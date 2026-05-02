@@ -7,7 +7,6 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.serialization.kotlinx.json.*
 
 class FileClient : kotlin.io.Closeable {
-
     private val client = HttpClient(CIO) {
         install(ContentNegotiation) { json() }
     }

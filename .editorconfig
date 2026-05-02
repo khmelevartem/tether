@@ -1,0 +1,21 @@
+[*.{kt,kts}]
+
+max_line_length = 120
+
+# For function declarations
+ktlint_standard_function-signature = disabled
+
+# For parameter/argument lists
+ktlint_standard_parameter-list-wrapping = disabled
+
+# Composable functions naming
+ktlint_function_naming_ignore_when_annotated_with = Composable
+
+# Allows wildcard imports for Ktor packages and all its subpackages
+ij_kotlin_packages_to_use_import_on_demand = io.ktor.**
+
+# Line breaks
+ktlint_standard_multiline-expression-wrapping = disabled
+ktlint_standard_string-template-indent = disabled
+
+compose_preview_public_check = false

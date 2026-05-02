@@ -6,7 +6,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 actual class MdnsDiscovery actual constructor() {
-
     private val _discoveredDevices = MutableStateFlow<List<Device>>(emptyList())
     actual val discoveredDevices: Flow<List<Device>> = _discoveredDevices.asStateFlow()
 

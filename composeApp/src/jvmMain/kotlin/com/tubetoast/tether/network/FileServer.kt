@@ -10,8 +10,9 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.coroutines.runBlocking
 
-class FileServer(private val port: Int) {
-
+class FileServer(
+    private val port: Int,
+) {
     private var server: EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration>? = null
 
     fun start(): Int {
