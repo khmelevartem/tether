@@ -1,13 +1,14 @@
 package com.tubetoast.tether
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.ProgramResult
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
 import com.tubetoast.tether.discovery.MdnsDiscovery
 import com.tubetoast.tether.network.FileServer
 import kotlinx.coroutines.*
-import java.net.ServerSocket
+import java.io.IOException
 
 class TetherCommand : CliktCommand(
     name = "tether",
@@ -21,14 +22,18 @@ class TetherCommand : CliktCommand(
         .default(0)
 
     override fun run() = runBlocking {
-        val actualPort = if (port == 0) ServerSocket(0).use { it.localPort } else port
-
         echo("=== Tether debug runner ===")
         echo("device : $deviceName")
-        echo("port   : $actualPort")
 
-        val server = FileServer(actualPort)
-        server.start()
+        val server = FileServer(port)
+        val actualPort = try {
+            server.start()
+        } catch (e: IOException) {
+            echo("ERROR: Could not start FileServer on port $port — ${e.message}", err = true)
+            echo("Tip: use --port 0 to auto-select a free port.", err = true)
+            throw ProgramResult(1)
+        }
+        echo("port   : $actualPort")
         echo("FileServer started  →  http://localhost:$actualPort/health")
 
         val discovery = MdnsDiscovery()
@@ -43,8 +48,12 @@ class TetherCommand : CliktCommand(
         }
 
         Runtime.getRuntime().addShutdownHook(Thread {
-            discovery.stop()
-            server.stop()
+            try { discovery.stop() } catch (e: Exception) {
+                System.err.println("WARN: mDNS stop failed — ${e.message}")
+            }
+            try { server.stop() } catch (e: Exception) {
+                System.err.println("WARN: FileServer stop failed — ${e.message}")
+            }
         })
 
         echo("Ctrl+C to stop")

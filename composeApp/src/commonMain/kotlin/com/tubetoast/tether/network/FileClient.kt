@@ -6,7 +6,7 @@ import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.serialization.kotlinx.json.*
 
-class FileClient {
+class FileClient : kotlin.io.Closeable {
 
     private val client = HttpClient(CIO) {
         install(ContentNegotiation) { json() }
@@ -14,10 +14,10 @@ class FileClient {
 
     suspend fun ping(device: Device): Boolean {
         // TODO: GET http://${device.host}:${device.port}/health
-        return false
+        throw NotImplementedError("ping() is not yet implemented")
     }
 
-    fun close() {
+    override fun close() {
         client.close()
     }
 }
