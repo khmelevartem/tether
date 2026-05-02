@@ -11,7 +11,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class FileServerTest {
-
     @Test
     fun `health endpoint returns 200 with Tether OK`() {
         val server = FileServer(0)

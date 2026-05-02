@@ -1,12 +1,10 @@
 package com.tubetoast.tether.protocol
 
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class DeviceTest {
-
     private val json = Json { prettyPrint = false }
 
     @Test
@@ -15,7 +13,7 @@ class DeviceTest {
             id = "abc-123",
             name = "My Mac",
             host = "192.168.1.10",
-            port = 8080
+            port = 8080,
         )
         val decoded = json.decodeFromString<Device>(json.encodeToString(original))
         assertEquals(original, decoded)

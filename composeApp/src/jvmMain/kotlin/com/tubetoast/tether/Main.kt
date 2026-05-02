@@ -7,13 +7,16 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
 import com.tubetoast.tether.discovery.MdnsDiscovery
 import com.tubetoast.tether.network.FileServer
-import kotlinx.coroutines.*
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import java.io.IOException
 
-class TetherCommand : CliktCommand(
-    name = "tether",
-    help = "Tether debug runner — local peer-to-peer file transfer over WiFi"
-) {
+class TetherCommand :
+    CliktCommand(
+        name = "tether",
+        help = "Tether debug runner — local peer-to-peer file transfer over WiFi",
+    ) {
     private val deviceName by option("--name", help = "Device name advertised via mDNS")
         .default("Tether-${System.getenv("USER") ?: "dev"}")
 
@@ -42,19 +45,28 @@ class TetherCommand : CliktCommand(
 
         launch {
             discovery.discoveredDevices.collect { peers ->
-                if (peers.isEmpty()) echo("[peers] none")
-                else peers.forEach { echo("[peers] $it") }
+                if (peers.isEmpty()) {
+                    echo("[peers] none")
+                } else {
+                    peers.forEach { echo("[peers] $it") }
+                }
             }
         }
 
-        Runtime.getRuntime().addShutdownHook(Thread {
-            try { discovery.stop() } catch (e: Exception) {
-                System.err.println("WARN: mDNS stop failed — ${e.message}")
-            }
-            try { server.stop() } catch (e: Exception) {
-                System.err.println("WARN: FileServer stop failed — ${e.message}")
-            }
-        })
+        Runtime.getRuntime().addShutdownHook(
+            Thread {
+                try {
+                    discovery.stop()
+                } catch (e: Exception) {
+                    System.err.println("WARN: mDNS stop failed — ${e.message}")
+                }
+                try {
+                    server.stop()
+                } catch (e: Exception) {
+                    System.err.println("WARN: FileServer stop failed — ${e.message}")
+                }
+            },
+        )
 
         echo("Ctrl+C to stop")
         awaitCancellation()
