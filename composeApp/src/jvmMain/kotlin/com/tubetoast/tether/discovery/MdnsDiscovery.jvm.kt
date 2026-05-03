@@ -16,8 +16,9 @@ actual class MdnsDiscovery actual constructor() {
     private val _discoveredDevices = MutableStateFlow<List<Device>>(emptyList())
     actual val discoveredDevices: Flow<List<Device>> = _discoveredDevices.asStateFlow()
 
-    private var jmdns: JmDNS? = null
-    private var ownName: String? = null
+    @Volatile private var jmdns: JmDNS? = null
+
+    @Volatile private var ownName: String? = null
 
     @Synchronized
     actual fun start(deviceName: String, port: Int) {
@@ -102,8 +103,16 @@ actual class MdnsDiscovery actual constructor() {
     @Synchronized
     actual fun stop() {
         try {
-            jmdns?.unregisterAllServices()
-            jmdns?.close()
+            try {
+                jmdns?.unregisterAllServices()
+            } catch (e: Exception) {
+                System.err.println("WARN: unregisterAllServices failed — ${e.message}")
+            }
+            try {
+                jmdns?.close()
+            } catch (e: Exception) {
+                System.err.println("WARN: jmdns close failed — ${e.message}")
+            }
         } finally {
             jmdns = null
             ownName = null
