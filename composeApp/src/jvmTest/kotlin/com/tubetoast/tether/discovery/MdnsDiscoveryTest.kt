@@ -77,9 +77,38 @@ class MdnsDiscoveryTest {
             withTimeout(10_000) {
                 a.discoveredDevices.first { peers -> peers.any { it.name == "SelfB" } }
             }
+            withTimeout(10_000) {
+                b.discoveredDevices.first { peers -> peers.any { it.name == "SelfA" } }
+            }
 
             assertTrue(a.discoveredDevices.first().none { it.name == "SelfA" })
             assertTrue(b.discoveredDevices.first().none { it.name == "SelfB" })
+        } finally {
+            a.stop()
+            b.stop()
+        }
+    }
+
+    @Test
+    fun `restart — stop then start works correctly`() = runBlocking {
+        val a = MdnsDiscovery()
+        val b = MdnsDiscovery()
+        try {
+            a.start("RestartA", 19050)
+            b.start("RestartB", 19051)
+
+            withTimeout(10_000) {
+                a.discoveredDevices.first { peers -> peers.any { it.name == "RestartB" } }
+            }
+
+            a.stop()
+            assertTrue(a.discoveredDevices.first().isEmpty())
+
+            a.start("RestartA", 19050)
+            withTimeout(10_000) {
+                a.discoveredDevices.first { peers -> peers.any { it.name == "RestartB" } }
+            }
+            assertEquals(1, a.discoveredDevices.first().size)
         } finally {
             a.stop()
             b.stop()

@@ -40,7 +40,13 @@ class TetherCommand :
         echo("FileServer started  →  http://localhost:$actualPort/health")
 
         val discovery = MdnsDiscovery()
-        discovery.start(deviceName, actualPort)
+        try {
+            discovery.start(deviceName, actualPort)
+        } catch (e: Exception) {
+            echo("ERROR: Could not start mDNS — ${e.message}", err = true)
+            server.stop()
+            throw ProgramResult(1)
+        }
         echo("mDNS started → advertising '$deviceName' on port $actualPort\n")
 
         launch {

@@ -10,6 +10,7 @@ import javax.jmdns.ServiceInfo
 import javax.jmdns.ServiceListener
 
 private const val SERVICE_TYPE = "_tether._tcp.local."
+private val IPV4_REGEX = Regex("""\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}""")
 
 actual class MdnsDiscovery actual constructor() {
     private val _discoveredDevices = MutableStateFlow<List<Device>>(emptyList())
@@ -23,7 +24,12 @@ actual class MdnsDiscovery actual constructor() {
         if (jmdns != null) throw IllegalStateException("MdnsDiscovery already started; call stop() first")
 
         ownName = deviceName
-        val instance = JmDNS.create()
+        val instance = try {
+            JmDNS.create()
+        } catch (e: Exception) {
+            ownName = null
+            throw e
+        }
         jmdns = instance
 
         instance.addServiceListener(
@@ -39,11 +45,18 @@ actual class MdnsDiscovery actual constructor() {
                 }
 
                 override fun serviceResolved(event: ServiceEvent) {
+                    if (jmdns == null) return
                     try {
                         if (event.name == ownName) return
 
                         val info: ServiceInfo = event.info
-                        val ipv4 = info.getHostAddresses().firstOrNull { it.contains('.') }
+
+                        if (info.port !in 1..65535) {
+                            System.err.println("WARN: invalid port ${info.port} for '${event.name}', skipping")
+                            return
+                        }
+
+                        val ipv4 = info.getHostAddresses().firstOrNull { IPV4_REGEX.matches(it) }
                         if (ipv4 == null) {
                             System.err.println(
                                 "WARN: serviceResolved — no IPv4 for '${event.name}', skipping",
@@ -66,14 +79,24 @@ actual class MdnsDiscovery actual constructor() {
             },
         )
 
-        instance.registerService(
-            ServiceInfo.create(
-                SERVICE_TYPE,
-                deviceName,
-                port,
-                "",
-            ),
-        )
+        try {
+            instance.registerService(
+                ServiceInfo.create(
+                    SERVICE_TYPE,
+                    deviceName,
+                    port,
+                    "",
+                ),
+            )
+        } catch (e: Exception) {
+            jmdns = null
+            ownName = null
+            try {
+                instance.close()
+            } catch (ignored: Exception) {
+            }
+            throw e
+        }
     }
 
     @Synchronized
