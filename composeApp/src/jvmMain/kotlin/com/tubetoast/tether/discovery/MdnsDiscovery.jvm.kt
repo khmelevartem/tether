@@ -15,10 +15,10 @@ actual class MdnsDiscovery actual constructor() {
     private val _discoveredDevices = MutableStateFlow<List<Device>>(emptyList())
     actual val discoveredDevices: Flow<List<Device>> = _discoveredDevices.asStateFlow()
 
-    @Volatile private var jmdns: JmDNS? = null
+    private var jmdns: JmDNS? = null
+    private var ownName: String? = null
 
-    @Volatile private var ownName: String? = null
-
+    @Synchronized
     actual fun start(deviceName: String, port: Int) {
         if (jmdns != null) throw IllegalStateException("MdnsDiscovery already started; call stop() first")
 
@@ -76,6 +76,7 @@ actual class MdnsDiscovery actual constructor() {
         )
     }
 
+    @Synchronized
     actual fun stop() {
         try {
             jmdns?.unregisterAllServices()
