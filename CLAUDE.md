@@ -146,6 +146,10 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on all pushes and PRs to main:
 - **Common tests** (`commonTest/`): протокол и shared-логика
 - Стиль: `kotlin.test`, `runBlocking` для корутин, `withTimeout` для сетевых/асинхронных тестов
 
+## Code Review
+
+When reviewing a PR, follow the process in [`.claude/code-review.md`](.claude/code-review.md).
+
 ## Worktree и окружение
 
 При работе в git worktree (`.claude/worktrees/*`) скопируй `local.properties` из корня репозитория в директорию worktree — иначе pre-push хук (`./gradlew allTests`) не найдёт Android SDK и заблокирует push:
