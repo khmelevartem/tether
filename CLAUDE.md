@@ -76,18 +76,29 @@ curl http://localhost:{port}/health  # → "Tether OK"
 
 **KtLint — никогда не запускай вручную.** Git hook запускает KtLint автоматически при каждом коммите и исправляет форматирование сам. Не трать время на ручное исправление стилевых ошибок — просто коммить.
 
+Тесты запускай с флагом `-q`, чтобы выкинуть лишнюю информацию из вывода.
+
 **Run all tests**
+
+В стандартном цикле разработки запускай все тесты, чтобы проеврить, не отломался ли какой-то таргет.
+
 ```bash
-./gradlew allTests
+./gradlew allTests -q
 ```
 
 **Run tests for a specific module**
+
+Запускай тесты на конкретный модуль или класс, только когда видишь реальную пользу сэкономить немного времени, или когда точно знаешь, что какой-то таргет еще не доделан.
+
 ```bash
-./gradlew :composeApp:jvmTest    # JVM tests only
-./gradlew :composeApp:commonTest # Common tests only
+./gradlew :composeApp:jvmTest -q    # JVM tests only
+./gradlew :composeApp:commonTest -q # Common tests only
 ```
 
 **Single test class**
+
+Как и предыдущий пункт, должна быть явная причина запустить именно отдельный тест.
+
 ```bash
 ./gradlew :composeApp:jvmTest --tests "com.tubetoast.tether.network.FileServerTest"
 ```
