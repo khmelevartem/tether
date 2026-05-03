@@ -131,6 +131,17 @@ compose.desktop {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "com.tubetoast.tether"
             packageVersion = "1.0.0"
+
+            linux {
+                iconFile.set(project.file("src/commonMain/composeResources/drawable/icon.png"))
+            }
+            // For macOS and Windows, you need .icns and .ico formats respectively
+            // macOS {
+            //    iconFile.set(project.file("src/commonMain/composeResources/drawable/icon.icns"))
+            // }
+            // windows {
+            //    iconFile.set(project.file("src/commonMain/composeResources/drawable/icon.ico"))
+            // }
         }
     }
 }
