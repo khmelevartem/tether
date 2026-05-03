@@ -74,11 +74,7 @@ curl http://localhost:{port}/health  # → "Tether OK"
 
 ### Quality & Testing
 
-**Lint check (KtLint)**
-```bash
-./gradlew ktlintCheck      # Check code style violations
-./gradlew ktlintFormat     # Auto-fix code style
-```
+**KtLint — никогда не запускай вручную.** Git hook запускает KtLint автоматически при каждом коммите и исправляет форматирование сам. Не трать время на ручное исправление стилевых ошибок — просто коммить.
 
 **Run all tests**
 ```bash
@@ -133,6 +129,16 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on all pushes and PRs to main:
 
 ## Testing Strategy
 
-- **JVM tests** (`jvmTest/`): Server and network integration tests (FileServerTest)
-- **Common tests** (`commonTest/`): Protocol and shared logic (DeviceTest)
-- Platform-specific tests would go in androidTest/, iosTest/, etc. (not yet present)
+**Тесты обязательны.** При реализации любой функциональности пиши тесты — unit и/или интеграционные. Ориентируйся на краевые случаи из описания задачи (issue).
+
+- **JVM tests** (`jvmTest/`): Server и network интеграционные тесты
+- **Common tests** (`commonTest/`): протокол и shared-логика
+- Стиль: `kotlin.test`, `runBlocking` для корутин, `withTimeout` для сетевых/асинхронных тестов
+
+## Worktree и окружение
+
+При работе в git worktree (`.claude/worktrees/*`) скопируй `local.properties` из корня репозитория в директорию worktree — иначе pre-push хук (`./gradlew allTests`) не найдёт Android SDK и заблокирует push:
+
+```bash
+cp /path/to/repo/local.properties /path/to/worktree/local.properties
+```
