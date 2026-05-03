@@ -27,7 +27,7 @@ class FileServer(
         server = srv
         // resolvedConnectors() returns the actual OS-assigned port when port=0 was specified,
         // eliminating the TOCTOU race that would exist if we probed with ServerSocket(0) first.
-        return runBlocking { srv.resolvedConnectors() }.first().port
+        return runBlocking { srv.engine.resolvedConnectors() }.first().port
     }
 
     fun stop() {
