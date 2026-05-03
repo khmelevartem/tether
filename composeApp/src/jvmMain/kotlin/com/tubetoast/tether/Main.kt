@@ -41,7 +41,7 @@ class TetherCommand :
 
         val discovery = MdnsDiscovery()
         discovery.start(deviceName, actualPort)
-        echo("mDNS started  →  advertising '$deviceName' on port $actualPort\n")
+        echo("mDNS started → advertising '$deviceName' on port $actualPort\n")
 
         launch {
             discovery.discoveredDevices.collect { peers ->
