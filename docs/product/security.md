@@ -66,6 +66,17 @@ These are non-negotiable:
 - **No cloud, no relay, no fallback.** If the LAN is unavailable, transfer fails honestly. We do not silently route through any third party.
 - **Discovery announces only what's needed.** Device name (user-controlled) and port. No hardware ID, no email, no phone.
 
+## Logging Policy
+
+Tether does run local logs to help users (and us) debug network issues. Rules:
+
+- **Local-only.** Logs stay on the device. They are never uploaded, even on crash.
+- **Default level: warning + error.** Info/debug logs are off by default; user can flip a switch in settings to capture a verbose session when reporting a bug.
+- **No file contents, no peer identities beyond the local pairing record.** Log lines record events ("transfer started", "peer disconnected", "discovery failed") and error reasons — never bytes, never file names by default.
+- **User-accessible.** The user can view, export, and clear the log from within the app. "Export" produces a file the user can attach to a manual bug report — never an automated upload.
+
+Crash reporting and remote performance metrics are explicitly **out of scope for MVP**. If they're added later, they follow the same rule: opt-in, off by default, visible to the user.
+
 ## Open Questions
 
 - Channel encryption choice (above).

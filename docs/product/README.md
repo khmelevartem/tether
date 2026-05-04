@@ -8,6 +8,7 @@ Navigation hub. Start here, then go to the section you need.
 docs/product/
   vision.md        — concept, principles, goals
   audience.md      — target audience
+  competitors.md   — comparison with AirDrop, LocalSend, messengers, etc.
   design.md        — UX/UI principles, key screens
   tech-stack.md    — stack and architecture decisions
   security.md      — threat model, pairing, encryption
@@ -23,6 +24,7 @@ docs/product/
 
 - [Vision & Principles](vision.md) — what Tether is, why it exists, what guides decisions
 - [Target Audience](audience.md) — who uses Tether and what they need
+- [Competitors](competitors.md) — AirDrop, LocalSend, messengers — how Tether differs
 - [Design](design.md) — visual language, key screens, tone of voice
 - [Tech Stack](tech-stack.md) — platform choices, libraries, architecture rationale
 - [Security & Privacy](security.md) — threat model, pairing flow, channel encryption
