@@ -135,6 +135,36 @@ class MdnsDiscoveryTest {
     }
 
     @Test
+    fun `instance does not discover itself when JmDNS renames due to name conflict`() = runBlocking {
+        // When two instances register the same name, JmDNS renames one (e.g. "Foo" → "Foo (2)").
+        // ownName must track the actual registered name, not the requested one.
+        val a = MdnsDiscovery()
+        val b = MdnsDiscovery()
+        try {
+            a.start("ConflictName", 19060)
+            b.start("ConflictName", 19061) // JmDNS will rename to "ConflictName (2)"
+
+            withTimeout(10_000) {
+                a.discoveredDevices.first { peers -> peers.isNotEmpty() }
+            }
+            withTimeout(10_000) {
+                b.discoveredDevices.first { peers -> peers.isNotEmpty() }
+            }
+
+            val seenByA = a.discoveredDevices.first()
+            val seenByB = b.discoveredDevices.first()
+
+            assertTrue(seenByA.none { it.port == 19060 }, "A must not discover itself (port 19060)")
+            assertTrue(seenByB.none { it.port == 19061 }, "B must not discover itself (port 19061)")
+            assertEquals(1, seenByA.size, "A should see exactly one peer")
+            assertEquals(1, seenByB.size, "B should see exactly one peer")
+        } finally {
+            a.stop()
+            b.stop()
+        }
+    }
+
+    @Test
     fun `discovered device has correct host and port`() = runBlocking {
         val a = MdnsDiscovery()
         val b = MdnsDiscovery()
