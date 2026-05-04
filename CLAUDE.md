@@ -43,6 +43,8 @@ Before making commits, identify the relevant GitHub issue. If no issue exists fo
 
 ## Common Commands
 
+Все Gradle-команды можно запускать с флагом `-q` (quiet) — он убирает бойлерплейтный вывод и оставляет только ошибки и предупреждения. Используй его по умолчанию.
+
 ### Build and Run
 
 **Desktop CLI (debug runner with Ktor + mDNS stub)**
@@ -75,8 +77,6 @@ curl http://localhost:{port}/health  # → "Tether OK"
 ### Quality & Testing
 
 **KtLint — никогда не запускай вручную.** Git hook запускает KtLint автоматически при каждом коммите и исправляет форматирование сам. Не трать время на ручное исправление стилевых ошибок — просто коммить.
-
-Тесты запускай с флагом `-q`, чтобы выкинуть лишнюю информацию из вывода.
 
 **Run all tests**
 
