@@ -53,9 +53,9 @@ Tether is a multiplatform project (Kotlin Multiplatform) supporting Android, iOS
 - **No regressions**: Changes to platform-specific code shouldn't break the build or runtime behavior of other platforms.
 
 **Example findings:**
-- `[REQUIRED]` MdnsDiscovery.android.kt uses NsdManager but AndroidManifest.xml lacks `INTERNET` and `ACCESS_NETWORK_STATE` permissions — add them.
 - `[REQUIRED]` `serviceInfo.host` is deprecated on API 34+; add version check with `Build.VERSION.SDK_INT >= UPSIDE_DOWN_CAKE`.
-- `[UNVERIFIABLE]` Does iOS need equivalent mDNS implementation to match Android? — question for author.
+- `[UNVERIFIABLE]` New feature uses location APIs on Android but no corresponding iOS implementation — does the `expect` interface require location? Ask author.
+- `[UNVERIFIABLE]` Does each platform-specific implementation match the `expect/actual` contract in commonMain? — verify signatures.
 
 ---
 
