@@ -9,7 +9,7 @@ Who we protect against, in order of priority:
 1. **Untrusted peers on the same Wi-Fi.** Coffee shops, coworking spaces, home networks with guests. Other devices on the LAN can see mDNS announces and reach the file server port. They must not be able to send or receive files without explicit user consent (pairing).
 2. **Passive eavesdropper on an open Wi-Fi.** Someone sniffing unencrypted traffic on the same network. Mitigation depends on the channel-encryption choice (see open question).
 3. **Active MITM on an open Wi-Fi.** Someone able to intercept and modify traffic between two paired devices. Mitigation requires authenticated channel encryption.
-4. **Lost / stolen device.** Trusted-peer keys stored locally are exposed to whoever has the device. We rely on OS-level device security (lock screen, disk encryption) — Tether does not add an app-level passcode in MVP.
+4. **Lost / stolen device.** Trusted-peer keys stored locally are exposed to whoever has the device. We rely entirely on OS-level device security (lock screen, disk encryption, secure storage). Tether does **not** add an app-level passcode or biometric lock — that's the OS's job, and reproducing it inside the app is duplicate work that users would expect to keep working when their phone is unlocked anyway.
 
 Out of scope:
 - Nation-state adversaries.
@@ -80,6 +80,5 @@ Crash reporting and remote performance metrics are explicitly **out of scope for
 ## Open Questions
 
 - Channel encryption choice (above).
-- Per-app passcode / biometric lock — needed in MVP, or rely on OS lock screen?
 - Auto-rotation of paired keys after N transfers / N days?
 - Visible "this device sent / received X files from Y" log — useful for trust, or privacy-leaky?

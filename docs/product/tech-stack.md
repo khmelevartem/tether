@@ -8,7 +8,7 @@
 | iOS | Stub | KMP target wired (`iosArm64`, `iosSimulatorArm64`); discovery via NSNetService — see issue [#6](https://github.com/) |
 | macOS | Basic | `macosArm64` only (Apple Silicon). Discovery shares `appleMain` with iOS |
 | Windows | In progress | JVM-based via Gradle desktop target. Reference implementation. Hosts `FileServer` and the CLI debug runner |
-| Linux | Excluded for MVP | Possible later via JVM target |
+| Linux | Post-MVP | Will ship via JVM target after MVP. Not a maybe — a deferred yes |
 
 ## Core Stack
 
@@ -33,7 +33,33 @@ For implementation-side guidance — module layout, layering principles, and DI 
 
 **Why:** The product is symmetric — any device can send to any device. A client/server split would require a designated host, which contradicts the discovery model and the home-network use case.
 
-**Tradeoff:** Ktor server is currently JVM-only (covers Windows, but not Android/iOS). Receive flow on Android and iOS needs a different solution (likely embedded server via Kotlin/Native or platform APIs) before MVP closes. Acceptable because send/receive in MVP can ship asymmetrically per-platform during development.
+**Tradeoff:** Ktor's server modules are JVM-only — `ktor-server-*` has no Kotlin/Native publication. This is a real, load-bearing constraint, not a footnote. **Receive flow on Android and iOS does not work today**, and "all platforms send and receive" is a hard MVP requirement (see [vision.md](vision.md)). This needs to be solved before we can claim MVP.
+
+#### Options on the table
+
+1. **Per-platform server `actual` implementations.** Common `expect class FileServer` with platform-specific implementations:
+   - JVM (Windows/Linux): keep Ktor.
+   - Android: NanoHTTPD (mature Java lib that runs on Android out of the box).
+   - iOS / macOS: GCDWebServer via cinterop, or build on top of Apple's `Network.framework`.
+
+   *Pros:* uses well-tested platform-native servers, predictable behavior.
+   *Cons:* three different codebases for one role, three different bug surfaces, more cinterop work for Apple targets.
+
+2. **Custom minimal HTTP server in `commonMain` over `kotlinx-io` / sockets.** Roll our own ~200-500-line HTTP server. We control exactly which features we use (we don't need most of HTTP).
+
+   *Pros:* one codebase for all platforms, no cinterop, no per-platform bugs.
+   *Cons:* writing HTTP is famously full of corner cases (chunked encoding, headers, keep-alive). Real risk of subtle interop bugs against curl / browsers / future tooling.
+
+3. **Wait for / track `ktor-server` Kotlin/Native.** The Ktor team has been working toward Native server support. If a stable release exists by the time we reach MVP, prefer it.
+
+   *Pros:* same codebase as JVM, leverages Ktor's correctness.
+   *Cons:* timing is out of our hands; cannot block MVP on it.
+
+4. **Drop the symmetry — one direction per pair.** E.g. "phone always sends, laptop always receives." Rejected: contradicts the "any device sends to any device" principle in [vision.md](vision.md).
+
+**Tentative direction:** option 1 (per-platform `actual`s) is the safe default and what we plan for unless option 3 lands first. Decision is deferred to the issue that picks up the Android/iOS receiver work — track Ktor Native server status before committing to option 1.
+
+Acceptable for now because the JVM server is the reference implementation we test the protocol against; mobile receivers come online when their issues are scheduled.
 
 ### mDNS over BLE / Wi-Fi Direct / hand-typed addresses
 
@@ -73,7 +99,7 @@ For implementation-side guidance — module layout, layering principles, and DI 
 - **mDNS may be blocked** on guest networks, captive portals, and enterprise APs with client isolation. Tether should detect and explain, not silently fail.
 - **iOS Local Network permission.** Required for discovery to work; user will see the system prompt on first run.
 - **Android `INTERNET` and local-network permissions.** Standard, but worth being explicit.
-- **macOS:** Apple Silicon only (`macosArm64`). Intel support can be added with `macosX64()` if a real need appears.
+- **macOS:** Apple Silicon only (`macosArm64`). Intel support (`macosX64()`) is cheap to add — one line in `kotlin { ... }`, plus a small permanent build/test/release tax (extra compile cycle, extra artifact in releases). Skipped now because the Intel Mac population among target users is small and shrinking; revisit when an actual user reports it.
 - **Java 21 (Temurin)** for Windows (JVM) and the build itself.
 - **Compose on macOS is experimental** — accepted; flagged in build configuration.
 - **Ktor server is JVM-only.** No `ktor-server-*` Kotlin/Native publication exists. Receiver implementation on Android and iOS needs a different mechanism.

@@ -11,6 +11,7 @@ How Tether sits among the tools people use today to move files between devices. 
 | LocalSend | Android, iOS, macOS, Windows, Linux | Free (donations) | No | No | Yes | Yes (TLS, self-signed) | Optional ("favorites") |
 | Snapdrop / PairDrop | Web (any browser) | Free | No | No | Yes (same network only) | Yes (WebRTC) | No |
 | Send Anywhere | Android, iOS, macOS, Windows | Freemium | Optional | No | Cloud relay | Yes (TLS) | No (6-digit one-time key) |
+| Microsoft Phone Link | Android ↔ Windows 11 (limited iPhone) | Free | Required (Microsoft account) | No | Bluetooth + Wi-Fi + cloud | Yes (Microsoft-managed) | Yes (per Microsoft account) |
 | Telegram "Saved Messages" / DM | Everywhere | Free | Required | **Yes** for photos/video unless "as file" | No (cloud) | Server-side (cloud) | n/a |
 | Email to self | Everywhere | Free | Required | Sometimes (provider-dependent) | No | Provider-dependent | n/a |
 | USB cable | Phone ↔ desktop only | Free | No | No | n/a | n/a | n/a |
@@ -39,6 +40,10 @@ Browser-based, zero-install, runs over WebRTC on the same network. Great for one
 
 Cross-platform, but routes through their servers. Freemium with size caps. Tether's "no cloud" principle is the explicit anti-pattern.
 
+### Microsoft Phone Link — bundled, single-pair, account-bound
+
+Built into Windows 11. Optimizes a specific axis (Android phone ↔ Windows PC) and includes notifications, calls, and SMS bridging on top of file transfer. Microsoft account required; some routes touch the cloud. For the narrow "I have an Android and a Windows PC" segment it's already preinstalled — that's a real distribution advantage we cannot match. Where Phone Link fails: the user has more than one OS pair (e.g. Android + Mac, or iPhone + Windows beyond what Apple allows), or doesn't want a Microsoft account, or is sending between two phones.
+
 ### Telegram / WhatsApp — what users actually use today
 
 The real default for sending files between own devices for many people. Compresses photos and video unless explicitly sent "as file" — and most users don't know to do that. Requires accounts. This is the *behavioral default* Tether displaces, even though it's the worst technical choice.
@@ -55,7 +60,32 @@ Email has size limits and provider-dependent compression. USB requires the right
 4. **LAN speed, no size limits.** Beats anything cloud-based on transfers above a few hundred MB.
 5. **Privacy by architecture, not by promise.** No server means no data to leak. Beats every cloud-based option.
 
+## Honestly: why does Tether exist if LocalSend exists?
+
+This deserves a direct answer. LocalSend ships today on every platform we target, has no accounts, no cloud, no compression, and is free. By the time Tether reaches MVP, ~80–90% of what Tether promises will already be a one-tap install away on the App Store, Play Store, and every major desktop OS.
+
+**Stated differentiators, with skepticism:**
+
+- *"Single visual language across platforms."* Maker preference more than user demand. Most non-technical users never compare a phone app to a desktop app side-by-side. Real but small.
+- *"Non-technical onboarding."* LocalSend is already easy. Closing this gap requires concrete interaction work, not a stance.
+- *"Pro features (folder sync, multi-peer)."* Speculation until shipped. LocalSend can add either at any time.
+
+**Possible real wedges (need proving by execution, not by claim):**
+
+- **iOS receive done right.** LocalSend's iOS app exists, but iOS background receive is structurally difficult — the OS aggressively suspends apps. A polished "we just got a file in the background" experience is a real, hard-won feature. If Tether nails this, it's a wedge. If not, no.
+- **An opinionated, fewer-knobs UX.** LocalSend exposes a lot of options (favorites, ports, history, methods). A version that decides for the user (sane defaults, two visible affordances) is *different*, even if "better" is subjective.
+- **Pairing-first model.** LocalSend treats pairing as optional ("favorites"). Tether makes pairing the default trust unit, which produces a more "AirDrop-like" experience for repeat use between own devices.
+- **Pro that LocalSend can't easily do.** A donation-only OSS project has structural constraints around supporting paid features. If a real Pro market exists for folder sync / multi-peer (see [monetization.md](monetization.md)), Tether can iterate there faster than a community project.
+
+**Honest reasons that aren't "the product is better":**
+
+- KMP exploration / portfolio value for the maintainer.
+- Control over direction without depending on a community roadmap.
+- Optionality: if any of the wedges above prove out, having an independent codebase to act on them is worth the cost of duplication.
+
+**Bottom line.** There is no a-priori reason a user *must* pick Tether over LocalSend today. The wedge has to be earned through execution — specifically through (a) an iOS receive experience meaningfully better than what LocalSend offers, and (b) a curated UX bar that says "no" to options LocalSend says "yes" to. If after MVP we cannot point at one concrete moment where a typical user will notice Tether is better, the honest move is to stop and contribute to LocalSend instead. This bar is intentional — write it down so we hold ourselves to it.
+
 ## Open Questions
 
-- Is "we look the same on every platform" a strong enough wedge against LocalSend by itself, or does Tether need a feature LocalSend lacks (e.g. folder sync from MVP)?
 - Pricing reference: free comparables (LocalSend, Snapdrop) make any Pro tier compete on real convenience, not on "premium" framing. Worth re-checking before committing to monetization (see [monetization.md](monetization.md)).
+- Distribution disadvantage vs Microsoft Phone Link (preinstalled on Windows 11) and AirDrop (preinstalled on Apple). For users locked into one ecosystem these are zero-friction defaults — Tether wins only when their device set crosses ecosystems. Worth quantifying market size of cross-ecosystem households.
