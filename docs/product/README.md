@@ -2,6 +2,8 @@
 
 Navigation hub. Start here, then go to the section you need.
 
+For implementation guidance (module layout, architecture principles, DI rules), see [`docs/engineering/`](../engineering/README.md).
+
 ## Structure
 
 ```

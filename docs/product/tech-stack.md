@@ -23,6 +23,8 @@
 | CLI | Clikt (JVM only) | Argument parsing for the desktop debug runner (`--name`, `--port`) |
 | Build | Gradle 8 + Kotlin 2.x, Java 21 (Temurin) | Configuration cache and build cache enabled |
 
+For implementation-side guidance — module layout, layering principles, and DI rules — see [`docs/engineering/`](../engineering/README.md).
+
 ## Architecture Decisions
 
 ### Every node is both client and server
