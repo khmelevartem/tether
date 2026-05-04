@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Required by NsdManager on some OEM Android builds (e.g. OPPO/OnePlus ColorOS) -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:name=".TetherApp"
         android:allowBackup="true"
