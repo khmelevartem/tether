@@ -40,26 +40,25 @@ Extract every acceptance criterion from the issue (or PR description if no issue
 
 ---
 
-## Phase 2.5 — Platform specifics
+## Phase 3 — Platform specifics
 
-*Skip for: DOCS, REFACTOR without platform-specific changes.*
+*Apply only if diff touches: `androidMain/`, `iosMain/`, `macosMain/`, `jvmMain/`, `desktopMain/`, `appleMain/`. Otherwise skip.*
 
-Tether is a multiplatform project (Kotlin Multiplatform) supporting Android, iOS, macOS, Desktop (JVM), with Linux planned. When a PR modifies platform-specific code (`androidMain/`, `iosMain/`, `macosMain/`, `jvmMain/`, `desktopMain/`, `appleMain/`), verify:
+Tether is a multiplatform project (Kotlin Multiplatform) supporting Android, iOS, macOS, Desktop (JVM), with Linux planned. Verify:
 
-**For platform-specific changes:**
 - **API level compatibility** (Android): If code uses API-specific features, are there version checks (`Build.VERSION.SDK_INT >= ...`)? Deprecated APIs must be suppressed with `@Suppress("DEPRECATION")` and have fallbacks for older API levels.
-- **Permissions** (Android): Do new Android features require permissions in `AndroidManifest.xml`? NSD, network access, location, camera, etc.
+- **Permissions** (Android): Do new Android features require permissions in `AndroidManifest.xml`? Network access, location, camera, etc.
 - **Platform parity**: If one platform gets a feature, check if other platforms need corresponding implementations to satisfy the `expect/actual` contract in `commonMain/`.
 - **No regressions**: Changes to platform-specific code shouldn't break the build or runtime behavior of other platforms.
 
 **Example findings:**
 - `[REQUIRED]` `serviceInfo.host` is deprecated on API 34+; add version check with `Build.VERSION.SDK_INT >= UPSIDE_DOWN_CAKE`.
+- `[REQUIRED]` New feature added to `androidMain/` but `expect` declaration in `commonMain/` has no matching `actual` for `iosMain/` — add stub or full implementation.
 - `[UNVERIFIABLE]` New feature uses location APIs on Android but no corresponding iOS implementation — does the `expect` interface require location? Ask author.
-- `[UNVERIFIABLE]` Does each platform-specific implementation match the `expect/actual` contract in commonMain? — verify signatures.
 
 ---
 
-## Phase 3 — Correctness
+## Phase 4 — Correctness
 
 *Skip for: DOCS, DEPENDENCY (unless dependency introduces API changes).*
 
@@ -73,7 +72,7 @@ For every execution path — normal, exception, concurrent — ask: is the syste
 
 ---
 
-## Phase 4 — Security
+## Phase 5 — Security
 
 *Skip for: DOCS, REFACTOR (behavior-preserving only).*
 
@@ -81,7 +80,7 @@ Identify the trust boundary: everything from outside the process is untrusted un
 
 ---
 
-## Phase 5 — Test quality
+## Phase 6 — Test quality
 
 *Skip for: DOCS, INFRA.*
 
@@ -91,7 +90,7 @@ Identify the trust boundary: everything from outside the process is untrusted un
 
 ---
 
-## Phase 6 — Repo standards
+## Phase 7 — Repo standards
 
 Check against conventions in `CLAUDE.md`:
 - Commit message format
@@ -100,7 +99,7 @@ Check against conventions in `CLAUDE.md`:
 
 ---
 
-## Phase 7 — Reviewing a revised PR
+## Phase 8 — Reviewing a revised PR
 
 When a PR has been updated in response to prior review comments:
 
