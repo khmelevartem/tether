@@ -173,4 +173,31 @@ class FileServerTest {
             tmpDir.deleteRecursively()
         }
     }
+
+    @Test
+    fun `upload strips path traversal from filename`() {
+        val tmpDir = Files.createTempDirectory("tether-test").toFile()
+        val server = FileServer(0, downloadsDir = tmpDir)
+        val port = server.start()
+        val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
+        try {
+            runBlocking {
+                val response = client.post("http://localhost:$port/upload?name=../evil.txt") {
+                    contentType(ContentType.Application.OctetStream)
+                    setBody("malicious".toByteArray())
+                }
+                assertEquals(HttpStatusCode.OK, response.status)
+                val savedPath = response.body<Map<String, String>>()["savedPath"]!!
+                assertFalse(File(tmpDir.parentFile, "evil.txt").exists(), "file must not escape downloads dir")
+                assertTrue(
+                    File(savedPath).canonicalPath.startsWith(tmpDir.canonicalPath),
+                    "saved path must be inside downloads dir",
+                )
+            }
+        } finally {
+            client.close()
+            server.stop()
+            tmpDir.deleteRecursively()
+        }
+    }
 }
