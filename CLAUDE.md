@@ -30,6 +30,7 @@ The project follows KMP best practices with platform-specific and shared code:
 
 ## Git Conventions
 
+All git naming is only in English: commit messages, PR titles and etc.
 **All commit messages must be prefixed with the GitHub issue number** in the format `#<issue>: <message>`.
 
 Examples:
