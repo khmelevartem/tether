@@ -40,6 +40,25 @@ Extract every acceptance criterion from the issue (or PR description if no issue
 
 ---
 
+## Phase 2.5 — Platform specifics
+
+*Skip for: DOCS, REFACTOR without platform-specific changes.*
+
+Tether is a multiplatform project (Kotlin Multiplatform) supporting Android, iOS, macOS, Desktop (JVM), with Linux planned. When a PR modifies platform-specific code (`androidMain/`, `iosMain/`, `macosMain/`, `jvmMain/`, `desktopMain/`, `appleMain/`), verify:
+
+**For platform-specific changes:**
+- **API level compatibility** (Android): If code uses API-specific features, are there version checks (`Build.VERSION.SDK_INT >= ...`)? Deprecated APIs must be suppressed with `@Suppress("DEPRECATION")` and have fallbacks for older API levels.
+- **Permissions** (Android): Do new Android features require permissions in `AndroidManifest.xml`? NSD, network access, location, camera, etc.
+- **Platform parity**: If one platform gets a feature, check if other platforms need corresponding implementations to satisfy the `expect/actual` contract in `commonMain/`.
+- **No regressions**: Changes to platform-specific code shouldn't break the build or runtime behavior of other platforms.
+
+**Example findings:**
+- `[REQUIRED]` MdnsDiscovery.android.kt uses NsdManager but AndroidManifest.xml lacks `INTERNET` and `ACCESS_NETWORK_STATE` permissions — add them.
+- `[REQUIRED]` `serviceInfo.host` is deprecated on API 34+; add version check with `Build.VERSION.SDK_INT >= UPSIDE_DOWN_CAKE`.
+- `[UNVERIFIABLE]` Does iOS need equivalent mDNS implementation to match Android? — question for author.
+
+---
+
 ## Phase 3 — Correctness
 
 *Skip for: DOCS, DEPENDENCY (unless dependency introduces API changes).*
@@ -102,6 +121,10 @@ PHASE: DoD
   [DONE] ...
   [MISSING] ...
   [UNVERIFIABLE] question for the author
+
+PHASE: Platform specifics
+  [REQUIRED] ...
+  [OK] ...
 
 PHASE: Correctness
   [REQUIRED] file:line — what is wrong and what must change
