@@ -14,11 +14,11 @@
 
 | Component | Technology | Why |
 |-----------|-----------|-----|
-| Shared code | Kotlin Multiplatform | One codebase across Android, iOS, macOS, Windows. Cross-platform parity is part of the product (see [vision.md](vision.md)) |
-| UI | Compose Multiplatform | Single UI tree across all four targets; matches the "single visual language" choice in [design.md](design.md). Experimental on macOS but viable for our scope |
+| Shared code | Kotlin Multiplatform | One codebase across Android, iOS, macOS, Windows, Linux. Cross-platform parity is part of the product (see [vision.md](vision.md)) |
+| UI | Compose Multiplatform | Single UI tree across all targets; matches the "single visual language" choice in [design.md](design.md). Experimental on macOS but viable for our scope |
 | HTTP server | Ktor (CIO engine, JVM-only) | Same async/coroutine model as the rest of the stack; simpler than embedded Jetty/Netty for our use; no Native publication needed since the server side is currently JVM-only |
 | HTTP client | Ktor (CIO) | Shared client across all targets; common API, no per-platform glue |
-| Service discovery | mDNS, per-platform | Android NSD (`androidMain`), JmDNS (`jvmMain`), NSNetService via `appleMain` for iOS + macOS. mDNS is the only cross-platform option that's installed and reachable on all four OSes by default |
+| Service discovery | mDNS, per-platform | Android NSD (`androidMain`), JmDNS (`jvmMain` for Windows + Linux), NSNetService via `appleMain` for iOS + macOS. mDNS is the only cross-platform option that's installed and reachable on all OSes by default |
 | Serialization | kotlinx.serialization (JSON) | Multiplatform, compile-time, no reflection. Used for protocol messages in `protocol/Device.kt` |
 | CLI | Clikt (JVM only) | Argument parsing for the desktop debug runner (`--name`, `--port`) |
 | Build | Gradle 8 + Kotlin 2.x, Java 21 (Temurin) | Configuration cache and build cache enabled |
