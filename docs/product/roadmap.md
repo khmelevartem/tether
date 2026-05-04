@@ -6,14 +6,14 @@ Three buckets, no dates. Order within a bucket is rough priority.
 
 The minimum that makes Tether worth installing. **All four platforms ship together** — the cross-platform promise is the product.
 
-- mDNS discovery on Android, iOS, macOS, Desktop JVM.
+- mDNS discovery on Android, iOS, macOS, Windows.
 - Pairing with 4-digit code verification.
 - Single-file transfer, streaming (no in-memory buffering).
 - Live progress on both sender and receiver, cancel.
 - Device list screen + transfer/progress screen on every platform.
 - Channel encryption decision made and implemented (see [security.md](security.md)).
 
-Done = a non-technical user can install Tether on their phone and laptop, pair them once, and reliably move files between them on home Wi-Fi.
+Done = a non-technical user can install Tether on their phone and macOS/Windows laptop, pair them once, and reliably move files between them on home Wi-Fi.
 
 ## Post-MVP
 
@@ -33,7 +33,7 @@ Directions, not commitments. Some of these may turn out to be wrong; some are pa
 - **Folder sync** — automatic mirroring of selected folders between paired devices. Pro candidate.
 - **Multi-peer / group send** — fan out to several devices in one action. Pro candidate.
 - **Transfer over the internet** — relay or STUN/TURN for paired devices not on the same LAN. Big architectural shift; explicitly *not* in MVP.
-- **Linux desktop** target.
+- **Linux desktop** target (JVM-based).
 - **Transfer history** — local journal of what went where. Privacy implications under review.
 
 ## Non-Goals

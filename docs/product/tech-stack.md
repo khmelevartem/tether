@@ -7,15 +7,14 @@
 | Android | In progress | mDNS via Android NSD; Compose UI in `androidMain` |
 | iOS | Stub | KMP target wired (`iosArm64`, `iosSimulatorArm64`); discovery via NSNetService — see issue [#6](https://github.com/) |
 | macOS | Basic | `macosArm64` only (Apple Silicon). Discovery shares `appleMain` with iOS |
-| Desktop (JVM) | In progress | Reference implementation. Hosts `FileServer` and the CLI debug runner |
+| Windows | In progress | JVM-based via Gradle desktop target. Reference implementation. Hosts `FileServer` and the CLI debug runner |
 | Linux | Excluded for MVP | Possible later via JVM target |
-| Windows | Excluded for MVP | Possible later via JVM target |
 
 ## Core Stack
 
 | Component | Technology | Why |
 |-----------|-----------|-----|
-| Shared code | Kotlin Multiplatform | One codebase across Android, iOS, macOS, Desktop. Cross-platform parity is part of the product (see [vision.md](vision.md)) |
+| Shared code | Kotlin Multiplatform | One codebase across Android, iOS, macOS, Windows. Cross-platform parity is part of the product (see [vision.md](vision.md)) |
 | UI | Compose Multiplatform | Single UI tree across all four targets; matches the "single visual language" choice in [design.md](design.md). Experimental on macOS but viable for our scope |
 | HTTP server | Ktor (CIO engine, JVM-only) | Same async/coroutine model as the rest of the stack; simpler than embedded Jetty/Netty for our use; no Native publication needed since the server side is currently JVM-only |
 | HTTP client | Ktor (CIO) | Shared client across all targets; common API, no per-platform glue |
@@ -32,7 +31,7 @@
 
 **Why:** The product is symmetric — any device can send to any device. A client/server split would require a designated host, which contradicts the discovery model and the home-network use case.
 
-**Tradeoff:** Ktor server is currently JVM-only. iOS receive flow needs a different solution (likely embedded server via Kotlin/Native or platform APIs) before MVP closes. Acceptable because send/receive in MVP can ship asymmetrically per-platform during development.
+**Tradeoff:** Ktor server is currently JVM-only (covers Windows, but not Android/iOS). Receive flow on Android and iOS needs a different solution (likely embedded server via Kotlin/Native or platform APIs) before MVP closes. Acceptable because send/receive in MVP can ship asymmetrically per-platform during development.
 
 ### mDNS over BLE / Wi-Fi Direct / hand-typed addresses
 
@@ -73,6 +72,6 @@
 - **iOS Local Network permission.** Required for discovery to work; user will see the system prompt on first run.
 - **Android `INTERNET` and local-network permissions.** Standard, but worth being explicit.
 - **macOS:** Apple Silicon only (`macosArm64`). Intel support can be added with `macosX64()` if a real need appears.
-- **Java 21 (Temurin)** for Desktop and the build itself.
+- **Java 21 (Temurin)** for Windows (JVM) and the build itself.
 - **Compose on macOS is experimental** — accepted; flagged in build configuration.
-- **Ktor server is JVM-only.** No `ktor-server-*` Kotlin/Native publication exists. Receiver implementation on iOS needs a different mechanism.
+- **Ktor server is JVM-only.** No `ktor-server-*` Kotlin/Native publication exists. Receiver implementation on Android and iOS needs a different mechanism.

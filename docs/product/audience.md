@@ -2,7 +2,7 @@
 
 ## Primary User
 
-A non-technical person who owns devices across more than one ecosystem. The canonical example: an Android phone and a MacBook at home. Or an iPhone and a Windows PC. Or a tablet on one OS and a laptop on another.
+A non-technical person who owns devices across more than one ecosystem. The canonical example: an Android phone and a macOS laptop at home. Or an iPhone and a Windows PC. Or a tablet on one OS and a laptop on another.
 
 They are *not* a developer, *not* a sysadmin, *not* a privacy activist. They don't care about how the transfer works — they care that the photo they took on their phone shows up on their laptop in full quality without effort.
 

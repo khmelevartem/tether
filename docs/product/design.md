@@ -4,7 +4,7 @@ How Tether looks and feels. This doc captures principles and key flows; per-scre
 
 ## Principles
 
-- **One visual language across all platforms.** Tether does not adopt the native look of each OS. The same layout, typography, palette, and iconography on Android, iOS, macOS, and Desktop. Consistency is part of the value proposition — the user recognizes Tether instantly on any device.
+- **One visual language across all platforms.** Tether does not adopt the native look of each OS. The same layout, typography, palette, and iconography on Android, iOS, macOS, and Windows. Consistency is part of the value proposition — the user recognizes Tether instantly on any device.
 - **Minimalism, not blank.** Few elements per screen, generous spacing, no decorative chrome. But each state (empty, searching, found, transferring, error) has a clear visual identity.
 - **Two taps to send.** Pick device → pick file. Anything that adds a step needs to justify itself.
 - **Show what's happening.** Discovery, pairing, transfer — every async action has a visible state. No silent waits.
