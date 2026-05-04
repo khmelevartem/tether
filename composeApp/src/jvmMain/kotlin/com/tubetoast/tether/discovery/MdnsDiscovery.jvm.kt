@@ -18,20 +18,25 @@ actual class MdnsDiscovery actual constructor() {
 
     @Volatile private var jmdns: JmDNS? = null
 
-    @Volatile private var ownName: String? = null
+    // Self-filter: identify own service by the IP JmDNS bound to and the registered port.
+    // Name-based filtering is unreliable — JmDNS may rename the service on conflict
+    // (e.g. "Foo" → "Foo (2)"), and stale records of the old name linger after a restart.
+    @Volatile private var ownIp: String? = null
+
+    @Volatile private var ownPort: Int = -1
 
     @Synchronized
     actual fun start(deviceName: String, port: Int) {
         if (jmdns != null) throw IllegalStateException("MdnsDiscovery already started; call stop() first")
 
-        ownName = deviceName
         val instance = try {
             JmDNS.create()
         } catch (e: Exception) {
-            ownName = null
             throw e
         }
         jmdns = instance
+        ownIp = instance.inetAddress.hostAddress
+        ownPort = port
 
         instance.addServiceListener(
             SERVICE_TYPE,
@@ -48,8 +53,6 @@ actual class MdnsDiscovery actual constructor() {
                 override fun serviceResolved(event: ServiceEvent) {
                     if (jmdns == null) return
                     try {
-                        if (event.name == ownName) return
-
                         val info: ServiceInfo = event.info
 
                         if (info.port !in 1..65535) {
@@ -64,6 +67,10 @@ actual class MdnsDiscovery actual constructor() {
                             )
                             return
                         }
+
+                        // Filter self: same IP and same port uniquely identifies our own service,
+                        // regardless of the name JmDNS assigned (which may differ from deviceName).
+                        if (ipv4 == ownIp && info.port == ownPort) return
 
                         val device = Device(
                             id = "${event.name}@$ipv4:${info.port}",
@@ -82,16 +89,12 @@ actual class MdnsDiscovery actual constructor() {
 
         try {
             instance.registerService(
-                ServiceInfo.create(
-                    SERVICE_TYPE,
-                    deviceName,
-                    port,
-                    "",
-                ),
+                ServiceInfo.create(SERVICE_TYPE, deviceName, port, ""),
             )
         } catch (e: Exception) {
             jmdns = null
-            ownName = null
+            ownIp = null
+            ownPort = -1
             try {
                 instance.close()
             } catch (ignored: Exception) {
@@ -115,7 +118,8 @@ actual class MdnsDiscovery actual constructor() {
             }
         } finally {
             jmdns = null
-            ownName = null
+            ownIp = null
+            ownPort = -1
             _discoveredDevices.value = emptyList()
         }
     }
