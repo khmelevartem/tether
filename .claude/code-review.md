@@ -126,3 +126,18 @@ REQUIRED_BEFORE_MERGE:
 ```
 
 `DECISION: APPROVE` only if there are zero `REQUIRED` items across all phases. `UNVERIFIABLE` items do not block APPROVE unless safety-critical; they must appear as explicit questions to the author.
+
+### Post review to GitHub
+
+**Always attach the review as a comment to the PR on GitHub.** Do not leave findings locally:
+
+```bash
+gh pr comment <PR> --body "$(cat <<'EOF'
+## Code Review — Issue #<N>
+
+[paste the review output here, formatted as markdown]
+EOF
+)"
+```
+
+The PR author and reviewers need to see findings in the GitHub UI. Findings left only in local output are invisible to the team.
