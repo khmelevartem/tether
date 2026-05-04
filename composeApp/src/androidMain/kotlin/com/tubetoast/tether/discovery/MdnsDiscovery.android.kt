@@ -36,6 +36,9 @@ actual class MdnsDiscovery actual constructor() {
 
         override fun onServiceRegistered(serviceInfo: NsdServiceInfo) {
             Log.d(TAG, "NSD service registered: ${serviceInfo.serviceName}")
+            // NsdManager may modify the requested name (e.g. strip special chars or resolve conflicts).
+            // Track the actual registered name so self-filter in onServiceFound stays accurate.
+            ownName = serviceInfo.serviceName
         }
 
         override fun onServiceUnregistered(serviceInfo: NsdServiceInfo) {
@@ -129,8 +132,12 @@ actual class MdnsDiscovery actual constructor() {
         val nm = nsdManager ?: return
         val next = resolveQueue.poll() ?: return
         resolving = true
-        @Suppress("DEPRECATION")
-        nm.resolveService(next, makeResolveListener())
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            nm.resolveService(next, Runnable::run, makeResolveListener())
+        } else {
+            @Suppress("DEPRECATION")
+            nm.resolveService(next, makeResolveListener())
+        }
     }
 
     @Synchronized

@@ -26,7 +26,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        discovery.stop()
+        // isChangingConfigurations is true on rotation/language change — skip stop() there
+        // to avoid leaking the NSD registration while the activity is recreated.
+        if (!isChangingConfigurations) {
+            discovery.stop()
+        }
     }
 }
 
