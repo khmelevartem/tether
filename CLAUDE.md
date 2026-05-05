@@ -91,11 +91,21 @@ curl http://localhost:{port}/health  # → "Tether OK"
 
 **Run all tests**
 
-В стандартном цикле разработки запускай все тесты, чтобы проеврить, не отломался ли какой-то таргет.
+В стандартном цикле разработки запускай все тесты, чтобы проверить, не отломался ли какой-то таргет.
 
 ```bash
 ./gradlew allTests -q
 ```
+
+**Проверка warnings перед финальным коммитом**
+
+Флаг `-q` скрывает Gradle/KGP warnings. Перед финальным коммитом запусти один прогон без него, чтобы убедиться, что новых предупреждений нет:
+
+```bash
+./gradlew allTests 2>&1 | grep -i "warning\|warn" | grep -v "^w: KLIB"
+```
+
+Предупреждения вида `w: KLIB resolver: The same 'unique_name=...'` — существующие, игнорируй их.
 
 **Run tests for a specific module**
 
@@ -168,3 +178,15 @@ When reviewing a PR, follow the process in [`.claude/commands/code-review.md`](.
 ```bash
 cp /path/to/repo/local.properties /path/to/worktree/local.properties
 ```
+
+**Важно: редактируй файлы только в worktree, не в корне репозитория.**
+Перед первым Edit убедись, что путь ведёт в `.claude/worktrees/<branch>/`, а не в корень проекта. Ошибка в пути приведёт к правке основной ветки в обход ревью.
+
+## KMP source set hierarchy
+
+При работе с Kotlin Multiplatform source sets:
+
+- **Промежуточные source sets** (shared JVM, shared Apple и т.п.) создаются через `applyHierarchyTemplate { ... }`, а не через ручной `dependsOn(commonMain.get())`. Ручной `dependsOn(commonMain)` на кастомном промежуточном source set ломает native metadata resolver (ошибки `Expected X has no actual declaration for Native`).
+- **Образец** для любого нового промежуточного source set — `appleMain`: он создаётся автоматически иерархическим шаблоном, не прописан вручную в `sourceSets { }`.
+- **`jvm("desktop")`** не создаёт `jvmMain` автоматически. Чтобы `jvmMain` стал промежуточным родителем `androidMain` и `desktopMain`, нужен `applyHierarchyTemplate` с `group("jvm") { withAndroidTarget(); withJvm() }`.
+- **Доступ к промежуточному source set** через `sourceSets.named("jvmMain")` вместо extension property `jvmMain` — иначе KGP выдаёт warning «Source Set used with custom target name».
