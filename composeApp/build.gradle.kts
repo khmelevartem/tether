@@ -104,12 +104,17 @@ kotlin {
             implementation(libs.androidx.activity.compose)
         }
 
-        jvmMain.dependencies {
-            // Ktor server is JVM-only; no Kotlin/Native publication exists for ktor-server-*
-            // Shared between Android and Desktop JVM targets
-            implementation(libs.ktor.server.core)
-            implementation(libs.ktor.server.cio)
-            implementation(libs.ktor.server.content.negotiation)
+        // Access via name to avoid "Source Set used with custom target name" KGP warning.
+        // jvmMain is intentionally created as an intermediate source set by applyHierarchyTemplate
+        // (not as the leaf for jvm("desktop")), hence the mismatch the warning detects.
+        sourceSets.named("jvmMain") {
+            dependencies {
+                // Ktor server is JVM-only; no Kotlin/Native publication exists for ktor-server-*
+                // Shared between Android and Desktop JVM targets
+                implementation(libs.ktor.server.core)
+                implementation(libs.ktor.server.cio)
+                implementation(libs.ktor.server.content.negotiation)
+            }
         }
 
         val desktopMain by getting {
