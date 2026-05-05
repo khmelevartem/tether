@@ -20,12 +20,13 @@ Two doc trees in this repo:
 The project follows KMP best practices with platform-specific and shared code:
 
 - **commonMain**: Shared Kotlin code (UI with Compose Multiplatform, network protocol, file client)
-- **Platform-specific sources**: `androidMain/`, `iosMain/`, `macosMain/`, `jvmMain/`, `appleMain/` (iOS + macOS shared code)
+- **Platform-specific sources**: `androidMain/`, `iosMain/`, `macosMain/`, `jvmMain/`, `desktopMain/`, `appleMain/` (iOS + macOS shared code)
+- **Source set hierarchy**: `jvmMain` is the intermediate parent for both `androidMain` and `desktopMain` (configured via `applyHierarchyTemplate` in `build.gradle.kts`)
 - **Core components**:
   - `protocol/Device.kt` — Protocol definitions for device identification and serialization
-  - `network/FileServer.kt` — Ktor-based HTTP server (JVM only, in desktopMain/jvmMain)
+  - `network/FileServer.kt` — Ktor-based HTTP server (in `jvmMain`, shared Android + Desktop)
   - `network/FileClient.kt` — HTTP client for file transfer (shared)
-  - `discovery/MdnsDiscovery.kt` — Platform-specific mDNS service discovery (implementations in androidMain, appleMain, jvmMain)
+  - `discovery/MdnsDiscovery.kt` — Platform-specific mDNS service discovery (implementations in androidMain, appleMain, desktopMain)
   - `App.kt` — Compose Multiplatform UI entry point
   - Platform adapters (Platform.kt + platform-specific implementations)
 
@@ -101,8 +102,8 @@ curl http://localhost:{port}/health  # → "Tether OK"
 Запускай тесты на конкретный модуль или класс, только когда видишь реальную пользу сэкономить немного времени, или когда точно знаешь, что какой-то таргет еще не доделан.
 
 ```bash
-./gradlew :composeApp:jvmTest -q    # JVM tests only
-./gradlew :composeApp:commonTest -q # Common tests only
+./gradlew :composeApp:desktopTest -q # Desktop JVM tests only
+./gradlew :composeApp:commonTest -q  # Common tests only
 ```
 
 **Single test class**
@@ -110,7 +111,7 @@ curl http://localhost:{port}/health  # → "Tether OK"
 Как и предыдущий пункт, должна быть явная причина запустить именно отдельный тест.
 
 ```bash
-./gradlew :composeApp:jvmTest --tests "com.tubetoast.tether.network.FileServerTest"
+./gradlew :composeApp:desktopTest --tests "com.tubetoast.tether.network.FileServerTest"
 ```
 
 ### Build Troubleshooting
@@ -127,11 +128,11 @@ composeApp/src/
 ├── commonTest/          # Common tests
 ├── androidMain/         # Android-specific (mDNS implementation)
 ├── iosMain/             # iOS-specific
-├── jvmMain/             # Desktop JVM (contains FileServer, CLI Main.kt)
-├── jvmTest/             # JVM tests (FileServerTest)
+├── appleMain/           # iOS + macOS shared (mDNS implementation)
 ├── macosMain/           # macOS-specific
-├── desktopMain/         # Desktop-specific shared code
-└── appleMain/           # iOS + macOS shared (mDNS implementation)
+├── jvmMain/             # Shared JVM: FileServer, FileClientJvm (parent of androidMain + desktopMain)
+├── desktopMain/         # Desktop JVM leaf: CLI Main.kt, MdnsDiscovery.jvm, Platform.jvm
+└── desktopTest/         # Desktop JVM tests (FileServerTest, FileClientTest, MdnsDiscoveryTest)
 ```
 
 ## CI/CD
@@ -145,14 +146,14 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on all pushes and PRs to main:
 - **mDNS Discovery**: Platform-specific implementations required (Bonjour on Apple, Jmmdns stub on JVM, platform APIs on Android)
 - **File Server**: Ktor-based, JVM-only (desktop debug runner). Listen logic in FileServer.kt
 - **Protocol Serialization**: Device.kt uses kotlinx.serialization for peer identification
-- **Compose for All Targets**: UI code in commonMain; platform-specific initialization in androidMain/iosMain/macosMain/jvmMain
+- **Compose for All Targets**: UI code in commonMain; platform-specific initialization in androidMain/iosMain/macosMain/desktopMain
 - **CLI Arguments**: Desktop runner accepts `--name` and `--port` via Clikt framework
 
 ## Testing Strategy
 
 **Тесты обязательны.** При реализации любой функциональности пиши тесты — unit и/или интеграционные. Ориентируйся на краевые случаи из описания задачи (issue).
 
-- **JVM tests** (`jvmTest/`): Server и network интеграционные тесты
+- **Desktop JVM tests** (`desktopTest/`): Server и network интеграционные тесты
 - **Common tests** (`commonTest/`): протокол и shared-логика
 - Стиль: `kotlin.test`, `runBlocking` для корутин, `withTimeout` для сетевых/асинхронных тестов
 
