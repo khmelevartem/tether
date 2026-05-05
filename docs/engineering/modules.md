@@ -4,7 +4,8 @@ How the code is organized today, where it's headed, and what triggers each step.
 
 ## Current state
 
-All code lives in a single Gradle module: `:composeApp`. Source sets follow the standard KMP hierarchy:
+All code lives in a single Gradle module: `:composeApp`. Source sets follow a custom KMP
+hierarchy (configured via `applyHierarchyTemplate` in `build.gradle.kts`):
 
 ```
 composeApp/src/
@@ -14,9 +15,14 @@ composeApp/src/
 ├── iosMain/         MainViewController, Platform.ios
 ├── appleMain/       MdnsDiscovery.apple (stub)
 ├── macosMain/       Platform.macos
-├── jvmMain/         Main.kt (CLI), FileServer, FileClientJvm, MdnsDiscovery.jvm, Platform.jvm
-└── jvmTest/         FileServerTest, FileClientTest, MdnsDiscoveryTest
+├── jvmMain/         FileServer, FileClientJvm           ← shared Android + Desktop JVM
+├── desktopMain/     Main.kt (CLI), MdnsDiscovery.jvm, Platform.jvm  ← Desktop JVM leaf
+└── desktopTest/     FileServerTest, FileClientTest, MdnsDiscoveryTest
 ```
+
+Hierarchy: `jvmMain` is the intermediate parent for both `androidMain` and `desktopMain`,
+enabling shared JVM code (Ktor server) to be visible to both without leaking
+desktop-only dependencies (Clikt, JmDNS, Compose Desktop) into Android.
 
 This is fine *for now*. Layers are visually distinguishable (protocol / discovery / network / UI / platform / cli). The cost is also real: nothing prevents UI code from importing `FileServer` directly, and a change in any layer rebuilds everything.
 
