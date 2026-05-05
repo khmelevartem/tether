@@ -163,11 +163,5 @@ When reviewing a PR, follow the process in [`.claude/commands/code-review.md`](.
 
 ## Worktree и окружение
 
-При работе в git worktree (`.claude/worktrees/*`) скопируй `local.properties` из корня репозитория в директорию worktree — иначе pre-push хук (`./gradlew allTests`) не найдёт Android SDK и заблокирует push:
-
-```bash
-cp /path/to/repo/local.properties /path/to/worktree/local.properties
-```
-
 **Важно: редактируй файлы только в worktree, не в корне репозитория.**
 Перед первым Edit убедись, что путь ведёт в `.claude/worktrees/<branch>/`, а не в корень проекта. Ошибка в пути приведёт к правке основной ветки в обход ревью.
