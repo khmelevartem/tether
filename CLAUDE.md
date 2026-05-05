@@ -76,8 +76,13 @@ curl http://localhost:{port}/health  # → "Tether OK"
 ```
 
 **macOS app (requires Apple Silicon Mac)**
+
+`macosArm64` target compiles to a native binary but has no standalone run task.
+Launch via IDE run configuration (Android Studio / IntelliJ / Fleet) or Xcode.
+
+To verify mDNS publishing without UI:
 ```bash
-./gradlew :composeApp:runReleaseExecutableMacosArm64
+dns-sd -B _tether._tcp.   # watch for _tether._tcp. services
 ```
 
 **iOS**
@@ -91,7 +96,7 @@ curl http://localhost:{port}/health  # → "Tether OK"
 
 **Run all tests**
 
-В стандартном цикле разработки запускай все тесты, чтобы проверить, не отломался ли какой-то таргет.
+В стандартном цикле разработки запускай все тесты, чтобы проверить, не отломался ли какой-то таргет. Это обязательно перед commit/push и при завершении любого feature branch.
 
 ```bash
 ./gradlew allTests -q
