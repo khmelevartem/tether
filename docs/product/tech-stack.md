@@ -18,7 +18,7 @@
 | UI | Compose Multiplatform | Single UI tree across all targets; matches the "single visual language" choice in [design.md](design.md). Experimental on macOS but viable for our scope |
 | HTTP server | Ktor (CIO engine, JVM-only) | Same async/coroutine model as the rest of the stack; simpler than embedded Jetty/Netty for our use; no Native publication needed since the server side is currently JVM-only |
 | HTTP client | Ktor (CIO) | Shared client across all targets; common API, no per-platform glue |
-| Service discovery | mDNS, per-platform | Android NSD (`androidMain`), JmDNS (`jvmMain` for Windows + Linux), NSNetService via `appleMain` for iOS + macOS. mDNS is the only cross-platform option that's installed and reachable on all OSes by default |
+| Service discovery | mDNS, per-platform | Android NSD (`androidMain`), JmDNS (`desktopMain` for Windows + Linux), NSNetService via `appleMain` for iOS + macOS. mDNS is the only cross-platform option that's installed and reachable on all OSes by default |
 | Serialization | kotlinx.serialization (JSON) | Multiplatform, compile-time, no reflection. Used for protocol messages in `protocol/Device.kt` |
 | CLI | Clikt (JVM only) | Argument parsing for the desktop debug runner (`--name`, `--port`) |
 | Build | Gradle 8 + Kotlin 2.x, Java 21 (Temurin) | Configuration cache and build cache enabled |
@@ -38,12 +38,11 @@ For implementation-side guidance — module layout, layering principles, and DI 
 #### Options on the table
 
 1. **Per-platform server `actual` implementations.** Common `expect class FileServer` with platform-specific implementations:
-   - JVM (Windows/Linux): keep Ktor.
-   - Android: NanoHTTPD (mature Java lib that runs on Android out of the box).
+   - Desktop (Windows/Linux) + Android: Ktor CIO, shared via a `jvmMain` intermediate source set. Ktor CIO publishes an Android artifact and runs on ART — no separate library needed.
    - iOS / macOS: GCDWebServer via cinterop, or build on top of Apple's `Network.framework`.
 
-   *Pros:* uses well-tested platform-native servers, predictable behavior.
-   *Cons:* three different codebases for one role, three different bug surfaces, more cinterop work for Apple targets.
+   *Pros:* Ktor on four of five targets (only Apple needs a different implementation), one server codebase for the `jvmMain` family.
+   *Cons:* still two codebases for one role (`jvmMain` vs Apple Native), cinterop work for Apple targets.
 
 2. **Custom minimal HTTP server in `commonMain` over `kotlinx-io` / sockets.** Roll our own ~200-500-line HTTP server. We control exactly which features we use (we don't need most of HTTP).
 
@@ -57,9 +56,23 @@ For implementation-side guidance — module layout, layering principles, and DI 
 
 4. **Drop the symmetry — one direction per pair.** E.g. "phone always sends, laptop always receives." Rejected: contradicts the "any device sends to any device" principle in [vision.md](vision.md).
 
-**Tentative direction:** option 1 (per-platform `actual`s) is the safe default and what we plan for unless option 3 lands first. Decision is deferred to the issue that picks up the Android/iOS receiver work — track Ktor Native server status before committing to option 1.
+**Tentative direction:** option 1 with the `jvmMain` intermediate source set — Ktor CIO shared between Android and Desktop, Apple targets get their own `actual`. Track Ktor Native server status before implementing the Apple side; if it lands before we get there, option 3 becomes viable for Apple targets too.
 
-Acceptable for now because the JVM server is the reference implementation we test the protocol against; mobile receivers come online when their issues are scheduled.
+Acceptable for now because the Desktop JVM server is the reference implementation we test the protocol against; mobile receivers come online when their issues are scheduled.
+
+#### Source set layout (target state)
+
+```
+commonMain
+├── jvmMain      ← Ktor CIO server (Android + Desktop)
+│   ├── androidMain  ← NSD discovery
+│   └── desktopMain  ← JmDNS discovery, CLI (Windows + Linux)
+└── appleMain    ← NSNetService discovery, server actual (iOS + macOS Native)
+    ├── iosMain
+    └── macosMain
+```
+
+Linux ships in `desktopMain` alongside Windows — same JVM target, same APIs. No separate Native target for Linux.
 
 ### mDNS over BLE / Wi-Fi Direct / hand-typed addresses
 
@@ -102,4 +115,4 @@ Acceptable for now because the JVM server is the reference implementation we tes
 - **macOS:** Apple Silicon only (`macosArm64`). Intel support (`macosX64()`) is cheap to add — one line in `kotlin { ... }`, plus a small permanent build/test/release tax (extra compile cycle, extra artifact in releases). Skipped now because the Intel Mac population among target users is small and shrinking; revisit when an actual user reports it.
 - **Java 21 (Temurin)** for Windows (JVM) and the build itself.
 - **Compose on macOS is experimental** — accepted; flagged in build configuration.
-- **Ktor server is JVM-only.** No `ktor-server-*` Kotlin/Native publication exists. Receiver implementation on Android and iOS needs a different mechanism.
+- **Ktor server is JVM-only (Native).** No `ktor-server-*` Kotlin/Native publication exists. Ktor CIO *does* run on Android (ART-compatible). Apple targets (iOS, macOS) need a different server mechanism — see options above.
