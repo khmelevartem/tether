@@ -15,6 +15,39 @@ kotlin {
         freeCompilerArgs.add("-Xexpect-actual-classes")
     }
 
+    // Custom hierarchy template to create jvmMain as an intermediate source set
+    // shared by androidMain and desktopMain. Without this, jvm("desktop") and
+    // androidTarget() would each connect directly to commonMain with no shared JVM layer.
+    //
+    // Result:
+    //   commonMain
+    //   ├── jvmMain          ← shared JVM code (FileServer, FileClientJvm, future shared logic)
+    //   │   ├── androidMain  ← Android-specific code
+    //   │   └── desktopMain  ← Desktop JVM code (mDNS, Clikt CLI, Compose Desktop)
+    //   └── nativeMain
+    //       └── appleMain    ← Apple-specific code (NSNetService mDNS)
+    //           ├── iosMain
+    //           └── macosMain
+    applyHierarchyTemplate {
+        common {
+            group("jvm") {
+                withAndroidTarget()
+                withJvm()
+            }
+            group("native") {
+                group("apple") {
+                    group("macos") {
+                        withMacosArm64()
+                    }
+                    group("ios") {
+                        withIosArm64()
+                        withIosSimulatorArm64()
+                    }
+                }
+            }
+        }
+    }
+
     androidTarget {
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_11)
@@ -35,12 +68,16 @@ kotlin {
     // macosX64 is deprecated in Kotlin 2.3 — add it back if Intel Mac support is needed.
     macosArm64()
 
-    jvm()
+    // jvm("desktop") creates desktopMain as the leaf source set for the Desktop JVM target.
+    // Combined with the custom hierarchy above, jvmMain becomes the intermediate parent
+    // for both androidMain and desktopMain.
+    jvm("desktop")
 
     sourceSets {
-        // The default KMP hierarchy template automatically creates:
+        // The custom hierarchy above creates:
         //   appleMain (iosMain + macosMain) → nativeMain → commonMain
-        // src/appleMain/ is picked up by the appleMain source set.
+        //   jvmMain (androidMain + desktopMain) → commonMain
+        // src/appleMain/ and src/jvmMain/ are picked up by their respective source sets.
 
         commonMain.dependencies {
             implementation(libs.compose.runtime)
@@ -68,22 +105,30 @@ kotlin {
         }
 
         jvmMain.dependencies {
-            implementation(compose.desktop.currentOs)
-            implementation(libs.kotlinx.coroutinesSwing)
-            implementation(libs.jmdns)
-            implementation(libs.clikt)
             // Ktor server is JVM-only; no Kotlin/Native publication exists for ktor-server-*
+            // Shared between Android and Desktop JVM targets
             implementation(libs.ktor.server.core)
             implementation(libs.ktor.server.cio)
             implementation(libs.ktor.server.content.negotiation)
         }
 
-        jvmTest.dependencies {
-            implementation(libs.kotlin.testJunit)
-            implementation(libs.ktor.client.core)
-            implementation(libs.ktor.client.cio)
-            implementation(libs.ktor.client.content.negotiation)
-            implementation(libs.ktor.serialization.kotlinx.json)
+        val desktopMain by getting {
+            dependencies {
+                implementation(compose.desktop.currentOs)
+                implementation(libs.kotlinx.coroutinesSwing)
+                implementation(libs.jmdns)
+                implementation(libs.clikt)
+            }
+        }
+
+        val desktopTest by getting {
+            dependencies {
+                implementation(libs.kotlin.testJunit)
+                implementation(libs.ktor.client.core)
+                implementation(libs.ktor.client.cio)
+                implementation(libs.ktor.client.content.negotiation)
+                implementation(libs.ktor.serialization.kotlinx.json)
+            }
         }
     }
 }
