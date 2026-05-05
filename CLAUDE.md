@@ -158,7 +158,7 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on all pushes and PRs to main:
 
 ## Code Review
 
-When reviewing a PR, follow the process in [`.claude/code-review.md`](.claude/code-review.md).
+When reviewing a PR, follow the process in [`.claude/commands/code-review.md`](.claude/commands/code-review.md).
 
 ## Worktree и окружение
 
