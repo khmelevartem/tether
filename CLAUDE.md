@@ -148,7 +148,7 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on all pushes and PRs to main:
 
 ## Key Development Notes
 
-- **mDNS Discovery**: Platform-specific implementations required (Bonjour on Apple, Jmmdns stub on JVM, platform APIs on Android)
+- **mDNS Discovery**: Platform-specific implementations required (Bonjour on Apple, JmDNS on JVM/Desktop, NsdManager on Android)
 - **File Server**: Ktor-based, JVM-only (desktop debug runner). Listen logic in FileServer.kt
 - **Protocol Serialization**: Device.kt uses kotlinx.serialization for peer identification
 - **Compose for All Targets**: UI code in commonMain; platform-specific initialization in androidMain/iosMain/macosMain/desktopMain
@@ -161,6 +161,11 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on all pushes and PRs to main:
 - **Desktop JVM tests** (`desktopTest/`): Server и network интеграционные тесты
 - **Common tests** (`commonTest/`): протокол и shared-логика
 - Стиль: `kotlin.test`, `runBlocking` для корутин, `withTimeout` для сетевых/асинхронных тестов
+- **Apple targets** (`appleTest/`): NSRunLoop нужно качать вручную — подробнее в [`docs/knowledge/apple-platform.md`](docs/knowledge/apple-platform.md).
+
+## Knowledge base
+
+[`docs/knowledge/`](docs/knowledge/) — база уже решённых проблем. Если сталкиваешься с чем-то непонятным, особенно на Apple-таргетах или в специфике платформы — загляни туда сначала: вероятно, мы это уже разбирали.
 
 ## Code Review
 

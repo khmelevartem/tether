@@ -106,7 +106,45 @@ If a component is supposed to be a singleton (`HttpClient`, `FileServer`, `MdnsD
 
 The composition root is the only place that knows lifecycles. Everywhere else, you receive what's already alive.
 
-### 5. Don't introduce an interface for one implementation
+### 5. Don't instantiate dependencies inside composables
+
+❌
+```kotlin
+@Composable
+fun MainViewController() = ComposeUIViewController {
+    val discovery = MdnsDiscovery()   // wrong — new instance on every recomposition
+    DisposableEffect(Unit) {
+        discovery.start(...)
+        onDispose { discovery.stop() }
+    }
+}
+```
+
+This is a DI violation: the composable is acting as a composition root. It creates a dependency itself instead of receiving it.
+
+Two problems:
+1. `DisposableEffect(Unit)` runs once, capturing the instance from the first composition. On every recomposition, a new `MdnsDiscovery()` is created and immediately discarded — never started, never stopped. Memory leak.
+2. Even with `remember { MdnsDiscovery() }` to fix the leak, the composable still owns the lifecycle of a singleton — it shouldn't.
+
+✅ The correct shape (Phase 1): build `MdnsDiscovery` in the platform entry point, pass it into the composable.
+
+```kotlin
+// iosMain — MainViewController.kt (platform entry point = composition root)
+fun MainViewController(): UIViewController {
+    val discovery = MdnsDiscovery()   // created here, owned here
+    return ComposeUIViewController {
+        DisposableEffect(Unit) {
+            discovery.start(UIDevice.currentDevice.name, port = 8080)
+            onDispose { discovery.stop() }
+        }
+        App(discovery = discovery)    // passed as parameter
+    }
+}
+```
+
+When `AppGraph` lands, `MainViewController` will receive the graph and extract `discovery` from it. The composable itself never calls a constructor.
+
+### 6. Don't introduce an interface for one implementation
 
 This rule contradicts the cargo-cult version of Clean Architecture. We follow it consciously (see [architecture-principles.md](architecture-principles.md)). An interface earns its place when:
 
@@ -115,7 +153,7 @@ This rule contradicts the cargo-cult version of Clean Architecture. We follow it
 
 A `FileTransferRepository` interface with one `FileTransferRepositoryImpl` adds noise, not safety.
 
-### 6. Test seams use fakes, not mocks of `HttpClient`
+### 7. Test seams use fakes, not mocks of `HttpClient`
 
 When you do need to test a class that depends on `HttpClient`, prefer Ktor's `MockEngine` or a hand-rolled fake — don't introduce a `HttpClientWrapper` interface just to mock it. Same logic for `MdnsDiscovery`: fake the `Flow<List<Device>>` it exposes, don't abstract the platform API behind another layer.
 
