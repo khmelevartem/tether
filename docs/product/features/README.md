@@ -20,7 +20,7 @@ Note on `Status` here vs. GitHub Issues: an issue can exist (and even be in prog
 
 | Feature | Area | Status | Doc | Issues |
 |---------|------|--------|-----|--------|
-| mDNS peer discovery | Discovery | in progress | _tbd_ | #6 (iOS/macOS) |
+| mDNS peer discovery | Discovery | done | _tbd_ | #6 (iOS/macOS) |
 | Pairing — key exchange & TrustedDeviceStore | Pairing | idea | _tbd_ | #9 |
 | Pairing — handshake & PIN computation | Pairing | idea | _tbd_ | #10 |
 | Pairing — Android PIN confirmation UI | Pairing | idea | _tbd_ | #11 |
