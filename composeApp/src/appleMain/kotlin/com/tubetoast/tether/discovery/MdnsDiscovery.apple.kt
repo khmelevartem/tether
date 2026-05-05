@@ -21,7 +21,12 @@ actual class MdnsDiscovery actual constructor() {
     private var netService: NSNetService? = null
     private var browser: NSNetServiceBrowser? = null
     private var ownServiceName: String? = null
+
+    // Strong references to delegates — ObjC delegate properties are weak, so without
+    // these Kotlin fields the delegates would be GC'd before their callbacks fire.
+    private var serviceDelegate: ServiceDelegate? = null
     private var browserDelegate: BrowserDelegate? = null
+    private val resolutionDelegates = mutableListOf<ResolutionDelegate>()
 
     actual fun start(deviceName: String, port: Int) {
         if (netService != null || browser != null) {
@@ -38,6 +43,7 @@ actual class MdnsDiscovery actual constructor() {
         )
 
         val delegate = ServiceDelegate(this)
+        serviceDelegate = delegate
         service.delegate = delegate
         service.publish()
         netService = service
@@ -71,7 +77,9 @@ actual class MdnsDiscovery actual constructor() {
         netService = null
         browser = null
         ownServiceName = null
+        serviceDelegate = null
         browserDelegate = null
+        resolutionDelegates.clear()
         _discoveredDevices.value = emptyList()
 
         NSLog("mDNS: stopped")
@@ -86,6 +94,7 @@ actual class MdnsDiscovery actual constructor() {
 
         NSLog("mDNS: found service %s, resolving...", serviceName)
         val delegate = ResolutionDelegate(this, serviceName)
+        resolutionDelegates.add(delegate)
         service.delegate = delegate
         service.resolveWithTimeout(5.0)
     }
