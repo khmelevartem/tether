@@ -51,6 +51,10 @@ Tether is a multiplatform project (Kotlin Multiplatform) supporting Android, iOS
 - **Platform parity**: If one platform gets a feature, check if other platforms need corresponding implementations to satisfy the `expect/actual` contract in `commonMain/`.
 - **No regressions**: Changes to platform-specific code shouldn't break the build or runtime behavior of other platforms.
 
+**Apple-specific checks** (apply when diff touches `appleMain/`, `iosMain/`, `macosMain/`):
+- **ObjC delegate GC**: every ObjC object whose `.delegate` is set must have a matching Kotlin strong reference (a class field). ObjC `delegate` properties are `weak`; without a strong ref the Kotlin object is GC'd before callbacks fire. See `docs/knowledge/apple-platform.md`.
+- **iOS Local Network Privacy**: if the feature uses local network / mDNS / Bonjour, verify `iosApp/iosApp/Info.plist` has `NSLocalNetworkUsageDescription` and `NSBonjourServices`. Missing these causes silent failure on device (works in simulator).
+
 **Example findings:**
 - `[REQUIRED]` `serviceInfo.host` is deprecated on API 34+; add version check with `Build.VERSION.SDK_INT >= UPSIDE_DOWN_CAKE`.
 - `[REQUIRED]` New feature added to `androidMain/` but `expect` declaration in `commonMain/` has no matching `actual` for `iosMain/` — add stub or full implementation.
