@@ -76,8 +76,13 @@ curl http://localhost:{port}/health  # → "Tether OK"
 ```
 
 **macOS app (requires Apple Silicon Mac)**
+
+`macosArm64` target compiles to a native binary but has no standalone run task.
+Launch via IDE run configuration (Android Studio / IntelliJ / Fleet) or Xcode.
+
+To verify mDNS publishing without UI:
 ```bash
-./gradlew :composeApp:runReleaseExecutableMacosArm64
+dns-sd -B _tether._tcp.   # watch for _tether._tcp. services
 ```
 
 **iOS**
