@@ -91,7 +91,7 @@ curl http://localhost:{port}/health  # → "Tether OK"
 
 **Run all tests**
 
-В стандартном цикле разработки запускай все тесты, чтобы проеврить, не отломался ли какой-то таргет.
+В стандартном цикле разработки запускай все тесты, чтобы проверить, не отломался ли какой-то таргет.
 
 ```bash
 ./gradlew allTests -q
@@ -160,3 +160,8 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on all pushes and PRs to main:
 ## Code Review
 
 When reviewing a PR, follow the process in [`.claude/commands/code-review.md`](.claude/commands/code-review.md).
+
+## Worktree и окружение
+
+**Важно: редактируй файлы только в worktree, не в корне репозитория.**
+Перед первым Edit убедись, что путь ведёт в `.claude/worktrees/<branch>/`, а не в корень проекта. Ошибка в пути приведёт к правке основной ветки в обход ревью.
