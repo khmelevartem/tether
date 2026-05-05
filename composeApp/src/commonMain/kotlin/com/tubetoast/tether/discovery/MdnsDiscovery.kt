@@ -1,10 +1,10 @@
 package com.tubetoast.tether.discovery
 
 import com.tubetoast.tether.protocol.Device
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 
 expect class MdnsDiscovery() {
-    val discoveredDevices: Flow<List<Device>>
+    val discoveredDevices: StateFlow<List<Device>>
 
     fun start(deviceName: String, port: Int)
 

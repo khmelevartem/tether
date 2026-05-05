@@ -7,8 +7,8 @@ import android.os.Build
 import android.util.Log
 import com.tubetoast.tether.TetherApp
 import com.tubetoast.tether.protocol.Device
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.util.concurrent.ConcurrentLinkedQueue
 
@@ -17,7 +17,7 @@ private const val TAG = "MdnsDiscovery"
 
 actual class MdnsDiscovery actual constructor() {
     private val _discoveredDevices = MutableStateFlow<List<Device>>(emptyList())
-    actual val discoveredDevices: Flow<List<Device>> = _discoveredDevices.asStateFlow()
+    actual val discoveredDevices: StateFlow<List<Device>> = _discoveredDevices.asStateFlow()
 
     @Volatile private var nsdManager: NsdManager? = null
 

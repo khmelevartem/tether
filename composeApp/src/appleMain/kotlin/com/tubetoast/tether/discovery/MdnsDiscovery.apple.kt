@@ -2,8 +2,8 @@ package com.tubetoast.tether.discovery
 
 import com.tubetoast.tether.protocol.Device
 import kotlinx.cinterop.ObjCSignatureOverride
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import platform.Foundation.NSLog
 import platform.Foundation.NSNetService
@@ -14,9 +14,15 @@ import platform.darwin.NSObject
 
 private const val SERVICE_TYPE = "_tether._tcp."
 
+// Thread-safety note: NSNetService and NSNetServiceBrowser must be created and used on
+// the thread that owns their run loop. All callbacks (didPublish, didFind, didResolve)
+// are delivered on that same run loop thread. As long as start() and stop() are called
+// from the same thread (main thread via DisposableEffect in Compose), all accesses to
+// mutable state are single-threaded — no @Synchronized or @Volatile needed.
+// @Synchronized is a JVM-only annotation and is not available in Kotlin/Native.
 actual class MdnsDiscovery actual constructor() {
     private val _discoveredDevices = MutableStateFlow<List<Device>>(emptyList())
-    actual val discoveredDevices: Flow<List<Device>> = _discoveredDevices.asStateFlow()
+    actual val discoveredDevices: StateFlow<List<Device>> = _discoveredDevices.asStateFlow()
 
     private var netService: NSNetService? = null
     private var browser: NSNetServiceBrowser? = null
