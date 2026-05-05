@@ -208,7 +208,7 @@ actual class MdnsDiscovery actual constructor() {
             NSLog("mDNS: browser search failed")
         }
 
-        override fun netServiceBrowserDidStopSearch(aNetServiceBrowser: NSNetServiceBrowser) {
+        override fun netServiceBrowserDidStopSearch(browser: NSNetServiceBrowser) {
             NSLog("mDNS: browser stopped")
         }
     }
