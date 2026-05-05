@@ -1,12 +1,16 @@
 package com.tubetoast.tether.discovery
 
 import com.tubetoast.tether.protocol.Device
+import kotlinx.cinterop.ObjCSignatureOverride
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import platform.Foundation.NSLog
 import platform.Foundation.NSNetService
 import platform.Foundation.NSNetServiceBrowser
+import platform.Foundation.NSNetServiceBrowserDelegateProtocol
+import platform.Foundation.NSNetServiceDelegateProtocol
+import platform.darwin.NSObject
 
 private const val SERVICE_TYPE = "_tether._tcp."
 
@@ -34,8 +38,7 @@ actual class MdnsDiscovery actual constructor() {
         )
 
         val delegate = ServiceDelegate(this)
-        @Suppress("UNCHECKED_CAST", "TYPE_MISMATCH")
-        service.delegate = delegate as platform.Foundation.NSNetServiceDelegateProtocol
+        service.delegate = delegate
         service.publish()
         netService = service
 
@@ -45,8 +48,7 @@ actual class MdnsDiscovery actual constructor() {
         this.browserDelegate = browserDelegate
 
         val browser = NSNetServiceBrowser()
-        @Suppress("UNCHECKED_CAST", "TYPE_MISMATCH")
-        browser.delegate = browserDelegate as platform.Foundation.NSNetServiceBrowserDelegateProtocol
+        browser.delegate = browserDelegate
         browser.searchForServicesOfType(SERVICE_TYPE, inDomain = "")
         this.browser = browser
 
@@ -84,8 +86,7 @@ actual class MdnsDiscovery actual constructor() {
 
         NSLog("mDNS: found service %s, resolving...", serviceName)
         val delegate = ResolutionDelegate(this, serviceName)
-        @Suppress("UNCHECKED_CAST", "TYPE_MISMATCH")
-        service.delegate = delegate as platform.Foundation.NSNetServiceDelegateProtocol
+        service.delegate = delegate
         service.resolveWithTimeout(5.0)
     }
 
@@ -127,68 +128,89 @@ actual class MdnsDiscovery actual constructor() {
         NSLog("mDNS: failed to resolve service %s", serviceName)
     }
 
+    // NSNetService delegate: handles service publication and resolution callbacks.
+    // Kotlin/Native maps ObjC "method:arg1:arg2:" to fun method(arg1, arg2).
     private class ServiceDelegate(
         private val discovery: MdnsDiscovery,
-    ) {
-        fun netServiceDidPublish(sender: NSNetService) {
+    ) : NSObject(),
+        NSNetServiceDelegateProtocol {
+        override fun netServiceDidPublish(sender: NSNetService) {
             NSLog("mDNS: service published: %s", sender.name)
             discovery.ownServiceName = sender.name
         }
 
-        fun netServiceDidNotPublish(sender: NSNetService, errorDict: Map<*, *>) {
+        @ObjCSignatureOverride
+        @Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE")
+        override fun netService(sender: NSNetService, didNotPublish: Map<Any?, *>) {
             NSLog("mDNS: service publication failed: %s", sender.name)
         }
 
-        fun netServiceDidStop(sender: NSNetService) {
+        override fun netServiceDidStop(sender: NSNetService) {
             NSLog("mDNS: service stopped: %s", sender.name)
         }
 
-        fun netServiceDidResolveAddress(sender: NSNetService) {
+        override fun netServiceDidResolveAddress(sender: NSNetService) {
             discovery.onServiceResolved(sender)
         }
 
-        fun netServiceDidNotResolve(sender: NSNetService, errorDict: Map<*, *>) {
+        @ObjCSignatureOverride
+        @Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE")
+        override fun netService(sender: NSNetService, didNotResolve: Map<Any?, *>) {
             discovery.onServiceResolutionFailed(sender.name)
         }
     }
 
+    // NSNetServiceBrowser delegate: handles service discovery callbacks.
     private class BrowserDelegate(
         private val discovery: MdnsDiscovery,
-    ) {
-        fun netServiceBrowserDidFindService(
+    ) : NSObject(),
+        NSNetServiceBrowserDelegateProtocol {
+        @ObjCSignatureOverride
+        @Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE")
+        override fun netServiceBrowser(
             aNetServiceBrowser: NSNetServiceBrowser,
-            netService: NSNetService,
+            didFindService: NSNetService,
             moreComing: Boolean,
         ) {
-            discovery.onServiceFound(netService)
+            discovery.onServiceFound(didFindService)
         }
 
-        fun netServiceBrowserDidRemoveService(
+        @ObjCSignatureOverride
+        @Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE")
+        override fun netServiceBrowser(
             aNetServiceBrowser: NSNetServiceBrowser,
-            netService: NSNetService,
+            didRemoveService: NSNetService,
             moreComing: Boolean,
         ) {
-            discovery.onServiceRemoved(netService.name)
+            discovery.onServiceRemoved(didRemoveService.name)
         }
 
-        fun netServiceBrowserDidNotSearch(aNetServiceBrowser: NSNetServiceBrowser, errorDict: Map<*, *>) {
+        @Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE")
+        override fun netServiceBrowser(
+            aNetServiceBrowser: NSNetServiceBrowser,
+            didNotSearch: Map<Any?, *>,
+        ) {
             NSLog("mDNS: browser search failed")
         }
 
-        fun netServiceBrowserDidStopSearch(aNetServiceBrowser: NSNetServiceBrowser) {
+        override fun netServiceBrowserDidStopSearch(aNetServiceBrowser: NSNetServiceBrowser) {
             NSLog("mDNS: browser stopped")
         }
     }
 
+    // Separate delegate per discovered service to isolate resolution callbacks.
     private class ResolutionDelegate(
         private val discovery: MdnsDiscovery,
         private val serviceName: String,
-    ) {
-        fun netServiceDidResolveAddress(sender: NSNetService) {
+    ) : NSObject(),
+        NSNetServiceDelegateProtocol {
+        override fun netServiceDidResolveAddress(sender: NSNetService) {
             discovery.onServiceResolved(sender)
         }
 
-        fun netServiceDidNotResolve(sender: NSNetService, errorDict: Map<*, *>) {
+        @ObjCSignatureOverride
+        @Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE")
+        override fun netService(sender: NSNetService, didNotResolve: Map<Any?, *>) {
             discovery.onServiceResolutionFailed(serviceName)
         }
     }
