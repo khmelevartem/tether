@@ -2,6 +2,15 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Documentation
+
+Two doc trees in this repo:
+
+- [`docs/product/`](docs/product/README.md) — vision, audience, features, roadmap, monetization, design, security, competitors. Source of truth for *what* and *why*.
+- [`docs/engineering/`](docs/engineering/README.md) — architecture principles, module layout, dependency injection rules. Source of truth for *how* code should be written.
+
+**Before implementing anything non-trivial:** read [`docs/engineering/dependency-injection.md`](docs/engineering/dependency-injection.md) — it contains a "does my code fit?" checklist (constructor injection, no global context lookups, no premature interfaces). Skim [`docs/engineering/architecture-principles.md`](docs/engineering/architecture-principles.md) and [`docs/engineering/modules.md`](docs/engineering/modules.md) when the task touches layering, new components, or anything you'd be tempted to extract into a module.
+
 ## Project Overview
 
 **Tether** is a Kotlin Multiplatform (KMP) file transfer application targeting Android, iOS, macOS, and Desktop (JVM). It enables peer-to-peer file sharing using mDNS service discovery and a Ktor-based file server.
@@ -149,7 +158,7 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on all pushes and PRs to main:
 
 ## Code Review
 
-When reviewing a PR, follow the process in [`.claude/code-review.md`](.claude/code-review.md).
+When reviewing a PR, follow the process in [`.claude/commands/code-review.md`](.claude/commands/code-review.md).
 
 ## Worktree и окружение
 
