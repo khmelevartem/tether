@@ -1,59 +1,61 @@
 # [Feature Name]
 
-**Area:** <!-- e.g. Transfer, Discovery, UI, Settings -->
+**Area:** <!-- e.g. Transfer, Discovery, UI, Pairing, Settings -->
 **Status:** `idea` | `scoped` | `in progress` | `done` | `on hold`
 **GitHub Issues:** <!-- #42, #43 — filled in when issues are created -->
 
 ---
 
-## Problem
+> A feature spec describes **what the user gets and why**, not how it is built.
+> Implementation details — file paths, module layout, code contracts, gradle tasks —
+> belong in the GitHub Issue. If a section here starts to read like a how-to,
+> move that part to the issue.
 
-<!-- What user pain or need does this address?
-     Be concrete: what happens today without this feature? -->
+## Why
 
-## Solution
+<!-- The user pain or need this addresses. Anchor it in vision.md / audience.md
+     where useful. What can't the user do today, and why does that matter? -->
 
-<!-- What does Tether do to solve it?
-     Describe behavior from the user's perspective, not implementation. -->
+## What it does
 
-## User Stories
+<!-- Describe the feature the way you would explain it to a non-technical user
+     of Tether. Behaviour and outcomes, not code. No module names, no APIs. -->
 
-<!-- Format: "As a [user], I want to [action], so that [outcome]"
-     Include the primary flow and the most important edge cases. -->
+## User flows
 
-- As a user, I want to ...
+<!-- The primary flow as a sequence of user-visible steps and states.
+     Then the most important alternative paths and failure cases.
+     Optional: a small diagram or bulleted state list if it clarifies. -->
 
-## Acceptance Criteria
+**Primary flow**
 
-<!-- Specific, testable conditions that define "done".
-     Written as checkboxes so they can be used in GitHub Issues directly. -->
+1. ...
+2. ...
 
-- [ ] ...
-- [ ] ...
+**Alternative paths**
 
-## Edge Cases & Constraints
+- ...
 
-<!-- What could go wrong? What must NOT happen?
-     Network failures, large files, OS permission denials, etc. -->
+## What "working" looks like
+
+<!-- Observable, user-visible signs that the feature does its job —
+     the kind of thing a non-technical reviewer could verify by using the app.
+     Not gradle commands, not unit tests, not green CI. -->
+
+- ...
+- ...
+
+## Not in this feature
+
+<!-- Explicit boundary. Adjacent things that belong to other features
+     or to a later iteration. Helps prevent scope creep. -->
 
 -
 -
 
-## Out of Scope
+## Open product questions
 
-<!-- What this feature explicitly does NOT cover.
-     Prevents scope creep during implementation. -->
-
--
--
-
-## Technical Notes
-
-<!-- Optional. Hints for the implementer: known constraints, suggested approach,
-     things to watch out for. Not a design doc — just what's useful to know upfront. -->
-
-## Open Questions
-
-<!-- Unresolved decisions that need an answer before or during implementation. -->
+<!-- Unresolved decisions about user-facing behaviour.
+     Implementation choices (which library, which storage backend) live in the issue. -->
 
 -

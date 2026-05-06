@@ -21,12 +21,19 @@ Note on `Status` here vs. GitHub Issues: an issue can exist (and even be in prog
 | Feature | Area | Status | Doc | Issues |
 |---------|------|--------|-----|--------|
 | mDNS peer discovery | Discovery | done | _tbd_ | #6 (iOS/macOS) |
-| Pairing — key exchange & TrustedDeviceStore | Pairing | idea | _tbd_ | #9 |
+| Pairing — key exchange & trusted device memory | Pairing | scoped | [pairing-key-exchange.md](pairing-key-exchange.md) | #9 |
 | Pairing — handshake & PIN computation | Pairing | idea | _tbd_ | #10 |
 | Pairing — Android PIN confirmation UI | Pairing | idea | _tbd_ | #11 |
-| Device list screen | UI | idea | _tbd_ | #7 |
-| File transfer + progress UI | UI | idea | _tbd_ | #8 |
-| Streaming file server | Transfer | in progress | _tbd_ | #25 |
+| Pairing — iOS PIN confirmation UI | Pairing | idea | [ios-pairing-confirmation.md](ios-pairing-confirmation.md) (stub) | _tbd_ |
+| Android device list screen | UI | scoped | [android-device-list.md](android-device-list.md) | #7 |
+| Android file send + progress | UI | idea | _tbd_ | #8 |
+| iOS device list screen | UI | idea | [ios-device-list.md](ios-device-list.md) (stub) | _tbd_ |
+| iOS file send + progress | UI | idea | [ios-send-progress.md](ios-send-progress.md) (stub) | _tbd_ |
+| Desktop UI + CLI/UI entry-point split | UI / Platform | idea | [desktop-ui-and-cli-split.md](desktop-ui-and-cli-split.md) (stub) | _tbd_ |
+| Streaming file server | Transfer | in progress | [streaming-file-server.md](streaming-file-server.md) (stub) | #25 |
+| Multi-file transfer | Transfer | idea | [multi-file-transfer.md](multi-file-transfer.md) (stub) | _tbd_ |
+| Permissions strategy | Cross-platform / UX | idea | [permissions-strategy.md](permissions-strategy.md) (stub) | _tbd_ |
+| Device name bootstrapping | Onboarding | idea | [device-name-bootstrapping.md](device-name-bootstrapping.md) (stub) | _tbd_ |
 
 ---
 
