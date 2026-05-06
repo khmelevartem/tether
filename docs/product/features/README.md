@@ -37,8 +37,16 @@ Note on `Status` here vs. GitHub Issues: an issue can exist (and even be in prog
 | Pairing | Pairing / Security | scoped | [pairing.md](pairing.md) | #9 (key exchange), #10 (PIN + CLI), #11 (Android UI); iOS, Desktop UI _tbd_ |
 | Device list screen | UI | scoped | [device-list.md](device-list.md) | #7 (Android); iOS, Desktop _tbd_ |
 | File transfer | Transfer / UI | idea | [file-transfer.md](file-transfer.md) (stub) | #8 (Android send UI); iOS, Desktop, receive-side UI _tbd_ |
-| Permissions strategy | Cross-platform / UX | idea | [permissions-strategy.md](permissions-strategy.md) (stub) | _tbd_ |
 | Device name bootstrapping | Onboarding | idea | [device-name-bootstrapping.md](device-name-bootstrapping.md) (stub) | _tbd_ |
+
+### System integration
+
+Small, separate features about how Tether reacts to the OS state around it. Each is its own concern; the [`system/`](system/) subfolder groups them. Add a new spec here when a new system surface earns its own behaviour.
+
+| Feature | Status | Doc | Issues |
+|---------|--------|-----|--------|
+| Permissions | idea | [system/permissions.md](system/permissions.md) (stub) | _tbd_ |
+| Wi-Fi availability | idea | [system/wifi-availability.md](system/wifi-availability.md) (stub) | _tbd_ |
 
 ---
 
