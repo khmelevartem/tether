@@ -45,6 +45,18 @@
 - ...
 - ...
 
+## Platform notes
+
+<!-- Optional. Capture user-visible quirks per platform — and only those.
+     Examples: an OS permission prompt that appears on iOS but not Android;
+     a system picker shape that differs between platforms; a behaviour that
+     can't be replicated on one target.
+     Implementation differences (NSD vs JmDNS, view models, build tasks)
+     do NOT belong here — those live in the issue. If there are no
+     user-visible platform differences, remove this section entirely. -->
+
+-
+
 ## Not in this feature
 
 <!-- Explicit boundary. Adjacent things that belong to other features
