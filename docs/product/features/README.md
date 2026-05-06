@@ -12,11 +12,22 @@ Overview of all features. Click a feature to see its full spec.
 | `done` | Shipped |
 | `on hold` | Paused, reason noted in doc |
 
-## Features
+## What counts as one feature
 
-<!-- One row per product feature. Features are cross-platform by default —
-     a separate row per platform is wrong. Per-platform implementation
-     issues all go into the same row's "Issues" column. -->
+**One feature = one user-visible product capability.** A row in this table is a thing the user experiences as one. Multiple GitHub issues can implement the same feature — they go into the same row's "Issues" column, not into separate rows.
+
+**Don't split a feature along these axes:**
+
+- **Platform.** "Android device list" and "iOS device list" are not two features — they are one feature shipping on multiple platforms. Per-platform user-visible quirks live in the spec's `Platform notes` section.
+- **Implementation layer.** "File send UI" and "streaming server" are not two features — they are two halves of one transfer experience. The user does not see the seam.
+- **Implementation milestone.** "Pairing — key exchange", "PIN computation", "PIN UI" are not three features — they are three milestones of one pairing experience. None of them ships user value alone.
+- **Quantity / scale.** "Single-file send" and "multi-file send" are not two features — they are N≥1 of the same surface. Behaviour-under-conditions (parallel vs sequential, batch failure semantics) lives in `Open product questions`.
+
+**Quick test:** can the milestone / piece you are tempted to extract ship user-visible value on its own, *without* the rest? If no, it is a milestone, not a feature.
+
+If a piece does pass that test (e.g. *fan-out — one file to many peers*), it is a separate feature with its own row.
+
+## Features
 
 Note on `Status` here vs. GitHub Issues: an issue can exist (and even be in progress) before a feature doc is written. `scoped` in this table means "feature doc exists"; until then, a tracked feature shows `idea` or `in progress` and the doc column links to `_tbd_`.
 
@@ -31,5 +42,4 @@ Note on `Status` here vs. GitHub Issues: an issue can exist (and even be in prog
 
 ---
 
-*To add a feature: copy `_template.md`, fill it in, add a row here.*
-*Per-platform splits don't get separate rows — list all platform issues in the existing feature's Issues column.*
+*To add a feature: copy `_template.md`, fill it in, add a row here. Before writing, read «What counts as one feature» above.*
