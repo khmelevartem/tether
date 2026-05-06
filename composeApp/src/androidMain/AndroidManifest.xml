@@ -3,6 +3,9 @@
 
     <!-- Required by NsdManager on some OEM Android builds (e.g. OPPO/OnePlus ColorOS) -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Required to join multicast groups used by NSD/mDNS service discovery.
+         Also satisfies the "any-of" permission requirement for FGS type connectedDevice. -->
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
 
     <!-- Foreground service hosting Ktor FileServer + NSD discovery so the Android peer
          stays reachable while the app is backgrounded. -->
