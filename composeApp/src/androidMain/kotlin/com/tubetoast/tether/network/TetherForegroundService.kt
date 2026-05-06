@@ -15,6 +15,7 @@ import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import com.tubetoast.tether.R
 import com.tubetoast.tether.discovery.MdnsDiscovery
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -24,8 +25,11 @@ private const val CHANNEL_ID = "tether_foreground"
 internal const val ACTION_STOP = "com.tubetoast.tether.action.STOP"
 
 class TetherForegroundService : LifecycleService() {
-    private var server: FileServer? = null
-    private var discovery: MdnsDiscovery? = null
+    // @Volatile: written from IO coroutine (lifecycleScope.launch(Dispatchers.IO)),
+    // read from main thread in onStartCommand / onDestroy.
+    @Volatile private var server: FileServer? = null
+
+    @Volatile private var discovery: MdnsDiscovery? = null
 
     // Binder returned from onBind so MainActivity can check if the service is running
     // via bindService(intent, connection, flags=0) without BIND_AUTO_CREATE.
@@ -40,6 +44,11 @@ class TetherForegroundService : LifecycleService() {
             val srv = FileServer(port = 0, downloadsDir = downloadsDir)
             val port = try {
                 srv.start()
+            } catch (e: CancellationException) {
+                // Coroutine cancelled (e.g. user pressed Stop before server finished starting).
+                // Ensure the partially-started engine doesn't leak.
+                runCatching { srv.stop() }
+                throw e
             } catch (e: Exception) {
                 Log.e(TAG, "FileServer failed to start: ${e.message}", e)
                 stopForeground(STOP_FOREGROUND_REMOVE)
