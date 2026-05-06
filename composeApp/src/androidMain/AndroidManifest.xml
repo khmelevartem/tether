@@ -7,7 +7,9 @@
     <!-- Foreground service hosting Ktor FileServer + NSD discovery so the Android peer
          stays reachable while the app is backgrounded. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!-- connectedDevice: «link with another device over a network» — семантически точнее dataSync;
+         не имеет 6h/сутки-лимита Android 15+ который применяется к dataSync. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
@@ -31,7 +33,7 @@
         <service
             android:name=".network.TetherForegroundService"
             android:exported="false"
-            android:foregroundServiceType="dataSync" />
+            android:foregroundServiceType="connectedDevice" />
     </application>
 
 </manifest>

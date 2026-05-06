@@ -40,10 +40,14 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        ContextCompat.startForegroundService(
-            this,
-            Intent(this, TetherForegroundService::class.java),
-        )
+        // Don't restart if the user explicitly stopped the service via the notification action.
+        // The flag resets on process death, so the service starts again on the next app launch.
+        if (!TetherForegroundService.userStopped) {
+            ContextCompat.startForegroundService(
+                this,
+                Intent(this, TetherForegroundService::class.java),
+            )
+        }
 
         setContent {
             App()

@@ -13,6 +13,11 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.tubetoast.tether.R
 import com.tubetoast.tether.discovery.MdnsDiscovery
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 private const val TAG = "TetherFGService"
 private const val NOTIFICATION_ID = 1001
@@ -22,40 +27,46 @@ private const val ACTION_STOP = "com.tubetoast.tether.action.STOP"
 class TetherForegroundService : Service() {
     private var server: FileServer? = null
     private var discovery: MdnsDiscovery? = null
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     override fun onCreate() {
         super.onCreate()
         startForegroundCompat()
 
-        val downloadsDir = (getExternalFilesDir(null) ?: filesDir).resolve("Tether")
-        val srv = FileServer(port = 0, downloadsDir = downloadsDir)
-        val port = try {
-            srv.start()
-        } catch (e: Exception) {
-            Log.e(TAG, "FileServer failed to start: ${e.message}", e)
-            stopSelf()
-            return
-        }
-        server = srv
-        Log.i(TAG, "FileServer started on port $port, downloads → ${downloadsDir.absolutePath}")
+        scope.launch {
+            val downloadsDir = (getExternalFilesDir(null) ?: filesDir).resolve("Tether")
+            val srv = FileServer(port = 0, downloadsDir = downloadsDir)
+            val port = try {
+                srv.start()
+            } catch (e: Exception) {
+                Log.e(TAG, "FileServer failed to start: ${e.message}", e)
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
+                return@launch
+            }
+            server = srv
+            Log.i(TAG, "FileServer started on port $port, downloads → ${downloadsDir.absolutePath}")
 
-        val deviceName = "Tether-${Build.MODEL}"
-        val disc = MdnsDiscovery()
-        try {
-            disc.start(deviceName, port)
-            discovery = disc
-            Log.i(TAG, "mDNS started: name=$deviceName port=$port")
-        } catch (e: Exception) {
-            Log.e(TAG, "mDNS failed to start: ${e.message}", e)
-            srv.stop()
-            server = null
-            stopSelf()
+            val deviceName = "Tether-${Build.MODEL}"
+            val disc = MdnsDiscovery()
+            try {
+                disc.start(deviceName, port)
+                discovery = disc
+                Log.i(TAG, "mDNS started: name=$deviceName port=$port")
+            } catch (e: Exception) {
+                Log.e(TAG, "mDNS failed to start: ${e.message}", e)
+                srv.stop()
+                server = null
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
+            }
         }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
             Log.i(TAG, "Stop requested via notification action")
+            userStopped = true
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
             return START_NOT_STICKY
@@ -66,6 +77,7 @@ class TetherForegroundService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        scope.cancel()
         try {
             discovery?.stop()
         } catch (e: Exception) {
@@ -102,7 +114,11 @@ class TetherForegroundService : Service() {
                 stopPendingIntent,
             ).build()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+            startForeground(
+                NOTIFICATION_ID,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE,
+            )
         } else {
             startForeground(NOTIFICATION_ID, notification)
         }
@@ -118,5 +134,13 @@ class TetherForegroundService : Service() {
             NotificationManager.IMPORTANCE_LOW,
         )
         nm.createNotificationChannel(channel)
+    }
+
+    companion object {
+        // Process-level flag: set when user explicitly taps Stop.
+        // Resets on process death, so the service starts again on next app launch.
+        // Prevents configurationChange (rotation etc.) from silently restarting a stopped service.
+        var userStopped: Boolean = false
+            private set
     }
 }
