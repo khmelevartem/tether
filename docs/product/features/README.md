@@ -23,9 +23,7 @@ Note on `Status` here vs. GitHub Issues: an issue can exist (and even be in prog
 | Feature | Area | Status | Doc | Issues |
 |---------|------|--------|-----|--------|
 | mDNS peer discovery | Discovery | done | _tbd_ | #6 (iOS/macOS) |
-| Pairing — key exchange & trusted device memory | Pairing | scoped | [pairing-key-exchange.md](pairing-key-exchange.md) | #9 |
-| Pairing — handshake & PIN computation | Pairing | idea | _tbd_ | #10 |
-| Pairing — PIN confirmation UI | Pairing / UI | idea | [pairing-pin-confirmation.md](pairing-pin-confirmation.md) (stub) | #11 (Android); iOS, Desktop _tbd_ |
+| Pairing | Pairing / Security | scoped | [pairing.md](pairing.md) | #9 (key exchange), #10 (PIN + CLI), #11 (Android UI); iOS, Desktop UI _tbd_ |
 | Device list screen | UI | scoped | [device-list.md](device-list.md) | #7 (Android); iOS, Desktop _tbd_ |
 | File transfer | Transfer / UI | idea | [file-transfer.md](file-transfer.md) (stub) | #8 (Android send UI); iOS, Desktop, receive-side UI _tbd_ |
 | Multi-file transfer | Transfer | idea | [multi-file-transfer.md](multi-file-transfer.md) (stub) | _tbd_ |
