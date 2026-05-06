@@ -2,7 +2,7 @@
   "hooks": {
     "worktreeCreate": {
       "description": "Copy local.properties from repo root to new worktree",
-      "command": "bash -c 'REPO_ROOT=$(git rev-parse --show-toplevel); cp \"$REPO_ROOT/local.properties\" local.properties 2>/dev/null || true'"
+      "command": "bash -c 'MAIN_ROOT=$(dirname $(git rev-parse --git-common-dir)); cp \"$MAIN_ROOT/local.properties\" local.properties'"
     }
   }
 }
