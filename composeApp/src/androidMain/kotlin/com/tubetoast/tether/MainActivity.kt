@@ -40,11 +40,17 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        startService()
-
         setContent {
             App()
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Ensure the service is running every time the user opens or returns to the app.
+        // Calling startForegroundService on an already-running service is safe — it routes
+        // to onStartCommand which returns START_STICKY without re-initialising anything.
+        startService()
     }
 
     /**
