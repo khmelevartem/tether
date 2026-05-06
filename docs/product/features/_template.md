@@ -10,6 +10,11 @@
 > Implementation details — file paths, module layout, code contracts, gradle tasks —
 > belong in the GitHub Issue. If a section here starts to read like a how-to,
 > move that part to the issue.
+>
+> **One spec covers all platforms and all implementation milestones of the feature.**
+> Don't write a separate "Android X" and "iOS X" spec — write one and put per-platform
+> user-visible quirks in `Platform notes`. Don't write a separate "X infrastructure" and
+> "X UI" spec — write one. See [README.md](README.md) → «What counts as one feature».
 
 ## Why
 
