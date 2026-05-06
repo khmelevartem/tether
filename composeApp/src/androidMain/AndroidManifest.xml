@@ -4,6 +4,12 @@
     <!-- Required by NsdManager on some OEM Android builds (e.g. OPPO/OnePlus ColorOS) -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Foreground service hosting Ktor FileServer + NSD discovery so the Android peer
+         stays reachable while the app is backgrounded. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <application
         android:name=".TetherApp"
         android:allowBackup="true"
@@ -21,6 +27,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <service
+            android:name=".network.TetherForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
     </application>
 
 </manifest>

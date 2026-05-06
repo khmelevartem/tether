@@ -126,7 +126,9 @@ kotlin {
             }
         }
 
-        val desktopTest by getting {
+        // jvmTest is the intermediate test source set shared by androidUnitTest and desktopTest.
+        // Tests for shared JVM code (e.g., FileServer) live here so they run on both targets.
+        sourceSets.named("jvmTest") {
             dependencies {
                 implementation(libs.kotlin.testJunit)
                 implementation(libs.ktor.client.core)

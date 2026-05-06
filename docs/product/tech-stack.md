@@ -4,7 +4,7 @@
 
 | Platform | Status | Notes |
 |----------|--------|-------|
-| Android | In progress | mDNS via Android NSD; Compose UI in `androidMain` |
+| Android | In progress | mDNS via Android NSD; Ktor CIO server hosted in foreground Service; Compose UI in `androidMain` |
 | iOS | Stub | KMP target wired (`iosArm64`, `iosSimulatorArm64`); discovery via NSNetService — see issue [#6](https://github.com/) |
 | macOS | Basic | `macosArm64` only (Apple Silicon). Discovery shares `appleMain` with iOS |
 | Windows | In progress | JVM-based via Gradle desktop target. Reference implementation. Hosts `FileServer` and the CLI debug runner |
@@ -33,7 +33,7 @@ For implementation-side guidance — module layout, layering principles, and DI 
 
 **Why:** The product is symmetric — any device can send to any device. A client/server split would require a designated host, which contradicts the discovery model and the home-network use case.
 
-**Tradeoff:** Ktor's server modules are JVM-only — `ktor-server-*` has no Kotlin/Native publication. This is a real, load-bearing constraint, not a footnote. **Receive flow on Android and iOS does not work today**, and "all platforms send and receive" is a hard MVP requirement (see [vision.md](vision.md)). This needs to be solved before we can claim MVP.
+**Tradeoff:** Ktor's server modules are JVM-only — `ktor-server-*` has no Kotlin/Native publication. This is a real, load-bearing constraint, not a footnote. Android and Desktop receive via Ktor CIO from `jvmMain`; **iOS / macOS still cannot receive** — that's the remaining MVP gap, tracked separately.
 
 #### Options on the table
 
@@ -56,9 +56,7 @@ For implementation-side guidance — module layout, layering principles, and DI 
 
 4. **Drop the symmetry — one direction per pair.** E.g. "phone always sends, laptop always receives." Rejected: contradicts the "any device sends to any device" principle in [vision.md](vision.md).
 
-**Tentative direction:** option 1 with the `jvmMain` intermediate source set — Ktor CIO shared between Android and Desktop, Apple targets get their own `actual`. Track Ktor Native server status before implementing the Apple side; if it lands before we get there, option 3 becomes viable for Apple targets too.
-
-Acceptable for now because the Desktop JVM server is the reference implementation we test the protocol against; mobile receivers come online when their issues are scheduled.
+**Direction (chosen, implemented in #34/#35):** option 1 with the `jvmMain` intermediate source set. Ktor CIO server lives in `jvmMain` and is shared between Android and Desktop. Android hosts it inside a foreground `Service` so the peer stays reachable when the app is backgrounded. Apple targets still need their own `actual` — tracked as a follow-up. If Ktor Native server lands stable before we start the Apple side, option 3 becomes preferable for Apple targets.
 
 #### Source set layout (target state)
 

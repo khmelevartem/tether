@@ -11,13 +11,14 @@ hierarchy (configured via `applyHierarchyTemplate` in `build.gradle.kts`):
 composeApp/src/
 ├── commonMain/      protocol, FileClient, MdnsDiscovery (expect), Platform (expect), App.kt
 ├── commonTest/      DeviceTest
-├── androidMain/     MainActivity, TetherApp, MdnsDiscovery.android, Platform.android
+├── androidMain/     MainActivity, TetherApp, TetherForegroundService, MdnsDiscovery.android, Platform.android
 ├── iosMain/         MainViewController, Platform.ios
 ├── appleMain/       MdnsDiscovery.apple (stub)
 ├── macosMain/       Platform.macos
 ├── jvmMain/         FileServer, FileClientJvm           ← shared Android + Desktop JVM
+├── jvmTest/         FileServerTest                      ← runs in both desktopTest and androidUnitTest
 ├── desktopMain/     Main.kt (CLI), MdnsDiscovery.jvm, Platform.jvm  ← Desktop JVM leaf
-└── desktopTest/     FileServerTest, FileClientTest, MdnsDiscoveryTest
+└── desktopTest/     FileClientTest, MdnsDiscoveryTest
 ```
 
 Hierarchy: `jvmMain` is the intermediate parent for both `androidMain` and `desktopMain`,

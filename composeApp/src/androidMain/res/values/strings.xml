@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">Tether</string>
+    <string name="fg_notification_channel">Tether background</string>
+    <string name="fg_notification_title">Tether is active</string>
+    <string name="fg_notification_text">Receiving files on this network</string>
+    <string name="fg_notification_stop_action">Stop</string>
 </resources>
