@@ -40,16 +40,19 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        startService()
+
         setContent {
             App()
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        // Ensure the service is running every time the user opens or returns to the app.
-        // Calling startForegroundService on an already-running service is safe — it routes
-        // to onStartCommand which returns START_STICKY without re-initialising anything.
+    override fun onStart() {
+        super.onStart()
+        // Also called when returning from background — ensures the service is restarted
+        // if it was stopped while the app was backgrounded (e.g. via the notification
+        // Stop button). Safe to call on an already-running service: routes to
+        // onStartCommand → START_STICKY without re-initialising anything.
         startService()
     }
 
