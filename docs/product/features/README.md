@@ -27,8 +27,7 @@ Note on `Status` here vs. GitHub Issues: an issue can exist (and even be in prog
 | Pairing — handshake & PIN computation | Pairing | idea | _tbd_ | #10 |
 | Pairing — PIN confirmation UI | Pairing / UI | idea | [pairing-pin-confirmation.md](pairing-pin-confirmation.md) (stub) | #11 (Android); iOS, Desktop _tbd_ |
 | Device list screen | UI | scoped | [device-list.md](device-list.md) | #7 (Android); iOS, Desktop _tbd_ |
-| File send + progress | UI / Transfer | idea | [file-send-and-progress.md](file-send-and-progress.md) (stub) | #8 (Android); iOS, Desktop _tbd_ |
-| Streaming file server | Transfer | in progress | [streaming-file-server.md](streaming-file-server.md) (stub) | #25 |
+| File transfer | Transfer / UI | idea | [file-transfer.md](file-transfer.md) (stub) | #8 (Android send UI); iOS, Desktop, receive-side UI _tbd_ |
 | Multi-file transfer | Transfer | idea | [multi-file-transfer.md](multi-file-transfer.md) (stub) | _tbd_ |
 | Permissions strategy | Cross-platform / UX | idea | [permissions-strategy.md](permissions-strategy.md) (stub) | _tbd_ |
 | Device name bootstrapping | Onboarding | idea | [device-name-bootstrapping.md](device-name-bootstrapping.md) (stub) | _tbd_ |
