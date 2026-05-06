@@ -3,16 +3,16 @@
 
     <!-- Required by NsdManager on some OEM Android builds (e.g. OPPO/OnePlus ColorOS) -->
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- Required to join multicast groups used by NSD/mDNS service discovery.
-         Also satisfies the "any-of" permission requirement for FGS type connectedDevice. -->
+    <!-- Required to join multicast groups used by NSD/mDNS service discovery. -->
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
 
     <!-- Foreground service hosting Ktor FileServer + NSD discovery so the Android peer
          stays reachable while the app is backgrounded. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <!-- connectedDevice: «link with another device over a network» — семантически точнее dataSync;
-         не имеет 6h/сутки-лимита Android 15+ который применяется к dataSync. -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <!-- dataSync: used for background network transfers. connectedDevice was tried but suppresses
+         the FGS notification on Android 14+ without Bluetooth/NFC/USB hardware involvement.
+         Android 15+ applies a 6h/day cumulative limit to dataSync — tracked in issue #50. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
@@ -37,7 +37,7 @@
         <service
             android:name=".network.TetherForegroundService"
             android:exported="false"
-            android:foregroundServiceType="connectedDevice" />
+            android:foregroundServiceType="dataSync" />
     </application>
 
 </manifest>
