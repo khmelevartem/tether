@@ -102,6 +102,12 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.activity.compose)
+            implementation(libs.androidx.lifecycle.service)
+        }
+
+        androidUnitTest.dependencies {
+            implementation(libs.robolectric)
+            implementation(libs.kotlin.testJunit)
         }
 
         // Access via name to avoid "Source Set used with custom target name" KGP warning.
@@ -170,6 +176,11 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+    }
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
     }
 }
 

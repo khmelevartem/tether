@@ -4,36 +4,38 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.lifecycle.LifecycleService
+import androidx.lifecycle.lifecycleScope
 import com.tubetoast.tether.R
 import com.tubetoast.tether.discovery.MdnsDiscovery
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 private const val TAG = "TetherFGService"
 private const val NOTIFICATION_ID = 1001
 private const val CHANNEL_ID = "tether_foreground"
-private const val ACTION_STOP = "com.tubetoast.tether.action.STOP"
+internal const val ACTION_STOP = "com.tubetoast.tether.action.STOP"
 
-class TetherForegroundService : Service() {
+class TetherForegroundService : LifecycleService() {
     private var server: FileServer? = null
     private var discovery: MdnsDiscovery? = null
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    // Binder returned from onBind so MainActivity can check if the service is running
+    // via bindService(intent, connection, flags=0) without BIND_AUTO_CREATE.
+    inner class LocalBinder : Binder()
 
     override fun onCreate() {
         super.onCreate()
         startForegroundCompat()
 
-        scope.launch {
+        lifecycleScope.launch(Dispatchers.IO) {
             val downloadsDir = (getExternalFilesDir(null) ?: filesDir).resolve("Tether")
             val srv = FileServer(port = 0, downloadsDir = downloadsDir)
             val port = try {
@@ -64,9 +66,9 @@ class TetherForegroundService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        super.onStartCommand(intent, flags, startId)
         if (intent?.action == ACTION_STOP) {
             Log.i(TAG, "Stop requested via notification action")
-            userStopped = true
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
             return START_NOT_STICKY
@@ -74,10 +76,12 @@ class TetherForegroundService : Service() {
         return START_STICKY
     }
 
-    override fun onBind(intent: Intent?): IBinder? = null
+    override fun onBind(intent: Intent): IBinder {
+        super.onBind(intent)
+        return LocalBinder()
+    }
 
     override fun onDestroy() {
-        scope.cancel()
         try {
             discovery?.stop()
         } catch (e: Exception) {
@@ -134,13 +138,5 @@ class TetherForegroundService : Service() {
             NotificationManager.IMPORTANCE_LOW,
         )
         nm.createNotificationChannel(channel)
-    }
-
-    companion object {
-        // Process-level flag: set when user explicitly taps Stop.
-        // Resets on process death, so the service starts again on next app launch.
-        // Prevents configurationChange (rotation etc.) from silently restarting a stopped service.
-        var userStopped: Boolean = false
-            private set
     }
 }
