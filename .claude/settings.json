@@ -1,8 +1,14 @@
 {
   "hooks": {
-    "worktreeCreate": {
-      "description": "Copy local.properties from repo root to new worktree",
-      "command": "bash -c 'MAIN_ROOT=$(dirname $(git rev-parse --git-common-dir)); cp \"$MAIN_ROOT/local.properties\" local.properties'"
-    }
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null) || exit 0; MAIN_ROOT=$(cd \"$COMMON_DIR/..\" && pwd); if [ ! -f local.properties ] && [ -f \"$MAIN_ROOT/local.properties\" ]; then cp \"$MAIN_ROOT/local.properties\" local.properties && echo \"copied local.properties from $MAIN_ROOT\"; fi'"
+          }
+        ]
+      }
+    ]
   }
 }
