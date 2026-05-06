@@ -47,23 +47,19 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    override fun onStart() {
-        super.onStart()
-        // Also called when returning from background — ensures the service is restarted
-        // if it was stopped while the app was backgrounded (e.g. via the notification
-        // Stop button). Safe to call on an already-running service: routes to
-        // onStartCommand → START_STICKY without re-initialising anything.
-        startService()
-    }
-
     /**
      * Start [TetherForegroundService].
+     *
+     * Called only from [onCreate] (cold start). Stop from the notification is sticky:
+     * once the user taps Stop, the service stays stopped until the user cold-starts the
+     * app again (or, in the future, taps a Start button in the app UI — tracked separately).
+     * Returning from background does not restart the service — that would defeat the
+     * Stop button's purpose for the foreground-shade case.
      *
      * Calling [ContextCompat.startForegroundService] on an already-running service is safe —
      * the system routes it to [TetherForegroundService.onStartCommand] which returns
      * [android.app.Service.START_STICKY] without re-initialising anything.
-     * Rotation-driven double-starts are prevented by [android:configChanges] in the manifest,
-     * so no extra guard is needed here.
+     * Rotation-driven double-starts are prevented by [android:configChanges] in the manifest.
      */
     private fun startService() {
         ContextCompat.startForegroundService(
