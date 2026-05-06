@@ -57,3 +57,15 @@ This feature also carries Tether's two non-negotiable transport promises (see [v
 - Visible categories of failure (network lost, peer gone, file unreadable) and what each looks like to the user.
 - Where exactly does an incoming file land on each platform, and what is the user's first encounter with that location?
 - What does "cancelled mid-transfer" leave behind on the receiver — discarded silently, kept as partial, surfaced as "incomplete"?
+
+### Batch behaviour (sending many files to one peer)
+
+This was previously a separate `multi-file-transfer` feature. We decided it is not a separate feature: from the user's perspective sending N files is the same surface as sending one (same picker, same progress screen, same cancel), and the underlying transport requires no mechanism change to handle N>1. It is N≥1 of this same feature, with a few extra product questions:
+
+- **Sequential or parallel uploads?** Mechanically trivial either way — Ktor's async server already handles parallel `POST /upload` on one port, no extra ports or coordination needed. The choice is a UX/UCX trade-off: parallel can shave latency on many small files but typically slows down few large files (Wi-Fi half-duplex, TCP contention, receiver disk pressure), and aggregate progress / cancel become harder to present cleanly. Default proposal: sequential, with a `[?допущение]` to revisit if real-world latency on small-file batches feels bad.
+- **Partial failure in a batch.** If one file fails, do the rest still go (skip + report at the end), or does the whole batch abort? Probably skip-and-continue, but needs confirming.
+- **Order.** Picker order, alphabetical, or unspecified?
+- **Folder send (recursive descent).** In or out for MVP? Roadmap mentions multi-select picker, not folder. Flag the boundary.
+- **Aggregate progress shape.** "File 7 of 30, 412 MB / 1.2 GB" works for sequential; for parallel a single byte total is cleaner than 30 progress bars.
+
+A genuine *fan-out* (one file → N different peers) IS a separate feature — different mechanism, per-peer pairing state, per-peer failure surfaces. That lives in the Post-MVP / Later bucket and is not this feature.
