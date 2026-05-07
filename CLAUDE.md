@@ -19,6 +19,7 @@ Two doc trees in this repo:
 
 The project follows KMP best practices with platform-specific and shared code:
 
+- **Common-first.** Всё, что может жить в `commonMain`, должно лежать в `commonMain`. Платформенные source sets (`androidMain`, `appleMain`, `jvmMain`, `desktopMain`, `iosMain`, `macosMain`) — только для кода, требующего platform API. При выборе между `expect/actual` в `commonMain` и копированием в `platformMain` — `expect/actual`.
 - **commonMain**: Shared Kotlin code (UI with Compose Multiplatform, network protocol, file client)
 - **Platform-specific sources**: `androidMain/`, `iosMain/`, `macosMain/`, `jvmMain/`, `desktopMain/`, `appleMain/` (iOS + macOS shared code)
 - **Source set hierarchy**: `jvmMain` is the intermediate parent for both `androidMain` and `desktopMain` (configured via `applyHierarchyTemplate` in `build.gradle.kts`)
@@ -136,8 +137,9 @@ composeApp/src/
 ├── appleMain/           # iOS + macOS shared (mDNS implementation)
 ├── macosMain/           # macOS-specific
 ├── jvmMain/             # Shared JVM: FileServer, FileClientJvm (parent of androidMain + desktopMain)
+├── jvmTest/             # Shared JVM tests (FileServerTest) — runs in both desktopTest and androidUnitTest
 ├── desktopMain/         # Desktop JVM leaf: CLI Main.kt, MdnsDiscovery.jvm, Platform.jvm
-└── desktopTest/         # Desktop JVM tests (FileServerTest, FileClientTest, MdnsDiscoveryTest)
+└── desktopTest/         # Desktop-only tests (FileClientTest, MdnsDiscoveryTest)
 ```
 
 ## CI/CD

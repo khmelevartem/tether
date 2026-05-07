@@ -102,6 +102,12 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.activity.compose)
+            implementation(libs.androidx.lifecycle.service)
+        }
+
+        androidUnitTest.dependencies {
+            implementation(libs.robolectric)
+            implementation(libs.kotlin.testJunit)
         }
 
         // Access via name to avoid "Source Set used with custom target name" KGP warning.
@@ -126,7 +132,9 @@ kotlin {
             }
         }
 
-        val desktopTest by getting {
+        // jvmTest is the intermediate test source set shared by androidUnitTest and desktopTest.
+        // Tests for shared JVM code (e.g., FileServer) live here so they run on both targets.
+        sourceSets.named("jvmTest") {
             dependencies {
                 implementation(libs.kotlin.testJunit)
                 implementation(libs.ktor.client.core)
@@ -168,6 +176,11 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+    }
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
     }
 }
 

@@ -3,6 +3,17 @@
 
     <!-- Required by NsdManager on some OEM Android builds (e.g. OPPO/OnePlus ColorOS) -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Required to join multicast groups used by NSD/mDNS service discovery. -->
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+
+    <!-- Foreground service hosting Ktor FileServer + NSD discovery so the Android peer
+         stays reachable while the app is backgrounded. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- dataSync: used for background network transfers. connectedDevice was tried but suppresses
+         the FGS notification on Android 14+ without Bluetooth/NFC/USB hardware involvement.
+         Android 15+ applies a 6h/day cumulative limit to dataSync — tracked in issue #59. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:name=".TetherApp"
@@ -14,13 +25,19 @@
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
         <activity
             android:exported="true"
-            android:name=".MainActivity">
+            android:name=".MainActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|uiMode|keyboardHidden">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <service
+            android:name=".network.TetherForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
     </application>
 
 </manifest>
