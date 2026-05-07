@@ -46,7 +46,7 @@ When refactoring existing code, the same questions apply in reverse: a layer tha
 
 ## Decisions
 
-- **ViewModel lives in its own layer** between UI and the layers below it. Reason: keep Compose as a thin, replaceable UI framework — when we eventually adopt [Decompose](https://github.com/arkivanov/Decompose) for navigation and component lifecycle, the presentation layer is already isolated and the change is contained. Decompose itself is deferred until the screen count justifies it.
+- **Presentation layer is built on [Decompose](https://github.com/arkivanov/Decompose).** Components hold state and lifecycle in plain Kotlin; Compose subscribes via `subscribeAsState` and is treated as a thin, replaceable renderer. Conventions and how to write/test components: [presentation-layer.md](presentation-layer.md). Rationale, alternatives considered, and per-platform notes: [adr/adr-presentation-and-navigation.md](adr/adr-presentation-and-navigation.md).
 - **Unidirectional data flow** (state down, events up) is the default. The specific framework — MVI library, Molecule, plain Compose state — is chosen per component as it appears, not declared globally up front.
 
 ## Open questions
