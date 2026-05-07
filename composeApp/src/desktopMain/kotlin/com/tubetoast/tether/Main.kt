@@ -108,7 +108,11 @@ class TetherCommand :
 
         var running = true
         while (running) {
-            val line = withContext(Dispatchers.IO) { readLine() } ?: break
+            val line = try {
+                withContext(Dispatchers.IO) { readLine() }
+            } catch (_: java.nio.charset.MalformedInputException) {
+                continue
+            } ?: break
             val tokens = line.trim().split("\\s+".toRegex(), limit = 3)
             when (tokens.firstOrNull()?.lowercase()) {
                 "", null -> continue
