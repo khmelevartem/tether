@@ -46,7 +46,7 @@ class DeviceListComponent(
 Conventions:
 
 - **Naming.** Classes are `XxxComponent`. We follow Decompose's convention rather than calling them `ViewModel` — they are not Android `ViewModel`s, and the difference matters for tests, lifecycle, and KMP.
-- **`ComponentContext` first, delegated.** Every Component takes `ComponentContext` as its first parameter and `: ComponentContext by componentContext` exposes lifecycle / state-keeper / instance-keeper / back-handler without ceremony.
+- **`ComponentContext` first, delegated.** Every Component takes `ComponentContext` as its first parameter and `: ComponentContext by componentContext` exposes lifecycle, `StateKeeper`, `InstanceKeeper`, and `BackHandler` without ceremony.
 - **`CoroutineScope` is a default constructor argument** wired to the library's `coroutineScope()` extension. Lifecycle-bound by default; tests pass an injected `TestScope` instead.
 - **Dependencies via constructor.** Same rule as everywhere else (see [dependency-injection.md](dependency-injection.md)). No globals, no service locators.
 
@@ -83,12 +83,12 @@ In particular: **we do not use `InstanceKeeper` to retain domain state across co
 
 ## Navigation
 
-Once the screen count grows past one, navigation is handled by:
+Decompose provides two navigation primitives we use, introduced one at a time as flows require them:
 
-- **`ChildStack`** — the back stack. Push / pop / replace, with `@Serializable` configurations.
-- **`ChildSlot`** — modal overlays. Pairing dialog, confirmations, anything that sits on top of a screen.
+- **`ChildSlot`** — modal overlays (dialogs, confirmations, anything that sits on top of a screen). Added when the first dialog lands — e.g. the pairing dialog (#11).
+- **`ChildStack`** — back stack with push / pop / replace; configurations are `@Serializable`. Added when the first explicit back-press flow lands — likely send + progress on top of device list (#8).
 
-Both are wired in a parent Component and observed in Compose via `Children { ... }` / `subscribeAsState`. The skeleton starts with a single root Component and only adds these primitives when the first multi-screen flow appears.
+Both are wired in a parent Component and observed in Compose via `Children { ... }` / `subscribeAsState`. The skeleton itself starts with a single root Component; primitives are added incrementally.
 
 See [Decompose: Navigation overview](https://arkivanov.github.io/Decompose/navigation/overview/).
 
