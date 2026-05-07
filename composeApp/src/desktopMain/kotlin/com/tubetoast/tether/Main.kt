@@ -17,7 +17,6 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.nio.file.Path
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.io.path.exists
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.TimeSource
@@ -71,30 +70,33 @@ class TetherCommand :
 
         val fileClient = FileClient()
 
-        // cleanup() stops JmDNS/Ktor threads so the JVM can exit. AtomicBoolean
-        // prevents double-close when quit calls it explicitly and the shutdown hook
-        // fires afterwards (or on Ctrl+C alone).
-        val cleanedUp = AtomicBoolean(false)
-
-        fun cleanup() {
-            if (!cleanedUp.compareAndSet(false, true)) return
-            try {
-                discovery.stop()
-            } catch (e: Exception) {
-                System.err.println("WARN: mDNS stop failed — ${e.message}")
-            }
-            try {
-                server.stop()
-            } catch (e: Exception) {
-                System.err.println("WARN: FileServer stop failed — ${e.message}")
-            }
-            try {
-                fileClient.close()
-            } catch (e: Exception) {
-                System.err.println("WARN: FileClient close failed — ${e.message}")
-            }
-        }
-        Runtime.getRuntime().addShutdownHook(Thread { cleanup() })
+        // Shutdown hook runs cleanup in a thread with a 2 s timeout so JmDNS
+        // can send goodbye packets but never blocks the JVM exit indefinitely.
+        // After all hooks finish the JVM halts and kills any remaining threads.
+        Runtime.getRuntime().addShutdownHook(
+            Thread {
+                val t = Thread {
+                    try {
+                        discovery.stop()
+                    } catch (e: Exception) {
+                        System.err.println("WARN: mDNS stop failed — ${e.message}")
+                    }
+                    try {
+                        server.stop()
+                    } catch (e: Exception) {
+                        System.err.println("WARN: FileServer stop failed — ${e.message}")
+                    }
+                    try {
+                        fileClient.close()
+                    } catch (e: Exception) {
+                        System.err.println("WARN: FileClient close failed — ${e.message}")
+                    }
+                }
+                t.isDaemon = true
+                t.start()
+                t.join(2_000)
+            },
+        )
 
         echo("Commands: send <peer-name> <path>, list, quit")
 
@@ -131,7 +133,7 @@ class TetherCommand :
                 else -> echo("unknown command: '${tokens[0]}'. Available: send, list, quit.")
             }
         }
-        cleanup()
+        System.exit(0)
     }
 }
 
