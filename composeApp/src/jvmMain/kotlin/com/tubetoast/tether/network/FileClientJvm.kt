@@ -12,7 +12,7 @@ import kotlin.io.path.inputStream
 suspend fun FileClient.send(
     device: Device,
     file: Path,
-    onProgress: ((bytesTransferred: Long, totalBytes: Long) -> Unit)? = null,
+    onProgress: ((bytesTransferred: Long, totalBytes: Long?) -> Unit)? = null,
 ): SendResult {
     if (!file.exists()) throw FileNotFoundException(file.toString())
     return send(

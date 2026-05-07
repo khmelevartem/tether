@@ -35,8 +35,8 @@ class FileClient : Closeable {
         device: Device,
         channel: ByteReadChannel,
         fileName: String,
-        totalBytes: Long = -1L,
-        onProgress: ((bytesTransferred: Long, totalBytes: Long) -> Unit)? = null,
+        totalBytes: Long? = null,
+        onProgress: ((bytesTransferred: Long, totalBytes: Long?) -> Unit)? = null,
     ): SendResult = if (onProgress == null) {
         doSend(device, channel, fileName)
     } else {
@@ -81,8 +81,8 @@ private const val COPY_BUFFER_SIZE = 8 * 1024
 private suspend fun copyWithProgress(
     source: ByteReadChannel,
     dest: ByteChannel,
-    totalBytes: Long,
-    onProgress: (Long, Long) -> Unit,
+    totalBytes: Long?,
+    onProgress: (Long, Long?) -> Unit,
 ) {
     val buf = ByteArray(COPY_BUFFER_SIZE)
     var transferred = 0L

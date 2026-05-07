@@ -133,7 +133,7 @@ class TetherCommand :
                         client = fileClient,
                         peers = discovery.discoveredDevices.value,
                         peerName = tokens[1],
-                        rawPath = tokens[2],
+                        file = Path.of(tokens[2]),
                     )
                 }
                 "quit" -> running = false
@@ -148,16 +148,16 @@ internal suspend fun handleSend(
     client: FileClient,
     peers: List<Device>,
     peerName: String,
-    rawPath: String,
+    file: Path,
     output: (String) -> Unit = ::println,
+    errorOutput: (String) -> Unit = System.err::println,
     progressOutput: (String) -> Unit = { s ->
         print(s)
         System.out.flush()
     },
 ) {
-    val file = Path.of(rawPath)
     if (!file.exists()) {
-        output("[send] ERROR: file not found: $rawPath")
+        output("[send] ERROR: file not found: $file")
         return
     }
 
@@ -167,7 +167,7 @@ internal suspend fun handleSend(
         return
     }
     if (matching.size > 1) {
-        System.err.println("WARN: multiple peers named '$peerName', using first")
+        errorOutput("WARN: multiple peers named '$peerName', using first")
     }
     val peer = matching.first()
 
@@ -181,7 +181,7 @@ internal suspend fun handleSend(
         if ((now - lastPrint) >= 500.milliseconds) {
             val intervalSec = (now - lastPrint).inWholeMilliseconds / 1000.0
             val speed = if (intervalSec > 0) (transferred - lastBytes) / intervalSec else 0.0
-            val totalStr = if (total > 0) " / ${formatBytes(total)}" else ""
+            val totalStr = total?.let { " / ${formatBytes(it)}" } ?: ""
             progressOutput("\r[send] ${formatBytes(transferred)}$totalStr  (${formatBytes(speed.toLong())}/s)   ")
             lastPrint = now
             lastBytes = transferred
@@ -197,7 +197,6 @@ internal suspend fun handleSend(
 }
 
 internal fun formatBytes(bytes: Long): String = when {
-    bytes < 0 -> "? B"
     bytes < 1_024 -> "$bytes B"
     bytes < 1_024 * 1_024 -> "%.1f KB".format(bytes / 1_024.0)
     bytes < 1_024 * 1_024 * 1_024 -> "%.1f MB".format(bytes / (1_024.0 * 1_024))
