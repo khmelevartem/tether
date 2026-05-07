@@ -70,6 +70,7 @@ class TetherCommand :
 
         val fileClient = FileClient()
 
+        // Shutdown hook handles cleanup for both Ctrl+C and normal exit via `quit`.
         Runtime.getRuntime().addShutdownHook(
             Thread {
                 try {
@@ -111,23 +112,17 @@ class TetherCommand :
                         echo("usage: send <peer-name> <path>")
                         continue
                     }
-                    launch {
-                        handleSend(
-                            client = fileClient,
-                            peers = discovery.discoveredDevices.value,
-                            peerName = tokens[1],
-                            rawPath = tokens[2],
-                        )
-                    }.join()
+                    handleSend(
+                        client = fileClient,
+                        peers = discovery.discoveredDevices.value,
+                        peerName = tokens[1],
+                        rawPath = tokens[2],
+                    )
                 }
                 "quit" -> running = false
                 else -> echo("unknown command: '${tokens[0]}'. Available: send, list, quit.")
             }
         }
-
-        discovery.stop()
-        server.stop()
-        fileClient.close()
     }
 }
 
@@ -137,6 +132,10 @@ internal suspend fun handleSend(
     peerName: String,
     rawPath: String,
     output: (String) -> Unit = ::println,
+    progressOutput: (String) -> Unit = { s ->
+        print(s)
+        System.out.flush()
+    },
 ) {
     val file = Path.of(rawPath)
     if (!file.exists()) {
@@ -165,15 +164,14 @@ internal suspend fun handleSend(
             val intervalSec = (now - lastPrint).inWholeMilliseconds / 1000.0
             val speed = if (intervalSec > 0) (transferred - lastBytes) / intervalSec else 0.0
             val totalStr = if (total > 0) " / ${formatBytes(total)}" else ""
-            print("\r[send] ${formatBytes(transferred)}$totalStr  (${formatBytes(speed.toLong())}/s)   ")
-            System.out.flush()
+            progressOutput("\r[send] ${formatBytes(transferred)}$totalStr  (${formatBytes(speed.toLong())}/s)   ")
             lastPrint = now
             lastBytes = transferred
         }
     }
 
+    progressOutput("\n") // end progress line
     val elapsed = started.elapsedNow()
-    println() // end progress line
     when (result) {
         is SendResult.Success -> output("[send] OK — ${elapsed.inWholeMilliseconds} ms  →  ${result.savedPath}")
         is SendResult.Failure -> output("[send] FAIL: ${result.reason}")

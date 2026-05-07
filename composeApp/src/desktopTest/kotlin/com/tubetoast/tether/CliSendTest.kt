@@ -90,13 +90,14 @@ class CliSendTest {
     fun `send reports error when file does not exist`() {
         val (client, device) = setup()
         try {
+            val nonExistent = Files.createTempDirectory("cli-missing").resolve("no-such-file.bin")
             val messages = mutableListOf<String>()
             runBlocking {
                 handleSend(
                     client = client,
                     peers = listOf(device),
                     peerName = device.name,
-                    rawPath = "/tmp/no-such-file-tether-test.bin",
+                    rawPath = nonExistent.toString(),
                     output = messages::add,
                 )
             }
