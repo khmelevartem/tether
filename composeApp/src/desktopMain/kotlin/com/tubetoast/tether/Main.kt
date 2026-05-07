@@ -58,7 +58,7 @@ class TetherCommand :
         }
         echo("mDNS started → advertising '$deviceName' on port $actualPort\n")
 
-        launch {
+        val peersJob = launch {
             discovery.discoveredDevices.collect { peers ->
                 if (peers.isEmpty()) {
                     echo("[peers] none")
@@ -119,7 +119,10 @@ class TetherCommand :
                         rawPath = tokens[2],
                     )
                 }
-                "quit" -> running = false
+                "quit" -> {
+                    peersJob.cancel()
+                    running = false
+                }
                 else -> echo("unknown command: '${tokens[0]}'. Available: send, list, quit.")
             }
         }
