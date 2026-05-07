@@ -171,6 +171,36 @@ class MdnsDiscoveryTest {
         }
     }
 
+    @Test
+    fun `peer re-resolved with new port replaces old entry`() = runBlocking {
+        val a = MdnsDiscovery()
+        val b = MdnsDiscovery()
+        try {
+            a.start("PortChangeA", 19060)
+            b.start("PortChangeB", 19061)
+
+            withTimeout(10_000) {
+                a.discoveredDevices.first { peers -> peers.any { it.name == "PortChangeB" && it.port == 19061 } }
+            }
+
+            b.stop()
+            b.start("PortChangeB", 19062)
+
+            val peersAfterRestart = withTimeout(15_000) {
+                a.discoveredDevices.first { peers ->
+                    peers.any { it.name == "PortChangeB" && it.port == 19062 }
+                }
+            }
+
+            val portChangeBPeers = peersAfterRestart.filter { it.name == "PortChangeB" }
+            assertEquals(1, portChangeBPeers.size, "expected exactly one entry for PortChangeB, got: $portChangeBPeers")
+            assertEquals(19062, portChangeBPeers[0].port)
+        } finally {
+            a.stop()
+            b.stop()
+        }
+    }
+
     // NOTE: the "JmDNS renames on conflict" test was removed because it tested JmDNS
     // internal conflict-probing behaviour rather than our own code. Our self-filter uses
     // IP+port (not name), so it is rename-proof by construction — no renaming scenario

@@ -46,6 +46,7 @@ actual class MdnsDiscovery {
                 }
 
                 override fun serviceRemoved(event: ServiceEvent) {
+                    println("INFO: serviceRemoved '${event.name}'")
                     _discoveredDevices.value = _discoveredDevices.value
                         .filterNot { it.name == event.name }
                 }
