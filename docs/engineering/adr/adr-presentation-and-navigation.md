@@ -61,7 +61,7 @@ Each option below is judged against the same five scenarios:
 - **DI fit:** native — Components take a `ComponentContext` plus their collaborators via constructor. The composition root creates the root Component fully wired.
 - **Maturity:** v3.x stable, actively maintained by Arkadii Ivanov, used in production at multiple JetBrains-adjacent projects.
 
-**Cost:** new primitives every contributor must learn (`ComponentContext`, `ChildStack`, `Value`, `StateKeeper`, `InstanceKeeper`); a one-screen feature still needs a Component, a Composable, and a wire-up at the root.
+**Cost:** new primitives every contributor must learn (`ComponentContext`, `ChildStack`, `Value`, `StateKeeper`); a one-screen feature still needs a Component, a Composable, and a wire-up at the root.
 
 **How it handles the scenarios:**
 
@@ -122,7 +122,7 @@ The AndroidX Navigation Compose library, recently extended to non-Android KMP ta
 - **UIKit interop:** PMs are pure Kotlin; native UIKit code can drive them directly. Same property as Decompose.
 - **Testability:** dedicated `premo-test` module with `runPmTest`. No Compose runtime needed.
 - **DI fit:** PMs accept `PmArgs` (serializable) and a parent reference via constructor. Compatible with `AppGraph`.
-- **Maturity:** v1.0.0-alpha.15 (May 2024), no commits since, single maintainer, ~200 stars. README explicitly warns: *"the library is in the pre-release alpha version. Stable work and backward compatibility are not guaranteed."* No stable release in five years.
+- **Maturity:** v1.0.0-alpha.15 (May 2024), no commits since May 2024, single maintainer, ~200 stars. README explicitly warns: *"the library is in the pre-release alpha version. Stable work and backward compatibility are not guaranteed."* No stable release in five years.
 
 **Why not chosen:** two blocking issues. (1) **macOS native is not supported** by the library's KMP configuration — and macOS native is one of our four required targets. (2) **Pre-release alpha + ~2 years of no commits + single maintainer** make this a risky bet for a load-bearing layer. The good ideas in Premo — process-death persistence as a first-class concern, parent-intercepts-navigation messaging — are noted as inspiration when extending the Decompose-based layer.
 
@@ -158,7 +158,7 @@ fun DeviceList(component: DeviceListComponent) {
 }
 
 // platform entry point (jvmMain / androidMain / iosMain / macosMain)
-val root = DefaultRootComponent(
+val root = RootComponent(
     componentContext = defaultComponentContext(),
     appGraph = appGraph,
 )
@@ -172,7 +172,7 @@ Shape rules:
 - **CoroutineScope is a default constructor argument** wired to the library's `coroutineScope()` extension on `ComponentContext`. Lifecycle-bound by default; tests pass an injected `TestScope` instead.
 - **`AppGraph` builds the root Component**; child Components are created by their parents (or by a `ChildStack` configuration).
 - **Compose subscribes via `subscribeAsState`** and forwards events as method calls. No `LaunchedEffect`-driven business logic.
-- **`ChildStack` for the main back stack**, **`ChildSlot` for modal overlays** (pairing dialog, confirmations).
+- **Start with a single root Component and `ChildSlot` for modal overlays** (pairing dialog, confirmations). Add **`ChildStack`** when the first explicit back-press flow lands (likely send + progress).
 - **One Component per logical screen / dialog.** Sub-state inside a screen stays inside the Component; we don't split presentation into ceremonial layers.
 - **Long-lived domain state stays out of Components.** Active transfers, peer state, and other state that must outlive a screen live in repositories owned by `AppGraph`. Components observe these repositories; they never own such state and do not use `InstanceKeeper` for it.
 
@@ -188,9 +188,10 @@ Shape rules:
 
 **Negative / cost:**
 
-- Every contributor must learn Decompose's primitives (`ComponentContext`, `ChildStack`, `Value`, `StateKeeper`, `InstanceKeeper`).
+- Every contributor must learn Decompose's primitives (`ComponentContext`, `ChildStack`, `Value`, `StateKeeper`).
 - One-screen features still carry the Component / Composable / wire-up split — small ceremony tax.
 - `ChildStack` configurations must be `@Serializable` (kotlinx.serialization) — a tiny constraint on what state goes into route arguments.
+- **Process-death state restoration is shallower than Premo's first-class story** — full restoration takes more wiring on top of `StateKeeper`. Acceptable for Tether: flows are short-lived enough that a killed process means a fresh start. Revisit if persistence requirements emerge.
 - Locks us into a third-party library at a load-bearing layer. Mitigated by Decompose's maturity and the fact that Components are isolated from UI — swapping the navigation framework later would not require rewriting screens.
 
 **Effects on existing decisions:**
@@ -207,10 +208,6 @@ Shape rules:
 | iOS | ✅ Supported | `MainViewController` builds the root Component; UIKit entry points call Component methods directly. |
 | Desktop JVM | ✅ Supported | `LifecycleRegistry()` driven by the Compose window. |
 | macOS native | ✅ Supported | Decompose's core is pure Kotlin and supports `macosArm64` / `macosX64`. UI rendering is a separate concern (Compose-MP for macOS) and is out of scope for this ADR. |
-
-## Open questions
-
-1. **`ChildStack` vs flat root.** First iteration may not need a back stack at all — a single root Component with `ChildSlot` overlays may be enough. Decide concretely once device list and pairing are both implemented.
 
 ## References
 

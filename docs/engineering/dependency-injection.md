@@ -192,9 +192,12 @@ Things to notice:
 - Different platforms build different graphs (Android passes `Context`, JVM also builds a `FileServer`).
 - No component in the graph reaches across to construct another.
 - `commonMain` defines the *shape* (`AppGraph` data class), platforms fill it in.
+- The platform entry point also builds the **root Component** (Decompose), passing `AppGraph` to it. The root creates its children with the dependencies they need. See [presentation-layer.md](presentation-layer.md).
+
+### Per-screen scoping
+
+`AppGraph` is a singleton. There is no separate per-screen DI scope and no `ViewModelStoreOwner` integration — per-screen state and lifecycle are owned by Decompose Components, not by an Android-style ViewModel container. Each Component receives the dependencies it needs from `AppGraph` (or from its parent Component) and constructs its children directly.
 
 ## Open questions
 
-- When we get to Phase 2, do scopes (per-screen, per-transfer) make sense, or stick to a single application graph? Decide when the first scoped need appears.
-- For per-screen view models, does Compose's `ViewModelStoreOwner` integration matter, or do we just instantiate them inside the graph? Address when 3+ screens exist.
 - iOS receive-side: when a non-Ktor `FileServer` implementation lands, the graph branches per-platform more aggressively. May be the moment to flip to Metro.

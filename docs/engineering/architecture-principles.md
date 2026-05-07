@@ -12,7 +12,7 @@ Concretely, this gives us a layering — from most stable to most volatile:
 
 1. **Protocol / domain.** Pure Kotlin types and rules — what gets exchanged between devices and what's true about them. No platform, no framework. Changes when the network protocol or core domain rules change.
 2. **Network / discovery / platform.** Transport, peer discovery, platform adapters. Depends on (1). Changes when we swap an underlying mechanism or add a target.
-3. **Presentation.** ViewModels and the navigation graph. Depends on (2) through interfaces, not concretes. Owns UI state shape but not visual rendering.
+3. **Presentation.** Components (Decompose) and the navigation graph. Depends on (2) via constructor injection. Owns UI state shape but not visual rendering.
 4. **UI.** Compose composables. The thinnest layer — renders state, fires events. Treated as replaceable.
 
 **Dependencies always point toward more stable code.** UI depends on the discovery interface. Discovery does not depend on UI. Protocol depends on nothing in this project except kotlinx.serialization.
@@ -42,7 +42,7 @@ When refactoring existing code, the same questions apply in reverse: a layer tha
 
 - Components that create their own collaborators (`HttpClient()` inside `FileClient`). Breaks testability and lifecycle. Fixed by constructor injection — see [dependency-injection.md](dependency-injection.md).
 - Platform context (`TetherApp.context`) reached for from inside discovery/network code. Pushes platform details across layers. Fixed by passing what's needed explicitly into the platform-specific `actual`.
-- UI directly orchestrating discovery + networking. Drag-bottom layer concerns into the most volatile one. Fixed by an `AppGraph` composition root that wires lifecycle, and a thin view-model surface for UI.
+- UI directly orchestrating discovery + networking. Drag-bottom layer concerns into the most volatile one. Fixed by an `AppGraph` composition root that wires lifecycle, and a thin Component surface for UI (see [presentation-layer.md](presentation-layer.md)).
 
 ## Decisions
 
