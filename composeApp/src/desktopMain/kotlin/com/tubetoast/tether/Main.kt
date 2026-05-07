@@ -17,6 +17,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.io.path.exists
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.TimeSource
@@ -70,26 +71,30 @@ class TetherCommand :
 
         val fileClient = FileClient()
 
-        // Shutdown hook handles cleanup for both Ctrl+C and normal exit via `quit`.
-        Runtime.getRuntime().addShutdownHook(
-            Thread {
-                try {
-                    discovery.stop()
-                } catch (e: Exception) {
-                    System.err.println("WARN: mDNS stop failed — ${e.message}")
-                }
-                try {
-                    server.stop()
-                } catch (e: Exception) {
-                    System.err.println("WARN: FileServer stop failed — ${e.message}")
-                }
-                try {
-                    fileClient.close()
-                } catch (e: Exception) {
-                    System.err.println("WARN: FileClient close failed — ${e.message}")
-                }
-            },
-        )
+        // cleanup() stops JmDNS/Ktor threads so the JVM can exit. AtomicBoolean
+        // prevents double-close when quit calls it explicitly and the shutdown hook
+        // fires afterwards (or on Ctrl+C alone).
+        val cleanedUp = AtomicBoolean(false)
+
+        fun cleanup() {
+            if (!cleanedUp.compareAndSet(false, true)) return
+            try {
+                discovery.stop()
+            } catch (e: Exception) {
+                System.err.println("WARN: mDNS stop failed — ${e.message}")
+            }
+            try {
+                server.stop()
+            } catch (e: Exception) {
+                System.err.println("WARN: FileServer stop failed — ${e.message}")
+            }
+            try {
+                fileClient.close()
+            } catch (e: Exception) {
+                System.err.println("WARN: FileClient close failed — ${e.message}")
+            }
+        }
+        Runtime.getRuntime().addShutdownHook(Thread { cleanup() })
 
         echo("Commands: send <peer-name> <path>, list, quit")
 
@@ -126,6 +131,7 @@ class TetherCommand :
                 else -> echo("unknown command: '${tokens[0]}'. Available: send, list, quit.")
             }
         }
+        cleanup()
     }
 }
 
