@@ -38,7 +38,7 @@ The shape we'll move toward, in priority order:
 | `:network` | common + jvm | `:protocol` | `FileClient` (common, Ktor CIO). `FileServer` lives in the JVM source set — there is no Native Ktor server. |
 | `:platform` | all | — | `Platform` `expect` + `actual`. Tiny by design; not a kitchen sink. |
 | `:cli` | jvmMain | `:network`, `:discovery`, `:platform` | `Main.kt`, Clikt argument parsing. JVM-only. |
-| `:composeApp` | all | everything above | Compose UI, view models, entry points. |
+| `:composeApp` | all | everything above | Compose UI, Decompose Components, entry points. |
 
 The split is not about Gradle modules per se — it's about **where the dependency arrow gets enforced by the compiler instead of by good intentions.**
 
