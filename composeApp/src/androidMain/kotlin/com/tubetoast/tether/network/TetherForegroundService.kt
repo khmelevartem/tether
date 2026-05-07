@@ -91,17 +91,21 @@ class TetherForegroundService : LifecycleService() {
     }
 
     override fun onDestroy() {
-        try {
-            discovery?.stop()
-            Log.i(TAG, "mDNS stopped")
-        } catch (e: Exception) {
-            Log.w(TAG, "mDNS stop failed: ${e.message}")
+        discovery?.also { d ->
+            try {
+                d.stop()
+                Log.i(TAG, "mDNS stopped")
+            } catch (e: Exception) {
+                Log.w(TAG, "mDNS stop failed: ${e.message}")
+            }
         }
-        try {
-            server?.stop()
-            Log.i(TAG, "FileServer stopped")
-        } catch (e: Exception) {
-            Log.w(TAG, "FileServer stop failed: ${e.message}")
+        server?.also { s ->
+            try {
+                s.stop()
+                Log.i(TAG, "FileServer stopped")
+            } catch (e: Exception) {
+                Log.w(TAG, "FileServer stop failed: ${e.message}")
+            }
         }
         discovery = null
         server = null
