@@ -18,13 +18,13 @@ import java.io.File
 
 private const val BUFFER_SIZE = 64 * 1024
 
-class FileServer(
+actual class FileServer(
     private val port: Int,
     private val downloadsDir: File = File(System.getProperty("user.home"), "Downloads/Tether"),
 ) {
     private var server: EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration>? = null
 
-    fun start(): Int {
+    actual fun start(): Int {
         check(server == null) { "FileServer is already running" }
         downloadsDir.mkdirs()
         val srv = embeddedServer(CIO, port = port) {
@@ -75,7 +75,7 @@ class FileServer(
         return runBlocking { srv.engine.resolvedConnectors() }.first().port
     }
 
-    fun stop() {
+    actual fun stop() {
         server?.stop(gracePeriodMillis = 500, timeoutMillis = 1_000)
         server = null
     }

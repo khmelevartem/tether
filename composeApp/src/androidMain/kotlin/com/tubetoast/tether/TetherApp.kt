@@ -1,16 +1,14 @@
 package com.tubetoast.tether
 
 import android.app.Application
-import android.content.Context
+import com.tubetoast.tether.di.AndroidAppContainer
+import com.tubetoast.tether.di.AppContainerProvider
+import com.tubetoast.tether.di.TetherAppConfig
 
-class TetherApp : Application() {
-    override fun onCreate() {
-        super.onCreate()
-        context = applicationContext
-    }
-
-    companion object {
-        lateinit var context: Context
-            private set
+class TetherApp :
+    Application(),
+    AppContainerProvider {
+    override val container: AndroidAppContainer by lazy {
+        AndroidAppContainer(TetherAppConfig(application = this))
     }
 }

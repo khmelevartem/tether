@@ -14,6 +14,7 @@ import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import com.tubetoast.tether.R
+import com.tubetoast.tether.di.AppContainerProvider
 import com.tubetoast.tether.discovery.MdnsDiscovery
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -25,11 +26,13 @@ private const val CHANNEL_ID = "tether_foreground"
 internal const val ACTION_STOP = "com.tubetoast.tether.action.STOP"
 
 class TetherForegroundService : LifecycleService() {
+    // The "running" prefix marks these as the started, attached instances —
+    // distinct from the "candidate" locals fetched from the container before start().
     // @Volatile: written from IO coroutine (lifecycleScope.launch(Dispatchers.IO)),
     // read from main thread in onStartCommand / onDestroy.
-    @Volatile private var server: FileServer? = null
+    @Volatile private var runningFileServer: FileServer? = null
 
-    @Volatile private var discovery: MdnsDiscovery? = null
+    @Volatile private var runningMdnsDiscovery: MdnsDiscovery? = null
 
     // Binder returned from onBind so MainActivity can check if the service is running
     // via bindService(intent, connection, flags=0) without BIND_AUTO_CREATE.
@@ -39,15 +42,19 @@ class TetherForegroundService : LifecycleService() {
         super.onCreate()
         startForegroundCompat()
 
+        val container = (application as AppContainerProvider).container
+        val fileServer = container.fileServer
+        val mdnsDiscovery = container.mdnsDiscovery
+        val deviceName = container.deviceName
+        val downloadsDir = container.downloadsDir
+
         lifecycleScope.launch(Dispatchers.IO) {
-            val downloadsDir = (getExternalFilesDir(null) ?: filesDir).resolve("Tether")
-            val srv = FileServer(port = 0, downloadsDir = downloadsDir)
             val port = try {
-                srv.start()
+                fileServer.start()
             } catch (e: CancellationException) {
                 // Coroutine cancelled (e.g. user pressed Stop before server finished starting).
                 // Ensure the partially-started engine doesn't leak.
-                runCatching { srv.stop() }
+                runCatching { fileServer.stop() }
                 throw e
             } catch (e: Exception) {
                 Log.e(TAG, "FileServer failed to start: ${e.message}", e)
@@ -55,19 +62,17 @@ class TetherForegroundService : LifecycleService() {
                 stopSelf()
                 return@launch
             }
-            server = srv
+            runningFileServer = fileServer
             Log.i(TAG, "FileServer started on port $port, downloads → ${downloadsDir.absolutePath}")
 
-            val deviceName = "Tether-${Build.MODEL}"
-            val disc = MdnsDiscovery()
             try {
-                disc.start(deviceName, port)
-                discovery = disc
+                mdnsDiscovery.start(deviceName, port)
+                runningMdnsDiscovery = mdnsDiscovery
                 Log.i(TAG, "mDNS started: name=$deviceName port=$port")
             } catch (e: Exception) {
                 Log.e(TAG, "mDNS failed to start: ${e.message}", e)
-                srv.stop()
-                server = null
+                fileServer.stop()
+                runningFileServer = null
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
             }
@@ -91,24 +96,24 @@ class TetherForegroundService : LifecycleService() {
     }
 
     override fun onDestroy() {
-        discovery?.also { d ->
+        runningMdnsDiscovery?.let { mdnsDiscovery ->
             try {
-                d.stop()
+                mdnsDiscovery.stop()
                 Log.i(TAG, "mDNS stopped")
             } catch (e: Exception) {
                 Log.w(TAG, "mDNS stop failed: ${e.message}")
             }
         }
-        server?.also { s ->
+        runningFileServer?.let { fileServer ->
             try {
-                s.stop()
+                fileServer.stop()
                 Log.i(TAG, "FileServer stopped")
             } catch (e: Exception) {
                 Log.w(TAG, "FileServer stop failed: ${e.message}")
             }
         }
-        discovery = null
-        server = null
+        runningMdnsDiscovery = null
+        runningFileServer = null
         super.onDestroy()
     }
 

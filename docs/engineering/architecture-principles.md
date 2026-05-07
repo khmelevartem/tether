@@ -28,6 +28,25 @@ Clean Architecture and adjacent patterns are full of ceremony that doesn't pay r
 - **Triple-layer DTO ↔ domain ↔ presentation mapping when there's no real divergence yet.** This one is nuanced: as the project matures, layers *do* legitimately need different shapes (DTO has serialization quirks, domain has invariants, presentation has display fields). The rule is not "never map" — it's "don't force three types up front." Start with one. Split when the second shape *actually* diverges (e.g. a UI list state with `selected`, `lastSeen`, `signal` is genuinely not the same as a network `Device`). Don't fight that growth in the name of brevity, and don't pre-empt it in the name of layering.
 - **Interfaces for things with one implementation.** An interface earns its place when there are at least two implementations, or it's a seam for testing. Otherwise the concrete class is the contract.
 
+## Named classes over anonymous objects
+
+When you need to implement an interface — even with a trivial body that's just data (e.g. a config interface filled with constants) — **prefer a named class in its own file** over `object : Interface { ... }` inline.
+
+Why:
+- Anonymous objects sprout duplicates. The next call site copies the literal, drifts on a field, and the divergence is invisible at review.
+- A named class has a place in the file tree and a name in stack traces and test reports.
+- Refactoring (rename a config field, add a new one) updates one file instead of N inline objects.
+
+The exception is one-shot test fakes for a single test method, where extracting would obscure the test. If the same anonymous object would be useful in a second test — extract.
+
+## Naming: spell properties out, no abbreviations
+
+Don't shorten property or local-variable names to save keystrokes (`srv`, `disc`, `cfg`, `mgr`). Names should describe what the value is, not approximate it.
+
+When two values represent the same conceptual entity in different roles (e.g. a candidate held in a local before being published to a field), don't disambiguate by abbreviating one of them. Pick names that describe each role: a "freshly fetched" instance vs a "started/attached" one, an "incoming" vs a "current" instance. The reader should learn from the name why both exist.
+
+Reason: abbreviated names hide intent and merge with each other (`svc`, `srv`, `srvc` all blur together). Descriptive names also surface duplication that abbreviations let slide — if two variables would have the same long name, that's a design signal, not a styling problem.
+
 ## Heuristics for new code
 
 When deciding whether to add a layer, an interface, or a use case, ask:
@@ -42,7 +61,7 @@ When refactoring existing code, the same questions apply in reverse: a layer tha
 
 - Components that create their own collaborators (`HttpClient()` inside `FileClient`). Breaks testability and lifecycle. Fixed by constructor injection — see [dependency-injection.md](dependency-injection.md).
 - Platform context (`TetherApp.context`) reached for from inside discovery/network code. Pushes platform details across layers. Fixed by passing what's needed explicitly into the platform-specific `actual`.
-- UI directly orchestrating discovery + networking. Drag-bottom layer concerns into the most volatile one. Fixed by an `AppGraph` composition root that wires lifecycle, and a thin Component surface for UI (see [presentation-layer.md](presentation-layer.md)).
+- UI directly orchestrating discovery + networking. Drag-bottom layer concerns into the most volatile one. Fixed by an `AppContainer` composition root that wires lifecycle, and a thin Component surface for UI (see [presentation-layer.md](presentation-layer.md)).
 
 ## Decisions
 

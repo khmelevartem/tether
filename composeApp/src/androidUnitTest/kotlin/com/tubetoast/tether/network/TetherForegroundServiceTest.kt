@@ -2,6 +2,7 @@ package com.tubetoast.tether.network
 
 import android.app.Service
 import android.content.Intent
+import com.tubetoast.tether.TetherApp
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
@@ -12,7 +13,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+@Config(sdk = [34], application = TetherApp::class)
 class TetherForegroundServiceTest {
     @Test
     fun `onBind returns non-null binder so bindService check works`() {

@@ -12,7 +12,7 @@ import javax.jmdns.ServiceListener
 private const val SERVICE_TYPE = "_tether._tcp.local."
 private val IPV4_REGEX = Regex("""\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}""")
 
-actual class MdnsDiscovery actual constructor() {
+actual class MdnsDiscovery {
     private val _discoveredDevices = MutableStateFlow<List<Device>>(emptyList())
     actual val discoveredDevices: StateFlow<List<Device>> = _discoveredDevices.asStateFlow()
 

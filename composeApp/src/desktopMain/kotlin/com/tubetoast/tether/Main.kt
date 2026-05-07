@@ -5,9 +5,9 @@ import com.github.ajalt.clikt.core.ProgramResult
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
-import com.tubetoast.tether.discovery.MdnsDiscovery
+import com.tubetoast.tether.di.DefaultDesktopAppConfig
+import com.tubetoast.tether.di.DesktopAppContainer
 import com.tubetoast.tether.network.FileClient
-import com.tubetoast.tether.network.FileServer
 import com.tubetoast.tether.network.send
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.protocol.SendResult
@@ -39,7 +39,10 @@ class TetherCommand :
         echo("=== Tether debug runner ===")
         echo("device : $deviceName")
 
-        val server = FileServer(port)
+        val container = DesktopAppContainer(
+            DefaultDesktopAppConfig(deviceName = deviceName, port = port),
+        )
+        val server = container.fileServer
         val actualPort = try {
             server.start()
         } catch (e: IOException) {
@@ -50,7 +53,7 @@ class TetherCommand :
         echo("port   : $actualPort")
         echo("FileServer started  →  http://localhost:$actualPort/health")
 
-        val discovery = MdnsDiscovery()
+        val discovery = container.mdnsDiscovery
         try {
             discovery.start(deviceName, actualPort)
         } catch (e: Exception) {

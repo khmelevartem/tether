@@ -20,7 +20,7 @@ private const val SERVICE_TYPE = "_tether._tcp."
 // from the same thread (main thread via DisposableEffect in Compose), all accesses to
 // mutable state are single-threaded — no @Synchronized or @Volatile needed.
 // @Synchronized is a JVM-only annotation and is not available in Kotlin/Native.
-actual class MdnsDiscovery actual constructor() {
+actual class MdnsDiscovery {
     private val _discoveredDevices = MutableStateFlow<List<Device>>(emptyList())
     actual val discoveredDevices: StateFlow<List<Device>> = _discoveredDevices.asStateFlow()
 

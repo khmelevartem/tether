@@ -23,7 +23,7 @@ Each of those tasks would otherwise have to answer the same architectural questi
 - **Single UI codebase.** Compose-MP is the rendering layer everywhere; we will not maintain a parallel SwiftUI tree.
 - **Android config-change survival** is required.
 - **iOS UIKit integration** is plausible — share sheet, file pickers, document camera. The presentation layer must let a UIKit entry point drive the same state holder a Compose screen drives.
-- **Existing DI shape.** Composition happens in `AppGraph` (see [dependency-injection.md](../dependency-injection.md)). Components receive collaborators via constructor; presentation must keep that style.
+- **Existing DI shape.** Composition happens in `AppContainer` (see [dependency-injection.md](../dependency-injection.md)). Components receive collaborators via constructor; presentation must keep that style.
 
 ## Decision drivers
 
@@ -34,7 +34,7 @@ Each of those tasks would otherwise have to answer the same architectural questi
 | Android config-change survival | Required (rotation, dark/light theme, locale). |
 | UIKit interop | Some iOS flows enter from native UI (share sheet) and must drive the same state holder. |
 | Testability without Compose | Presentation logic should be testable as plain Kotlin in `commonTest`. |
-| Fit with `AppGraph` constructor DI | Components must take dependencies via constructor, not look them up. |
+| Fit with `AppContainer` constructor DI | Components must take dependencies via constructor, not look them up. |
 | Maturity | This is a load-bearing choice; replacing it later is expensive. |
 
 ### Validation scenarios
@@ -66,9 +66,9 @@ Each option below is judged against the same five scenarios:
 **How it handles the scenarios:**
 
 1. Device list — `coroutineScope()` extension binds the discovery `collect` to component lifetime; cancelled on destroy.
-2. Send + progress — transfer state lives in an `AppGraph` repository, not in the Component. The send Component observes the repository; rotation rebuilds the Component, the transfer keeps running.
+2. Send + progress — transfer state lives in an `AppContainer` repository, not in the Component. The send Component observes the repository; rotation rebuilds the Component, the transfer keeps running.
 3. Pairing dialog — `ChildSlot` overlay; its own back handler closes the slot before the screen.
-4. Back from transfer — Component reads "is anything in progress?" from the AppGraph repository and registers a `BackHandler` accordingly to show a confirmation.
+4. Back from transfer — Component reads "is anything in progress?" from the AppContainer repository and registers a `BackHandler` accordingly to show a confirmation.
 5. iOS share sheet — `RootComponent.onSharedFile(uri)` is called from the UIViewController code path.
 
 ### 2. Voyager
@@ -80,7 +80,7 @@ Each option below is judged against the same five scenarios:
 - **Config-change survival:** ScreenModels are retained; `SavedStateHandle` integration on Android.
 - **UIKit interop:** limited to what Compose-MP gives you (a single root `UIViewController`). A UIKit-side entry point cannot drive a Voyager Screen without going through Compose first.
 - **Testability:** ScreenModels are testable, but their lifecycle is owned by the hosting Composable, which couples test setup to Compose fixtures.
-- **DI fit:** acceptable — `getScreenModel { ... }` accepts constructor args, but the canonical pattern leans on a service-locator, fighting `AppGraph`'s "no global lookups" rule.
+- **DI fit:** acceptable — `getScreenModel { ... }` accepts constructor args, but the canonical pattern leans on a service-locator, fighting `AppContainer`'s "no global lookups" rule.
 - **Maturity:** stable, popular, smaller maintainer team and slower release cadence than Decompose.
 
 **Why not chosen:** the UIKit blind spot is decisive. The native iOS pickers / share sheet path is plausible from day one (see `docs/product/features/file-transfer.md` and `pairing.md`). With Voyager, that path forces a parallel non-Voyager state holder for the native side — exactly the fork the ADR is meant to prevent.
@@ -121,7 +121,7 @@ The AndroidX Navigation Compose library, recently extended to non-Android KMP ta
 - **Config-change survival + process-death restoration:** persistence is a first-class feature — PMs serialise via `PmStateHandler` and restore after process recreation. Stronger out-of-the-box than Decompose's default.
 - **UIKit interop:** PMs are pure Kotlin; native UIKit code can drive them directly. Same property as Decompose.
 - **Testability:** dedicated `premo-test` module with `runPmTest`. No Compose runtime needed.
-- **DI fit:** PMs accept `PmArgs` (serializable) and a parent reference via constructor. Compatible with `AppGraph`.
+- **DI fit:** PMs accept `PmArgs` (serializable) and a parent reference via constructor. Compatible with `AppContainer`.
 - **Maturity:** v1.0.0-alpha.15 (May 2024), no commits since May 2024, single maintainer, ~200 stars. README explicitly warns: *"the library is in the pre-release alpha version. Stable work and backward compatibility are not guaranteed."* No stable release in five years.
 
 **Why not chosen:** two blocking issues. (1) **macOS native is not supported** by the library's KMP configuration — and macOS native is one of our four required targets. (2) **Pre-release alpha + ~2 years of no commits + single maintainer** make this a risky bet for a load-bearing layer. The good ideas in Premo — process-death persistence as a first-class concern, parent-intercepts-navigation messaging — are noted as inspiration when extending the Decompose-based layer.
@@ -170,11 +170,11 @@ Shape rules:
 - **Components are plain Kotlin** — they take their dependencies and a `ComponentContext` via constructor. No globals, no service locators.
 - **Naming follows Decompose** — classes are `XxxComponent`, not `XxxViewModel`. They are not Android `ViewModel`s; the difference matters for tests, lifecycle, and KMP.
 - **CoroutineScope is a default constructor argument** wired to the library's `coroutineScope()` extension on `ComponentContext`. Lifecycle-bound by default; tests pass an injected `TestScope` instead.
-- **`AppGraph` builds the root Component**; child Components are created by their parents (or by a `ChildStack` configuration).
+- **`AppContainer` builds the root Component**; child Components are created by their parents (or by a `ChildStack` configuration).
 - **Compose subscribes via `subscribeAsState`** and forwards events as method calls. No `LaunchedEffect`-driven business logic.
 - **Start with a single root Component and `ChildSlot` for modal overlays** (pairing dialog, confirmations). Add **`ChildStack`** when the first explicit back-press flow lands (likely send + progress).
 - **One Component per logical screen / dialog.** Sub-state inside a screen stays inside the Component; we don't split presentation into ceremonial layers.
-- **Long-lived domain state stays out of Components.** Active transfers, peer state, and other state that must outlive a screen live in repositories owned by `AppGraph`. Components observe these repositories; they never own such state and do not use `InstanceKeeper` for it.
+- **Long-lived domain state stays out of Components.** Active transfers, peer state, and other state that must outlive a screen live in repositories owned by `AppContainer`. Components observe these repositories; they never own such state and do not use `InstanceKeeper` for it.
 
 ## Consequences
 
@@ -183,8 +183,8 @@ Shape rules:
 - Presentation logic is testable as plain Kotlin in `commonTest` — no Compose runtime, no Robolectric.
 - Back stack, lifecycle, and state restoration come from a maintained library instead of from us.
 - iOS UIKit integration is on the table from day one; share-sheet / native pickers don't force a rewrite.
-- DI shape (`AppGraph` + constructor injection) generalises naturally — Components are constructor-injected like everything else.
-- Per-screen scope question from [dependency-injection.md](../dependency-injection.md) is answered: long-lived domain state stays in `AppGraph` repositories; Components own only screen-local view state (and only for as long as the screen lives). `AppGraph` stays singleton.
+- DI shape (`AppContainer` + constructor injection) generalises naturally — Components are constructor-injected like everything else.
+- Per-screen scope question from [dependency-injection.md](../dependency-injection.md) is answered: long-lived domain state stays in `AppContainer` repositories; Components own only screen-local view state (and only for as long as the screen lives). `AppContainer` stays singleton.
 
 **Negative / cost:**
 
