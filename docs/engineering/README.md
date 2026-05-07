@@ -10,6 +10,12 @@ Product-side docs (vision, audience, features) live in [`docs/product/`](../prod
 - [Modules](modules.md) — current monolith, target module split, and the triggers that move a piece of code into its own module.
 - [Dependency Injection](dependency-injection.md) — DI strategy now (manual composition root) and later (Metro). Concrete rules for new code.
 
+## Architecture Decision Records
+
+ADRs in [`adr/`](adr/) capture the *why* behind one-time architectural choices. Living docs above; ADRs are append-only history.
+
+- [macOS target — Native over Desktop JVM](adr/adr-macos-native-vs-jvm.md) — chose `macosArm64` Kotlin/Native to share `appleMain` with iOS.
+
 ## For the AI agent / contributor
 
 Before writing code, read [dependency-injection.md](dependency-injection.md) — it has the concrete "does my code fit" checklist.
