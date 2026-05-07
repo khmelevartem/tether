@@ -21,6 +21,8 @@ import kotlin.io.path.exists
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.TimeSource
 
+private const val ESC = ""
+
 class TetherCommand :
     CliktCommand(
         name = "tether",
@@ -58,13 +60,17 @@ class TetherCommand :
         }
         echo("mDNS started → advertising '$deviceName' on port $actualPort\n")
 
-        val peersJob = launch {
+        var peersLinePrinted = false
+        launch {
             discovery.discoveredDevices.collect { peers ->
-                if (peers.isEmpty()) {
-                    echo("[peers] none")
+                val ids = if (peers.isEmpty()) "none" else peers.joinToString(", ") { it.id }
+                if (peersLinePrinted) {
+                    print("$ESC[1A\r$ESC[K[peers] $ids\n")
                 } else {
-                    peers.forEach { echo("[peers] $it") }
+                    print("[peers] $ids\n")
+                    peersLinePrinted = true
                 }
+                System.out.flush()
             }
         }
 
@@ -126,10 +132,7 @@ class TetherCommand :
                         rawPath = tokens[2],
                     )
                 }
-                "quit" -> {
-                    peersJob.cancel()
-                    running = false
-                }
+                "quit" -> running = false
                 else -> echo("unknown command: '${tokens[0]}'. Available: send, list, quit.")
             }
         }
@@ -181,7 +184,7 @@ internal suspend fun handleSend(
         }
     }
 
-    progressOutput("\n") // end progress line
+    progressOutput("\n")
     val elapsed = started.elapsedNow()
     when (result) {
         is SendResult.Success -> output("[send] OK — ${elapsed.inWholeMilliseconds} ms  →  ${result.savedPath}")
