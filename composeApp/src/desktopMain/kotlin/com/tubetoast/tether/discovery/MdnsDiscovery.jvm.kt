@@ -62,8 +62,12 @@ actual class MdnsDiscovery {
 
                         val ipv4 = info.getHostAddresses().firstOrNull { IPV4_REGEX.matches(it) }
                         if (ipv4 == null) {
+                            // JmDNS resolves A/AAAA records in stages — first callback can carry only
+                            // IPv6, IPv4 arrives on a later callback. Skip quietly and wait for the
+                            // next event. A persistent IPv6-only state across the peer's lifetime
+                            // is a separate concern (see follow-up logger issue).
                             System.err.println(
-                                "WARN: serviceResolved — no IPv4 for '${event.name}', skipping",
+                                "DEBUG: serviceResolved — no IPv4 yet for '${event.name}', skipping",
                             )
                             return
                         }
