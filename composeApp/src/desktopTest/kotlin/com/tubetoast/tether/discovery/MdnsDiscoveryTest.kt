@@ -2,6 +2,7 @@ package com.tubetoast.tether.discovery
 
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -207,6 +208,33 @@ class MdnsDiscoveryTest {
     // can break it. The test was also consistently flaky: same-machine JmDNS conflict
     // probing is timing-dependent and cannot reliably complete within a fixed timeout.
     // The correctness guarantee is documented in MdnsDiscovery.jvm.kt instead.
+
+    // Reproduces issue #47: a peer that registers after JmDNS's initial 3-query
+    // ServiceResolver burst (~675 ms) must still be discovered without waiting for the
+    // ~48-minute TTL refresh. Implemented via periodic re-arming of addServiceListener.
+    @Test
+    fun `late-joining peer is discovered after initial browse cycle`() = runBlocking {
+        val a = MdnsDiscovery()
+        val b = MdnsDiscovery()
+        try {
+            a.start("LateA", 19070)
+            // Well past the initial ServiceResolver burst (3 × 225 ms ≈ 675 ms) so any
+            // discovery now depends on the periodic re-query, not the initial cycle.
+            delay(3_000)
+
+            b.start("LateB", 19071)
+
+            val peers = withTimeout(15_000) {
+                a.discoveredDevices.first { peers -> peers.any { it.name == "LateB" } }
+            }
+            val lateB = peers.filter { it.name == "LateB" }
+            assertEquals(1, lateB.size)
+            assertEquals(19071, lateB[0].port)
+        } finally {
+            a.stop()
+            b.stop()
+        }
+    }
 
     @Test
     fun `discovered device has correct host and port`() = runBlocking {
