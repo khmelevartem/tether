@@ -77,14 +77,14 @@ class TetherCommand :
             }
         }
 
-        val fileClient = FileClient()
+        val fileClient = container.fileClient
 
         // Shutdown hook runs cleanup in a thread with a 2 s timeout so JmDNS
         // can send goodbye packets but never blocks the JVM exit indefinitely.
         // After all hooks finish the JVM halts and kills any remaining threads.
         Runtime.getRuntime().addShutdownHook(
             Thread {
-                val t = Thread {
+                val cleanupThread = Thread {
                     try {
                         discovery.stop()
                     } catch (e: Exception) {
@@ -101,9 +101,9 @@ class TetherCommand :
                         System.err.println("WARN: FileClient close failed — ${e.message}")
                     }
                 }
-                t.isDaemon = true
-                t.start()
-                t.join(2_000)
+                cleanupThread.isDaemon = true
+                cleanupThread.start()
+                cleanupThread.join(2_000)
             },
         )
 
@@ -154,8 +154,8 @@ internal suspend fun handleSend(
     file: Path,
     output: (String) -> Unit = ::println,
     errorOutput: (String) -> Unit = System.err::println,
-    progressOutput: (String) -> Unit = { s ->
-        print(s)
+    progressOutput: (String) -> Unit = { text ->
+        print(text)
         System.out.flush()
     },
 ) {
@@ -184,8 +184,8 @@ internal suspend fun handleSend(
         if ((now - lastPrint) >= 500.milliseconds) {
             val intervalSec = (now - lastPrint).inWholeMilliseconds / 1000.0
             val speed = if (intervalSec > 0) (transferred - lastBytes) / intervalSec else 0.0
-            val totalStr = total?.let { " / ${formatBytes(it)}" } ?: ""
-            progressOutput("\r[send] ${formatBytes(transferred)}$totalStr  (${formatBytes(speed.toLong())}/s)   ")
+            val formattedTotal = total?.let { " / ${formatBytes(it)}" } ?: ""
+            progressOutput("\r[send] ${formatBytes(transferred)}$formattedTotal  (${formatBytes(speed.toLong())}/s)   ")
             lastPrint = now
             lastBytes = transferred
         }

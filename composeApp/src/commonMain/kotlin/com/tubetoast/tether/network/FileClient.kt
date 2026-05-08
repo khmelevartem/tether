@@ -80,22 +80,22 @@ private const val COPY_BUFFER_SIZE = 8 * 1024
 
 private suspend fun copyWithProgress(
     source: ByteReadChannel,
-    dest: ByteChannel,
+    destination: ByteChannel,
     totalBytes: Long?,
     onProgress: (Long, Long?) -> Unit,
 ) {
-    val buf = ByteArray(COPY_BUFFER_SIZE)
+    val buffer = ByteArray(COPY_BUFFER_SIZE)
     var transferred = 0L
     try {
         while (!source.isClosedForRead) {
-            val read = source.readAvailable(buf)
-            if (read > 0) {
-                dest.writeFully(buf, 0, read)
-                transferred += read
+            val bytesRead = source.readAvailable(buffer)
+            if (bytesRead > 0) {
+                destination.writeFully(buffer, 0, bytesRead)
+                transferred += bytesRead
                 onProgress(transferred, totalBytes)
             }
         }
     } finally {
-        dest.close()
+        destination.close()
     }
 }
