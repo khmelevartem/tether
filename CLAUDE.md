@@ -137,6 +137,13 @@ dns-sd -B _tether._tcp.   # watch for _tether._tcp. services
 ./gradlew :composeApp:desktopTest --tests "com.tubetoast.tether.network.FileServerTest"
 ```
 
+**Smoke-тест по таргетам.** В репо есть скилл `/smoke-test` — happy-path по Desktop CLI, Desktop↔Desktop send, Android (если adb-устройство подключено) и нативной компиляции macosArm64/iosSimulatorArm64. Используй его, когда:
+- сомневаешься, не сломал ли что-то рантайм (особенно сетевую часть, FileServer, mDNS, FGS) после нетривиальных правок;
+- готовишься merge'ить PR, который трогает рантайм-поведение;
+- закрываешь задачу через `/close-issue` — Шаг 2 «Ручные тесты» рекомендует прогнать smoke перед запросом подтверждения.
+
+Skip skill для DOCS-only / `.claude/` / комментариев — там нечего проверять рантаймом. Smoke не заменяет `allTests` (это unit-тесты, а smoke — рантайм happy-path).
+
 ### Build Troubleshooting
 
 - **Clear build cache**: `./gradlew clean`
