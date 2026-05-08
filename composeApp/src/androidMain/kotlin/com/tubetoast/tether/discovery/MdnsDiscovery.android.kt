@@ -5,7 +5,6 @@ import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.os.Build
 import android.util.Log
-import com.tubetoast.tether.TetherApp
 import com.tubetoast.tether.protocol.Device
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,7 +14,9 @@ import java.util.concurrent.ConcurrentLinkedQueue
 private const val SERVICE_TYPE = "_tether._tcp."
 private const val TAG = "MdnsDiscovery"
 
-actual class MdnsDiscovery actual constructor() {
+actual class MdnsDiscovery(
+    private val context: Context,
+) {
     private val _discoveredDevices = MutableStateFlow<List<Device>>(emptyList())
     actual val discoveredDevices: StateFlow<List<Device>> = _discoveredDevices.asStateFlow()
 
@@ -146,7 +147,7 @@ actual class MdnsDiscovery actual constructor() {
         ownName = deviceName
         resolveQueue.clear()
         resolving = false
-        val nm = TetherApp.context.getSystemService(Context.NSD_SERVICE) as NsdManager
+        val nm = context.getSystemService(Context.NSD_SERVICE) as NsdManager
         nsdManager = nm
         val serviceInfo = NsdServiceInfo().apply {
             serviceName = deviceName

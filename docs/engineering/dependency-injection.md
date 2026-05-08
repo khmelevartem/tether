@@ -2,33 +2,55 @@
 
 How Tether wires its components — today, and where this is headed. This is also the **"does my code fit?" checklist** for new code.
 
-## Today: no DI
+## Phase 1 (current): Manual DI via composition root
 
-There is no DI framework. Components construct their own collaborators:
+A container — `AppContainer` — is the single place where shared components are constructed. Each platform's entry point creates the right container leaf, hands components to whoever needs them, and owns their lifecycle. No reflection, no DSL, no annotations. Components themselves never call `new` on their collaborators.
 
-```kotlin
-class FileClient { private val http = HttpClient { ... } }     // FileClient owns its http client
-class FileServer { private val server = embeddedServer(...) }  // FileServer owns its server
+### Container hierarchy
+
+The container hierarchy mirrors the source set hierarchy. Every layer adds only what its source set can actually see:
+
+```
+AppContainer            (commonMain)        — abstract: fileServer, mdnsDiscovery
+├── JvmAppContainer     (jvmMain)           — provides FileServer(port, downloadsDir)
+│   ├── AndroidAppContainer  (androidMain)  — provides MdnsDiscovery(context)
+│   └── DesktopAppContainer  (desktopMain)  — provides MdnsDiscovery() no-arg
+└── AppleAppContainer   (appleMain)         — provides FileServer() stub + MdnsDiscovery() no-arg
+    ├── IosAppContainer     (iosMain)
+    └── MacosAppContainer   (macosMain)
 ```
 
-This is fine while the project is tiny. It is also already starting to bite — see anti-patterns below.
+`AppContainer` is `abstract` and declares both `fileServer` and `mdnsDiscovery` abstractly — construction lives in the platform leaves because the `MdnsDiscovery` constructor needs `Context` on Android but no args on Desktop/Apple, and `FileServer` is JVM-implementation-only with an Apple stub. `JvmAppContainer` is also `abstract`: it provides `FileServer` (sharing the construction across Android + Desktop) but cannot construct `MdnsDiscovery`.
 
-## Decision
+`FileServer` itself is declared in `commonMain` as an `expect class` so common code can reference the type. The JVM `actual` ([`FileServer.kt`](../../composeApp/src/jvmMain/kotlin/com/tubetoast/tether/network/FileServer.kt)) holds the real Ktor implementation; the Apple `actual` ([`FileServer.apple.kt`](../../composeApp/src/appleMain/kotlin/com/tubetoast/tether/network/FileServer.apple.kt)) is a stub that throws on `start()` — a real Apple implementation will land when the iOS receive-side is built.
 
-We adopt DI in two phases.
+Every container takes an `AppConfig` interface in its constructor. `AppConfig` is the input — the values the entry point chooses (device name, port, downloads dir, Android `Application`). The hierarchy of `*AppConfig` interfaces tracks the container hierarchy: [`AppConfig`](../../composeApp/src/commonMain/kotlin/com/tubetoast/tether/di/AppConfig.kt), [`JvmAppConfig`](../../composeApp/src/jvmMain/kotlin/com/tubetoast/tether/di/JvmAppConfig.kt), [`AndroidAppConfig`](../../composeApp/src/androidMain/kotlin/com/tubetoast/tether/di/AndroidAppConfig.kt), etc.
 
-### Phase 1 (now): Manual DI via composition root
+Concrete `*AppConfig` implementations are **named classes in their own files** (per [architecture-principles.md](architecture-principles.md) — "Named classes over anonymous objects"): [`TetherAppConfig`](../../composeApp/src/androidMain/kotlin/com/tubetoast/tether/di/TetherAppConfig.kt) for Android, [`DefaultDesktopAppConfig`](../../composeApp/src/desktopMain/kotlin/com/tubetoast/tether/di/DesktopAppConfig.kt), [`DefaultIosAppConfig`](../../composeApp/src/iosMain/kotlin/com/tubetoast/tether/di/IosAppConfig.kt), [`DefaultMacosAppConfig`](../../composeApp/src/macosMain/kotlin/com/tubetoast/tether/di/MacosAppConfig.kt). Anonymous `object : AppConfig { ... }` literals invite drift between call sites.
 
-A single object — call it `AppGraph` — assembles dependencies in each platform's entry point:
+### Entry points
 
-- JVM: `Main.kt` builds `AppGraph`, hands components to whoever needs them.
-- Android: `TetherApp.onCreate()` builds `AppGraph`, exposes it to `MainActivity`.
-- iOS: `MainViewController` builds `AppGraph`, passes it into Compose.
-- macOS: same shape as iOS.
+Each platform builds its container in its entry point and passes components down:
 
-Inside the graph, dependencies are wired by calling constructors. No reflection, no DSL, no annotations. Components themselves never call `new` on their collaborators.
+- **Desktop** ([`Main.kt`](../../composeApp/src/desktopMain/kotlin/com/tubetoast/tether/Main.kt)): builds `DesktopAppContainer` from CLI args at the top of `runBlocking`.
+- **Android** ([`TetherApp`](../../composeApp/src/androidMain/kotlin/com/tubetoast/tether/TetherApp.kt)): builds `AndroidAppContainer` lazily in the `Application` subclass and exposes it via the [`AppContainerProvider`](../../composeApp/src/androidMain/kotlin/com/tubetoast/tether/di/AppContainerProvider.kt) interface. [`TetherForegroundService`](../../composeApp/src/androidMain/kotlin/com/tubetoast/tether/network/TetherForegroundService.kt) reads it via `(application as AppContainerProvider).container`.
+- **iOS** ([`MainViewController`](../../composeApp/src/iosMain/kotlin/com/tubetoast/tether/MainViewController.kt)): builds `IosAppContainer` outside the `ComposeUIViewController { ... }` lambda so the composable does not act as a composition root (see rule 5 below).
+- **macOS**: container leaf and config exist; the entry point will follow the same shape as iOS once a macOS run target lands.
 
-### Phase 2 (later): Migrate to Metro
+### The Provider pattern (Android)
+
+Android's framework-managed components — `Activity`, `Service`, `BroadcastReceiver` — must have empty constructors. They cannot receive `AppContainer` through the constructor like normal components. The pattern that fits is:
+
+1. The `Application` subclass implements `AppContainerProvider` and owns the container.
+2. Framework components access it via `(application as AppContainerProvider).container`.
+
+This is **not** a service-locator: `AppContainerProvider` is an interface implemented by exactly one type (`TetherApp` in production, a test `Application` in tests), and access is scoped to Android-framework-managed classes. Pure Kotlin classes still receive their collaborators through the constructor.
+
+### Migration to Phase 2 stays cheap
+
+The container hierarchy and provider pattern map directly onto Metro's shape. When we migrate, `AppContainer` becomes a `@DependencyGraph`, the platform subclasses become Metro contributions, and the `*AppConfig` interfaces become `@Provides` methods on a config graph. Tests that override `open val`s become test graphs with `@Provides` overrides. No structural reshuffle.
+
+## Phase 2 (later): Migrate to Metro
 
 When manual DI becomes painful, we move to [Metro](https://github.com/ZacSweers/metro) — a Kotlin compiler-plugin DI framework by Zac Sweers (Anvil author). v1.0.0 stable, April 2026.
 
@@ -45,13 +67,13 @@ When manual DI becomes painful, we move to [Metro](https://github.com/ZacSweers/
 
 **Why not Hilt / Dagger:** not KMP. Dagger generates JVM bytecode, Hilt is Android-locked.
 
-### Migration trigger (when Phase 2 starts)
+## Migration trigger (when Phase 2 starts)
 
 We move to Metro when **any one** of these hits:
 
-- We split out a third Gradle module and wiring across module boundaries becomes tedious in `AppGraph`.
+- We split out a third Gradle module and wiring across module boundaries becomes tedious in the container.
 - We forget to register something for the first time and ship a crash to a platform.
-- The composition root grows past ~30 lines or starts branching by platform / build flavor.
+- A container leaf grows past ~30 lines or starts branching by build flavor.
 
 Until then, a compiler plugin is more apparatus than the problem deserves.
 
@@ -77,7 +99,7 @@ The composition root creates the `HttpClient` once and hands it to every compone
 
 ### 2. Constructor injection only
 
-No `lateinit var http: HttpClient` set after construction. No service-locator lookups inside methods (`AppGraph.http.send(...)`). Dependencies are explicit constructor arguments.
+No `lateinit var http: HttpClient` set after construction. No service-locator lookups inside methods (`AppContainer.http.send(...)`). Dependencies are explicit constructor arguments.
 
 Reason: a class's constructor signature is its honest dependency list. Anything reached through globals is invisible.
 
@@ -126,23 +148,25 @@ Two problems:
 1. `DisposableEffect(Unit)` runs once, capturing the instance from the first composition. On every recomposition, a new `MdnsDiscovery()` is created and immediately discarded — never started, never stopped. Memory leak.
 2. Even with `remember { MdnsDiscovery() }` to fix the leak, the composable still owns the lifecycle of a singleton — it shouldn't.
 
-✅ The correct shape (Phase 1): build `MdnsDiscovery` in the platform entry point, pass it into the composable.
+✅ The correct shape: build the container in the platform entry point, pass components into the composable.
 
 ```kotlin
 // iosMain — MainViewController.kt (platform entry point = composition root)
-fun MainViewController(): UIViewController {
-    val discovery = MdnsDiscovery()   // created here, owned here
-    return ComposeUIViewController {
+fun MainViewController() = run {
+    val container = IosAppContainer(
+        DefaultIosAppConfig(deviceName = UIDevice.currentDevice.name),
+    )
+    ComposeUIViewController {
         DisposableEffect(Unit) {
-            discovery.start(UIDevice.currentDevice.name, port = 8080)
-            onDispose { discovery.stop() }
+            container.mdnsDiscovery.start(container.deviceName, port = 8080)
+            onDispose { container.mdnsDiscovery.stop() }
         }
-        App(discovery = discovery)    // passed as parameter
+        App()
     }
 }
 ```
 
-When `AppGraph` lands, `MainViewController` will receive the graph and extract `discovery` from it. The composable itself never calls a constructor.
+The container is created **outside** the `ComposeUIViewController { ... }` lambda; the composable receives ready-made components, never calls a constructor.
 
 ### 6. Don't introduce an interface for one implementation
 
@@ -157,47 +181,48 @@ A `FileTransferRepository` interface with one `FileTransferRepositoryImpl` adds 
 
 When you do need to test a class that depends on `HttpClient`, prefer Ktor's `MockEngine` or a hand-rolled fake — don't introduce a `HttpClientWrapper` interface just to mock it. Same logic for `MdnsDiscovery`: fake the `Flow<List<Device>>` it exposes, don't abstract the platform API behind another layer.
 
-## Composition root sketch
+## Testability
 
-This is the rough shape `AppGraph` will take in Phase 1. Not yet implemented; reference it when wiring is added.
+The container is also the seam tests use to substitute fakes. Three levels of tests, three patterns:
+
+### 1. Unit tests of components (no container needed)
+
+Components like `FileServer` and `MdnsDiscovery` take their dependencies through the constructor and are tested directly. The container exists for production wiring only — tests construct what they need. See [`FileServerTest`](../../composeApp/src/jvmTest/kotlin/com/tubetoast/tether/network/FileServerTest.kt).
+
+### 2. Tests of consumers that depend on container components
+
+When a class (e.g. a future Decompose Component or `TrustedDeviceStore`) takes container components, the test builds a fake container by subclassing and overriding `open val`s — exactly what the `open val mdnsDiscovery` declarations are for:
 
 ```kotlin
-// commonMain
-class AppGraph(
-    val protocol: ProtocolModule,
-    val discovery: MdnsDiscovery,
-    val client: FileClient,
-)
-
-// jvmMain (Main.kt)
-fun main(args: Array<String>) {
-    val graph = AppGraph(
-        protocol = ProtocolModule(),
-        discovery = MdnsDiscovery(),
-        client = FileClient(HttpClient(CIO)),
-    )
-    val server = FileServer(/* ... */)
-    // ...
+class FakeAppContainer(deviceName: String = "test") : AppContainer(
+    object : AppConfig { override val deviceName = deviceName },
+) {
+    override val mdnsDiscovery: MdnsDiscovery = FakeMdnsDiscovery()
 }
-
-// androidMain (TetherApp.onCreate)
-appGraph = AppGraph(
-    protocol = ProtocolModule(),
-    discovery = MdnsDiscovery(applicationContext),
-    client = FileClient(HttpClient(CIO)),
-)
 ```
 
-Things to notice:
-- Different platforms build different graphs (Android passes `Context`, JVM also builds a `FileServer`).
-- No component in the graph reaches across to construct another.
-- `commonMain` defines the *shape* (`AppGraph` data class), platforms fill it in.
-- The platform entry point also builds the **root Component** (Decompose), passing `AppGraph` to it. The root creates its children with the dependencies they need. See [presentation-layer.md](presentation-layer.md).
+(For one-shot test fakes, an inline `object : AppConfig` literal is acceptable — the named-class rule has its exception there. Reused fakes get extracted to a named class.)
 
-### Per-screen scoping
+### 3. Tests of Android framework components
 
-`AppGraph` is a singleton. There is no separate per-screen DI scope and no `ViewModelStoreOwner` integration — per-screen state and lifecycle are owned by Decompose Components, not by an Android-style ViewModel container. Each Component receives the dependencies it needs from `AppGraph` (or from its parent Component) and constructs its children directly.
+`Service`/`Activity` tests under Robolectric need an `Application` that implements `AppContainerProvider`. The simplest path is `@Config(application = TetherApp::class)` — Robolectric instantiates the real `TetherApp`, the lazy container builds against the Robolectric-shadowed `getExternalFilesDir`, etc. See [`TetherForegroundServiceTest`](../../composeApp/src/androidUnitTest/kotlin/com/tubetoast/tether/network/TetherForegroundServiceTest.kt).
+
+When a test needs a fake container instead of the real one, define a `TestApplication : Application(), AppContainerProvider` that exposes a `FakeAndroidAppContainer`, and switch `@Config(application = TestApplication::class)`. This stays out of any global static — each test method gets a fresh instance through Robolectric.
+
+### Testability rules to keep this working
+
+1. **Container fields are `open val`.** Override is the substitution mechanism. No setters, no `lateinit var`.
+2. **`AppConfig` and its subtypes are interfaces.** Tests implement them with named classes (or, exceptionally, anonymous objects for one-shot test cases).
+3. **Common-logic tests don't reach for a platform container.** They construct a minimal `AppContainer` subclass in `commonTest`.
+4. **Don't mock components, fake them.** Mock frameworks force a layer of indirection that pollutes production code. If a fake is hard to write because the component is too coupled to its collaborators, fix the component.
+
+## Per-screen scoping
+
+`AppContainer` is a singleton. There is no separate per-screen DI scope and no `ViewModelStoreOwner` integration — per-screen state and lifecycle are owned by Decompose Components, not by an Android-style ViewModel container. Each Component receives the dependencies it needs from `AppContainer` (or from its parent Component) and constructs its children directly.
+
+The platform entry point also builds the **root Component** (Decompose), passing `AppContainer` to it. The root creates its children with the dependencies they need. See [presentation-layer.md](presentation-layer.md).
 
 ## Open questions
 
-- iOS receive-side: when a non-Ktor `FileServer` implementation lands, the graph branches per-platform more aggressively. May be the moment to flip to Metro.
+- iOS receive-side: when a non-Ktor `FileServer` implementation lands, the container branches per-platform more aggressively. May be the moment to flip to Metro.
+- Public/Internal container split (per the library DI pattern): not needed in a single-module app; revisit when the first lib module is extracted.

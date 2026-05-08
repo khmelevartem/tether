@@ -10,14 +10,14 @@ A **Component** is a plain Kotlin class that holds the state and lifecycle of on
 
 ```
 +-------------------+      +-----------------+      +----------------+
-|  Composable       |      |  Component      |      |  AppGraph      |
+|  Composable       |      |  Component      |      |  AppContainer      |
 |  DeviceList(...)  +------> state: Value    +------> repositories,  |
 |  events as calls  |      |  fun onClick()  |      |  discovery,    |
 +-------------------+      +-----------------+      |  network       |
                                                     +----------------+
 ```
 
-Compose talks down to the Component. The Component talks down to `AppGraph` collaborators received via constructor — never the other way around.
+Compose talks down to the Component. The Component talks down to `AppContainer` collaborators received via constructor — never the other way around.
 
 ## Component anatomy
 
@@ -77,9 +77,9 @@ Events are plain method calls on the Component. No `LaunchedEffect` business log
 
 ## Long-lived state lives outside Components
 
-A Component's lifetime is bound to the screen (or flow) it represents. Anything that must outlive a screen — active file transfers, peer state, long-running connections — lives in repositories owned by `AppGraph`. Components observe these repositories via injected dependencies and never duplicate the state internally.
+A Component's lifetime is bound to the screen (or flow) it represents. Anything that must outlive a screen — active file transfers, peer state, long-running connections — lives in repositories owned by `AppContainer`. Components observe these repositories via injected dependencies and never duplicate the state internally.
 
-In particular: **we do not use `InstanceKeeper` to retain domain state across configuration changes.** The repository in `AppGraph` already outlives the Activity; the Component just rebuilds and re-subscribes on rotation.
+In particular: **we do not use `InstanceKeeper` to retain domain state across configuration changes.** The repository in `AppContainer` already outlives the Activity; the Component just rebuilds and re-subscribes on rotation.
 
 ## Navigation
 
@@ -94,7 +94,7 @@ See [Decompose: Navigation overview](https://arkivanov.github.io/Decompose/navig
 
 ## Configuration change (Android)
 
-Decompose hooks into `AppCompatActivity` via `defaultComponentContext(...)`. When the activity is recreated on rotation, the root Component is rebuilt, but `StateKeeper` restores serializable view state and the underlying `AppGraph` repositories are untouched. No work needed in individual Components beyond putting any session-local view state through `stateKeeper.consume(...)` / `register(...)`.
+Decompose hooks into `AppCompatActivity` via `defaultComponentContext(...)`. When the activity is recreated on rotation, the root Component is rebuilt, but `StateKeeper` restores serializable view state and the underlying `AppContainer` repositories are untouched. No work needed in individual Components beyond putting any session-local view state through `stateKeeper.consume(...)` / `register(...)`.
 
 Process-death state restoration is **not currently a goal** — Tether's flows are short-lived enough that a killed process means a fresh start. Revisit if persistence requirements emerge.
 

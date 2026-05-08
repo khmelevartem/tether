@@ -156,18 +156,19 @@ adb devices | awk '/device$/ && !/List/ {print $1}'
 
 1. **Install:** `./gradlew -q :composeApp:installDebug`
 2. **Logcat clear:** `adb logcat -c`
-3. **Start activity** (с замером времени для метрики cross-discovery):
+3. **Start activity:**
    ```bash
-   LAUNCH_MS=$(python3 -c "import time; print(int(time.time() * 1000))")
    adb shell am start -n com.tubetoast.tether/.MainActivity
    ```
-4. **Ждём `NSD service registered` как anchor готовности** (вместо слепого `sleep 8`):
+4. **Ждём `NSD service registered` как anchor готовности** (вместо слепого `sleep 8`).
+   Anchor для метрики cross-discovery ставится **после** того как Android-сторона опубликовалась — чтобы дельта мерила только пропагацию через сеть + JmDNS resolve, а не Android boot/init/наш wait-loop:
    ```bash
    DEADLINE=$(($(date +%s) + 12))
    while [ $(date +%s) -lt $DEADLINE ]; do
      adb logcat -d 2>/dev/null | grep -q "NSD service registered" && break
      sleep 1
    done
+   NSD_READY_MS=$(python3 -c "import time; print(int(time.time() * 1000))")
    ```
    Парсим:
    - `TetherFGService: FileServer started on port <N>` → `ANDROID_PORT`
@@ -178,18 +179,18 @@ adb devices | awk '/device$/ && !/List/ {print $1}'
    ```
    Если эмулятор и IP `10.0.2.x` — host-доступ через `adb forward tcp:18080 tcp:$ANDROID_PORT` и `localhost:18080`. Для физ. устройства — прямо `$ANDROID_IP:$ANDROID_PORT`.
 6. **`/health` sanity:** `curl -sf http://$ANDROID_IP:$ANDROID_PORT/health` → `Tether OK`. Это единственное место, где curl допустим — endpoint sanity, не пользовательский flow.
-7. **Cross-discovery с замером времени:** в stdin Desktop CLI поллим лог, ищем `Tether-<MODEL>` пока не появится. Записываем delta от `LAUNCH_MS`:
+7. **Cross-discovery с замером времени:** в stdin Desktop CLI поллим лог, ищем `Tether-<MODEL>` пока не появится. Дельта считается от `NSD_READY_MS` (момент когда Android уже опубликовался), не от `am start`:
    ```bash
    for i in $(seq 1 30); do
      sleep 1
      grep -E "\[peers\] .*Tether-" $LOG_A | grep -v "none" | tail -1 | grep -q . && break
    done
    NOW_MS=$(python3 -c "import time; print(int(time.time() * 1000))")
-   DELTA_MS=$((NOW_MS - LAUNCH_MS))
+   DELTA_MS=$((NOW_MS - NSD_READY_MS))
    ANDROID_NAME=$(grep -oE 'Tether-[A-Za-z0-9_]+' $LOG_A | head -1)
    echo "cross-discovery: ${DELTA_MS}ms, peer=$ANDROID_NAME"
    ```
-   В отчёт: `Android | cross-discovery | ✓ PASS | 2154 ms`. Это намного информативнее голого PASS.
+   В отчёт: `Android | cross-discovery | ✓ PASS | 250 ms`. Это чистое время network-propagation + JmDNS resolve, без Android-init и без slop'а 1-секундного `sleep`-loop'а.
 8. **Send Desktop → Android (через CLI):**
    ```bash
    if [ -z "$ANDROID_NAME" ]; then

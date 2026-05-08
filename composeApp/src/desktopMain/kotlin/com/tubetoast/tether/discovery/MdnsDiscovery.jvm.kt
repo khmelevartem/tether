@@ -12,7 +12,7 @@ import javax.jmdns.ServiceListener
 private const val SERVICE_TYPE = "_tether._tcp.local."
 private val IPV4_REGEX = Regex("""\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}""")
 
-actual class MdnsDiscovery actual constructor() {
+actual class MdnsDiscovery {
     private val _discoveredDevices = MutableStateFlow<List<Device>>(emptyList())
     actual val discoveredDevices: StateFlow<List<Device>> = _discoveredDevices.asStateFlow()
 
@@ -62,8 +62,12 @@ actual class MdnsDiscovery actual constructor() {
 
                         val ipv4 = info.getHostAddresses().firstOrNull { IPV4_REGEX.matches(it) }
                         if (ipv4 == null) {
+                            // JmDNS resolves A/AAAA records in stages — first callback can carry only
+                            // IPv6, IPv4 arrives on a later callback. Skip quietly and wait for the
+                            // next event. A persistent IPv6-only state across the peer's lifetime
+                            // is a separate concern (see follow-up logger issue).
                             System.err.println(
-                                "WARN: serviceResolved — no IPv4 for '${event.name}', skipping",
+                                "DEBUG: serviceResolved — no IPv4 yet for '${event.name}', skipping",
                             )
                             return
                         }
