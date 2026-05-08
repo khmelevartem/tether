@@ -13,8 +13,13 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
+import io.ktor.utils.io.ByteChannel
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.core.Closeable
+import io.ktor.utils.io.readAvailable
+import io.ktor.utils.io.writeFully
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 
 class FileClient : Closeable {
     private val client = HttpClient(CIO) {
@@ -26,7 +31,34 @@ class FileClient : Closeable {
         throw NotImplementedError("ping() is not yet implemented")
     }
 
-    suspend fun send(device: Device, channel: ByteReadChannel, fileName: String): SendResult = try {
+    suspend fun send(
+        device: Device,
+        channel: ByteReadChannel,
+        fileName: String,
+        totalBytes: Long? = null,
+        onProgress: ((bytesTransferred: Long, totalBytes: Long?) -> Unit)? = null,
+    ): SendResult = if (onProgress == null) {
+        doSend(device, channel, fileName)
+    } else {
+        // Launch the copy into a pipe concurrently with the Ktor upload so that
+        // Ktor reads from the pipe while we are filling it. coroutineScope waits
+        // for the copy job after the Ktor call returns.
+        coroutineScope {
+            val pipe = ByteChannel(autoFlush = true)
+            launch { copyWithProgress(channel, pipe, totalBytes, onProgress) }
+            doSend(device, pipe, fileName)
+        }
+    }
+
+    override fun close() {
+        client.close()
+    }
+
+    private suspend fun doSend(
+        device: Device,
+        channel: ByteReadChannel,
+        fileName: String,
+    ): SendResult = try {
         val response = client.post("http://${device.host}:${device.port}/upload") {
             parameter("name", fileName)
             contentType(ContentType.Application.OctetStream)
@@ -42,8 +74,28 @@ class FileClient : Closeable {
     } catch (e: Exception) {
         SendResult.Failure(e.message ?: "unknown error")
     }
+}
 
-    override fun close() {
-        client.close()
+private const val COPY_BUFFER_SIZE = 8 * 1024
+
+private suspend fun copyWithProgress(
+    source: ByteReadChannel,
+    dest: ByteChannel,
+    totalBytes: Long?,
+    onProgress: (Long, Long?) -> Unit,
+) {
+    val buf = ByteArray(COPY_BUFFER_SIZE)
+    var transferred = 0L
+    try {
+        while (!source.isClosedForRead) {
+            val read = source.readAvailable(buf)
+            if (read > 0) {
+                dest.writeFully(buf, 0, read)
+                transferred += read
+                onProgress(transferred, totalBytes)
+            }
+        }
+    } finally {
+        dest.close()
     }
 }

@@ -71,6 +71,23 @@ Before making commits, identify the relevant GitHub issue. If no issue exists fo
 curl http://localhost:{port}/health  # → "Tether OK"
 ```
 
+Once the runner is up, it reads commands from stdin:
+
+| Command | Description |
+|---------|-------------|
+| `list` | Print currently discovered peers |
+| `send <peer-name> <path>` | Send a file to the named peer; prints live progress and a final OK/FAIL line |
+| `quit` | Stop FileServer + mDNS and exit |
+
+```
+send Phone /tmp/photo.jpg
+[send] 12.3 MB / 50.0 MB  (3.4 MB/s)
+[send] OK — 14523 ms  →  /tmp/tether-downloads/photo.jpg
+```
+
+- Peers are matched by `Device.name`; if multiple peers share a name the first is used (warning printed to stderr).
+- Unknown commands, empty lines, missing file, or missing peer all produce a message and return to the prompt without killing the runner.
+
 **Android APK**
 ```bash
 ./gradlew :composeApp:assembleDebug
