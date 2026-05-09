@@ -3,6 +3,15 @@
 Structured process for reviewing pull requests. Follow phases in order.
 Output is machine-readable; final decision is binary.
 
+**Input:** PR number or issue number. If given an issue number, find the related PR first:
+```bash
+gh issue view <N> --json title,body --jq '.body' | grep -i "pull request\|PR #\|#[0-9]"
+# or
+gh pr list --search "closes #<N>" --json number,title
+```
+
+**Attitude:** Be attentive and critical about substance — logic, correctness, test coverage, architecture. Do not flag style or formatting issues unless they are explicitly called out in `CLAUDE.md` or the project guides.
+
 ---
 
 ## Phase 1 — Gather inputs before forming any opinion
@@ -160,8 +169,8 @@ REQUIRED_BEFORE_MERGE:
 **Always attach the review as a comment to the PR on GitHub.** Do not leave findings locally:
 
 ```bash
-gh pr comment <PR> --body "$(cat <<'EOF'
-## Code Review — Issue #<N>
+gh pr review <PR> --comment --body "$(cat <<'EOF'
+## Code Review
 
 [paste the review output here, formatted as markdown]
 EOF
