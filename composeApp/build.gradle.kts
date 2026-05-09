@@ -195,7 +195,10 @@ tasks.register("runJar") {
     description = "Packages the uber JAR for the current OS and runs it via java -jar"
     dependsOn("packageUberJarForCurrentOS")
     doLast {
-        val jarDir = layout.buildDirectory.dir("compose/jars").get().asFile
+        val jarDir = layout.buildDirectory
+            .dir("compose/jars")
+            .get()
+            .asFile
         val jar = jarDir.listFiles()?.firstOrNull { it.extension == "jar" }
             ?: error("Uber JAR not found in ${jarDir.absolutePath}")
         val runArgs = (project.findProperty("args") as? String)
