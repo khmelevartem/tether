@@ -1,9 +1,19 @@
 package com.tubetoast.tether.network
 
+import com.tubetoast.tether.protocol.PairRequest
+import com.tubetoast.tether.protocol.PairResponse
+import com.tubetoast.tether.security.DeviceKeyPair
+import com.tubetoast.tether.security.TrustedDeviceStore
+import io.ktor.http.HttpStatusCode
+import io.ktor.server.application.Application
 import io.ktor.server.cio.CIO
 import io.ktor.server.cio.CIOApplicationEngine
 import io.ktor.server.engine.EmbeddedServer
 import io.ktor.server.engine.embeddedServer
+import io.ktor.server.request.receive
+import io.ktor.server.response.respond
+import io.ktor.server.routing.post
+import io.ktor.server.routing.routing
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.jvm.javaio.toInputStream
 import kotlinx.coroutines.runBlocking
@@ -12,6 +22,8 @@ import java.io.File
 actual class FileServer(
     private val port: Int,
     private val downloadsDir: File = File(System.getProperty("user.home"), "Downloads/Tether"),
+    private val trustedDeviceStore: TrustedDeviceStore,
+    private val deviceKeyPair: DeviceKeyPair,
 ) {
     private var server: EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration>? = null
 
@@ -21,6 +33,7 @@ actual class FileServer(
         storage.ensureRoot()
         val srv = embeddedServer(CIO, port = port) {
             installFileServerRoutes(storage)
+            installPairRoute(trustedDeviceStore, deviceKeyPair)
         }.start(wait = false)
         server = srv
         // resolvedConnectors() returns the actual OS-assigned port when port=0 was specified,
@@ -31,6 +44,19 @@ actual class FileServer(
     actual fun stop() {
         server?.stop(gracePeriodMillis = 500, timeoutMillis = 1_000)
         server = null
+    }
+}
+
+private fun Application.installPairRoute(
+    trustedDeviceStore: TrustedDeviceStore,
+    deviceKeyPair: DeviceKeyPair,
+) {
+    routing {
+        post("/pair") {
+            val request = call.receive<PairRequest>()
+            trustedDeviceStore.saveTrustedKey(request.deviceName, request.publicKey)
+            call.respond(HttpStatusCode.OK, PairResponse(publicKey = deviceKeyPair.publicKey))
+        }
     }
 }
 

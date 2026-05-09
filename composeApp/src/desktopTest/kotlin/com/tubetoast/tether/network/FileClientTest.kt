@@ -2,6 +2,8 @@ package com.tubetoast.tether.network
 
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.protocol.SendResult
+import com.tubetoast.tether.security.DeviceKeyPair
+import com.tubetoast.tether.security.TrustedDeviceStore
 import kotlinx.coroutines.runBlocking
 import java.io.FileNotFoundException
 import java.nio.file.Files
@@ -18,7 +20,14 @@ class FileClientTest {
 
     private var serverPort = 0
     private var tmpDir = Files.createTempDirectory("tether-client-test").toFile()
-    private val server = FileServer(0, downloadsDir = tmpDir)
+    private val configDir = Files.createTempDirectory("tether-client-test-keys").toFile()
+    private val server =
+        FileServer(
+            0,
+            downloadsDir = tmpDir,
+            trustedDeviceStore = TrustedDeviceStore(configDir),
+            deviceKeyPair = DeviceKeyPair(configDir),
+        )
 
     private fun setup(): FileClient {
         serverPort = server.start()
@@ -29,6 +38,7 @@ class FileClientTest {
         client.close()
         server.stop()
         tmpDir.deleteRecursively()
+        configDir.deleteRecursively()
     }
 
     @Test
