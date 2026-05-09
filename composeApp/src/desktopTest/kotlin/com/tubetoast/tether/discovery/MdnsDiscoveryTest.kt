@@ -211,15 +211,6 @@ class MdnsDiscoveryTest {
     // probing is timing-dependent and cannot reliably complete within a fixed timeout.
     // The correctness guarantee is documented in MdnsDiscovery.jvm.kt instead.
 
-    // Reproduces issue #47: a peer that registers after JmDNS's initial 3-query
-    // ServiceResolver burst (~675 ms) must still be discovered without waiting for the
-    // ~48-minute TTL refresh. Implemented via periodic re-arming of addServiceListener.
-    //
-    // Uses runTest + StandardTestDispatcher to control the re-query backoff timer with
-    // virtual time. JmDNS's own timers run on real threads — Thread.sleep is used for
-    // those boundaries. Discovery is polled via System.currentTimeMillis rather than
-    // a coroutine withTimeout because runTest routes all coroutine delays through the
-    // virtual clock; a real-time guard is needed for the JmDNS callback.
     @Test
     fun `late-joining peer is discovered after initial browse cycle`() = runTest {
         val testDispatcher = StandardTestDispatcher(testScheduler)

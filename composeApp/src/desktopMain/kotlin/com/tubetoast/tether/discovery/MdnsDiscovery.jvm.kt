@@ -39,15 +39,12 @@ private const val REQUERY_MAX_INTERVAL_MS = 60_000L
 actual class MdnsDiscovery {
     private val requeryContext: CoroutineContext
 
-    // Matches the expect class — production use, re-query runs on Dispatchers.IO.
     constructor() {
         requeryContext = Dispatchers.IO
         requeryScope = CoroutineScope(SupervisorJob() + requeryContext)
     }
 
-    // Additional constructor visible within the module for tests. Allows injecting a
-    // TestDispatcher so that advanceTimeBy() controls the re-query backoff timer
-    // without waiting for real time.
+    // Internal — for tests: inject a TestDispatcher to control re-query timing via advanceTimeBy().
     internal constructor(testContext: CoroutineContext) {
         requeryContext = testContext
         requeryScope = CoroutineScope(SupervisorJob() + requeryContext)
@@ -58,8 +55,7 @@ actual class MdnsDiscovery {
 
     @Volatile private var jmdns: JmDNS? = null
 
-    // JmDNS may rename a service on conflict (e.g. "Foo" → "Foo (2)"), so we identify
-    // our own service by IP+port, not by name.
+    // IP+port, not name: JmDNS may rename a service on conflict (e.g. "Foo" → "Foo (2)").
     @Volatile private var ownIp: String? = null
 
     @Volatile private var ownPort: Int = -1
@@ -171,8 +167,7 @@ actual class MdnsDiscovery {
         }
     }
 
-    // JmDNS resolves A/AAAA records in stages — the first callback may carry only IPv6;
-    // IPv4 arrives on a later callback. Returns null (caller skips) and waits for the next event.
+    // JmDNS may deliver only IPv6 on the first callback; IPv4 arrives later.
     private fun resolveIPv4(info: ServiceInfo, serviceName: String): String? {
         val ipv4 = info.getHostAddresses().firstOrNull { IPV4_REGEX.matches(it) }
         if (ipv4 == null) {
