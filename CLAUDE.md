@@ -188,6 +188,7 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on all pushes and PRs to main:
 - **Protocol Serialization**: Device.kt uses kotlinx.serialization for peer identification
 - **Compose for All Targets**: UI code in commonMain; platform-specific initialization in androidMain/iosMain/macosMain/desktopMain
 - **CLI Arguments**: Desktop runner accepts `--name` and `--port` via Clikt framework
+- **Comment style**: минимум комментариев. Перед тем как добавить комментарий — попробуй вынести блок в приватный метод: имя метода часто делает комментарий ненужным. Комментарий оставляй только там, где код не может выразить намерение сам: намеренное проглатывание исключения, неочевидные инварианты внешних библиотек, которые нужно перепроверять при обновлении зависимости.
 
 ## Testing Strategy
 
@@ -213,3 +214,5 @@ When reviewing a PR, follow the process in [`.claude/commands/code-review.md`](.
 
 **Важно: редактируй файлы только в worktree, не в корне репозитория.**
 Перед первым Edit убедись, что путь ведёт в `.claude/worktrees/<branch>/`, а не в корень проекта. Ошибка в пути приведёт к правке основной ветки в обход ревью.
+
+**Обновление инструкций (CLAUDE.md и других файлов в `.claude/`)**: правь только файл внутри текущего worktree. Корневой `CLAUDE.md` живёт на `main` — изменения в него попадают через обычный PR-флоу, а не прямой правкой.
