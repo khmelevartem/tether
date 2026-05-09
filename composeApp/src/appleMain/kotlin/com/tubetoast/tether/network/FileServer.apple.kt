@@ -27,6 +27,7 @@ import platform.Foundation.NSLog
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSUserDomainMask
 import platform.posix.fclose
+import platform.posix.fflush
 import platform.posix.fopen
 import platform.posix.fwrite
 
@@ -139,15 +140,38 @@ private suspend fun writeChannelToFile(input: ByteReadChannel, path: String) {
     val file = fopen(path, "wb")
         ?: error("FileServer: could not open '$path' for writing")
     try {
-        val buffer = ByteArray(BUFFER_SIZE)
-        while (!input.isClosedForRead) {
-            val n = input.readAvailable(buffer, 0, buffer.size)
-            if (n <= 0) break
+        streamUploadBody(input) { buffer, n ->
             buffer.usePinned { pinned ->
-                fwrite(pinned.addressOf(0), 1u, n.toULong(), file)
+                val written = fwrite(pinned.addressOf(0), 1u, n.toULong(), file).toLong()
+                // POSIX: short return from fwrite indicates an I/O error (disk full,
+                // quota exceeded, etc.). Without this check a truncated upload would
+                // be reported as 200 OK. JVM gets the equivalent for free because
+                // OutputStream.write throws on failure.
+                if (written < n.toLong()) {
+                    error("FileServer: short write to '$path' — wrote $written of $n bytes")
+                }
             }
+        }
+        // Flush stdio buffers before respond — a deferred I/O error from fwrite may
+        // surface here. Treat it the same as a short write so the catch/cleanup path
+        // runs. fclose still happens in finally; its error is ignored because fflush
+        // has already validated the data made it to the OS.
+        if (fflush(file) != 0) {
+            error("FileServer: fflush failed for '$path'")
         }
     } finally {
         fclose(file)
+    }
+}
+
+internal suspend fun streamUploadBody(
+    input: ByteReadChannel,
+    write: (buffer: ByteArray, length: Int) -> Unit,
+) {
+    val buffer = ByteArray(BUFFER_SIZE)
+    while (!input.isClosedForRead) {
+        val n = input.readAvailable(buffer, 0, buffer.size)
+        if (n <= 0) break
+        write(buffer, n)
     }
 }

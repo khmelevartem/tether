@@ -14,6 +14,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
+import io.ktor.utils.io.ByteReadChannel
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.runBlocking
 import platform.Foundation.NSFileManager
@@ -202,6 +203,57 @@ class FileServerTest {
             client.close()
             server.stop()
         }
+    }
+
+    @Test
+    fun upload_to_unwritable_destination_returns_error_and_no_partial_file() {
+        // downloadsDir is a regular file, not a directory. ensureDirectory is a no-op
+        // (fileExistsAtPath is true), resolveDestination yields "<file>/upload.txt",
+        // and fopen on a non-directory parent fails with ENOTDIR. This exercises the
+        // catch/finally cleanup path that fwrite-failure shares — proving an I/O
+        // error mid-upload yields a non-2xx response and no partial file.
+        val parent = newTempDir()
+        val regularFile = "$parent/not-a-dir.txt"
+        NSFileManager.defaultManager.createFileAtPath(regularFile, contents = null, attributes = null)
+        val server = FileServer(port = 0, downloadsDir = regularFile)
+        val port = server.start()
+        val client = makeClient()
+        try {
+            runBlocking {
+                val response = client.post("http://localhost:$port/upload?name=upload.txt") {
+                    contentType(ContentType.Application.OctetStream)
+                    setBody("payload".encodeToByteArray())
+                }
+                assertEquals(HttpStatusCode.InternalServerError, response.status)
+                val candidate = "$regularFile/upload.txt"
+                assertFalse(
+                    NSFileManager.defaultManager.fileExistsAtPath(candidate),
+                    "no partial file should remain at $candidate",
+                )
+            }
+        } finally {
+            client.close()
+            server.stop()
+        }
+    }
+
+    @Test
+    fun streamUploadBody_propagates_writer_exception() = runBlocking {
+        // Guards the structural invariant that the I/O write path must throw on
+        // failure rather than silently swallowing errors. If a future contributor
+        // discards a syscall return value (the bug fixed in this PR was exactly
+        // this), the writer lambda would still run all chunks and the upload route
+        // would respond 200 OK on a truncated file. This test pins the contract.
+        val input = ByteReadChannel("hello tether".encodeToByteArray())
+        val ex = assertFailsWith<IllegalStateException> {
+            streamUploadBody(input) { _, _ ->
+                error("simulated I/O failure")
+            }
+        }
+        assertTrue(
+            ex.message?.contains("simulated I/O failure") == true,
+            "expected simulated failure to propagate, got: ${ex.message}",
+        )
     }
 
     @Test
