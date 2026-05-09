@@ -90,6 +90,8 @@ Identify the trust boundary: everything from outside the process is untrusted un
 
 **For FEATURE / BUGFIX:** For each test ask: if the behavior under test were broken, would this test actually fail? Cross-reference tests against edge cases in the issue — flag gaps. Check that tests are isolated from each other and will work in CI.
 
+**Regression gap check (BUGFIX / REFACTOR):** For every piece of logic the PR removes or replaces, ask: was that logic covered by a test? If no — flag it as a gap. A missing test for the old behavior means a silent regression is possible the moment someone touches that code again. The fix must either add the missing test or explicitly document why the old behavior is intentionally abandoned.
+
 **For REFACTOR:** Do not require new tests. Instead verify: existing tests still pass (green in CI), test coverage has not decreased, and no test was deleted or weakened to make the refactor pass.
 
 ---
