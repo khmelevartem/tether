@@ -195,7 +195,10 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on all pushes and PRs to main:
 
 - **Desktop JVM tests** (`desktopTest/`): Server и network интеграционные тесты
 - **Common tests** (`commonTest/`): протокол и shared-логика
-- Стиль: `kotlin.test`, `runBlocking` для корутин, `withTimeout` для сетевых/асинхронных тестов
+- Стиль: `kotlin.test`; для корутин — `runTest` + `TestDispatcher` (из `kotlinx-coroutines-test`), **не `runBlocking`**
+- Управляй временем виртуально через `advanceTimeBy()` / `advanceUntilIdle()` — это ускоряет тесты и делает их детерминированными
+- `Thread.sleep` и `System.currentTimeMillis`-polling допустимы только для ожидания событий от **внешних нативных API** (JmDNS, NsdManager и т.п.), которые работают на реальных потоках вне нашего `CoroutineScope`; внутри тела теста всё остальное — виртуальное время
+- `withTimeout` внутри `runTest` использует **виртуальные** часы даже на `Dispatchers.IO` — не рассчитывай на него как на реальный таймаут
 - **Apple targets** (`appleTest/`): NSRunLoop нужно качать вручную — подробнее в [`docs/knowledge/apple-platform.md`](docs/knowledge/apple-platform.md).
 
 ## Knowledge base
