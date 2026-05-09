@@ -56,14 +56,12 @@ actual class MdnsDiscovery {
 
     @Volatile private var jmdns: JmDNS? = null
 
-    // Self-filter: identify own service by the IP JmDNS bound to and the registered port.
-    // Name-based filtering is unreliable — JmDNS may rename the service on conflict
-    // (e.g. "Foo" → "Foo (2)"), and stale records of the old name linger after a restart.
+    // JmDNS may rename a service on conflict (e.g. "Foo" → "Foo (2)"), so we identify
+    // our own service by IP+port, not by name.
     @Volatile private var ownIp: String? = null
 
     @Volatile private var ownPort: Int = -1
 
-    @Volatile private var serviceListener: ServiceListener? = null
     private var requeryScope: CoroutineScope? = null
 
     @Synchronized
@@ -94,28 +92,12 @@ actual class MdnsDiscovery {
                 if (jmdns == null) return
                 try {
                     val info: ServiceInfo = event.info
-
                     if (info.port !in 1..65535) {
                         System.err.println("WARN: invalid port ${info.port} for '${event.name}', skipping")
                         return
                     }
-
-                    val ipv4 = info.getHostAddresses().firstOrNull { IPV4_REGEX.matches(it) }
-                    if (ipv4 == null) {
-                        // JmDNS resolves A/AAAA records in stages — first callback can carry only
-                        // IPv6, IPv4 arrives on a later callback. Skip quietly and wait for the
-                        // next event. A persistent IPv6-only state across the peer's lifetime
-                        // is a separate concern (see follow-up logger issue).
-                        System.err.println(
-                            "DEBUG: serviceResolved — no IPv4 yet for '${event.name}', skipping",
-                        )
-                        return
-                    }
-
-                    // Filter self: same IP and same port uniquely identifies our own service,
-                    // regardless of the name JmDNS assigned (which may differ from deviceName).
-                    if (ipv4 == ownIp && info.port == ownPort) return
-
+                    val ipv4 = resolveIPv4(info, event.name) ?: return
+                    if (isSelf(ipv4, info.port)) return
                     val device = Device(
                         id = "${event.name}@$ipv4:${info.port}",
                         name = event.name,
@@ -129,7 +111,6 @@ actual class MdnsDiscovery {
                 }
             }
         }
-        serviceListener = listener
         instance.addServiceListener(SERVICE_TYPE, listener)
 
         val scope = CoroutineScope(SupervisorJob() + requeryContext)
@@ -139,9 +120,8 @@ actual class MdnsDiscovery {
             while (isActive) {
                 delay(interval)
                 val jm = jmdns ?: break
-                val sl = serviceListener ?: break
                 try {
-                    jm.addServiceListener(SERVICE_TYPE, sl)
+                    jm.addServiceListener(SERVICE_TYPE, listener)
                 } catch (e: Exception) {
                     // JmDNS may be mid-close; nothing to do.
                 }
@@ -156,7 +136,6 @@ actual class MdnsDiscovery {
         } catch (e: Exception) {
             scope.cancel()
             requeryScope = null
-            serviceListener = null
             jmdns = null
             ownIp = null
             ownPort = -1
@@ -172,7 +151,6 @@ actual class MdnsDiscovery {
     actual fun stop() {
         requeryScope?.cancel()
         requeryScope = null
-        serviceListener = null
         try {
             try {
                 jmdns?.unregisterAllServices()
@@ -191,4 +169,16 @@ actual class MdnsDiscovery {
             _discoveredDevices.value = emptyList()
         }
     }
+
+    // JmDNS resolves A/AAAA records in stages — the first callback may carry only IPv6;
+    // IPv4 arrives on a later callback. Returns null (caller skips) and waits for the next event.
+    private fun resolveIPv4(info: ServiceInfo, serviceName: String): String? {
+        val ipv4 = info.getHostAddresses().firstOrNull { IPV4_REGEX.matches(it) }
+        if (ipv4 == null) {
+            System.err.println("DEBUG: serviceResolved — no IPv4 yet for '$serviceName', skipping")
+        }
+        return ipv4
+    }
+
+    private fun isSelf(ipv4: String, port: Int): Boolean = ipv4 == ownIp && port == ownPort
 }

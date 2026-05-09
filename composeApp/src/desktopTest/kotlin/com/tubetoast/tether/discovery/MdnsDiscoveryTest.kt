@@ -229,7 +229,7 @@ class MdnsDiscoveryTest {
             a.start("LateA", 19070)
             // JmDNS's ServiceResolver fires 3 PTR queries over ~675 ms of real time.
             // Thread.sleep keeps us in real time so the burst finishes before b joins.
-            Thread.sleep(1_500)
+            Thread.sleep(1_000)
             b.start("LateB", 19071)
             // JmDNS probes the service name before advertising (~3 × 250 ms). Wait for
             // b to be reachable on the network before triggering a's re-query.
