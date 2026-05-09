@@ -188,6 +188,27 @@ dependencies {
     debugImplementation(libs.compose.uiTooling)
 }
 
+// Builds the uber JAR and immediately launches it with `java -jar`.
+// Usage: ./gradlew :composeApp:runJar --args="--name MyMac --port 8080"
+tasks.register("runJar") {
+    group = "application"
+    description = "Packages the uber JAR for the current OS and runs it via java -jar"
+    dependsOn("packageUberJarForCurrentOS")
+    doLast {
+        val jarDir = layout.buildDirectory.dir("compose/jars").get().asFile
+        val jar = jarDir.listFiles()?.firstOrNull { it.extension == "jar" }
+            ?: error("Uber JAR not found in ${jarDir.absolutePath}")
+        val runArgs = (project.findProperty("args") as? String)
+            ?.split("\\s+".toRegex())
+            .orEmpty()
+        project.javaexec {
+            classpath(jar)
+            mainClass.set("com.tubetoast.tether.MainKt")
+            args(runArgs)
+        }
+    }
+}
+
 compose.desktop {
     application {
         mainClass = "com.tubetoast.tether.MainKt"

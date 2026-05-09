@@ -71,6 +71,15 @@ Before making commits, identify the relevant GitHub issue. If no issue exists fo
 curl http://localhost:{port}/health  # → "Tether OK"
 ```
 
+**Desktop CLI via uber JAR** (builds the packaged artifact and runs it — useful for testing the real jar)
+```bash
+# Build uber JAR + run (default args)
+./gradlew :composeApp:runJar
+
+# Custom name and port
+./gradlew :composeApp:runJar --args="--name MyMac --port 8080"
+```
+
 Once the runner is up, it reads commands from stdin:
 
 | Command | Description |
