@@ -1,12 +1,15 @@
 package com.tubetoast.tether.discovery.bonjour
 
+import com.sun.jna.Memory
 import com.sun.jna.Pointer
 import com.sun.jna.ptr.PointerByReference
 import com.tubetoast.tether.protocol.Device
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,21 +17,25 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 
 // JVM-on-macOS implementation backed by Apple's DNS-SD API (mDNSResponder IPC).
 //
-// On macOS the kernel routes incoming WiFi mDNS multicast packets exclusively to
-// mDNSResponder, so user-space sockets bound to 224.0.0.251:5353 (e.g. JmDNS) do not see
-// announcements from external peers — only the loopback path delivers to user space.
-// Going through DNS-SD makes us a peer of mDNSResponder rather than a competing
-// multicast listener, which is the only way to observe external peers reliably.
+// On macOS the kernel routes incoming WiFi mDNS multicast exclusively to mDNSResponder,
+// so user-space sockets bound to 224.0.0.251:5353 (e.g. JmDNS) do not see announcements
+// from external peers — only the loopback path delivers to user space. Going through
+// DNS-SD makes us a peer of mDNSResponder rather than a competing multicast listener,
+// which is the only way to observe external peers reliably. See issue #47.
 //
-// Discovery is staged: Browse → Resolve → GetAddrInfo. Each stage opens its own
-// DNSServiceRef and runs a blocking DNSServiceProcessResult loop on Dispatchers.IO;
-// callbacks marshal events onto a single events Channel where mutable state (devices
-// list, sub-session refs) is mutated by exactly one consumer coroutine without locks.
+// Lifecycle invariant: each DNSServiceRef is owned by exactly one polling coroutine
+// that calls DNSServiceProcessResult only when poll(2) reports the FD readable, and
+// calls DNSServiceRefDeallocate in its own finally block once cancelled. This avoids
+// the race forbidden by dns_sd.h ("no other thread is currently using the DNSServiceRef
+// while DNSServiceRefDeallocate is being called"). Cancellation flows via standard
+// kotlinx Job cancellation; the polling coroutine returns from poll within at most
+// POLL_TIMEOUT_MS so close() never blocks the caller for long.
 internal class MdnsDiscoveryBonjour {
     private val _discoveredDevices = MutableStateFlow<List<Device>>(emptyList())
     val discoveredDevices: StateFlow<List<Device>> = _discoveredDevices.asStateFlow()
@@ -55,118 +62,94 @@ internal class MdnsDiscoveryBonjour {
     }
 
     private class Session(
-        private val ownName: String,
-        private val ownPort: Int,
         private val discoveredDevices: MutableStateFlow<List<Device>>,
         private val scope: CoroutineScope,
-        private val registerRef: Pointer?,
-        private val browseRef: Pointer,
         private val events: Channel<Event>,
-    ) {
-        // Concurrent maps because the events-consumer coroutine and stop() may run on
-        // different threads. ConcurrentHashMap prevents CME during stop()'s forEach over
-        // values while a final callback is still in flight.
-        private val resolveRefs = ConcurrentHashMap<String, Pointer>()
-        private val addrInfoRefs = ConcurrentHashMap<String, Pointer>()
-        private val pendingPorts = ConcurrentHashMap<String, Int>()
-        private val pendingIps = ConcurrentHashMap<String, String>()
+    ) : BonjourState.Sink {
+        private lateinit var state: BonjourState
+
+        // Per-name jobs. Cancelling the job stops the poll loop and triggers
+        // self-deallocation of the DNSServiceRef in the loop's finally block.
+        private val resolveJobs = ConcurrentHashMap<String, Job>()
+        private val addrInfoJobs = ConcurrentHashMap<String, Job>()
 
         // Anchor JNA callbacks against GC for the session lifetime. Without strong
         // references, JNA's CallbackReference can free the trampoline while
         // mDNSResponder still holds a pointer to it.
-        private val callbackAnchors = CopyOnWriteArrayList<Any>()
+        val callbackAnchors = CopyOnWriteArrayList<Any>()
 
         fun close() {
-            scope.cancel()
+            // 1. Stop accepting new events. The consumer coroutine drains its queue
+            //    and exits once the channel is empty + closed.
             events.close()
-            deallocate(browseRef, "browse")
-            registerRef?.let { deallocate(it, "register") }
-            (resolveRefs.values + addrInfoRefs.values).forEach { deallocate(it, "sub") }
-            resolveRefs.clear()
-            addrInfoRefs.clear()
-            pendingPorts.clear()
-            pendingIps.clear()
+            // 2. Cancel everything and wait for poll loops to exit. Each loop's finally
+            //    deallocates its own ref, satisfying the dns_sd.h same-thread invariant.
+            //    cancelAndJoin blocks the caller for at most POLL_TIMEOUT_MS.
+            runBlocking { scope.coroutineContext[Job]!!.cancelAndJoin() }
+            resolveJobs.clear()
+            addrInfoJobs.clear()
             callbackAnchors.clear()
         }
 
-        fun trackAnchor(callback: Any) {
-            callbackAnchors.add(callback)
+        // BonjourState.Sink — events flow on the consumer coroutine, which is single-threaded
+        // (Channel is consumed by exactly one launch{} below), so concurrent access to the
+        // job maps stays bounded.
+        override fun openResolve(name: String, interfaceIndex: Int) {
+            resolveJobs[name] = scope.launch(Dispatchers.IO) { runResolve(name, interfaceIndex) }
         }
 
-        suspend fun consumeEvents() {
+        override fun closeResolve(name: String) {
+            resolveJobs.remove(name)?.cancel()
+        }
+
+        override fun openAddrInfo(name: String, hostname: String) {
+            addrInfoJobs[name] = scope.launch(Dispatchers.IO) { runAddrInfo(name, hostname) }
+        }
+
+        override fun closeAddrInfo(name: String) {
+            addrInfoJobs.remove(name)?.cancel()
+        }
+
+        override fun publishDevices(devices: List<Device>) {
+            discoveredDevices.value = devices
+        }
+
+        private fun bindState(state: BonjourState) {
+            this.state = state
+        }
+
+        private suspend fun consumeEvents() {
             for (event in events) {
                 when (event) {
-                    is Event.BrowseAdd -> onBrowseAdd(event)
-                    is Event.BrowseRemove -> onBrowseRemove(event)
-                    is Event.Resolved -> onResolved(event)
-                    is Event.AddrInfoFound -> onAddrInfoFound(event)
+                    is Event.OwnNameAssigned -> state.ownNameAssigned(event.canonicalName)
+                    is Event.BrowseAdd -> state.onBrowseAdd(event.name, event.interfaceIndex)
+                    is Event.BrowseRemove -> state.onBrowseRemove(event.name)
+                    is Event.Resolved -> state.onResolved(event.name, event.host, event.port)
+                    is Event.AddrInfoFound -> state.onAddrInfoFound(event.name, event.ipv4, event.isAdd)
                 }
             }
         }
 
-        suspend fun processLoop(ref: Pointer) {
-            while (currentCoroutineContext().isActive) {
-                val rc = try {
-                    DnsSd.INSTANCE.DNSServiceProcessResult(ref)
-                } catch (_: Throwable) {
-                    return
-                }
-                if (rc != DnsSd.NO_ERROR) return
+        private suspend fun runResolve(peerName: String, interfaceIndex: Int) {
+            val ref = openResolveRef(peerName, interfaceIndex) ?: return
+            try {
+                pollLoop(ref)
+            } finally {
+                deallocate(ref, "resolve($peerName)")
             }
         }
 
-        private fun onBrowseAdd(event: Event.BrowseAdd) {
-            if (event.name == ownName) return
-            if (resolveRefs.containsKey(event.name)) return
-            val ref = openResolve(event.name, event.interfaceIndex) ?: return
-            resolveRefs[event.name] = ref
-            scope.launch(Dispatchers.IO) { processLoop(ref) }
+        private suspend fun runAddrInfo(peerName: String, hostname: String) {
+            val ref = openAddrInfoRef(peerName, hostname) ?: return
+            try {
+                pollLoop(ref)
+            } finally {
+                deallocate(ref, "addrInfo($peerName)")
+            }
         }
 
-        private fun onBrowseRemove(event: Event.BrowseRemove) {
-            if (event.name == ownName) return
-            resolveRefs.remove(event.name)?.let { deallocate(it, "resolve(removed)") }
-            addrInfoRefs.remove(event.name)?.let { deallocate(it, "addrInfo(removed)") }
-            pendingPorts.remove(event.name)
-            pendingIps.remove(event.name)
-            discoveredDevices.value = discoveredDevices.value.filterNot { it.name == event.name }
-        }
-
-        private fun onResolved(event: Event.Resolved) {
-            if (event.name == ownName) return
-            pendingPorts[event.name] = event.port
-            // The resolve session stays alive across SRV changes (e.g. a peer restarts on
-            // a different port) and fires this callback again with the new port. If the IP
-            // is still known from a prior addrinfo result, re-emit the device immediately;
-            // otherwise wait for the addrinfo callback below.
-            emitDeviceIfReady(event.name)
-            if (addrInfoRefs.containsKey(event.name)) return
-            val ref = openGetAddrInfo(event.name, event.host) ?: return
-            addrInfoRefs[event.name] = ref
-            scope.launch(Dispatchers.IO) { processLoop(ref) }
-        }
-
-        private fun onAddrInfoFound(event: Event.AddrInfoFound) {
-            if (event.name == ownName) return
-            pendingIps[event.name] = event.ipv4
-            emitDeviceIfReady(event.name)
-        }
-
-        private fun emitDeviceIfReady(name: String) {
-            val ip = pendingIps[name] ?: return
-            val port = pendingPorts[name] ?: return
-            val device = Device(
-                id = "$name@$ip:$port",
-                name = name,
-                host = ip,
-                port = port,
-            )
-            discoveredDevices.value = discoveredDevices.value
-                .filterNot { it.name == name } + device
-        }
-
-        private fun openResolve(name: String, interfaceIndex: Int): Pointer? {
-            val ref = PointerByReference()
+        private fun openResolveRef(peerName: String, interfaceIndex: Int): Pointer? {
+            val refPtr = PointerByReference()
             val callback = object : DnsSd.ResolveReply {
                 override fun invoke(
                     sdRef: Pointer,
@@ -182,30 +165,29 @@ internal class MdnsDiscoveryBonjour {
                 ) {
                     if (errorCode != DnsSd.NO_ERROR) return
                     val host = hosttarget ?: return
-                    val portHostOrder = networkOrderToHost(port)
-                    events.trySend(Event.Resolved(name, host, portHostOrder))
+                    events.trySend(Event.Resolved(peerName, host, BonjourCodec.networkOrderToHost(port)))
                 }
             }
-            trackAnchor(callback)
+            callbackAnchors.add(callback)
             val rc = DnsSd.INSTANCE.DNSServiceResolve(
-                ref,
+                refPtr,
                 0,
                 interfaceIndex,
-                name,
+                peerName,
                 SERVICE_TYPE,
                 "local.",
                 callback,
                 null,
             )
             if (rc != DnsSd.NO_ERROR) {
-                System.err.println("WARN: DNSServiceResolve('$name') failed rc=$rc")
+                System.err.println("WARN: DNSServiceResolve('$peerName') failed rc=$rc")
                 return null
             }
-            return ref.value
+            return refPtr.value
         }
 
-        private fun openGetAddrInfo(peerName: String, hostname: String): Pointer? {
-            val ref = PointerByReference()
+        private fun openAddrInfoRef(peerName: String, hostname: String): Pointer? {
+            val refPtr = PointerByReference()
             val callback = object : DnsSd.GetAddrInfoReply {
                 override fun invoke(
                     sdRef: Pointer,
@@ -218,13 +200,14 @@ internal class MdnsDiscoveryBonjour {
                     context: Pointer?,
                 ) {
                     if (errorCode != DnsSd.NO_ERROR) return
-                    val ipv4 = readIpv4(address?.pointer) ?: return
-                    events.trySend(Event.AddrInfoFound(peerName, ipv4))
+                    val ipv4 = BonjourCodec.readIpv4(address?.pointer) ?: return
+                    val isAdd = (flags and DnsSd.FLAGS_ADD) != 0
+                    events.trySend(Event.AddrInfoFound(peerName, ipv4, isAdd))
                 }
             }
-            trackAnchor(callback)
+            callbackAnchors.add(callback)
             val rc = DnsSd.INSTANCE.DNSServiceGetAddrInfo(
-                ref,
+                refPtr,
                 0,
                 0,
                 DnsSd.PROTOCOL_IPV4,
@@ -236,10 +219,42 @@ internal class MdnsDiscoveryBonjour {
                 System.err.println("WARN: DNSServiceGetAddrInfo('$hostname') failed rc=$rc")
                 return null
             }
-            return ref.value
+            return refPtr.value
+        }
+
+        private suspend fun pollLoop(ref: Pointer) {
+            val fd = DnsSd.INSTANCE.DNSServiceRefSockFD(ref)
+            if (fd < 0) return
+            val pollfd = Memory(Posix.POLLFD_SIZE)
+            while (currentCoroutineContext().isActive) {
+                pollfd.setInt(Posix.OFFSET_FD, fd)
+                pollfd.setShort(Posix.OFFSET_EVENTS, Posix.POLLIN)
+                pollfd.setShort(Posix.OFFSET_REVENTS, 0)
+                val rc = try {
+                    Posix.INSTANCE.poll(pollfd, 1, POLL_TIMEOUT_MS)
+                } catch (_: Throwable) {
+                    return
+                }
+                if (rc < 0) return
+                if (rc == 0) continue
+                val revents = pollfd.getShort(Posix.OFFSET_REVENTS).toInt() and 0xFFFF
+                val errorMask = (Posix.POLLERR.toInt() or Posix.POLLHUP.toInt() or Posix.POLLNVAL.toInt()) and 0xFFFF
+                if (revents and errorMask != 0) return
+                if (revents and (Posix.POLLIN.toInt() and 0xFFFF) == 0) continue
+                val processRc = try {
+                    DnsSd.INSTANCE.DNSServiceProcessResult(ref)
+                } catch (_: Throwable) {
+                    return
+                }
+                if (processRc != DnsSd.NO_ERROR) return
+            }
         }
 
         sealed class Event {
+            data class OwnNameAssigned(
+                val canonicalName: String,
+            ) : Event()
+
             data class BrowseAdd(
                 val name: String,
                 val interfaceIndex: Int,
@@ -258,11 +273,13 @@ internal class MdnsDiscoveryBonjour {
             data class AddrInfoFound(
                 val name: String,
                 val ipv4: String,
+                val isAdd: Boolean,
             ) : Event()
         }
 
         companion object {
             const val SERVICE_TYPE: String = "_tether._tcp."
+            private const val POLL_TIMEOUT_MS: Int = 200
 
             fun start(
                 deviceName: String,
@@ -271,9 +288,12 @@ internal class MdnsDiscoveryBonjour {
             ): Session {
                 val events = Channel<Event>(Channel.UNLIMITED)
                 val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-                val anchors = mutableListOf<Any>()
 
-                val registerRef = openRegister(deviceName, port, anchors)
+                val session = Session(discoveredDevices, scope, events)
+                val state = BonjourState(deviceName, session)
+                session.bindState(state)
+
+                val registerRef = openRegisterRef(deviceName, port, events) { session.callbackAnchors.add(it) }
 
                 val browseCallback = object : DnsSd.BrowseReply {
                     override fun invoke(
@@ -296,7 +316,7 @@ internal class MdnsDiscoveryBonjour {
                         events.trySend(event)
                     }
                 }
-                anchors.add(browseCallback)
+                session.callbackAnchors.add(browseCallback)
 
                 val browseRefPtr = PointerByReference()
                 val rc = DnsSd.INSTANCE.DNSServiceBrowse(
@@ -317,29 +337,32 @@ internal class MdnsDiscoveryBonjour {
                 val browseRef = browseRefPtr.value
                     ?: throw IllegalStateException("DNSServiceBrowse returned null sdRef")
 
-                val session = Session(
-                    ownName = deviceName,
-                    ownPort = port,
-                    discoveredDevices = discoveredDevices,
-                    scope = scope,
-                    registerRef = registerRef,
-                    browseRef = browseRef,
-                    events = events,
-                )
-                anchors.forEach { session.trackAnchor(it) }
-
-                scope.launch(Dispatchers.IO) { session.processLoop(browseRef) }
+                // Top-level poll loops: each owns its ref and deallocates in finally.
+                scope.launch(Dispatchers.IO) {
+                    try {
+                        session.pollLoop(browseRef)
+                    } finally {
+                        deallocate(browseRef, "browse")
+                    }
+                }
                 registerRef?.let { ref ->
-                    scope.launch(Dispatchers.IO) { session.processLoop(ref) }
+                    scope.launch(Dispatchers.IO) {
+                        try {
+                            session.pollLoop(ref)
+                        } finally {
+                            deallocate(ref, "register")
+                        }
+                    }
                 }
                 scope.launch { session.consumeEvents() }
                 return session
             }
 
-            private fun openRegister(
+            private fun openRegisterRef(
                 deviceName: String,
                 port: Int,
-                anchors: MutableList<Any>,
+                events: Channel<Event>,
+                anchor: (Any) -> Unit,
             ): Pointer? {
                 val ref = PointerByReference()
                 val callback = object : DnsSd.RegisterReply {
@@ -354,10 +377,16 @@ internal class MdnsDiscoveryBonjour {
                     ) {
                         if (errorCode != DnsSd.NO_ERROR) {
                             System.err.println("WARN: DNSServiceRegister callback errorCode=$errorCode")
+                            return
                         }
+                        // mDNSResponder may rename the service on conflict (e.g. "Foo" →
+                        // "Foo (2)"). Surface the canonical name to the state machine so
+                        // self-filtering uses the actual published name.
+                        val canonical = name ?: return
+                        events.trySend(Event.OwnNameAssigned(canonical))
                     }
                 }
-                anchors.add(callback)
+                anchor(callback)
                 val rc = DnsSd.INSTANCE.DNSServiceRegister(
                     ref,
                     0,
@@ -366,7 +395,7 @@ internal class MdnsDiscoveryBonjour {
                     SERVICE_TYPE,
                     null,
                     null,
-                    hostOrderToNetwork(port),
+                    BonjourCodec.hostOrderToNetwork(port),
                     0,
                     null,
                     callback,
@@ -385,25 +414,6 @@ internal class MdnsDiscoveryBonjour {
                 } catch (e: Throwable) {
                     System.err.println("WARN: Bonjour $label deallocate failed — ${e.message}")
                 }
-            }
-
-            private fun hostOrderToNetwork(port: Int): Short =
-                ((((port and 0xFF) shl 8) or ((port ushr 8) and 0xFF))).toShort()
-
-            private fun networkOrderToHost(port: Short): Int {
-                val unsigned = port.toInt() and 0xFFFF
-                return ((unsigned and 0xFF) shl 8) or ((unsigned ushr 8) and 0xFF)
-            }
-
-            private fun readIpv4(sockaddr: Pointer?): String? {
-                if (sockaddr == null) return null
-                // sockaddr_in (BSD): u8 sa_len, u8 sa_family, u16 sin_port, u8 sin_addr[4], ...
-                if (sockaddr.getByte(1) != DnsSd.AF_INET_BSD) return null
-                val a = sockaddr.getByte(4).toInt() and 0xFF
-                val b = sockaddr.getByte(5).toInt() and 0xFF
-                val c = sockaddr.getByte(6).toInt() and 0xFF
-                val d = sockaddr.getByte(7).toInt() and 0xFF
-                return "$a.$b.$c.$d"
             }
         }
     }
