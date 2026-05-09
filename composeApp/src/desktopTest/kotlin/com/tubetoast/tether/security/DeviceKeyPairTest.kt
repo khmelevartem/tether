@@ -35,7 +35,7 @@ class DeviceKeyPairTest {
     fun `corrupted key file is regenerated on next load`() {
         val configDir = Files.createTempDirectory("tether-keypair-test").toFile()
         try {
-            val original = DeviceKeyPair(configDir).publicKey
+            DeviceKeyPair(configDir)
 
             val publicKeyFile = configDir.resolve("device_public.key")
             publicKeyFile.writeBytes(byteArrayOf(0x00, 0x01, 0x02))

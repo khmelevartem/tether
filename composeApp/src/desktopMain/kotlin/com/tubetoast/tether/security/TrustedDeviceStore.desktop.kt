@@ -32,9 +32,9 @@ actual class TrustedDeviceStore(
         return try {
             val json = Json.parseToJsonElement(storageFile.readText()) as JsonObject
             json.entries
-                .associate { (key, value) ->
+                .associateTo(mutableMapOf()) { (key, value) ->
                     key to value.jsonArray.map { it.jsonPrimitive.int.toByte() }.toByteArray()
-                }.toMutableMap()
+                }
         } catch (e: Exception) {
             System.err.println("ERROR: failed to load trusted device store — ${e.message}")
             mutableMapOf()
