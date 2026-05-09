@@ -1,9 +1,9 @@
 package com.tubetoast.tether.security
 
 import java.io.File
+import java.io.IOException
 import java.security.KeyFactory
 import java.security.KeyPairGenerator
-import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
 
 class DeviceKeyPair(
@@ -16,13 +16,24 @@ class DeviceKeyPair(
         val privateKeyFile = File(configDir, "device_private.key")
 
         publicKey = if (publicKeyFile.exists() && privateKeyFile.exists()) {
-            loadPublicKey(publicKeyFile)
+            try {
+                loadPublicKey(publicKeyFile)
+            } catch (e: Exception) {
+                System.err.println("WARN: device key corrupted, regenerating — ${e.message}")
+                publicKeyFile.delete()
+                privateKeyFile.delete()
+                generateAndPersist(publicKeyFile, privateKeyFile)
+            }
         } else {
             generateAndPersist(publicKeyFile, privateKeyFile)
         }
     }
 
     private fun loadPublicKey(publicKeyFile: File): ByteArray = publicKeyFile.readBytes().also { encoded ->
+        validatePublicKeyBytes(encoded)
+    }
+
+    private fun validatePublicKeyBytes(encoded: ByteArray) {
         KeyFactory.getInstance("EC").generatePublic(X509EncodedKeySpec(encoded))
     }
 
@@ -30,7 +41,9 @@ class DeviceKeyPair(
         publicKeyFile: File,
         privateKeyFile: File,
     ): ByteArray {
-        configDir.mkdirs()
+        if (!configDir.exists() && !configDir.mkdirs()) {
+            throw IOException("Failed to create config directory: $configDir")
+        }
         val generator = KeyPairGenerator.getInstance("EC")
         generator.initialize(256)
         val keyPair = generator.generateKeyPair()
@@ -38,9 +51,4 @@ class DeviceKeyPair(
         privateKeyFile.writeBytes(keyPair.private.encoded)
         return keyPair.public.encoded
     }
-}
-
-@Suppress("unused")
-private fun loadPrivateKey(privateKeyFile: File) {
-    KeyFactory.getInstance("EC").generatePrivate(PKCS8EncodedKeySpec(privateKeyFile.readBytes()))
 }

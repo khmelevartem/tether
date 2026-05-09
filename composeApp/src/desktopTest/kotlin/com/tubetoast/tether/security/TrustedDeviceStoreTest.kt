@@ -72,4 +72,34 @@ class TrustedDeviceStoreTest {
             configDir.deleteRecursively()
         }
     }
+
+    @Test
+    fun `negative byte values round-trip correctly`() {
+        val configDir = Files.createTempDirectory("tether-store-test").toFile()
+        try {
+            val key = byteArrayOf(-128, -1, 0, 1, 127)
+            TrustedDeviceStore(configDir).saveTrustedKey("device-neg", key)
+
+            val loaded = TrustedDeviceStore(configDir).getPublicKey("device-neg")
+            assertNotNull(loaded)
+            assertTrue(loaded.contentEquals(key), "negative byte values must survive serialization round-trip")
+        } finally {
+            configDir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `empty key array round-trips correctly`() {
+        val configDir = Files.createTempDirectory("tether-store-test").toFile()
+        try {
+            val key = ByteArray(0)
+            TrustedDeviceStore(configDir).saveTrustedKey("device-empty", key)
+
+            val loaded = TrustedDeviceStore(configDir).getPublicKey("device-empty")
+            assertNotNull(loaded)
+            assertTrue(loaded.isEmpty(), "empty key must round-trip as empty array")
+        } finally {
+            configDir.deleteRecursively()
+        }
+    }
 }

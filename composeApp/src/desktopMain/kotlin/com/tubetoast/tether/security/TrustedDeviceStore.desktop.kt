@@ -42,16 +42,12 @@ actual class TrustedDeviceStore(
     }
 
     private fun persistToDisk() {
-        try {
-            configDir.mkdirs()
-            val json = buildJsonObject {
-                store.forEach { (deviceId, publicKey) ->
-                    put(deviceId, JsonArray(publicKey.map { JsonPrimitive(it.toInt()) }))
-                }
+        configDir.mkdirs()
+        val json = buildJsonObject {
+            store.forEach { (deviceId, publicKey) ->
+                put(deviceId, JsonArray(publicKey.map { JsonPrimitive(it.toInt()) }))
             }
-            storageFile.writeText(json.toString())
-        } catch (e: Exception) {
-            System.err.println("ERROR: failed to persist trusted device store — ${e.message}")
         }
+        storageFile.writeText(json.toString())
     }
 }

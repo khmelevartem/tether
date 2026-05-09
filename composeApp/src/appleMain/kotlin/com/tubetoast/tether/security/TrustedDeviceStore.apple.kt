@@ -1,5 +1,6 @@
 package com.tubetoast.tether.security
 
+import platform.Foundation.NSLog
 import platform.Foundation.NSUserDefaults
 
 actual class TrustedDeviceStore {
@@ -10,11 +11,17 @@ actual class TrustedDeviceStore {
     actual fun saveTrustedKey(deviceId: String, publicKey: ByteArray) {
         val encoded = publicKey.joinToString(",")
         defaults.setObject(encoded, forKey = "tether_trust_$deviceId")
+        defaults.synchronize()
     }
 
     actual fun getPublicKey(deviceId: String): ByteArray? {
         val value = defaults.stringForKey("tether_trust_$deviceId") ?: return null
         if (value.isEmpty()) return ByteArray(0)
-        return value.split(",").map { it.trim().toByte() }.toByteArray()
+        return try {
+            value.split(",").map { it.trim().toByte() }.toByteArray()
+        } catch (e: Exception) {
+            NSLog("ERROR: corrupted trusted key for '%s' — %s", deviceId, e.message ?: "unknown error")
+            null
+        }
     }
 }

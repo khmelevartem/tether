@@ -31,6 +31,11 @@ actual class TrustedDeviceStore(
     actual fun getPublicKey(deviceId: String): ByteArray? {
         val value = prefs.getString(deviceId, null) ?: return null
         if (value.isEmpty()) return ByteArray(0)
-        return value.split(",").map { it.trim().toByte() }.toByteArray()
+        return try {
+            value.split(",").map { it.trim().toByte() }.toByteArray()
+        } catch (e: Exception) {
+            System.err.println("ERROR: corrupted trusted key for '$deviceId' — ${e.message}")
+            null
+        }
     }
 }
