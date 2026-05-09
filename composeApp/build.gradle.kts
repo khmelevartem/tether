@@ -129,6 +129,7 @@ kotlin {
                 implementation(compose.desktop.currentOs)
                 implementation(libs.kotlinx.coroutinesSwing)
                 implementation(libs.jmdns)
+                implementation(libs.jna)
                 implementation(libs.clikt)
             }
         }
