@@ -108,6 +108,7 @@ class TetherCommand :
         )
 
         echo("Commands: send <peer-name> <path>, list, quit")
+        echo("  Tip: use quotes for names/paths with spaces — send \"My Peer\" \"/my path/file.txt\"")
 
         var running = true
         while (running) {
@@ -116,7 +117,7 @@ class TetherCommand :
             } catch (_: java.nio.charset.MalformedInputException) {
                 continue
             } ?: break
-            val tokens = line.trim().split("\\s+".toRegex(), limit = 3)
+            val tokens = parseTokens(line.trim())
             when (tokens.firstOrNull()?.lowercase()) {
                 "", null -> continue
                 "list" -> {
@@ -204,6 +205,38 @@ internal fun formatBytes(bytes: Long): String = when {
     bytes < 1_024 * 1_024 -> "%.1f KB".format(bytes / 1_024.0)
     bytes < 1_024 * 1_024 * 1_024 -> "%.1f MB".format(bytes / (1_024.0 * 1_024))
     else -> "%.2f GB".format(bytes / (1_024.0 * 1_024 * 1_024))
+}
+
+internal fun parseTokens(line: String): List<String> {
+    val tokens = mutableListOf<String>()
+    val current = StringBuilder()
+    var i = 0
+    while (i < line.length) {
+        when (val ch = line[i]) {
+            '"', '\'' -> {
+                i++
+                while (i < line.length && line[i] != ch) {
+                    if (line[i] == '\\' && i + 1 < line.length) {
+                        current.append(line[++i])
+                    } else {
+                        current.append(line[i])
+                    }
+                    i++
+                }
+            }
+            '\\' -> if (i + 1 < line.length) current.append(line[++i])
+            ' ', '\t' -> {
+                if (current.isNotEmpty()) {
+                    tokens.add(current.toString())
+                    current.clear()
+                }
+            }
+            else -> current.append(ch)
+        }
+        i++
+    }
+    if (current.isNotEmpty()) tokens.add(current.toString())
+    return tokens
 }
 
 fun main(args: Array<String>) = TetherCommand().main(args)
