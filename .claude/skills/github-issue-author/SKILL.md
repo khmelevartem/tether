@@ -131,11 +131,15 @@ Feature-спек имеет приоритет над тем, что польз�
 
 ## Связи между issue
 
-GitHub поддерживает три уровня:
+**Принцип: связи проставляем через нативные GitHub-поля, а не текстом в теле issue.** Тело issue остаётся про задачу; связи живут в API/UI и видны как структурированные данные (sub-issues sidebar, blocked-by/blocking sidebar, project fields). Это даёт боту-ревьюеру и автоматизациям машинно-читаемый граф зависимостей.
 
-1. **Sub-issues / parent** — нативный механизм через GraphQL/REST API, виден в UI как иерархия.
-2. **Blocked by / blocks** — через ключевые слова и упоминания в теле issue (`Blocked by #123`, `Blocks #456`). Не создаёт жёсткой связи в API, но это де-факто стандарт.
-3. **Related** — просто упоминание `#123` в описании.
+GitHub поддерживает:
+
+1. **Sub-issues / parent** — нативный механизм через GraphQL (`addSubIssue` / `removeSubIssue`), виден в UI как иерархия.
+2. **Blocked by / blocks** — нативные issue dependencies (запущены GitHub в 2024), GraphQL-мутации `addIssueDependency` / `removeIssueDependency`. В UI показываются в правом сайдбаре issue.
+3. **Related** — нативного поля нет; используем упоминание `#123` в теле, либо общий parent/epic, либо тег labels.
+
+**Текстовый блок `**Связи:**` в теле issue не используем** — он дублирует то, что уже есть в нативных полях, и расходится с ним при правках. Исключение — fallback, если конкретная мутация недоступна в репозитории (см. ниже).
 
 ### Sub-issue (parent → child)
 
@@ -166,23 +170,32 @@ gh api graphql -f query='
   }' -F parentId="$PARENT_ID" -F childId="$CHILD_ID"
 ```
 
-Если `addSubIssue` возвращает ошибку про неизвестное поле — у репозитория не включена фича sub-issues. Сообщи об этом пользователю и предложи fallback через упоминания.
+Если `addSubIssue` возвращает ошибку про неизвестное поле — у репозитория не включена фича sub-issues. Сообщи об этом пользователю и предложи fallback через упоминания в теле parent.
 
-### Blocked by / blocks / related
+### Blocked by / blocks (issue dependencies)
 
-Добавляются прямо в тело issue в отдельной секции в самом конце (после `## Следствия`):
+```bash
+# node_id обоих issue получаются тем же запросом, что для sub-issue (см. выше)
 
-```markdown
----
-
-**Связи:**
-- Parent: #42
-- Blocked by: #99
-- Blocks: #150
-- Related: #77
+# A блокирует B  ⇄  B blocked by A
+gh api graphql -f query='
+  mutation($issueId: ID!, $blockedById: ID!) {
+    addIssueDependency(input: { issueId: $issueId, blockedById: $blockedById }) {
+      issue { number }
+    }
+  }' -F issueId="$BLOCKED_ID" -F blockedById="$BLOCKER_ID"
 ```
 
-Это парсится глазами, ботами трекеров и расширениями. Если пользователь использует ZenHub / Linear sync / другой инструмент — он может предпочитать свой синтаксис, спроси если непонятно.
+`addIssueDependency` — относительно свежая мутация (2024). Если возвращает ошибку про неизвестное поле/мутацию — фича в репозитории не включена. В этом случае fallback: добавить в тело blocked issue одну строку `Blocked by #N` и попросить пользователя поднять вопрос про включение dependencies в репозитории.
+
+### Related
+
+Нативного поля нет. Используем:
+- Упоминание `#N` в разделе **Контекст** или **Зачем** issue (там, где это естественно по смыслу).
+- Общий parent/epic, если задачи действительно связаны иерархически.
+- Labels (например, `area:discovery`), если это тематическая, а не задаче-задачная связь.
+
+Отдельный текстовый блок `**Связи:**` в конце issue не делаем — упоминание `#N` уже создаёт двустороннюю ссылку в GitHub UI.
 
 ## Создание issue через `gh` CLI
 
