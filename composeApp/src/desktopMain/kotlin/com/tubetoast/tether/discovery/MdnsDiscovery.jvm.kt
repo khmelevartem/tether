@@ -15,6 +15,7 @@ import javax.jmdns.JmDNS
 import javax.jmdns.ServiceEvent
 import javax.jmdns.ServiceInfo
 import javax.jmdns.ServiceListener
+import kotlin.coroutines.CoroutineContext
 
 private const val SERVICE_TYPE = "_tether._tcp.local."
 private val IPV4_REGEX = Regex("""\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}""")
@@ -32,10 +33,24 @@ private val IPV4_REGEX = Regex("""\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}""")
 // list.contains(status) via ListenerStatus.equals → getListener().equals() before adding,
 // and calls startServiceResolver(type) unconditionally afterwards regardless of dedup.
 // If JmDNS is upgraded, re-verify this invariant in JmDNSImpl.addServiceListener.
-private const val REQUERY_INITIAL_INTERVAL_MS = 5_000L
+internal const val REQUERY_INITIAL_INTERVAL_MS = 5_000L
 private const val REQUERY_MAX_INTERVAL_MS = 60_000L
 
 actual class MdnsDiscovery {
+    private val requeryContext: CoroutineContext
+
+    // Matches the expect class — production use, re-query runs on Dispatchers.IO.
+    constructor() {
+        requeryContext = Dispatchers.IO
+    }
+
+    // Additional constructor visible within the module for tests. Allows injecting a
+    // TestDispatcher so that advanceTimeBy() controls the re-query backoff timer
+    // without waiting for real time.
+    internal constructor(testContext: CoroutineContext) {
+        requeryContext = testContext
+    }
+
     private val _discoveredDevices = MutableStateFlow<List<Device>>(emptyList())
     actual val discoveredDevices: StateFlow<List<Device>> = _discoveredDevices.asStateFlow()
 
@@ -117,7 +132,7 @@ actual class MdnsDiscovery {
         serviceListener = listener
         instance.addServiceListener(SERVICE_TYPE, listener)
 
-        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        val scope = CoroutineScope(SupervisorJob() + requeryContext)
         requeryScope = scope
         scope.launch {
             var interval = REQUERY_INITIAL_INTERVAL_MS

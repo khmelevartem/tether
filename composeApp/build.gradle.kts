@@ -144,6 +144,12 @@ kotlin {
                 implementation(libs.ktor.serialization.kotlinx.json)
             }
         }
+
+        sourceSets.named("desktopTest") {
+            dependencies {
+                implementation(libs.kotlinx.coroutines.test)
+            }
+        }
     }
 }
 

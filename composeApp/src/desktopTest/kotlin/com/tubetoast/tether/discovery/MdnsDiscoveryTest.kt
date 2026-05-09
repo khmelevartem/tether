@@ -2,9 +2,11 @@ package com.tubetoast.tether.discovery
 
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -212,23 +214,38 @@ class MdnsDiscoveryTest {
     // Reproduces issue #47: a peer that registers after JmDNS's initial 3-query
     // ServiceResolver burst (~675 ms) must still be discovered without waiting for the
     // ~48-minute TTL refresh. Implemented via periodic re-arming of addServiceListener.
+    //
+    // Uses runTest + StandardTestDispatcher to control the re-query backoff timer with
+    // virtual time. JmDNS's own timers run on real threads — Thread.sleep is used for
+    // those boundaries. Discovery is polled via System.currentTimeMillis rather than
+    // a coroutine withTimeout because runTest routes all coroutine delays through the
+    // virtual clock; a real-time guard is needed for the JmDNS callback.
     @Test
-    fun `late-joining peer is discovered after initial browse cycle`() = runBlocking {
-        val a = MdnsDiscovery()
-        val b = MdnsDiscovery()
+    fun `late-joining peer is discovered after initial browse cycle`() = runTest {
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val a = MdnsDiscovery(testDispatcher)
+        val b = MdnsDiscovery(testDispatcher)
         try {
             a.start("LateA", 19070)
-            // Well past the initial ServiceResolver burst (3 × 225 ms ≈ 675 ms) so any
-            // discovery now depends on the periodic re-query, not the initial cycle.
-            delay(3_000)
-
+            // JmDNS's ServiceResolver fires 3 PTR queries over ~675 ms of real time.
+            // Thread.sleep keeps us in real time so the burst finishes before b joins.
+            Thread.sleep(1_500)
             b.start("LateB", 19071)
-
-            val peers = withTimeout(15_000) {
-                a.discoveredDevices.first { peers -> peers.any { it.name == "LateB" } }
+            // JmDNS probes the service name before advertising (~3 × 250 ms). Wait for
+            // b to be reachable on the network before triggering a's re-query.
+            Thread.sleep(1_000)
+            // Advance virtual clock past the initial re-query interval: triggers
+            // addServiceListener in a's re-query coroutine, which re-arms ServiceResolver.
+            advanceTimeBy(REQUERY_INITIAL_INTERVAL_MS + 1)
+            // Poll with real time — discoveredDevices is updated from JmDNS's own threads
+            // and coroutine withTimeout would use virtual clock (routed through testScheduler).
+            val deadline = System.currentTimeMillis() + 10_000
+            while (System.currentTimeMillis() < deadline) {
+                if (a.discoveredDevices.value.any { it.name == "LateB" }) break
+                Thread.sleep(100)
             }
-            val lateB = peers.filter { it.name == "LateB" }
-            assertEquals(1, lateB.size)
+            val lateB = a.discoveredDevices.value.filter { it.name == "LateB" }
+            assertEquals(1, lateB.size, "LateB not discovered within 10 s after re-query")
             assertEquals(19071, lateB[0].port)
         } finally {
             a.stop()
