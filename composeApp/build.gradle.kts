@@ -1,5 +1,6 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.io.File
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -188,27 +189,34 @@ dependencies {
     debugImplementation(libs.compose.uiTooling)
 }
 
-// Builds the uber JAR and immediately launches it with `java -jar`.
-// Usage: ./gradlew :composeApp:runJar --args="--name MyMac --port 8080"
-tasks.register("runJar") {
+// Installs tether CLI to ~/.local/bin/tether for system-wide access
+tasks.register("installJar") {
     group = "application"
-    description = "Packages the uber JAR for the current OS and runs it via java -jar"
+    description = "Installs uber JAR to ~/.local/bin/tether for CLI access"
     dependsOn("packageUberJarForCurrentOS")
+    notCompatibleWithConfigurationCache("installJar performs file I/O and system operations")
     doLast {
         val jarDir = layout.buildDirectory
             .dir("compose/jars")
             .get()
             .asFile
-        val jar = jarDir.listFiles()?.firstOrNull { it.extension == "jar" }
+        val sourceJar = jarDir.listFiles()?.firstOrNull { it.extension == "jar" }
             ?: error("Uber JAR not found in ${jarDir.absolutePath}")
-        val runArgs = (project.findProperty("args") as? String)
-            ?.split("\\s+".toRegex())
-            .orEmpty()
-        project.javaexec {
-            classpath(jar)
-            mainClass.set("com.tubetoast.tether.MainKt")
-            args(runArgs)
+
+        val userHome = System.getProperty("user.home")
+        val localBinDir = File("$userHome/.local/bin")
+        val wrapperScript = File(localBinDir, "tether")
+
+        if (!localBinDir.exists()) {
+            localBinDir.mkdirs()
         }
+
+        val bashScript = "#!/bin/bash\nexec java -jar \"$sourceJar\" \"\$@\""
+        wrapperScript.writeText(bashScript)
+        wrapperScript.setExecutable(true)
+        println("✓ Installed to ${wrapperScript.absolutePath}")
+        println("  Add to PATH: export PATH=\"\$PATH:$userHome/.local/bin\"")
+        println("  Then run: tether --help")
     }
 }
 
