@@ -3,8 +3,8 @@ package com.tubetoast.tether.discovery
 import com.tubetoast.tether.protocol.Device
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -42,6 +42,7 @@ actual class MdnsDiscovery {
     // Matches the expect class — production use, re-query runs on Dispatchers.IO.
     constructor() {
         requeryContext = Dispatchers.IO
+        requeryScope = CoroutineScope(SupervisorJob() + requeryContext)
     }
 
     // Additional constructor visible within the module for tests. Allows injecting a
@@ -49,6 +50,7 @@ actual class MdnsDiscovery {
     // without waiting for real time.
     internal constructor(testContext: CoroutineContext) {
         requeryContext = testContext
+        requeryScope = CoroutineScope(SupervisorJob() + requeryContext)
     }
 
     private val _discoveredDevices = MutableStateFlow<List<Device>>(emptyList())
@@ -62,7 +64,8 @@ actual class MdnsDiscovery {
 
     @Volatile private var ownPort: Int = -1
 
-    private var requeryScope: CoroutineScope? = null
+    private lateinit var requeryScope: CoroutineScope
+    private var requeryJob: Job? = null
 
     @Synchronized
     actual fun start(deviceName: String, port: Int) {
@@ -113,9 +116,7 @@ actual class MdnsDiscovery {
         }
         instance.addServiceListener(SERVICE_TYPE, listener)
 
-        val scope = CoroutineScope(SupervisorJob() + requeryContext)
-        requeryScope = scope
-        scope.launch {
+        requeryJob = requeryScope.launch {
             var interval = REQUERY_INITIAL_INTERVAL_MS
             while (isActive) {
                 delay(interval)
@@ -134,8 +135,8 @@ actual class MdnsDiscovery {
                 ServiceInfo.create(SERVICE_TYPE, deviceName, port, ""),
             )
         } catch (e: Exception) {
-            scope.cancel()
-            requeryScope = null
+            requeryJob?.cancel()
+            requeryJob = null
             jmdns = null
             ownIp = null
             ownPort = -1
@@ -149,8 +150,8 @@ actual class MdnsDiscovery {
 
     @Synchronized
     actual fun stop() {
-        requeryScope?.cancel()
-        requeryScope = null
+        requeryJob?.cancel()
+        requeryJob = null
         try {
             try {
                 jmdns?.unregisterAllServices()
