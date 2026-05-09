@@ -13,9 +13,12 @@ fun MainViewController() = run {
     )
     ComposeUIViewController {
         DisposableEffect(Unit) {
-            // TODO: replace with actual FileServer port once server is available on iOS
-            container.mdnsDiscovery.start(container.deviceName, port = 8080)
-            onDispose { container.mdnsDiscovery.stop() }
+            val port = container.fileServer.start()
+            container.mdnsDiscovery.start(container.deviceName, port = port)
+            onDispose {
+                container.mdnsDiscovery.stop()
+                container.fileServer.stop()
+            }
         }
         App()
     }

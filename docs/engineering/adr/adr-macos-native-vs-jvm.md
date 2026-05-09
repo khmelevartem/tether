@@ -2,6 +2,7 @@
 
 **Status:** Accepted — 2026-05-07 (de facto since project init; this ADR records the rationale)
 **Issue:** #63
+**Update (2026-05-10):** the "Ktor server doesn't run on Kotlin/Native" cost listed below was true at the time of writing but no longer holds — Ktor 3.0+ publishes `ktor-server-cio` for Native targets. The Apple-side `FileServer.actual` now uses CIO on Native; see [adr-apple-fileserver-engine.md](adr-apple-fileserver-engine.md). The macOS-native-over-JVM decision is unchanged — the `appleMain`-sharing argument is now stronger, not weaker.
 
 ## Context
 

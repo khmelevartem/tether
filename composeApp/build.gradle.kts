@@ -95,6 +95,13 @@ kotlin {
             implementation(libs.ktor.client.cio)
             implementation(libs.ktor.client.content.negotiation)
             implementation(libs.ktor.serialization.kotlinx.json)
+            // Ktor 3.0+ publishes ktor-server-cio for Kotlin/Native (iosArm64, iosSimulatorArm64,
+            // macosArm64) in addition to JVM. Keeping the server stack in commonMain lets the
+            // Apple FileServer share routing/streaming code with the JVM actual instead of
+            // hand-rolling an HTTP listener. See docs/engineering/adr/adr-apple-fileserver-engine.md.
+            implementation(libs.ktor.server.core)
+            implementation(libs.ktor.server.cio)
+            implementation(libs.ktor.server.content.negotiation)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -109,19 +116,6 @@ kotlin {
         androidUnitTest.dependencies {
             implementation(libs.robolectric)
             implementation(libs.kotlin.testJunit)
-        }
-
-        // Access via name to avoid "Source Set used with custom target name" KGP warning.
-        // jvmMain is intentionally created as an intermediate source set by applyHierarchyTemplate
-        // (not as the leaf for jvm("desktop")), hence the mismatch the warning detects.
-        sourceSets.named("jvmMain") {
-            dependencies {
-                // Ktor server is JVM-only; no Kotlin/Native publication exists for ktor-server-*
-                // Shared between Android and Desktop JVM targets
-                implementation(libs.ktor.server.core)
-                implementation(libs.ktor.server.cio)
-                implementation(libs.ktor.server.content.negotiation)
-            }
         }
 
         val desktopMain by getting {
