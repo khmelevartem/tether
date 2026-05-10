@@ -16,9 +16,9 @@ private const val TAG = "MdnsDiscovery"
 
 actual class MdnsDiscovery(
     private val context: Context,
-) {
+) : DeviceDiscovery {
     private val _discoveredDevices = MutableStateFlow<List<Device>>(emptyList())
-    actual val discoveredDevices: StateFlow<List<Device>> = _discoveredDevices.asStateFlow()
+    actual override val discoveredDevices: StateFlow<List<Device>> = _discoveredDevices.asStateFlow()
 
     @Volatile private var nsdManager: NsdManager? = null
 
@@ -142,7 +142,7 @@ actual class MdnsDiscovery(
     }
 
     @Synchronized
-    actual fun start(deviceName: String, port: Int) {
+    actual override fun start(deviceName: String, port: Int) {
         if (nsdManager != null) throw IllegalStateException("MdnsDiscovery already started; call stop() first")
         ownName = deviceName
         resolveQueue.clear()
@@ -160,7 +160,7 @@ actual class MdnsDiscovery(
     }
 
     @Synchronized
-    actual fun stop() {
+    actual override fun stop() {
         val nm = nsdManager ?: return
         Log.d(TAG, "Stopping NSD")
         try {

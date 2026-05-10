@@ -6,18 +6,19 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import com.arkivanov.decompose.defaultComponentContext
+import com.tubetoast.tether.di.AppContainerProvider
 import com.tubetoast.tether.network.TetherForegroundService
+import com.tubetoast.tether.presentation.DeviceListComponent
 
 private const val TAG = "MainActivity"
 
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
     private val notificationPermissionRequest = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { granted ->
@@ -42,8 +43,13 @@ class MainActivity : ComponentActivity() {
 
         startService()
 
+        val container = (application as AppContainerProvider).container
+        val component = DeviceListComponent(
+            componentContext = defaultComponentContext(),
+            discovery = container.mdnsDiscovery,
+        )
         setContent {
-            App()
+            App(component)
         }
     }
 
@@ -67,10 +73,4 @@ class MainActivity : ComponentActivity() {
             Intent(this, TetherForegroundService::class.java),
         )
     }
-}
-
-@Preview
-@Composable
-private fun AppAndroidPreview() {
-    App()
 }

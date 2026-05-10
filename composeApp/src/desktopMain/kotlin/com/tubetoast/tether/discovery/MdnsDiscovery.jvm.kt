@@ -18,15 +18,15 @@ internal interface MdnsDiscoveryDelegate {
  *
  * [stop] may block up to ~200 ms on macOS; invoke from a background dispatcher in UI code.
  */
-actual class MdnsDiscovery {
+actual class MdnsDiscovery : DeviceDiscovery {
     private val delegate: MdnsDiscoveryDelegate =
         if (isMacOsHost()) MdnsDiscoveryBonjour() else MdnsDiscoveryJmdns()
 
-    actual val discoveredDevices: StateFlow<List<Device>> get() = delegate.discoveredDevices
+    actual override val discoveredDevices: StateFlow<List<Device>> get() = delegate.discoveredDevices
 
-    actual fun start(deviceName: String, port: Int) = delegate.start(deviceName, port)
+    actual override fun start(deviceName: String, port: Int) = delegate.start(deviceName, port)
 
-    actual fun stop() = delegate.stop()
+    actual override fun stop() = delegate.stop()
 }
 
 private fun isMacOsHost(): Boolean =
