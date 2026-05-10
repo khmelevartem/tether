@@ -239,22 +239,23 @@ class FileServerTest {
 
     @Test
     fun `restart after stop succeeds`() {
-        val server = FileServer(0)
-        val port1 = server.start()
-        assertTrue(port1 in 1024..65535)
-        server.stop()
-        val port2 = server.start()
+        val (server, configDir) = testServer()
         try {
+            val port1 = server.start()
+            assertTrue(port1 in 1024..65535)
+            server.stop()
+            val port2 = server.start()
             assertTrue(port2 in 1024..65535)
         } finally {
             server.stop()
+            configDir.deleteRecursively()
         }
     }
 
     @Test
     fun `upload streams 5MB body byte identical`() {
         val tmpDir = Files.createTempDirectory("tether-test").toFile()
-        val server = FileServer(0, downloadsDir = tmpDir)
+        val (server, configDir) = testServer(downloadsDir = tmpDir)
         val port = server.start()
         val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
         try {
@@ -275,6 +276,7 @@ class FileServerTest {
             client.close()
             server.stop()
             tmpDir.deleteRecursively()
+            configDir.deleteRecursively()
         }
     }
 
@@ -283,7 +285,7 @@ class FileServerTest {
         // SlowContent declares Content-Length and paces with per-chunk delay so
         // withTimeout fires mid-transfer deterministically across platforms.
         val tmpDir = Files.createTempDirectory("tether-test").toFile()
-        val server = FileServer(0, downloadsDir = tmpDir)
+        val (server, configDir) = testServer(downloadsDir = tmpDir)
         val port = server.start()
         val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
         try {
@@ -313,6 +315,7 @@ class FileServerTest {
             client.close()
             server.stop()
             tmpDir.deleteRecursively()
+            configDir.deleteRecursively()
         }
     }
 }

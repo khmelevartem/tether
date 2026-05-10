@@ -4,6 +4,7 @@ import com.tubetoast.tether.protocol.PairRequest
 import com.tubetoast.tether.protocol.PairResponse
 import com.tubetoast.tether.security.DeviceKeyPair
 import com.tubetoast.tether.security.TrustedDeviceStore
+import com.tubetoast.tether.security.deviceIdFromPublicKey
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
@@ -19,6 +20,8 @@ import java.io.File
 import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class FileServerPairTest {
@@ -57,25 +60,95 @@ class FileServerPairTest {
     }
 
     @Test
-    fun `pair saves initiator public key to store`() {
+    fun `pair saves initiator public key under publicKey-derived deviceId`() {
         val (server, _, configDir) = testPairServer()
+        val peerKey = byteArrayOf(10, 20, 30)
+        val expectedDeviceId = deviceIdFromPublicKey(peerKey)
         val port = server.start()
         val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
         try {
             runBlocking {
                 client.post("http://localhost:$port/pair") {
                     contentType(ContentType.Application.Json)
-                    setBody(PairRequest(publicKey = byteArrayOf(10, 20, 30), deviceName = "PeerDevice"))
+                    setBody(PairRequest(publicKey = peerKey, deviceName = "PeerDevice"))
                 }
             }
+            val reloaded = TrustedDeviceStore(configDir)
             assertTrue(
-                TrustedDeviceStore(configDir).isTrusted("PeerDevice"),
-                "PeerDevice must be trusted after pairing",
+                reloaded.isTrusted(expectedDeviceId),
+                "deviceId derived from publicKey must be trusted after pairing",
+            )
+            assertFalse(
+                reloaded.isTrusted("PeerDevice"),
+                "deviceName must NOT be used as trust-store key — it is unauthenticated and collidable",
             )
         } finally {
             client.close()
             server.stop()
             configDir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `name collision with different keys produces distinct trust entries`() {
+        val (server, _, configDir) = testPairServer()
+        val keyAlice = byteArrayOf(1, 1, 1)
+        val keyMallory = byteArrayOf(2, 2, 2)
+        val port = server.start()
+        val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
+        try {
+            runBlocking {
+                client.post("http://localhost:$port/pair") {
+                    contentType(ContentType.Application.Json)
+                    setBody(PairRequest(publicKey = keyAlice, deviceName = "Phone"))
+                }
+                client.post("http://localhost:$port/pair") {
+                    contentType(ContentType.Application.Json)
+                    setBody(PairRequest(publicKey = keyMallory, deviceName = "Phone"))
+                }
+            }
+            val store = TrustedDeviceStore(configDir)
+            val aliceStored = store.getPublicKey(deviceIdFromPublicKey(keyAlice))
+            val malloryStored = store.getPublicKey(deviceIdFromPublicKey(keyMallory))
+            assertNotNull(aliceStored)
+            assertNotNull(malloryStored)
+            assertTrue(aliceStored.contentEquals(keyAlice), "alice's key must be preserved")
+            assertTrue(
+                malloryStored.contentEquals(keyMallory),
+                "mallory cannot overwrite alice's trust by reusing the deviceName",
+            )
+        } finally {
+            client.close()
+            server.stop()
+            configDir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `pair returns 500 when store fails to persist`() {
+        // Point the store at an existing regular file: configDir.mkdirs() returns false and
+        // writeText on the storage file throws because the parent is not a directory. Same
+        // exception path as a real disk failure (read-only FS, full disk, EACCES).
+        val keyPairDir = Files.createTempDirectory("tether-pair-fail-keys").toFile()
+        val notADirectory = Files.createTempFile("tether-pair-fail", ".not-a-dir").toFile()
+        val keyPair = DeviceKeyPair(keyPairDir)
+        val throwingStore = TrustedDeviceStore(notADirectory)
+        val server = FileServer(0, trustedDeviceStore = throwingStore, deviceKeyPair = keyPair)
+        val port = server.start()
+        val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
+        try {
+            runBlocking {
+                val response = client.post("http://localhost:$port/pair") {
+                    contentType(ContentType.Application.Json)
+                    setBody(PairRequest(publicKey = byteArrayOf(7, 7, 7), deviceName = "Whatever"))
+                }
+                assertEquals(HttpStatusCode.InternalServerError, response.status)
+            }
+        } finally {
+            client.close()
+            server.stop()
+            keyPairDir.deleteRecursively()
+            notADirectory.delete()
         }
     }
 

@@ -4,6 +4,7 @@ import com.tubetoast.tether.protocol.PairRequest
 import com.tubetoast.tether.protocol.PairResponse
 import com.tubetoast.tether.security.DeviceKeyPair
 import com.tubetoast.tether.security.TrustedDeviceStore
+import com.tubetoast.tether.security.deviceIdFromPublicKey
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.cio.CIO
@@ -54,7 +55,8 @@ private fun Application.installPairRoute(
     routing {
         post("/pair") {
             val request = call.receive<PairRequest>()
-            trustedDeviceStore.saveTrustedKey(request.deviceName, request.publicKey)
+            val deviceId = deviceIdFromPublicKey(request.publicKey)
+            trustedDeviceStore.saveTrustedKey(deviceId, request.publicKey)
             call.respond(HttpStatusCode.OK, PairResponse(publicKey = deviceKeyPair.publicKey))
         }
     }

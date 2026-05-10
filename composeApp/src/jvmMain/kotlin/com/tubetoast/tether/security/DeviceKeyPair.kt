@@ -2,6 +2,8 @@ package com.tubetoast.tether.security
 
 import java.io.File
 import java.io.IOException
+import java.nio.file.Files
+import java.nio.file.attribute.PosixFilePermission
 import java.security.KeyFactory
 import java.security.KeyPairGenerator
 import java.security.spec.X509EncodedKeySpec
@@ -49,6 +51,15 @@ class DeviceKeyPair(
         val keyPair = generator.generateKeyPair()
         publicKeyFile.writeBytes(keyPair.public.encoded)
         privateKeyFile.writeBytes(keyPair.private.encoded)
+        restrictToOwner(privateKeyFile)
         return keyPair.public.encoded
+    }
+
+    private fun restrictToOwner(file: File) {
+        val view = Files.getFileAttributeView(
+            file.toPath(),
+            java.nio.file.attribute.PosixFileAttributeView::class.java,
+        ) ?: return // non-POSIX filesystem (e.g. Android internal storage already per-app, Windows)
+        view.setPermissions(setOf(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE))
     }
 }

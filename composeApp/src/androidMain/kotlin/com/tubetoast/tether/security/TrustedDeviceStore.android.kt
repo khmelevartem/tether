@@ -4,6 +4,10 @@ import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
 
+// security-crypto 1.0.0 is the last stable release; MasterKeys/EncryptedSharedPreferences are
+// deprecated in 1.1.0-alpha but the replacement (MasterKey.Builder) is not yet on a stable line.
+// Pinned here until 1.1.0 ships stable; revisit when bumping the dep.
+@Suppress("DEPRECATION")
 actual class TrustedDeviceStore(
     private val context: Context,
 ) {
@@ -21,11 +25,7 @@ actual class TrustedDeviceStore(
     actual fun isTrusted(deviceId: String): Boolean = getPublicKey(deviceId) != null
 
     actual fun saveTrustedKey(deviceId: String, publicKey: ByteArray) {
-        try {
-            prefs.edit().putString(deviceId, publicKey.joinToString(",")).apply()
-        } catch (e: Exception) {
-            System.err.println("ERROR: failed to save trusted key for '$deviceId' — ${e.message}")
-        }
+        prefs.edit().putString(deviceId, publicKey.joinToString(",")).apply()
     }
 
     actual fun getPublicKey(deviceId: String): ByteArray? {
