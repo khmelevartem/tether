@@ -110,8 +110,12 @@ private class AppleUploadStorage(
         }
     }
 
+    override fun logInfo(message: String) {
+        NSLog("[FileServer] %s", message)
+    }
+
     override fun logError(message: String) {
-        NSLog("FileServer: %s", message)
+        NSLog("[FileServer] ERROR: %s", message)
     }
 }
 

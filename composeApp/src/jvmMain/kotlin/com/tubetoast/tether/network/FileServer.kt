@@ -58,8 +58,12 @@ private class JvmUploadStorage(
         }
     }
 
+    override fun logInfo(message: String) {
+        println("[FileServer] $message")
+    }
+
     override fun logError(message: String) {
-        System.err.println("ERROR: $message")
+        System.err.println("[FileServer] ERROR: $message")
     }
 }
 

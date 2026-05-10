@@ -25,6 +25,8 @@ internal interface UploadStorage {
 
     fun deleteIfExists(destination: String)
 
+    fun logInfo(message: String)
+
     fun logError(message: String)
 }
 
@@ -56,6 +58,7 @@ internal fun Application.installFileServerRoutes(storage: UploadStorage) {
                     error("FileServer: incomplete upload — got $bytesWritten of $expected bytes")
                 }
                 uploadComplete = true
+                storage.logInfo("received '$fileName' — $bytesWritten bytes → $destination")
                 call.respond(HttpStatusCode.OK, mapOf("savedPath" to destination))
             } catch (e: Exception) {
                 storage.logError("upload failed for '$fileName' — ${e.message ?: "unknown error"}")
