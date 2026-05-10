@@ -79,3 +79,43 @@ EOF
 
 chmod +x "$PUSH_HOOK_FILE"
 echo "✅ Pre-push hook installed at $PUSH_HOOK_FILE"
+
+# ---------------------------------------------------------------------------
+# prepare-commit-msg: restore commit subject lost during `git rebase --continue`
+#
+# Symptom: after resolving a conflict and running `git rebase --continue`,
+# the resulting commit has only the `Co-Authored-By` trailer as its subject,
+# the original subject line is gone. Reproducible in Claude Code's environment,
+# likely caused by a GIT_EDITOR that truncates COMMIT_EDITMSG.
+#
+# Fix: when we detect this corruption (first meaningful line is a known trailer),
+# restore the message from `$GIT_DIR/rebase-merge/message`, which git itself
+# populates with the original commit message before invoking the editor.
+# ---------------------------------------------------------------------------
+PREPARE_HOOK_FILE="$HOOK_DIR/prepare-commit-msg"
+
+cat > "$PREPARE_HOOK_FILE" << 'EOF'
+#!/bin/bash
+# prepare-commit-msg hook: restore subject lost during `git rebase --continue`
+
+COMMIT_MSG_FILE="$1"
+GIT_DIR=$(git rev-parse --git-dir 2>/dev/null)
+REBASE_MSG="$GIT_DIR/rebase-merge/message"
+
+# Only act during an in-progress rebase that has a saved original message
+[ -f "$REBASE_MSG" ] || exit 0
+
+# First meaningful line (skip comments and blanks)
+FIRST_LINE=$(grep -v '^#' "$COMMIT_MSG_FILE" | grep -v '^[[:space:]]*$' | head -1)
+
+# If the subject looks like a trailer, the original subject was lost — restore it.
+if echo "$FIRST_LINE" | grep -qiE '^(Co-Authored-By|Signed-off-by|Reviewed-by|Acked-by|Tested-by|Helped-by|Reported-by):'; then
+  cp "$REBASE_MSG" "$COMMIT_MSG_FILE"
+  echo "ℹ️  prepare-commit-msg: restored subject from rebase-merge/message" >&2
+fi
+
+exit 0
+EOF
+
+chmod +x "$PREPARE_HOOK_FILE"
+echo "✅ prepare-commit-msg hook installed at $PREPARE_HOOK_FILE"
