@@ -48,7 +48,7 @@ All git naming in English. **Все commit messages обязаны начина�
 
 ## Slash commands и скиллы
 
-В `.claude/commands/` лежат рабочие команды (`/work-on-issue`, `/close-issue`, `/code-review`, `/check-review`, `/grooming`, `/retro`).
+В `.claude/commands/` лежат рабочие команды (`/work-on-issue`, `/close-issue`, `/code-review`, `/check-review`, `/grooming`, `/retro`, `/quick-issue`).
 
 `/smoke-test` — runtime happy-path по платформам (Desktop CLI, Desktop↔Desktop send, Android если adb подключён, native compile macosArm64/iosSimulatorArm64). Прогоняй когда сомневаешься в рантайме после нетривиальных правок в сетевой части / FileServer / mDNS / FGS, перед merge runtime-changing PR, и в `/close-issue`. Skip для DOCS-only / `.claude/`-only / comment-only изменений. Smoke не заменяет `allTests`.
 
@@ -63,5 +63,7 @@ All git naming in English. **Все commit messages обязаны начина�
 **Редактируй файлы только в worktree, не в корне репозитория.** Перед первым Edit убедись, что путь ведёт в `.claude/worktrees/<branch>/`, а не в корень. Ошибка в пути = правка main в обход ревью.
 
 **Обновление инструкций** (CLAUDE.md и других файлов в `.claude/`): правь только в текущем worktree. Корневой CLAUDE.md живёт на main — туда изменения попадают через PR-флоу.
+
+**Авто-очистка worktree.** При остановке сессии Claude Code `Stop` hook автоматически удаляет worktree'ы, для которых remote-ветка удалена и PR смержен (`gh pr list --state merged`). Работает для squash, regular и fast-forward merge.
 
 **Проверяй `pwd` перед Bash-командами.** Bash-сессии не сохраняют `cd` между вызовами. Перед diagnostic-сессией (smoke, ручная проверка, сборка для тестирования) первой командой делай `pwd && git rev-parse --short HEAD`, чтобы убедиться что ты в worktree, а не в `/Users/artem/StudioProjects/tether` на main.
