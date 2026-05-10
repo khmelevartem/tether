@@ -39,6 +39,7 @@ fun DeviceListScreen(component: DeviceListComponent, modifier: Modifier = Modifi
         LazyColumn(modifier = modifier.fillMaxSize()) {
             items(state.devices, key = { it.id }) { device ->
                 Card(
+                    onClick = { /* TODO: navigate to file selection — #4b */ },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
