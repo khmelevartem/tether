@@ -21,21 +21,26 @@ import kotlinx.coroutines.runBlocking
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 
-// JVM-on-macOS implementation backed by Apple's DNS-SD API (mDNSResponder IPC).
-//
-// On macOS the kernel routes incoming WiFi mDNS multicast exclusively to mDNSResponder,
-// so user-space sockets bound to 224.0.0.251:5353 (e.g. JmDNS) do not see announcements
-// from external peers — only the loopback path delivers to user space. Going through
-// DNS-SD makes us a peer of mDNSResponder rather than a competing multicast listener,
-// which is the only way to observe external peers reliably. See issue #47.
-//
-// Lifecycle invariant: each DNSServiceRef is owned by exactly one polling coroutine
-// that calls DNSServiceProcessResult only when poll(2) reports the FD readable, and
-// calls DNSServiceRefDeallocate in its own finally block once cancelled. This avoids
-// the race forbidden by dns_sd.h ("no other thread is currently using the DNSServiceRef
-// while DNSServiceRefDeallocate is being called"). Cancellation flows via standard
-// kotlinx Job cancellation; the polling coroutine returns from poll within at most
-// POLL_TIMEOUT_MS so close() never blocks the caller for long.
+/**
+ * JVM-on-macOS implementation of [com.tubetoast.tether.discovery.MdnsDiscovery]
+ * backed by Apple's DNS-SD API (mDNSResponder IPC, see [DnsSd]).
+ *
+ * On macOS the kernel routes incoming WiFi mDNS multicast exclusively to
+ * mDNSResponder, so user-space sockets bound to `224.0.0.251:5353` (e.g. JmDNS)
+ * do not see announcements from external peers — only the loopback path
+ * delivers to user space. Going through DNS-SD makes us a peer of mDNSResponder
+ * rather than a competing multicast listener, which is the only way to observe
+ * external peers reliably. See issue #47 and `docs/knowledge/macos-mdns-bonjour.md`.
+ *
+ * **Lifecycle invariant.** Each `DNSServiceRef` is owned by exactly one polling
+ * coroutine that calls `DNSServiceProcessResult` only when `poll(2)` reports
+ * the FD readable, and calls `DNSServiceRefDeallocate` in its own `finally`
+ * block once cancelled. This avoids the race forbidden by `dns_sd.h` ("no
+ * other thread is currently using the DNSServiceRef while
+ * DNSServiceRefDeallocate is being called"). Cancellation flows via standard
+ * kotlinx [Job] cancellation; the polling coroutine returns from `poll` within
+ * at most [Session.POLL_TIMEOUT_MS] so [stop] never blocks the caller for long.
+ */
 internal class MdnsDiscoveryBonjour {
     private val _discoveredDevices = MutableStateFlow<List<Device>>(emptyList())
     val discoveredDevices: StateFlow<List<Device>> = _discoveredDevices.asStateFlow()
@@ -68,35 +73,36 @@ internal class MdnsDiscoveryBonjour {
     ) : BonjourState.Sink {
         private lateinit var state: BonjourState
 
-        // Per-name jobs. Cancelling the job stops the poll loop and triggers
-        // self-deallocation of the DNSServiceRef in the loop's finally block.
+        /**
+         * Per-name jobs. Cancelling a job stops its poll loop and triggers
+         * self-deallocation of the corresponding `DNSServiceRef` in the loop's
+         * `finally` block — the canonical pattern that satisfies the
+         * `dns_sd.h` same-thread invariant.
+         */
         private val resolveJobs = ConcurrentHashMap<String, Job>()
         private val addrInfoJobs = ConcurrentHashMap<String, Job>()
 
-        // Anchor JNA callbacks against GC for the session lifetime. Without strong
-        // references, JNA's CallbackReference can free the trampoline while
-        // mDNSResponder still holds a pointer to it.
+        /**
+         * Anchors JNA callbacks against GC for the session lifetime. Without
+         * strong references, JNA's `CallbackReference` can free the trampoline
+         * while mDNSResponder still holds a pointer to it.
+         */
         val callbackAnchors = CopyOnWriteArrayList<Any>()
 
-        // Synchronous cleanup. Blocks the caller for up to POLL_TIMEOUT_MS (200 ms)
-        // while each poll loop observes cancellation and self-deallocates its ref.
-        // Sufficient for CLI shutdown; UI callers should invoke MdnsDiscovery.stop()
-        // from a background dispatcher.
+        /**
+         * Synchronous cleanup. Blocks the caller for up to [POLL_TIMEOUT_MS]
+         * while each poll loop observes cancellation and self-deallocates its
+         * ref. Sufficient for CLI shutdown; UI callers should invoke
+         * [MdnsDiscoveryBonjour.stop] from a background dispatcher.
+         */
         fun close() {
-            // 1. Stop accepting new events. The consumer coroutine drains its queue
-            //    and exits once the channel is empty + closed.
             events.close()
-            // 2. Cancel everything and wait for poll loops to exit. Each loop's finally
-            //    deallocates its own ref, satisfying the dns_sd.h same-thread invariant.
             runBlocking { scope.coroutineContext[Job]!!.cancelAndJoin() }
             resolveJobs.clear()
             addrInfoJobs.clear()
             callbackAnchors.clear()
         }
 
-        // BonjourState.Sink — events flow on the consumer coroutine, which is single-threaded
-        // (Channel is consumed by exactly one launch{} below), so concurrent access to the
-        // job maps stays bounded.
         override fun openResolve(name: String, interfaceIndex: Int) {
             resolveJobs[name] = scope.launch(Dispatchers.IO) { runResolve(name, interfaceIndex) }
         }
@@ -282,7 +288,7 @@ internal class MdnsDiscoveryBonjour {
 
         companion object {
             const val SERVICE_TYPE: String = "_tether._tcp."
-            private const val POLL_TIMEOUT_MS: Int = 200
+            const val POLL_TIMEOUT_MS: Int = 200
 
             fun start(
                 deviceName: String,
@@ -340,7 +346,6 @@ internal class MdnsDiscoveryBonjour {
                 val browseRef = browseRefPtr.value
                     ?: throw IllegalStateException("DNSServiceBrowse returned null sdRef")
 
-                // Top-level poll loops: each owns its ref and deallocates in finally.
                 scope.launch(Dispatchers.IO) {
                     try {
                         session.pollLoop(browseRef)
@@ -382,9 +387,6 @@ internal class MdnsDiscoveryBonjour {
                             System.err.println("WARN: DNSServiceRegister callback errorCode=$errorCode")
                             return
                         }
-                        // mDNSResponder may rename the service on conflict (e.g. "Foo" →
-                        // "Foo (2)"). Surface the canonical name to the state machine so
-                        // self-filtering uses the actual published name.
                         val canonical = name ?: return
                         events.trySend(Event.OwnNameAssigned(canonical))
                     }

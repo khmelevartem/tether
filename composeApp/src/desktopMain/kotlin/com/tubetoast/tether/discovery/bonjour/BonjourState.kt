@@ -2,15 +2,24 @@ package com.tubetoast.tether.discovery.bonjour
 
 import com.tubetoast.tether.protocol.Device
 
-// State-machine over Browse → Resolve → GetAddrInfo events. Pure logic, no JNA.
-// Effects (open/close subordinate refs, publish devices) are routed through the
-// Sink so MdnsDiscoveryBonjour can wire the JNA side and tests can wire fakes.
-//
-// Self-filter: ownName is set asynchronously from the DNSServiceRegister callback,
-// because mDNSResponder may rename our service on conflict (e.g. "Foo" → "Foo (2)").
-// Until ownNameAssigned() is called, we treat ourselves as not-yet-named and accept
-// the configured deviceName as a starting filter; the canonical name overrides it
-// when register completes.
+/**
+ * State machine over the Browse → Resolve → GetAddrInfo callback chain. Pure
+ * Kotlin, no JNA — effects (open/close subordinate refs, publish devices) go
+ * through [Sink] so [MdnsDiscoveryBonjour] wires the JNA side and tests wire
+ * fakes.
+ *
+ * **Self-filter.** [ownName] starts as the configured `deviceName`. mDNSResponder
+ * may rename our service on conflict (e.g. `Foo` → `Foo (2)`); the canonical
+ * name arrives asynchronously via [ownNameAssigned] from the DNSServiceRegister
+ * callback. Until that happens the configured name is used as a starting filter,
+ * and any self entry that slipped in under the renamed name is removed when the
+ * canonical name is set.
+ *
+ * **Stale-event gate.** [onResolved] and [onAddrInfoFound] early-return when the
+ * peer name is no longer in [activeResolves] / [activeAddrInfos]. Without this,
+ * an event queued by the per-name poll loop before BrowseRemove was processed
+ * would resurrect a peer entry after [onBrowseRemove] cleaned it up.
+ */
 internal class BonjourState(
     deviceName: String,
     private val sink: Sink,
@@ -23,11 +32,14 @@ internal class BonjourState(
     private val pendingIps = mutableMapOf<String, String>()
     private var devices: List<Device> = emptyList()
 
+    /**
+     * Apply the canonical name reported by the `DNSServiceRegister` callback.
+     * If the configured name has been replaced (e.g. on conflict) and a self
+     * entry was already published under the new name, drop it.
+     */
     fun ownNameAssigned(canonicalName: String) {
         if (canonicalName == ownName) return
         ownName = canonicalName
-        // If we previously published ourselves as a peer (because the canonical name
-        // wasn't yet known when the browse callback fired), drop that entry now.
         if (cleanupName(canonicalName)) {
             sink.publishDevices(devices)
         }
@@ -50,10 +62,6 @@ internal class BonjourState(
 
     fun onResolved(name: String, hostname: String, port: Int) {
         if (name == ownName) return
-        // Membership gate: a Resolved event may be queued before BrowseRemove was
-        // processed, so by the time we consume it the peer might already be gone.
-        // Without this, we'd resurrect the device entry and re-open an addrInfo for
-        // a removed peer.
         if (name !in activeResolves) return
         pendingPorts[name] = port
         emitIfReady(name)
@@ -62,19 +70,20 @@ internal class BonjourState(
         }
     }
 
+    /**
+     * @param isAdd `true` for a new address (`kDNSServiceFlagsAdd`); `false`
+     *   means the address is going away. Per dns_sd.h, `false` should drop the
+     *   IP from any cached address list. We deliberately keep the device entry
+     *   in place — BrowseRemove is the canonical "peer gone" signal, and
+     *   removing the device on every routine IP rotation would flicker the UI.
+     */
     fun onAddrInfoFound(name: String, ipv4: String, isAdd: Boolean) {
         if (name == ownName) return
-        // Same membership gate as onResolved — drop stale addrInfo callbacks
-        // queued before BrowseRemove cleaned up the peer.
         if (name !in activeAddrInfos) return
         if (isAdd) {
             pendingIps[name] = ipv4
             emitIfReady(name)
         } else {
-            // dns_sd reports flag=0 to mean "this address is going away" — drop it from
-            // pending IPs but keep the device entry until either the next IP-add resolves
-            // or BrowseRemove fires. Removing the device here would flicker on every
-            // routine IP rotation.
             pendingIps.remove(name)
         }
     }
@@ -101,6 +110,7 @@ internal class BonjourState(
         }
     }
 
+    /** Effects emitted by the state machine. */
     internal interface Sink {
         fun openResolve(name: String, interfaceIndex: Int)
 
