@@ -2,22 +2,11 @@
 
 package com.tubetoast.tether.network
 
-import io.ktor.http.HttpStatusCode
-import io.ktor.serialization.kotlinx.json.json
-import io.ktor.server.application.install
 import io.ktor.server.cio.CIO
 import io.ktor.server.cio.CIOApplicationEngine
 import io.ktor.server.engine.EmbeddedServer
 import io.ktor.server.engine.embeddedServer
-import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.server.request.contentLength
-import io.ktor.server.request.receiveChannel
-import io.ktor.server.response.respond
-import io.ktor.server.routing.get
-import io.ktor.server.routing.post
-import io.ktor.server.routing.routing
 import io.ktor.utils.io.ByteReadChannel
-import io.ktor.utils.io.readAvailable
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.usePinned
@@ -32,8 +21,6 @@ import platform.posix.fflush
 import platform.posix.fopen
 import platform.posix.fwrite
 
-private const val BUFFER_SIZE = 64 * 1024
-
 actual class FileServer(
     private val port: Int,
     downloadsDir: String? = null,
@@ -43,55 +30,10 @@ actual class FileServer(
 
     actual fun start(): Int {
         check(server == null) { "FileServer is already running" }
-        ensureDirectory(downloadsDir)
+        val storage = AppleUploadStorage(downloadsDir)
+        storage.ensureRoot()
         val srv = embeddedServer(CIO, port = port) {
-            install(ContentNegotiation) { json() }
-            routing {
-                get("/health") { call.respond(HttpStatusCode.OK, "Tether OK") }
-                post("/upload") {
-                    val rawName = call.request.queryParameters["name"]
-                    if (rawName.isNullOrBlank()) {
-                        call.respond(
-                            HttpStatusCode.BadRequest,
-                            mapOf("error" to "missing 'name' query parameter"),
-                        )
-                        return@post
-                    }
-                    val fileName = stripPathComponents(rawName)
-                    val destPath = resolveDestination(this@FileServer.downloadsDir, fileName)
-                    var uploadComplete = false
-                    try {
-                        val body = call.receiveChannel()
-                        val bytesWritten = writeChannelToFile(body, destPath)
-                        // Premature client disconnect detection. Two complementary checks:
-                        // (1) Ktor signals exceptional close on the body channel via
-                        //     closedCause — propagate it so the cleanup path runs.
-                        // (2) When Content-Length is set, also compare bytesWritten —
-                        //     covers cases where Ktor closes the channel cleanly even
-                        //     though the declared body size was not delivered.
-                        body.closedCause?.let { throw it }
-                        val expected = call.request.contentLength()
-                        if (expected != null && bytesWritten < expected) {
-                            error("FileServer: incomplete upload — got $bytesWritten of $expected bytes")
-                        }
-                        uploadComplete = true
-                        call.respond(HttpStatusCode.OK, mapOf("savedPath" to destPath))
-                    } catch (e: Exception) {
-                        NSLog("FileServer: upload failed for '%s' — %s", fileName, e.message ?: "unknown")
-                        try {
-                            call.respond(
-                                HttpStatusCode.InternalServerError,
-                                mapOf("error" to (e.message ?: "upload failed")),
-                            )
-                        } catch (_: Exception) {
-                        }
-                    } finally {
-                        if (!uploadComplete) {
-                            deleteIfExists(destPath)
-                        }
-                    }
-                }
-            }
+            installFileServerRoutes(storage)
         }.start(wait = false)
         server = srv
         return runBlocking { srv.engine.resolvedConnectors() }.first().port
@@ -103,6 +45,76 @@ actual class FileServer(
     }
 }
 
+private class AppleUploadStorage(
+    private val root: String,
+) : UploadStorage {
+    override fun ensureRoot() {
+        val fm = NSFileManager.defaultManager
+        if (!fm.fileExistsAtPath(root)) {
+            fm.createDirectoryAtPath(
+                path = root,
+                withIntermediateDirectories = true,
+                attributes = null,
+                error = null,
+            )
+        }
+    }
+
+    override fun resolveDestination(fileName: String): String {
+        val fm = NSFileManager.defaultManager
+        val firstTry = "$root/$fileName"
+        if (!fm.fileExistsAtPath(firstTry)) return firstTry
+        val ext = fileName.substringAfterLast('.', "")
+        val base = if (ext.isEmpty()) fileName else fileName.removeSuffix(".$ext")
+        var i = 1
+        while (true) {
+            val candidate = if (ext.isEmpty()) "$root/${base}_$i" else "$root/${base}_$i.$ext"
+            if (!fm.fileExistsAtPath(candidate)) return candidate
+            i++
+        }
+    }
+
+    override suspend fun writeBody(body: ByteReadChannel, destination: String): Long {
+        val file = fopen(destination, "wb")
+            ?: error("FileServer: could not open '$destination' for writing")
+        var total = 0L
+        try {
+            streamUploadBody(body) { buffer, n ->
+                buffer.usePinned { pinned ->
+                    // POSIX: short fwrite return signals an I/O error (disk full,
+                    // quota, etc.). Without the check the upload would silently
+                    // truncate while the route responded 200 OK.
+                    val written = fwrite(pinned.addressOf(0), 1u, n.toULong(), file).toLong()
+                    if (written < n.toLong()) {
+                        error("FileServer: short write to '$destination' — wrote $written of $n bytes")
+                    }
+                }
+                total += n.toLong()
+            }
+            // fflush surfaces deferred stdio errors before the route responds.
+            // fclose still runs in finally; its error is ignored because fflush
+            // already validated the data reached the OS.
+            if (fflush(file) != 0) {
+                error("FileServer: fflush failed for '$destination'")
+            }
+        } finally {
+            fclose(file)
+        }
+        return total
+    }
+
+    override fun deleteIfExists(destination: String) {
+        val fm = NSFileManager.defaultManager
+        if (fm.fileExistsAtPath(destination)) {
+            fm.removeItemAtPath(destination, error = null)
+        }
+    }
+
+    override fun logError(message: String) {
+        NSLog("FileServer: %s", message)
+    }
+}
+
 private fun defaultDownloadsDir(): String {
     val docs = NSSearchPathForDirectoriesInDomains(
         NSDocumentDirectory,
@@ -111,83 +123,4 @@ private fun defaultDownloadsDir(): String {
     ).firstOrNull() as? String
         ?: error("FileServer: NSDocumentDirectory unavailable")
     return "$docs/Tether"
-}
-
-private fun ensureDirectory(path: String) {
-    val fm = NSFileManager.defaultManager
-    if (!fm.fileExistsAtPath(path)) {
-        fm.createDirectoryAtPath(
-            path = path,
-            withIntermediateDirectories = true,
-            attributes = null,
-            error = null,
-        )
-    }
-}
-
-private fun stripPathComponents(rawName: String): String =
-    rawName.substringAfterLast('/').substringAfterLast('\\')
-
-private fun resolveDestination(dir: String, fileName: String): String {
-    val fm = NSFileManager.defaultManager
-    val firstTry = "$dir/$fileName"
-    if (!fm.fileExistsAtPath(firstTry)) return firstTry
-    val ext = fileName.substringAfterLast('.', "")
-    val base = if (ext.isEmpty()) fileName else fileName.removeSuffix(".$ext")
-    var i = 1
-    while (true) {
-        val candidate = if (ext.isEmpty()) "$dir/${base}_$i" else "$dir/${base}_$i.$ext"
-        if (!fm.fileExistsAtPath(candidate)) return candidate
-        i++
-    }
-}
-
-private fun deleteIfExists(path: String) {
-    val fm = NSFileManager.defaultManager
-    if (fm.fileExistsAtPath(path)) {
-        fm.removeItemAtPath(path, error = null)
-    }
-}
-
-private suspend fun writeChannelToFile(input: ByteReadChannel, path: String): Long {
-    val file = fopen(path, "wb")
-        ?: error("FileServer: could not open '$path' for writing")
-    var total = 0L
-    try {
-        streamUploadBody(input) { buffer, n ->
-            buffer.usePinned { pinned ->
-                val written = fwrite(pinned.addressOf(0), 1u, n.toULong(), file).toLong()
-                // POSIX: short return from fwrite indicates an I/O error (disk full,
-                // quota exceeded, etc.). Without this check a truncated upload would
-                // be reported as 200 OK. JVM gets the equivalent for free because
-                // OutputStream.write throws on failure.
-                if (written < n.toLong()) {
-                    error("FileServer: short write to '$path' — wrote $written of $n bytes")
-                }
-            }
-            total += n.toLong()
-        }
-        // Flush stdio buffers before respond — a deferred I/O error from fwrite may
-        // surface here. Treat it the same as a short write so the catch/cleanup path
-        // runs. fclose still happens in finally; its error is ignored because fflush
-        // has already validated the data made it to the OS.
-        if (fflush(file) != 0) {
-            error("FileServer: fflush failed for '$path'")
-        }
-    } finally {
-        fclose(file)
-    }
-    return total
-}
-
-internal suspend fun streamUploadBody(
-    input: ByteReadChannel,
-    write: (buffer: ByteArray, length: Int) -> Unit,
-) {
-    val buffer = ByteArray(BUFFER_SIZE)
-    while (!input.isClosedForRead) {
-        val n = input.readAvailable(buffer, 0, buffer.size)
-        if (n <= 0) break
-        write(buffer, n)
-    }
 }

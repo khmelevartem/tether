@@ -212,7 +212,6 @@ class FileServerTest {
 
     @Test
     fun `restart after stop succeeds`() {
-        // Issue #81 "Как должно работать" item 5: повторный start() после stop() работает.
         val server = FileServer(0)
         val port1 = server.start()
         assertTrue(port1 in 1024..65535)
@@ -227,8 +226,6 @@ class FileServerTest {
 
     @Test
     fun `upload streams 5MB body byte identical`() {
-        // Issue #81 "Нефункциональные требования": streaming, без буферизации
-        // целиком в память. Locks in the no-buffering invariant on JVM.
         val tmpDir = Files.createTempDirectory("tether-test").toFile()
         val server = FileServer(0, downloadsDir = tmpDir)
         val port = server.start()
@@ -256,12 +253,8 @@ class FileServerTest {
 
     @Test
     fun `client disconnect mid upload leaves no partial file`() {
-        // Issue #81 "Краевые случаи": клиент закрыл коннекшен в середине
-        // загрузки — частичный файл удаляется. The OutgoingContent below
-        // declares a Content-Length (mirroring production FileClient sending
-        // a known-size file) and streams the body slowly with a per-chunk
-        // delay, so withTimeout reliably fires mid-transfer regardless of
-        // platform speed. Server compares received bytes vs Content-Length.
+        // SlowContent declares Content-Length and paces with per-chunk delay so
+        // withTimeout fires mid-transfer deterministically across platforms.
         val tmpDir = Files.createTempDirectory("tether-test").toFile()
         val server = FileServer(0, downloadsDir = tmpDir)
         val port = server.start()
@@ -276,14 +269,12 @@ class FileServerTest {
                     }
                     fail("expected cancellation, request unexpectedly completed")
                 } catch (_: TimeoutCancellationException) {
-                    // expected
                 } catch (_: Exception) {
-                    // any other I/O exception from the client is also acceptable —
-                    // we only care that the upload did not complete with 200 OK.
+                    // Any client-side I/O failure is acceptable; we only care that
+                    // the upload did not complete with 200 OK.
                 }
 
-                // Allow server-side catch/finally to run.
-                delay(200.milliseconds)
+                delay(200.milliseconds) // let server-side catch/finally settle
 
                 val partial = tmpDir.listFiles()?.filter { it.name.startsWith("trunc") } ?: emptyList()
                 assertTrue(

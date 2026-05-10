@@ -1,24 +1,13 @@
 package com.tubetoast.tether.network
 
-import io.ktor.http.HttpStatusCode
-import io.ktor.serialization.kotlinx.json.json
-import io.ktor.server.application.install
 import io.ktor.server.cio.CIO
 import io.ktor.server.cio.CIOApplicationEngine
 import io.ktor.server.engine.EmbeddedServer
 import io.ktor.server.engine.embeddedServer
-import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.server.request.contentLength
-import io.ktor.server.request.receiveChannel
-import io.ktor.server.response.respond
-import io.ktor.server.routing.get
-import io.ktor.server.routing.post
-import io.ktor.server.routing.routing
+import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.jvm.javaio.toInputStream
 import kotlinx.coroutines.runBlocking
 import java.io.File
-
-private const val BUFFER_SIZE = 64 * 1024
 
 actual class FileServer(
     private val port: Int,
@@ -28,60 +17,10 @@ actual class FileServer(
 
     actual fun start(): Int {
         check(server == null) { "FileServer is already running" }
-        downloadsDir.mkdirs()
+        val storage = JvmUploadStorage(downloadsDir)
+        storage.ensureRoot()
         val srv = embeddedServer(CIO, port = port) {
-            install(ContentNegotiation) { json() }
-            routing {
-                get("/health") { call.respond(HttpStatusCode.OK, "Tether OK") }
-                post("/upload") {
-                    val rawName = call.request.queryParameters["name"]
-                    if (rawName.isNullOrBlank()) {
-                        call.respond(HttpStatusCode.BadRequest, mapOf("error" to "missing 'name' query parameter"))
-                        return@post
-                    }
-                    // Strip path components to prevent traversal attacks
-                    val fileName = File(rawName).name
-                    val dest = resolveDestination(downloadsDir, fileName)
-                    var uploadComplete = false
-                    try {
-                        val body = call.receiveChannel()
-                        val bytesCopied = body.toInputStream().use { input ->
-                            dest.outputStream().use { output ->
-                                input.copyTo(output, bufferSize = BUFFER_SIZE)
-                            }
-                        }
-                        // Premature client disconnect detection. Two complementary checks:
-                        // (1) Ktor signals exceptional close on the body channel via
-                        //     closedCause — propagate it so the cleanup path runs.
-                        // (2) When Content-Length is set, also compare bytesCopied —
-                        //     covers cases where Ktor closes the channel cleanly even
-                        //     though the declared body size was not delivered.
-                        body.closedCause?.let { throw it }
-                        val expected = call.request.contentLength()
-                        if (expected != null && bytesCopied < expected) {
-                            error("FileServer: incomplete upload — got $bytesCopied of $expected bytes")
-                        }
-                        uploadComplete = true
-                        call.respond(HttpStatusCode.OK, mapOf("savedPath" to dest.absolutePath))
-                    } catch (e: Exception) {
-                        System.err.println("ERROR: upload failed for '$fileName' — ${e.message}")
-                        try {
-                            call.respond(
-                                HttpStatusCode.InternalServerError,
-                                mapOf("error" to (e.message ?: "upload failed")),
-                            )
-                        } catch (_: Exception) {
-                        }
-                    } finally {
-                        if (!uploadComplete) {
-                            try {
-                                dest.delete()
-                            } catch (_: Exception) {
-                            }
-                        }
-                    }
-                }
-            }
+            installFileServerRoutes(storage)
         }.start(wait = false)
         server = srv
         // resolvedConnectors() returns the actual OS-assigned port when port=0 was specified,
@@ -95,7 +34,36 @@ actual class FileServer(
     }
 }
 
-private fun resolveDestination(dir: File, fileName: String): File {
+private class JvmUploadStorage(
+    private val root: File,
+) : UploadStorage {
+    override fun ensureRoot() {
+        root.mkdirs()
+    }
+
+    override fun resolveDestination(fileName: String): String =
+        resolveDestinationFile(root, fileName).absolutePath
+
+    override suspend fun writeBody(body: ByteReadChannel, destination: String): Long =
+        body.toInputStream().use { input ->
+            File(destination).outputStream().use { output ->
+                input.copyTo(output, bufferSize = UPLOAD_BUFFER_SIZE)
+            }
+        }
+
+    override fun deleteIfExists(destination: String) {
+        try {
+            File(destination).delete()
+        } catch (_: Exception) {
+        }
+    }
+
+    override fun logError(message: String) {
+        System.err.println("ERROR: $message")
+    }
+}
+
+private fun resolveDestinationFile(dir: File, fileName: String): File {
     var dest = File(dir, fileName)
     if (!dest.exists()) return dest
     val ext = fileName.substringAfterLast('.', "")

@@ -221,11 +221,6 @@ class FileServerTest {
 
     @Test
     fun upload_to_unwritable_destination_returns_error_and_no_partial_file() {
-        // downloadsDir is a regular file, not a directory. ensureDirectory is a no-op
-        // (fileExistsAtPath is true), resolveDestination yields "<file>/upload.txt",
-        // and fopen on a non-directory parent fails with ENOTDIR. This exercises the
-        // catch/finally cleanup path that fwrite-failure shares — proving an I/O
-        // error mid-upload yields a non-2xx response and no partial file.
         val parent = newTempDir()
         val regularFile = "$parent/not-a-dir.txt"
         NSFileManager.defaultManager.createFileAtPath(regularFile, contents = null, attributes = null)
@@ -253,11 +248,6 @@ class FileServerTest {
 
     @Test
     fun streamUploadBody_propagates_writer_exception() = runBlocking {
-        // Guards the structural invariant that the I/O write path must throw on
-        // failure rather than silently swallowing errors. If a future contributor
-        // discards a syscall return value (the bug fixed in this PR was exactly
-        // this), the writer lambda would still run all chunks and the upload route
-        // would respond 200 OK on a truncated file. This test pins the contract.
         val input = ByteReadChannel("hello tether".encodeToByteArray())
         val ex = assertFailsWith<IllegalStateException> {
             streamUploadBody(input) { _, _ ->
@@ -294,7 +284,6 @@ class FileServerTest {
 
     @Test
     fun restart_after_stop_succeeds() {
-        // Issue #81 "Как должно работать" item 5: повторный start() после stop() работает.
         val server = FileServer(port = 0, downloadsDir = newTempDir())
         val port1 = server.start()
         assertTrue(port1 in 1024..65535)
@@ -309,9 +298,8 @@ class FileServerTest {
 
     @Test
     fun upload_streams_5mb_body_byte_identical() {
-        // Issue #81 "Нефункциональные требования": streaming, без буферизации
-        // целиком в память. Native impl uses POSIX fopen/fwrite — diverges
-        // most from JVM and most worth pinning down on a non-trivial payload.
+        // Native impl uses POSIX fopen/fwrite directly — non-trivial payload pins
+        // down the streaming guarantee where JVM's copyTo and Apple's loop diverge.
         val dir = newTempDir()
         val server = FileServer(port = 0, downloadsDir = dir)
         val port = server.start()
@@ -338,12 +326,8 @@ class FileServerTest {
 
     @Test
     fun client_disconnect_mid_upload_leaves_no_partial_file() {
-        // Issue #81 "Краевые случаи": клиент закрыл коннекшен в середине
-        // загрузки — частичный файл удаляется. The OutgoingContent below
-        // declares a Content-Length (mirroring production FileClient sending
-        // a known-size file) and streams the body slowly with a per-chunk
-        // delay, so withTimeout reliably fires mid-transfer regardless of
-        // platform speed. Server compares received bytes vs Content-Length.
+        // SlowContent declares Content-Length and paces with per-chunk delay so
+        // withTimeout fires mid-transfer deterministically across platforms.
         val dir = newTempDir()
         val server = FileServer(port = 0, downloadsDir = dir)
         val port = server.start()
@@ -358,14 +342,12 @@ class FileServerTest {
                     }
                     fail("expected cancellation, request unexpectedly completed")
                 } catch (_: TimeoutCancellationException) {
-                    // expected
                 } catch (_: Exception) {
-                    // any other I/O exception from the client is also acceptable —
-                    // we only care that the upload did not complete with 200 OK.
+                    // Any client-side I/O failure is acceptable; we only care that
+                    // the upload did not complete with 200 OK.
                 }
 
-                // Allow server-side catch/finally to run.
-                delay(200.milliseconds)
+                delay(200.milliseconds) // let server-side catch/finally settle
 
                 val files = NSFileManager.defaultManager
                     .contentsOfDirectoryAtPath(dir, error = null) as? List<*> ?: emptyList<Any?>()
