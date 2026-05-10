@@ -5,10 +5,9 @@ import com.sun.jna.Memory
 import com.sun.jna.Native
 
 /**
- * `poll(2)` from libSystem. Used by [MdnsDiscoveryBonjour] to wait for a DNS-SD
- * socket to be readable with a bounded timeout, so the polling coroutine can
- * observe cancellation without leaving `DNSServiceProcessResult` blocked across
- * a `DNSServiceRefDeallocate` call (Apple's `dns_sd.h` forbids that race).
+ * `poll(2)` from libSystem. Bounded timeout lets polling coroutines observe
+ * cancellation without leaving `DNSServiceProcessResult` blocked across a
+ * `DNSServiceRefDeallocate` call (`dns_sd.h` forbids that race).
  */
 internal interface Posix : Library {
     fun poll(fds: Memory, nfds: Int, timeout: Int): Int

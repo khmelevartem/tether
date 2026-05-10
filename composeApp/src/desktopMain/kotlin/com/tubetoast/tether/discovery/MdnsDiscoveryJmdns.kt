@@ -23,26 +23,13 @@ internal const val REQUERY_INITIAL_INTERVAL_MS = 5_000L
 private const val REQUERY_MAX_INTERVAL_MS = 60_000L
 
 /**
- * JmDNS-based discovery for non-macOS JVM hosts (Linux, Windows). On those
- * platforms no system-wide mDNSResponder daemon is running, so a raw multicast
- * socket on `224.0.0.251:5353` receives announcements directly from peers.
+ * JmDNS-based discovery for non-macOS JVM hosts (Linux, Windows).
  *
- * **Late-joiner re-arm.** JmDNS's `ServiceResolver` sends three PTR queries
- * within ~675 ms of `addServiceListener` and then stops; the next refresh only
- * happens at ~80% of TTL (≈48 minutes by default). If a peer's initial
- * announcement is missed (transient packet loss, WiFi power-save, etc.),
- * discovery stalls until that refresh — observed in production as 2–3 minute
- * latency for Android peers (issue #47). Re-invoking `addServiceListener` with
- * the same listener instance does not add a duplicate (deduped via `equals`)
- * but unconditionally re-arms `ServiceResolver`, flushing out late or lost
- * announcements.
- *
- * Verified against JmDNS 3.5.9 (`libs.versions.toml`):
- * `JmDNSImpl.addServiceListener` checks `list.contains(status)` via
- * `ListenerStatus.equals → getListener().equals()` before adding, and calls
- * `startServiceResolver(type)` unconditionally afterwards regardless of dedup.
- * Re-verify this invariant in `JmDNSImpl.addServiceListener` if JmDNS is
- * upgraded.
+ * JmDNS stops querying ~675 ms after `addServiceListener`; the next refresh is
+ * at ~80% of TTL (~48 min). Re-calling `addServiceListener` with the same
+ * instance skips the duplicate-add (deduped by `equals`) but unconditionally
+ * re-arms `ServiceResolver` — re-verified in JmDNS 3.5.9 `JmDNSImpl`.
+ * Re-verify if JmDNS is upgraded.
  */
 internal class MdnsDiscoveryJmdns {
     private val requeryContext: CoroutineContext
@@ -63,11 +50,7 @@ internal class MdnsDiscoveryJmdns {
 
     @Volatile private var jmdns: JmDNS? = null
 
-    /**
-     * Identifies our own service for self-filtering by IP+port rather than name.
-     * JmDNS may rename a service on conflict (e.g. `Foo` → `Foo (2)`), so a
-     * name-based filter would miss the renamed entry.
-     */
+    /** IP+port, not name — JmDNS may rename on conflict (e.g. `Foo` → `Foo (2)`). */
     @Volatile private var ownIp: String? = null
 
     @Volatile private var ownPort: Int = -1
@@ -175,13 +158,7 @@ internal class MdnsDiscoveryJmdns {
         }
     }
 
-    /**
-     * JmDNS resolves A/AAAA records in stages — the first callback can carry
-     * only IPv6 with IPv4 arriving on a later callback. Returns `null` (and
-     * logs a debug line) so the caller can quietly wait for the next event.
-     * A persistent IPv6-only state across the peer's lifetime is a separate
-     * concern.
-     */
+    /** JmDNS resolves A/AAAA in stages; first callback may carry only IPv6. Returns `null` to wait for next event. */
     private fun resolveIPv4(info: ServiceInfo, serviceName: String): String? {
         val ipv4 = info.getHostAddresses().firstOrNull { IPV4_REGEX.matches(it) }
         if (ipv4 == null) {

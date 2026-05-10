@@ -4,21 +4,13 @@ import com.tubetoast.tether.protocol.Device
 
 /**
  * State machine over the Browse → Resolve → GetAddrInfo callback chain. Pure
- * Kotlin, no JNA — effects (open/close subordinate refs, publish devices) go
- * through [Sink] so [MdnsDiscoveryBonjour] wires the JNA side and tests wire
- * fakes.
+ * Kotlin, no JNA — effects go through [Sink].
  *
- * **Self-filter.** [ownName] starts as the configured `deviceName`. mDNSResponder
- * may rename our service on conflict (e.g. `Foo` → `Foo (2)`); the canonical
- * name arrives asynchronously via [ownNameAssigned] from the DNSServiceRegister
- * callback. Until that happens the configured name is used as a starting filter,
- * and any self entry that slipped in under the renamed name is removed when the
- * canonical name is set.
- *
- * **Stale-event gate.** [onResolved] and [onAddrInfoFound] early-return when the
- * peer name is no longer in [activeResolves] / [activeAddrInfos]. Without this,
- * an event queued by the per-name poll loop before BrowseRemove was processed
- * would resurrect a peer entry after [onBrowseRemove] cleaned it up.
+ * [ownName] starts as the configured `deviceName`; mDNSResponder may rename on
+ * conflict (e.g. `Foo` → `Foo (2)`) and delivers the canonical name via
+ * [ownNameAssigned]. [onResolved] and [onAddrInfoFound] gate on
+ * [activeResolves] / [activeAddrInfos] to drop events queued before a
+ * BrowseRemove was processed.
  */
 internal class BonjourState(
     deviceName: String,
@@ -32,11 +24,6 @@ internal class BonjourState(
     private val pendingIps = mutableMapOf<String, String>()
     private var devices: List<Device> = emptyList()
 
-    /**
-     * Apply the canonical name reported by the `DNSServiceRegister` callback.
-     * If the configured name has been replaced (e.g. on conflict) and a self
-     * entry was already published under the new name, drop it.
-     */
     fun ownNameAssigned(canonicalName: String) {
         if (canonicalName == ownName) return
         ownName = canonicalName
@@ -110,7 +97,6 @@ internal class BonjourState(
         }
     }
 
-    /** Effects emitted by the state machine. */
     internal interface Sink {
         fun openResolve(name: String, interfaceIndex: Int)
 

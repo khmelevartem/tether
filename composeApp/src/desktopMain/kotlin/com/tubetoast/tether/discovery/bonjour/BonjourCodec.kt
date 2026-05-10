@@ -2,30 +2,19 @@ package com.tubetoast.tether.discovery.bonjour
 
 import com.sun.jna.Pointer
 
-/**
- * Pure helpers used by [MdnsDiscoveryBonjour]; extracted so they can be
- * unit-tested without loading libSystem.
- */
+/** Pure helpers; extracted to allow unit tests without loading libSystem. */
 internal object BonjourCodec {
-    /**
-     * Convert a host-byte-order port (e.g. `8080`) to the network-byte-order
-     * `Short` expected by `DNSServiceRegister`'s `port` parameter on macOS.
-     */
     fun hostOrderToNetwork(port: Int): Short =
         ((((port and 0xFF) shl 8) or ((port ushr 8) and 0xFF))).toShort()
 
-    /** Inverse of [hostOrderToNetwork]: network-byte-order `Short` to host-order `Int`. */
     fun networkOrderToHost(port: Short): Int {
         val unsigned = port.toInt() and 0xFFFF
         return ((unsigned and 0xFF) shl 8) or ((unsigned ushr 8) and 0xFF)
     }
 
     /**
-     * Read an IPv4 dotted-quad from a BSD `sockaddr_in` pointer. Layout:
-     * `{ u8 sa_len, u8 sa_family, u16 sin_port, u8 sin_addr[4], ... }`.
-     *
-     * Returns `null` when the pointer is null or the family byte is not BSD
-     * `AF_INET` (2), so callers can quietly skip IPv6 reports.
+     * BSD `sockaddr_in` layout: `{ u8 sa_len, u8 sa_family, u16 sin_port, u8 sin_addr[4], ... }`.
+     * Returns `null` for null pointer or non-`AF_INET` (2) family.
      */
     fun readIpv4(sockaddr: Pointer?): String? {
         if (sockaddr == null) return null

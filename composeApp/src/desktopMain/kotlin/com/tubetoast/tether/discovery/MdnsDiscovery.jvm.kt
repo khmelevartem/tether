@@ -5,19 +5,10 @@ import com.tubetoast.tether.protocol.Device
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * JVM Desktop discovery, dispatched by host OS:
+ * macOS → [MdnsDiscoveryBonjour] (DNS-SD IPC; JmDNS can't see external WiFi peers on macOS).
+ * Linux/Windows → [MdnsDiscoveryJmdns].
  *
- * - **macOS:** Bonjour (DNS-SD via mDNSResponder IPC) — see [MdnsDiscoveryBonjour].
- *   The macOS kernel routes incoming WiFi mDNS multicast exclusively to
- *   mDNSResponder; user-space sockets bound to `224.0.0.251:5353` do not see
- *   external peers, so JmDNS cannot complete discovery beyond Mac↔Mac loopback.
- *   See issue #47 and `docs/knowledge/macos-mdns-bonjour.md`.
- * - **Linux/Windows:** [MdnsDiscoveryJmdns] — no system mDNS daemon competes for
- *   the port and JmDNS receives announcements directly from peers.
- *
- * [stop] can block for up to ~200 ms on the macOS path while polling coroutines
- * observe their cancellation flag (see [MdnsDiscoveryBonjour]). UI callers
- * should invoke from a background dispatcher.
+ * [stop] may block up to ~200 ms on macOS; invoke from a background dispatcher in UI code.
  */
 actual class MdnsDiscovery {
     private val jmdns: MdnsDiscoveryJmdns? = if (isMacOsHost()) null else MdnsDiscoveryJmdns()
