@@ -14,8 +14,13 @@ git worktree list --porcelain | awk '
 ' | while IFS='|' read -r wt_path branch; do
     [ "$wt_path" = "$ROOT" ] && continue
 
-    if git branch --merged main 2>/dev/null | grep -qE "^\*? *${branch}$"; then
-        echo "cleanup-worktrees: removing $wt_path (branch: $branch, merged into main)"
+    remote_gone=false
+    unpushed=false
+    ! git show-ref --quiet "refs/remotes/origin/$branch" && remote_gone=true
+    [ -z "$(git log "main..$branch" --oneline 2>/dev/null)" ] && unpushed=false || unpushed=true
+
+    if $remote_gone && ! $unpushed; then
+        echo "cleanup-worktrees: removing $wt_path (branch: $branch, remote deleted, no unpushed commits)"
         git worktree remove "$wt_path" --force 2>/dev/null || true
         git branch -d "$branch" 2>/dev/null || true
     fi
