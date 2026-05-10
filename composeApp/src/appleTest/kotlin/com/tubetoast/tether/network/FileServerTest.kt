@@ -350,7 +350,7 @@ class FileServerTest {
                 delay(200.milliseconds) // let server-side catch/finally settle
 
                 val files = NSFileManager.defaultManager
-                    .contentsOfDirectoryAtPath(dir, error = null) as? List<*> ?: emptyList<Any?>()
+                    .contentsOfDirectoryAtPath(dir, error = null) ?: emptyList<Any?>()
                 val partial = files.filterIsInstance<String>().filter { it.startsWith("trunc") }
                 assertTrue(
                     partial.isEmpty(),
