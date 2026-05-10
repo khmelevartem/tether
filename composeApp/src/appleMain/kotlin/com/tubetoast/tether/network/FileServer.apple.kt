@@ -10,6 +10,7 @@ import io.ktor.server.cio.CIOApplicationEngine
 import io.ktor.server.engine.EmbeddedServer
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.server.request.contentLength
 import io.ktor.server.request.receiveChannel
 import io.ktor.server.response.respond
 import io.ktor.server.routing.get
@@ -60,7 +61,19 @@ actual class FileServer(
                     val destPath = resolveDestination(this@FileServer.downloadsDir, fileName)
                     var uploadComplete = false
                     try {
-                        writeChannelToFile(call.receiveChannel(), destPath)
+                        val body = call.receiveChannel()
+                        val bytesWritten = writeChannelToFile(body, destPath)
+                        // Premature client disconnect detection. Two complementary checks:
+                        // (1) Ktor signals exceptional close on the body channel via
+                        //     closedCause — propagate it so the cleanup path runs.
+                        // (2) When Content-Length is set, also compare bytesWritten —
+                        //     covers cases where Ktor closes the channel cleanly even
+                        //     though the declared body size was not delivered.
+                        body.closedCause?.let { throw it }
+                        val expected = call.request.contentLength()
+                        if (expected != null && bytesWritten < expected) {
+                            error("FileServer: incomplete upload — got $bytesWritten of $expected bytes")
+                        }
                         uploadComplete = true
                         call.respond(HttpStatusCode.OK, mapOf("savedPath" to destPath))
                     } catch (e: Exception) {
@@ -136,9 +149,10 @@ private fun deleteIfExists(path: String) {
     }
 }
 
-private suspend fun writeChannelToFile(input: ByteReadChannel, path: String) {
+private suspend fun writeChannelToFile(input: ByteReadChannel, path: String): Long {
     val file = fopen(path, "wb")
         ?: error("FileServer: could not open '$path' for writing")
+    var total = 0L
     try {
         streamUploadBody(input) { buffer, n ->
             buffer.usePinned { pinned ->
@@ -151,6 +165,7 @@ private suspend fun writeChannelToFile(input: ByteReadChannel, path: String) {
                     error("FileServer: short write to '$path' — wrote $written of $n bytes")
                 }
             }
+            total += n.toLong()
         }
         // Flush stdio buffers before respond — a deferred I/O error from fwrite may
         // surface here. Treat it the same as a short write so the catch/cleanup path
@@ -162,6 +177,7 @@ private suspend fun writeChannelToFile(input: ByteReadChannel, path: String) {
     } finally {
         fclose(file)
     }
+    return total
 }
 
 internal suspend fun streamUploadBody(

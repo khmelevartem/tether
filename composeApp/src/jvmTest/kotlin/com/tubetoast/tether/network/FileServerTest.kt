@@ -10,15 +10,24 @@ import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.OutgoingContent
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
+import io.ktor.utils.io.ByteWriteChannel
+import io.ktor.utils.io.writeFully
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import java.io.File
 import java.nio.file.Files
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.test.fail
+import kotlin.time.Duration.Companion.milliseconds
 
 class FileServerTest {
     @Test
@@ -198,6 +207,112 @@ class FileServerTest {
             client.close()
             server.stop()
             tmpDir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `restart after stop succeeds`() {
+        // Issue #81 "Как должно работать" item 5: повторный start() после stop() работает.
+        val server = FileServer(0)
+        val port1 = server.start()
+        assertTrue(port1 in 1024..65535)
+        server.stop()
+        val port2 = server.start()
+        try {
+            assertTrue(port2 in 1024..65535)
+        } finally {
+            server.stop()
+        }
+    }
+
+    @Test
+    fun `upload streams 5MB body byte identical`() {
+        // Issue #81 "Нефункциональные требования": streaming, без буферизации
+        // целиком в память. Locks in the no-buffering invariant on JVM.
+        val tmpDir = Files.createTempDirectory("tether-test").toFile()
+        val server = FileServer(0, downloadsDir = tmpDir)
+        val port = server.start()
+        val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
+        try {
+            val sizeMb = 5
+            val payload = ByteArray(sizeMb * 1024 * 1024) { (it % 251).toByte() }
+            runBlocking {
+                val response = client.post("http://localhost:$port/upload?name=big.bin") {
+                    contentType(ContentType.Application.OctetStream)
+                    setBody(payload)
+                }
+                assertEquals(HttpStatusCode.OK, response.status)
+                val savedPath = response.body<Map<String, String>>()["savedPath"]!!
+                val saved = File(savedPath).readBytes()
+                assertEquals(payload.size, saved.size, "size mismatch")
+                assertContentEquals(payload, saved, "content mismatch on $sizeMb MB roundtrip")
+            }
+        } finally {
+            client.close()
+            server.stop()
+            tmpDir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `client disconnect mid upload leaves no partial file`() {
+        // Issue #81 "Краевые случаи": клиент закрыл коннекшен в середине
+        // загрузки — частичный файл удаляется. The OutgoingContent below
+        // declares a Content-Length (mirroring production FileClient sending
+        // a known-size file) and streams the body slowly with a per-chunk
+        // delay, so withTimeout reliably fires mid-transfer regardless of
+        // platform speed. Server compares received bytes vs Content-Length.
+        val tmpDir = Files.createTempDirectory("tether-test").toFile()
+        val server = FileServer(0, downloadsDir = tmpDir)
+        val port = server.start()
+        val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
+        try {
+            runBlocking {
+                try {
+                    withTimeout(150.milliseconds) {
+                        client.post("http://localhost:$port/upload?name=trunc.bin") {
+                            setBody(SlowContent(totalBytes = 8L * 1024 * 1024))
+                        }
+                    }
+                    fail("expected cancellation, request unexpectedly completed")
+                } catch (_: TimeoutCancellationException) {
+                    // expected
+                } catch (_: Exception) {
+                    // any other I/O exception from the client is also acceptable —
+                    // we only care that the upload did not complete with 200 OK.
+                }
+
+                // Allow server-side catch/finally to run.
+                delay(200.milliseconds)
+
+                val partial = tmpDir.listFiles()?.filter { it.name.startsWith("trunc") } ?: emptyList()
+                assertTrue(
+                    partial.isEmpty(),
+                    "no partial file should remain in $tmpDir, found: ${partial.map { it.name }}",
+                )
+            }
+        } finally {
+            client.close()
+            server.stop()
+            tmpDir.deleteRecursively()
+        }
+    }
+}
+
+private class SlowContent(
+    private val totalBytes: Long,
+) : OutgoingContent.WriteChannelContent() {
+    override val contentLength: Long = totalBytes
+    override val contentType: ContentType = ContentType.Application.OctetStream
+
+    override suspend fun writeTo(channel: ByteWriteChannel) {
+        val chunk = ByteArray(64 * 1024) { 0x41 }
+        var sent = 0L
+        while (sent < totalBytes) {
+            val n = minOf(chunk.size.toLong(), totalBytes - sent).toInt()
+            channel.writeFully(chunk, 0, n)
+            sent += n
+            delay(20.milliseconds)
         }
     }
 }

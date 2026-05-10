@@ -8,11 +8,13 @@ import io.ktor.server.cio.CIOApplicationEngine
 import io.ktor.server.engine.EmbeddedServer
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.server.request.receiveStream
+import io.ktor.server.request.contentLength
+import io.ktor.server.request.receiveChannel
 import io.ktor.server.response.respond
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
+import io.ktor.utils.io.jvm.javaio.toInputStream
 import kotlinx.coroutines.runBlocking
 import java.io.File
 
@@ -42,10 +44,22 @@ actual class FileServer(
                     val dest = resolveDestination(downloadsDir, fileName)
                     var uploadComplete = false
                     try {
-                        call.receiveStream().use { input ->
+                        val body = call.receiveChannel()
+                        val bytesCopied = body.toInputStream().use { input ->
                             dest.outputStream().use { output ->
                                 input.copyTo(output, bufferSize = BUFFER_SIZE)
                             }
+                        }
+                        // Premature client disconnect detection. Two complementary checks:
+                        // (1) Ktor signals exceptional close on the body channel via
+                        //     closedCause — propagate it so the cleanup path runs.
+                        // (2) When Content-Length is set, also compare bytesCopied —
+                        //     covers cases where Ktor closes the channel cleanly even
+                        //     though the declared body size was not delivered.
+                        body.closedCause?.let { throw it }
+                        val expected = call.request.contentLength()
+                        if (expected != null && bytesCopied < expected) {
+                            error("FileServer: incomplete upload — got $bytesCopied of $expected bytes")
                         }
                         uploadComplete = true
                         call.respond(HttpStatusCode.OK, mapOf("savedPath" to dest.absolutePath))
