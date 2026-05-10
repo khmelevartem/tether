@@ -1,220 +1,67 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code working in this repo. **Short by design — load deeper docs on demand.**
 
-## Documentation
+## What is Tether
 
-Two doc trees in this repo:
+KMP file transfer app: Android, iOS, macOS, Desktop (JVM). P2P via mDNS discovery + Ktor file server. Human overview — [README.md](README.md).
 
-- [`docs/product/`](docs/product/README.md) — vision, audience, features, roadmap, monetization, design, security, competitors. Source of truth for *what* and *why*.
-- [`docs/engineering/`](docs/engineering/README.md) — architecture principles, module layout, dependency injection rules. Source of truth for *how* code should be written.
+## Documentation map
 
-**Before implementing anything non-trivial:** read [`docs/engineering/dependency-injection.md`](docs/engineering/dependency-injection.md) — it contains a "does my code fit?" checklist (constructor injection, no global context lookups, no premature interfaces). Skim [`docs/engineering/architecture-principles.md`](docs/engineering/architecture-principles.md) and [`docs/engineering/modules.md`](docs/engineering/modules.md) when the task touches layering, new components, or anything you'd be tempted to extract into a module.
+Read these on demand, not all upfront:
 
-## Project Overview
+- [`docs/product/`](docs/product/README.md) — vision, audience, features, roadmap. Source of truth for *what* / *why*.
+- [`docs/engineering/`](docs/engineering/README.md) — architecture, modules, DI, presentation, testing. Source of truth for *how*.
+- [`docs/knowledge/`](docs/knowledge/) — solved problems (Apple platform quirks, FGS, etc.). Check here when something looks weird before debugging from scratch.
 
-**Tether** is a Kotlin Multiplatform (KMP) file transfer application targeting Android, iOS, macOS, and Desktop (JVM). It enables peer-to-peer file sharing using mDNS service discovery and a Ktor-based file server.
+**Before non-trivial implementation:** read [`docs/engineering/dependency-injection.md`](docs/engineering/dependency-injection.md) (DI checklist). For new components / layering decisions — also [`architecture-principles.md`](docs/engineering/architecture-principles.md) and [`modules.md`](docs/engineering/modules.md). For UI — [`presentation-layer.md`](docs/engineering/presentation-layer.md). For tests — [`testing.md`](docs/engineering/testing.md).
 
-### Architecture
+## Architecture invariants
 
-The project follows KMP best practices with platform-specific and shared code:
+- **Common-first.** Всё, что может жить в `commonMain` — там и лежит. Платформенные source sets (`androidMain`, `appleMain`, `jvmMain`, `desktopMain`, `iosMain`, `macosMain`) — только для кода, требующего platform API. При выборе между `expect/actual` в `commonMain` и копированием в `platformMain` — `expect/actual`.
+- **Source set hierarchy:** `jvmMain` — общий родитель для `androidMain` и `desktopMain` (через `applyHierarchyTemplate` в `build.gradle.kts`). `appleMain` — общий для `iosMain` и `macosMain`.
+- **macOS:** Apple Silicon (`macosArm64`) only.
 
-- **Common-first.** Всё, что может жить в `commonMain`, должно лежать в `commonMain`. Платформенные source sets (`androidMain`, `appleMain`, `jvmMain`, `desktopMain`, `iosMain`, `macosMain`) — только для кода, требующего platform API. При выборе между `expect/actual` в `commonMain` и копированием в `platformMain` — `expect/actual`.
-- **commonMain**: Shared Kotlin code (UI with Compose Multiplatform, network protocol, file client)
-- **Platform-specific sources**: `androidMain/`, `iosMain/`, `macosMain/`, `jvmMain/`, `desktopMain/`, `appleMain/` (iOS + macOS shared code)
-- **Source set hierarchy**: `jvmMain` is the intermediate parent for both `androidMain` and `desktopMain` (configured via `applyHierarchyTemplate` in `build.gradle.kts`)
-- **Core components**:
-  - `protocol/Device.kt` — Protocol definitions for device identification and serialization
-  - `network/FileServer.kt` — Ktor-based HTTP server (in `jvmMain`, shared Android + Desktop)
-  - `network/FileClient.kt` — HTTP client for file transfer (shared)
-  - `discovery/MdnsDiscovery.kt` — Platform-specific mDNS service discovery (implementations in androidMain, appleMain, desktopMain)
-  - `App.kt` — Compose Multiplatform UI entry point
-  - Platform adapters (Platform.kt + platform-specific implementations)
+## Git conventions
 
-### Build Configuration
+All git naming in English. **Все commit messages обязаны начинаться с номера issue:** `#<issue>: <message>`.
 
-- **Java version**: 21 (Temurin distribution)
-- **Gradle features**: Configuration cache and build cache enabled
-- **Kotlin style**: Official Kotlin code style enforced
-- **macOS support**: Apple Silicon (arm64) only; Intel support can be added via macosX64() if needed
-- **Compose Multiplatform**: Experimental macOS feature enabled
-
-## Git Conventions
-
-All git naming is only in English: commit messages, PR titles and etc.
-**All commit messages must be prefixed with the GitHub issue number** in the format `#<issue>: <message>`.
-
-Examples:
 ```
 #42: add mDNS discovery for Android
-#17: fix FileServer port binding on macOS
-#5: refactor Device serialization to use kotlinx.serialization
 ```
 
-Before making commits, identify the relevant GitHub issue. If no issue exists for the task, ask the user to create one first or clarify which issue applies.
+Перед коммитом убедись, что issue существует. Если нет — попроси пользователя создать.
 
-## Common Commands
+## Common commands
 
-Все Gradle-команды можно запускать с флагом `-q` (quiet) — он убирает бойлерплейтный вывод и оставляет только ошибки и предупреждения. Используй его по умолчанию.
-
-### Build and Run
-
-**Desktop CLI (debug runner with Ktor + mDNS stub)**
-```bash
-# Default: random port, device name = "Tether-$USER"
-./gradlew :composeApp:run
-
-# Custom name and port
-./gradlew :composeApp:run --args="--name MyMac --port 8080"
-
-# Verify server health
-curl http://localhost:{port}/health  # → "Tether OK"
-```
-
-**Desktop CLI via uber JAR** (builds the packaged artifact and runs it — useful for testing the real jar)
-```bash
-# Build uber JAR + run (default args)
-./gradlew :composeApp:runJar
-
-# Custom name and port
-./gradlew :composeApp:runJar --args="--name MyMac --port 8080"
-```
-
-Once the runner is up, it reads commands from stdin:
-
-| Command | Description |
-|---------|-------------|
-| `list` | Print currently discovered peers |
-| `send <peer-name> <path>` | Send a file to the named peer; prints live progress and a final OK/FAIL line |
-| `quit` | Stop FileServer + mDNS and exit |
-
-```
-send Phone /tmp/photo.jpg
-[send] 12.3 MB / 50.0 MB  (3.4 MB/s)
-[send] OK — 14523 ms  →  /tmp/tether-downloads/photo.jpg
-```
-
-- Peers are matched by `Device.name`; if multiple peers share a name the first is used (warning printed to stderr).
-- Unknown commands, empty lines, missing file, or missing peer all produce a message and return to the prompt without killing the runner.
-
-**Android APK**
-```bash
-./gradlew :composeApp:assembleDebug
-```
-
-**macOS app (requires Apple Silicon Mac)**
-
-`macosArm64` target compiles to a native binary but has no standalone run task.
-Launch via IDE run configuration (Android Studio / IntelliJ / Fleet) or Xcode.
-
-To verify mDNS publishing without UI:
-```bash
-dns-sd -B _tether._tcp.   # watch for _tether._tcp. services
-```
-
-**iOS**
-```bash
-# Use IDE run configuration or open iosApp/ in Xcode
-```
-
-### Quality & Testing
-
-**KtLint — никогда не запускай вручную.** Git hook запускает KtLint автоматически при каждом коммите и исправляет форматирование сам. Не трать время на ручное исправление стилевых ошибок — просто коммить.
-
-**Run all tests**
-
-В стандартном цикле разработки запускай все тесты, чтобы проверить, не отломался ли какой-то таргет. Это обязательно перед commit/push и при завершении любого feature branch.
+Все Gradle команды запускай с `-q` (убирает бойлерплейт).
 
 ```bash
-./gradlew allTests -q
+./gradlew allTests -q                       # pre-commit / pre-push хуки прогонят это сами
+./gradlew :composeApp:run                   # Desktop CLI (см. README.md → How to run)
+./gradlew :composeApp:assembleDebug         # Android APK
 ```
 
-**Run tests for a specific module**
+**KtLint — никогда не запускай вручную.** Git hook делает это сам при коммите. Стилевые ошибки не правь руками — просто коммить.
 
-Запускай тесты на конкретный модуль или класс, только когда видишь реальную пользу сэкономить немного времени, или когда точно знаешь, что какой-то таргет еще не доделан.
+Подробные команды запуска по платформам — в [README.md](README.md). Тестовые команды — в [`docs/engineering/testing.md`](docs/engineering/testing.md).
 
-```bash
-./gradlew :composeApp:desktopTest -q # Desktop JVM tests only
-./gradlew :composeApp:commonTest -q  # Common tests only
-```
+## Slash commands и скиллы
 
-**Single test class**
+В `.claude/commands/` лежат рабочие команды (`/work-on-issue`, `/close-issue`, `/code-review`, `/check-review`, `/grooming`, `/retro`).
 
-Как и предыдущий пункт, должна быть явная причина запустить именно отдельный тест.
+`/smoke-test` — runtime happy-path по платформам (Desktop CLI, Desktop↔Desktop send, Android если adb подключён, native compile macosArm64/iosSimulatorArm64). Прогоняй когда сомневаешься в рантайме после нетривиальных правок в сетевой части / FileServer / mDNS / FGS, перед merge runtime-changing PR, и в `/close-issue`. Skip для DOCS-only / `.claude/`-only / comment-only изменений. Smoke не заменяет `allTests`.
 
-```bash
-./gradlew :composeApp:desktopTest --tests "com.tubetoast.tether.network.FileServerTest"
-```
+## Code style
 
-**Smoke-тест по таргетам.** В репо есть скилл `/smoke-test` — happy-path по Desktop CLI, Desktop↔Desktop send, Android (если adb-устройство подключено) и нативной компиляции macosArm64/iosSimulatorArm64. Используй его, когда:
-- сомневаешься, не сломал ли что-то рантайм (особенно сетевую часть, FileServer, mDNS, FGS) после нетривиальных правок;
-- готовишься merge'ить PR, который трогает рантайм-поведение;
-- закрываешь задачу через `/close-issue` — Шаг 2 «Ручные тесты» рекомендует прогнать smoke перед запросом подтверждения.
-
-Skip skill для DOCS-only / `.claude/` / комментариев — там нечего проверять рантаймом. Smoke не заменяет `allTests` (это unit-тесты, а smoke — рантайм happy-path).
-
-### Build Troubleshooting
-
-- **Clear build cache**: `./gradlew clean`
-- **Rebuild dependencies**: `./gradlew --refresh-dependencies`
-- **Verbose output**: Add `--info` or `--debug` flag to any gradle command
-
-## Project Structure
-
-```
-composeApp/src/
-├── commonMain/          # Shared code (protocol, UI, file operations)
-├── commonTest/          # Common tests
-├── androidMain/         # Android-specific (mDNS implementation)
-├── iosMain/             # iOS-specific
-├── appleMain/           # iOS + macOS shared (mDNS implementation)
-├── macosMain/           # macOS-specific
-├── jvmMain/             # Shared JVM: FileServer, FileClientJvm (parent of androidMain + desktopMain)
-├── jvmTest/             # Shared JVM tests (FileServerTest) — runs in both desktopTest and androidUnitTest
-├── desktopMain/         # Desktop JVM leaf: CLI Main.kt, MdnsDiscovery.jvm, Platform.jvm
-└── desktopTest/         # Desktop-only tests (FileClientTest, MdnsDiscoveryTest)
-```
-
-## CI/CD
-
-GitHub Actions (`.github/workflows/ci.yml`) runs on all pushes and PRs to main:
-1. **KtLint** check — enforces code style
-2. **Tests** — runs `./gradlew allTests` (JVM + Common tests)
-
-## Key Development Notes
-
-- **mDNS Discovery**: Platform-specific implementations required (Bonjour on Apple, JmDNS on JVM/Desktop, NsdManager on Android)
-- **File Server**: Ktor-based, JVM-only (desktop debug runner). Listen logic in FileServer.kt
-- **Protocol Serialization**: Device.kt uses kotlinx.serialization for peer identification
-- **Compose for All Targets**: UI code in commonMain; platform-specific initialization in androidMain/iosMain/macosMain/desktopMain
-- **CLI Arguments**: Desktop runner accepts `--name` and `--port` via Clikt framework
-- **Comment style**: минимум комментариев. Перед тем как добавить комментарий — попробуй вынести блок в приватный метод: имя метода часто делает комментарий ненужным. Комментарий оставляй только там, где код не может выразить намерение сам: намеренное проглатывание исключения, неочевидные инварианты внешних библиотек, которые нужно перепроверять при обновлении зависимости. **KDoc vs `//`**: используй KDoc только для контрактов (nullable-семантика, неочевидные пред-/постусловия, неочевидное WHY). Не пересказывай имя метода или сигнатуру — это шум. Если KDoc не добавляет информации относительно кода — сноси его.
-
-## Testing Strategy
-
-**Тесты обязательны.** При реализации любой функциональности пиши тесты — unit и/или интеграционные. Ориентируйся на краевые случаи из описания задачи (issue).
-
-- **Desktop JVM tests** (`desktopTest/`): Server и network интеграционные тесты
-- **Common tests** (`commonTest/`): протокол и shared-логика
-- Стиль: `kotlin.test`; для корутин — `runTest` + `TestDispatcher` (из `kotlinx-coroutines-test`), **не `runBlocking`**
-- Управляй временем виртуально через `advanceTimeBy()` / `advanceUntilIdle()` — это ускоряет тесты и делает их детерминированными
-- `Thread.sleep` и `System.currentTimeMillis`-polling допустимы только для ожидания событий от **внешних нативных API** (JmDNS, NsdManager и т.п.), которые работают на реальных потоках вне нашего `CoroutineScope`; внутри тела теста всё остальное — виртуальное время
-- `withTimeout` внутри `runTest` использует **виртуальные** часы даже на `Dispatchers.IO` — не рассчитывай на него как на реальный таймаут
-- **Apple targets** (`appleTest/`): NSRunLoop нужно качать вручную — подробнее в [`docs/knowledge/apple-platform.md`](docs/knowledge/apple-platform.md).
-
-## Knowledge base
-
-[`docs/knowledge/`](docs/knowledge/) — база уже решённых проблем. Если сталкиваешься с чем-то непонятным, особенно на Apple-таргетах или в специфике платформы — загляни туда сначала: вероятно, мы это уже разбирали.
-
-## Code Review
-
-When reviewing a PR, follow the process in [`.claude/commands/code-review.md`](.claude/commands/code-review.md).
+- **Минимум комментариев.** Перед тем как добавить — попробуй вынести блок в приватный метод: имя метода часто делает комментарий ненужным. Комментарий — только там, где код не может выразить намерение (намеренно проглоченное исключение, неочевидный инвариант внешней библиотеки).
+- **KDoc vs `//`.** KDoc — только для контрактов (nullable-семантика, неочевидные пред-/постусловия, неочевидное WHY). Не пересказывай имя метода или сигнатуру — это шум. Если KDoc не добавляет информации относительно кода — сноси его.
+- **Kotlin official style** (enforced by KtLint).
 
 ## Worktree и окружение
 
-**Важно: редактируй файлы только в worktree, не в корне репозитория.**
-Перед первым Edit убедись, что путь ведёт в `.claude/worktrees/<branch>/`, а не в корень проекта. Ошибка в пути приведёт к правке основной ветки в обход ревью.
+**Редактируй файлы только в worktree, не в корне репозитория.** Перед первым Edit убедись, что путь ведёт в `.claude/worktrees/<branch>/`, а не в корень. Ошибка в пути = правка main в обход ревью.
 
-**Обновление инструкций (CLAUDE.md и других файлов в `.claude/`)**: правь только файл внутри текущего worktree. Корневой `CLAUDE.md` живёт на `main` — изменения в него попадают через обычный PR-флоу, а не прямой правкой.
+**Обновление инструкций** (CLAUDE.md и других файлов в `.claude/`): правь только в текущем worktree. Корневой CLAUDE.md живёт на main — туда изменения попадают через PR-флоу.
 
-**Проверяй `pwd` перед Bash-командами.** Bash-сессии не сохраняют `cd` между вызовами, поэтому `./gradlew`, `git log`, `git rev-parse` и любые другие команды могут случайно выполниться не в worktree, а в корне репозитория (`/Users/artem/StudioProjects/tether` на `main`). Если запускаешь diagnostic-сессию — smoke-тест, ручную проверку, сборку для тестирования — первой командой делай `pwd && git rev-parse --short HEAD`, чтобы убедиться, что находишься там, где ожидаешь. Иначе можно потратить время на тестирование старого main-кода вместо своего фикса.
+**Проверяй `pwd` перед Bash-командами.** Bash-сессии не сохраняют `cd` между вызовами. Перед diagnostic-сессией (smoke, ручная проверка, сборка для тестирования) первой командой делай `pwd && git rev-parse --short HEAD`, чтобы убедиться что ты в worktree, а не в `/Users/artem/StudioProjects/tether` на main.
