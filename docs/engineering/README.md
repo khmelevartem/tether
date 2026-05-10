@@ -10,6 +10,7 @@ Product-side docs (vision, audience, features) live in [`docs/product/`](../prod
 - [Modules](modules.md) — current monolith, target module split, and the triggers that move a piece of code into its own module.
 - [Dependency Injection](dependency-injection.md) — DI strategy now (manual composition root) and later (Metro). Concrete rules for new code.
 - [Presentation Layer](presentation-layer.md) — Decompose-based components; how to write them, subscribe from Compose, and test.
+- [Testing](testing.md) — структура тестов по source sets, стиль (`runTest`/виртуальное время), особенности Apple-таргетов.
 
 ## Architecture Decision Records
 

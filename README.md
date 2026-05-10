@@ -1,66 +1,79 @@
-This is a Kotlin Multiplatform project targeting Android, iOS, Desktop (JVM), and macOS.
+# Tether
 
-* [/composeApp](./composeApp/src) is for code that will be shared across your Compose Multiplatform applications.
-  It contains several subfolders:
-  - [commonMain](./composeApp/src/commonMain/kotlin) is for code that's common for all targets.
-  - Other folders are for Kotlin code that will be compiled for only the platform indicated in the folder name.
-    For example, if you want to use Apple's CoreCrypto for the iOS part of your Kotlin app,
-    the [iosMain](./composeApp/src/iosMain/kotlin) folder would be the right place for such calls.
-    Similarly, if you want to edit the Desktop (JVM) specific part, the [jvmMain](./composeApp/src/jvmMain/kotlin)
-    folder is the appropriate location.
+P2P-передача файлов между устройствами на разных OS — по локальной Wi-Fi сети, без облака, без аккаунтов, без сжатия.
 
-* [/iosApp](./iosApp/iosApp) contains iOS applications. Even if you're sharing your UI with Compose Multiplatform,
-  you need this entry point for your iOS app. This is also where you should add SwiftUI code for your project.
+**Сценарий, который Tether закрывает:** фото с Android-телефона на MacBook сегодня едет через мессенджер (сжатие), почту (лимиты) или кабель. Tether заменяет это двумя тапами на одной Wi-Fi — оригинальный файл идёт напрямую между устройствами.
 
-### Build and Run Android Application
+**Таргеты:** Android, iOS, macOS, Desktop (JVM на Windows/Linux). Kotlin Multiplatform + Compose Multiplatform.
 
-To build and run the development version of the Android app, use the run configuration from the run widget
-in your IDE's toolbar or build it directly from the terminal:
-- on macOS/Linux
-  ```shell
-  ./gradlew :composeApp:assembleDebug
-  ```
-- on Windows
-  ```shell
-  .\gradlew.bat :composeApp:assembleDebug
-  ```
+**Статус:** ранний MVP. Дискавери, базовый протокол передачи и Desktop CLI работают; UI и pairing в работе.
 
-### Debug CLI Runner (JVM)
+## Документация
 
-A headless Ktor + mDNS debug runner. Starts a `FileServer` and `MdnsDiscovery` stub and prints discovered peers.
+- [Vision & принципы](docs/product/vision.md) — что мы строим и почему.
+- [Roadmap](docs/product/roadmap.md) — что в MVP, что после, что отложено.
+- [Фичи](docs/product/features/README.md) — статус по каждой фиче и ссылки на спеки.
+- [Tech stack](docs/product/tech-stack.md) — выбор стека.
+- [Security](docs/product/security.md) — модель угроз, pairing, шифрование.
+- [Engineering docs](docs/engineering/README.md) — архитектура, модули, DI, тестирование.
 
-- on macOS/Linux
-  ```shell
-  # default: random port, device name = "Tether-$USER"
-  ./gradlew :composeApp:run
+## Quick start
 
-  # custom name and port
-  ./gradlew :composeApp:run --args="--name MyMac --port 8080"
-  ```
-- on Windows
-  ```shell
-  .\gradlew.bat :composeApp:run --args="--name MyPC --port 8080"
-  ```
+Требуется JDK 21 (Temurin).
 
-Once running, verify the server at: `http://localhost:{port}/health` → `Tether OK`
+### Desktop CLI (отладочный раннер)
 
-Press `Ctrl+C` to stop.
+Стартует `FileServer` + mDNS-дискавери, читает команды из stdin (`list`, `send <peer> <path>`, `quit`).
 
-### Build and Run iOS Application
+```bash
+# дефолт: случайный порт, имя устройства = "Tether-$USER"
+./gradlew :composeApp:run
 
-To build and run the development version of the iOS app, use the run configuration from the run widget
-in your IDE's toolbar or open the [/iosApp](./iosApp) directory in Xcode and run it from there.
+# свои имя и порт
+./gradlew :composeApp:run --args="--name MyMac --port 8080"
 
-### Build and Run macOS Application
+# сборка uber JAR и запуск через него
+./gradlew :composeApp:runJar
+```
 
-> Requires Apple Silicon Mac (M1+). The `org.jetbrains.compose.experimental.macos.enabled=true`
-> property in `gradle.properties` must be set (already included in this project).
+Проверка, что сервер живой: `curl http://localhost:<port>/health` → `Tether OK`.
 
-- on macOS/Linux
-  ```shell
-  ./gradlew :composeApp:runReleaseExecutableMacosArm64
-  ```
+Пример сессии:
+```
+> send Phone /tmp/photo.jpg
+[send] 12.3 MB / 50.0 MB  (3.4 MB/s)
+[send] OK — 14523 ms  →  /tmp/tether-downloads/photo.jpg
+```
 
----
+### Android
 
-Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html)…
+```bash
+./gradlew :composeApp:assembleDebug
+```
+
+APK — в `composeApp/build/outputs/apk/debug/`. Или запускай run-конфигурацию `composeApp` из Android Studio.
+
+### iOS
+
+Открой `iosApp/` в Xcode и запусти, либо используй iOS run-конфигурацию из IDE (Android Studio / Fleet с KMP-плагином).
+
+### macOS (Apple Silicon)
+
+`macosArm64` компилируется в native binary. Запуск — через IDE run-конфигурацию или Xcode. Чтобы проверить mDNS без UI:
+
+```bash
+dns-sd -B _tether._tcp.    # должно появиться _tether._tcp.
+```
+
+## Для контрибьюторов
+
+- [CLAUDE.md](CLAUDE.md) — что обязан знать AI-агент или новый контрибьютор: архитектурные инварианты, git conventions, worktree-дисциплина.
+- [docs/engineering/](docs/engineering/README.md) — архитектура и правила написания кода (DI, modules, testing).
+- [.claude/commands/](.claude/commands/) — slash-команды для типовых workflow (`/work-on-issue`, `/close-issue`, `/code-review`).
+
+Тесты:
+```bash
+./gradlew allTests -q
+```
+
+KtLint запускается автоматически через git hook — руками не вызывай.
