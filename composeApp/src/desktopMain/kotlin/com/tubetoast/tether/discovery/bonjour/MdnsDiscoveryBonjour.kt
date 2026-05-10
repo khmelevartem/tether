@@ -3,6 +3,7 @@ package com.tubetoast.tether.discovery.bonjour
 import com.sun.jna.Memory
 import com.sun.jna.Pointer
 import com.sun.jna.ptr.PointerByReference
+import com.tubetoast.tether.discovery.MdnsDiscoveryDelegate
 import com.tubetoast.tether.protocol.Device
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -32,22 +33,22 @@ import java.util.concurrent.CopyOnWriteArrayList
  * `DNSServiceRefDeallocate` in its own `finally` block — the pattern required
  * by `dns_sd.h` to avoid a concurrent-deallocate race.
  */
-internal class MdnsDiscoveryBonjour {
+internal class MdnsDiscoveryBonjour : MdnsDiscoveryDelegate {
     private val _discoveredDevices = MutableStateFlow<List<Device>>(emptyList())
-    val discoveredDevices: StateFlow<List<Device>> = _discoveredDevices.asStateFlow()
+    override val discoveredDevices: StateFlow<List<Device>> = _discoveredDevices.asStateFlow()
 
     private val lifecycleLock = Any()
 
     @Volatile private var session: Session? = null
 
-    fun start(deviceName: String, port: Int) {
+    override fun start(deviceName: String, port: Int) {
         synchronized(lifecycleLock) {
             if (session != null) throw IllegalStateException("MdnsDiscovery already started; call stop() first")
             session = Session.start(deviceName, port, _discoveredDevices)
         }
     }
 
-    fun stop() {
+    override fun stop() {
         val toClose = synchronized(lifecycleLock) {
             val current = session
             session = null
@@ -144,7 +145,7 @@ internal class MdnsDiscoveryBonjour {
         }
 
         private fun openResolveRef(peerName: String, interfaceIndex: Int): Pointer? {
-            val refPtr = PointerByReference()
+            val outRef = PointerByReference()
             val callback = object : DnsSd.ResolveReply {
                 override fun invoke(
                     sdRef: Pointer,
@@ -164,8 +165,8 @@ internal class MdnsDiscoveryBonjour {
                 }
             }
             callbackAnchors.add(callback)
-            val rc = DnsSd.INSTANCE.DNSServiceResolve(
-                refPtr,
+            val error = DnsSd.INSTANCE.DNSServiceResolve(
+                outRef,
                 0,
                 interfaceIndex,
                 peerName,
@@ -174,15 +175,15 @@ internal class MdnsDiscoveryBonjour {
                 callback,
                 null,
             )
-            if (rc != DnsSd.NO_ERROR) {
-                System.err.println("WARN: DNSServiceResolve('$peerName') failed rc=$rc")
+            if (error != DnsSd.NO_ERROR) {
+                System.err.println("WARN: DNSServiceResolve('$peerName') failed error=$error")
                 return null
             }
-            return refPtr.value
+            return outRef.value
         }
 
         private fun openAddrInfoRef(peerName: String, hostname: String): Pointer? {
-            val refPtr = PointerByReference()
+            val outRef = PointerByReference()
             val callback = object : DnsSd.GetAddrInfoReply {
                 override fun invoke(
                     sdRef: Pointer,
@@ -201,8 +202,8 @@ internal class MdnsDiscoveryBonjour {
                 }
             }
             callbackAnchors.add(callback)
-            val rc = DnsSd.INSTANCE.DNSServiceGetAddrInfo(
-                refPtr,
+            val error = DnsSd.INSTANCE.DNSServiceGetAddrInfo(
+                outRef,
                 0,
                 0,
                 DnsSd.PROTOCOL_IPV4,
@@ -210,38 +211,38 @@ internal class MdnsDiscoveryBonjour {
                 callback,
                 null,
             )
-            if (rc != DnsSd.NO_ERROR) {
-                System.err.println("WARN: DNSServiceGetAddrInfo('$hostname') failed rc=$rc")
+            if (error != DnsSd.NO_ERROR) {
+                System.err.println("WARN: DNSServiceGetAddrInfo('$hostname') failed error=$error")
                 return null
             }
-            return refPtr.value
+            return outRef.value
         }
 
         private suspend fun pollLoop(ref: Pointer) {
-            val fd = DnsSd.INSTANCE.DNSServiceRefSockFD(ref)
-            if (fd < 0) return
+            val socketFd = DnsSd.INSTANCE.DNSServiceRefSockFD(ref)
+            if (socketFd < 0) return
             val pollfd = Memory(Posix.POLLFD_SIZE)
             while (currentCoroutineContext().isActive) {
-                pollfd.setInt(Posix.OFFSET_FD, fd)
+                pollfd.setInt(Posix.OFFSET_FD, socketFd)
                 pollfd.setShort(Posix.OFFSET_EVENTS, Posix.POLLIN)
                 pollfd.setShort(Posix.OFFSET_REVENTS, 0)
-                val rc = try {
+                val pollResult = try {
                     Posix.INSTANCE.poll(pollfd, 1, POLL_TIMEOUT_MS)
                 } catch (_: Throwable) {
                     return
                 }
-                if (rc < 0) return
-                if (rc == 0) continue
+                if (pollResult < 0) return
+                if (pollResult == 0) continue
                 val revents = pollfd.getShort(Posix.OFFSET_REVENTS).toInt() and 0xFFFF
                 val errorMask = (Posix.POLLERR.toInt() or Posix.POLLHUP.toInt() or Posix.POLLNVAL.toInt()) and 0xFFFF
                 if (revents and errorMask != 0) return
                 if (revents and (Posix.POLLIN.toInt() and 0xFFFF) == 0) continue
-                val processRc = try {
+                val processError = try {
                     DnsSd.INSTANCE.DNSServiceProcessResult(ref)
                 } catch (_: Throwable) {
                     return
                 }
-                if (processRc != DnsSd.NO_ERROR) return
+                if (processError != DnsSd.NO_ERROR) return
             }
         }
 
@@ -313,9 +314,9 @@ internal class MdnsDiscoveryBonjour {
                 }
                 session.callbackAnchors.add(browseCallback)
 
-                val browseRefPtr = PointerByReference()
-                val rc = DnsSd.INSTANCE.DNSServiceBrowse(
-                    browseRefPtr,
+                val browseOutRef = PointerByReference()
+                val error = DnsSd.INSTANCE.DNSServiceBrowse(
+                    browseOutRef,
                     0,
                     0,
                     SERVICE_TYPE,
@@ -323,13 +324,13 @@ internal class MdnsDiscoveryBonjour {
                     browseCallback,
                     null,
                 )
-                if (rc != DnsSd.NO_ERROR) {
+                if (error != DnsSd.NO_ERROR) {
                     registerRef?.let { deallocate(it, "register(rollback)") }
                     scope.cancel()
                     events.close()
-                    throw IllegalStateException("DNSServiceBrowse failed rc=$rc")
+                    throw IllegalStateException("DNSServiceBrowse failed error=$error")
                 }
-                val browseRef = browseRefPtr.value
+                val browseRef = browseOutRef.value
                     ?: throw IllegalStateException("DNSServiceBrowse returned null sdRef")
 
                 scope.launch(Dispatchers.IO) {
@@ -358,7 +359,7 @@ internal class MdnsDiscoveryBonjour {
                 events: Channel<Event>,
                 anchor: (Any) -> Unit,
             ): Pointer? {
-                val ref = PointerByReference()
+                val outRef = PointerByReference()
                 val callback = object : DnsSd.RegisterReply {
                     override fun invoke(
                         sdRef: Pointer,
@@ -378,8 +379,8 @@ internal class MdnsDiscoveryBonjour {
                     }
                 }
                 anchor(callback)
-                val rc = DnsSd.INSTANCE.DNSServiceRegister(
-                    ref,
+                val error = DnsSd.INSTANCE.DNSServiceRegister(
+                    outRef,
                     0,
                     0,
                     deviceName,
@@ -392,11 +393,11 @@ internal class MdnsDiscoveryBonjour {
                     callback,
                     null,
                 )
-                if (rc != DnsSd.NO_ERROR) {
-                    System.err.println("WARN: DNSServiceRegister failed rc=$rc; running browse-only")
+                if (error != DnsSd.NO_ERROR) {
+                    System.err.println("WARN: DNSServiceRegister failed error=$error; running browse-only")
                     return null
                 }
-                return ref.value
+                return outRef.value
             }
 
             private fun deallocate(ref: Pointer, label: String) {

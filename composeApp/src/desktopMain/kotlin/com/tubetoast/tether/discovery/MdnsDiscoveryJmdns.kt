@@ -31,7 +31,7 @@ private const val REQUERY_MAX_INTERVAL_MS = 60_000L
  * re-arms `ServiceResolver` — re-verified in JmDNS 3.5.9 `JmDNSImpl`.
  * Re-verify if JmDNS is upgraded.
  */
-internal class MdnsDiscoveryJmdns {
+internal class MdnsDiscoveryJmdns : MdnsDiscoveryDelegate {
     private val requeryContext: CoroutineContext
 
     constructor() {
@@ -46,7 +46,7 @@ internal class MdnsDiscoveryJmdns {
     }
 
     private val _discoveredDevices = MutableStateFlow<List<Device>>(emptyList())
-    val discoveredDevices: StateFlow<List<Device>> = _discoveredDevices.asStateFlow()
+    override val discoveredDevices: StateFlow<List<Device>> = _discoveredDevices.asStateFlow()
 
     @Volatile private var jmdns: JmDNS? = null
 
@@ -59,7 +59,7 @@ internal class MdnsDiscoveryJmdns {
     private var requeryJob: Job? = null
 
     @Synchronized
-    fun start(deviceName: String, port: Int) {
+    override fun start(deviceName: String, port: Int) {
         if (jmdns != null) throw IllegalStateException("MdnsDiscovery already started; call stop() first")
 
         val instance = JmDNS.create()
@@ -136,7 +136,7 @@ internal class MdnsDiscoveryJmdns {
     }
 
     @Synchronized
-    fun stop() {
+    override fun stop() {
         requeryJob?.cancel()
         requeryJob = null
         try {
