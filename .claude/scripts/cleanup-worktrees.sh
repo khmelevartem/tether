@@ -14,14 +14,18 @@ git worktree list --porcelain | awk '
 ' | while IFS='|' read -r wt_path branch; do
     [ "$wt_path" = "$ROOT" ] && continue
 
+    # Remote branch gone after fetch --prune AND a merged PR exists for this branch.
+    # git branch --merged / merge-base --is-ancestor both fail for squash merges;
+    # querying GitHub is the only reliable signal across all merge strategies.
     remote_gone=false
-    unpushed=false
     ! git show-ref --quiet "refs/remotes/origin/$branch" && remote_gone=true
-    [ -z "$(git log "main..$branch" --oneline 2>/dev/null)" ] && unpushed=false || unpushed=true
 
-    if $remote_gone && ! $unpushed; then
-        echo "cleanup-worktrees: removing $wt_path (branch: $branch, remote deleted, no unpushed commits)"
-        git worktree remove "$wt_path" --force 2>/dev/null || true
-        git branch -d "$branch" 2>/dev/null || true
+    if $remote_gone; then
+        merged=$(gh pr list --state merged --head "$branch" --json number --jq 'length' 2>/dev/null)
+        if [ "$merged" -gt 0 ] 2>/dev/null; then
+            echo "cleanup-worktrees: removing $wt_path (branch: $branch, PR merged)"
+            git worktree remove "$wt_path" --force 2>/dev/null || true
+            git branch -d "$branch" 2>/dev/null || true
+        fi
     fi
 done
