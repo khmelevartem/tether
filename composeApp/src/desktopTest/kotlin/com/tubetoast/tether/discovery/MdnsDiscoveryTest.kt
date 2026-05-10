@@ -211,11 +211,15 @@ class MdnsDiscoveryTest {
     // probing is timing-dependent and cannot reliably complete within a fixed timeout.
     // The correctness guarantee is documented in MdnsDiscovery.jvm.kt instead.
 
+    // JmDNS-specific test: re-arm only applies on Linux/Windows where JmDNS is used in
+    // production. On macOS hosts MdnsDiscovery delegates to Bonjour and this regression
+    // never occurs (mDNSResponder maintains its own continuous browse). The test runs on
+    // any host because MdnsDiscoveryJmdns can be instantiated directly here.
     @Test
     fun `late-joining peer is discovered after initial browse cycle`() = runTest {
         val testDispatcher = StandardTestDispatcher(testScheduler)
-        val a = MdnsDiscovery(testDispatcher)
-        val b = MdnsDiscovery(testDispatcher)
+        val a = MdnsDiscoveryJmdns(testDispatcher)
+        val b = MdnsDiscoveryJmdns(testDispatcher)
         try {
             a.start("LateA", 19070)
             // JmDNS's ServiceResolver fires 3 PTR queries over ~675 ms of real time.

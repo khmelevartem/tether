@@ -15,6 +15,7 @@ composeHotReload = "1.0.0"
 composeMultiplatform = "1.10.3"
 compose-rules = "0.5.8"
 jmdns = "3.5.9"
+jna = "5.14.0"
 junit = "4.13.2"
 kotlin = "2.3.20"
 kotlinx-coroutines = "1.10.2"
@@ -27,6 +28,7 @@ material3 = "1.10.0-alpha05"
 [libraries]
 clikt = { module = "com.github.ajalt.clikt:clikt", version.ref = "clikt" }
 jmdns = { module = "org.jmdns:jmdns", version.ref = "jmdns" }
+jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlin-testJunit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
 junit = { module = "junit:junit", version.ref = "junit" }
