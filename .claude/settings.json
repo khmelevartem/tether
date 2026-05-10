@@ -1,5 +1,15 @@
 {
   "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/scripts/cleanup-worktrees.sh"
+          }
+        ]
+      }
+    ],
     "SessionStart": [
       {
         "hooks": [
