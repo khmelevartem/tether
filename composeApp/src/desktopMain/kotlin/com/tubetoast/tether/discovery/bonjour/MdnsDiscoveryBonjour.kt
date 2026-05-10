@@ -78,13 +78,16 @@ internal class MdnsDiscoveryBonjour {
         // mDNSResponder still holds a pointer to it.
         val callbackAnchors = CopyOnWriteArrayList<Any>()
 
+        // Synchronous cleanup. Blocks the caller for up to POLL_TIMEOUT_MS (200 ms)
+        // while each poll loop observes cancellation and self-deallocates its ref.
+        // Sufficient for CLI shutdown; UI callers should invoke MdnsDiscovery.stop()
+        // from a background dispatcher.
         fun close() {
             // 1. Stop accepting new events. The consumer coroutine drains its queue
             //    and exits once the channel is empty + closed.
             events.close()
             // 2. Cancel everything and wait for poll loops to exit. Each loop's finally
             //    deallocates its own ref, satisfying the dns_sd.h same-thread invariant.
-            //    cancelAndJoin blocks the caller for at most POLL_TIMEOUT_MS.
             runBlocking { scope.coroutineContext[Job]!!.cancelAndJoin() }
             resolveJobs.clear()
             addrInfoJobs.clear()

@@ -38,7 +38,7 @@ class BonjourStateTest {
     }
 
     @Test
-    fun `device emits only when both port and ip present, regardless of order`() {
+    fun `device emits only when both port and ip present`() {
         val sink = RecordingSink()
         val state = BonjourState(deviceName = "self", sink = sink)
 
@@ -54,23 +54,11 @@ class BonjourStateTest {
     }
 
     @Test
-    fun `addrinfo before resolve also emits once both arrive`() {
-        val sink = RecordingSink()
-        val state = BonjourState("self", sink)
-
-        state.onAddrInfoFound("PeerA", "10.0.0.5", isAdd = true)
-        assertEquals(0, sink.publishCount)
-
-        state.onResolved("PeerA", "peera.local", port = 19999)
-        assertEquals(1, sink.publishCount)
-        assertEquals(19999, sink.devices.single().port)
-    }
-
-    @Test
     fun `resolve with new port replaces existing device`() {
         val sink = RecordingSink()
         val state = BonjourState("self", sink)
 
+        state.onBrowseAdd("PeerA", 0)
         state.onResolved("PeerA", "peera.local", 19999)
         state.onAddrInfoFound("PeerA", "10.0.0.5", isAdd = true)
         assertEquals(19999, sink.devices.single().port)
@@ -108,6 +96,7 @@ class BonjourStateTest {
         val sink = RecordingSink()
         val state = BonjourState("self", sink)
 
+        state.onBrowseAdd("PeerA", 0)
         state.onResolved("PeerA", "peera.local", 19999)
         state.onAddrInfoFound("PeerA", "10.0.0.5", isAdd = true)
         val baseline = sink.publishCount
@@ -128,6 +117,43 @@ class BonjourStateTest {
         state.onAddrInfoFound("Self", "10.0.0.1", isAdd = true)
         assertEquals(0, sink.publishCount, "own service must never appear in devices list")
         assertTrue(sink.opened.none { it.first == "openResolve" }, "no resolve for self")
+    }
+
+    @Test
+    fun `late Resolved arriving after BrowseRemove is dropped`() {
+        // Reproduces the small race the reviewer flagged: with Channel.UNLIMITED, a
+        // Resolved callback can be queued before BrowseRemove and then consumed after
+        // it. Without the membership gate, this resurrects the peer.
+        val sink = RecordingSink()
+        val state = BonjourState("self", sink)
+
+        state.onBrowseAdd("PeerA", 0)
+        state.onResolved("PeerA", "peera.local", 19999)
+        state.onAddrInfoFound("PeerA", "10.0.0.5", isAdd = true)
+        state.onBrowseRemove("PeerA")
+        assertTrue(sink.devices.isEmpty(), "device removed by BrowseRemove")
+
+        // Late event — should be dropped, not re-add the peer or re-open subordinates.
+        val openedBefore = sink.opened.size
+        state.onResolved("PeerA", "peera.local", 20000)
+        assertTrue(sink.devices.isEmpty(), "stale Resolved must not resurrect peer")
+        assertEquals(openedBefore, sink.opened.size, "stale Resolved must not open new subordinates")
+    }
+
+    @Test
+    fun `late AddrInfoFound arriving after BrowseRemove is dropped`() {
+        val sink = RecordingSink()
+        val state = BonjourState("self", sink)
+
+        state.onBrowseAdd("PeerA", 0)
+        state.onResolved("PeerA", "peera.local", 19999)
+        state.onAddrInfoFound("PeerA", "10.0.0.5", isAdd = true)
+        state.onBrowseRemove("PeerA")
+        val publishesBefore = sink.publishCount
+
+        state.onAddrInfoFound("PeerA", "10.0.0.6", isAdd = true)
+        assertTrue(sink.devices.isEmpty(), "stale AddrInfoFound must not resurrect peer")
+        assertEquals(publishesBefore, sink.publishCount, "no spurious publish from stale event")
     }
 
     @Test

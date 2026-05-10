@@ -13,6 +13,10 @@ import kotlinx.coroutines.flow.StateFlow
 //
 // - Linux/Windows: JmDNS over a raw multicast socket. No system mDNS daemon competes
 //   for the port, and JmDNS receives announcements directly from peers.
+//
+// stop() can block for up to ~200 ms on the macOS path while polling coroutines
+// observe their cancellation flag — see MdnsDiscoveryBonjour.Session.close. Acceptable
+// for the CLI; UI callers should invoke stop() from a background dispatcher.
 actual class MdnsDiscovery {
     private val jmdns: MdnsDiscoveryJmdns? = if (isMacOsHost()) null else MdnsDiscoveryJmdns()
     private val bonjour: MdnsDiscoveryBonjour? = if (isMacOsHost()) MdnsDiscoveryBonjour() else null

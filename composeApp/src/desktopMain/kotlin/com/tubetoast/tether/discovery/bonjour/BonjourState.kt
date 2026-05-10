@@ -50,6 +50,11 @@ internal class BonjourState(
 
     fun onResolved(name: String, hostname: String, port: Int) {
         if (name == ownName) return
+        // Membership gate: a Resolved event may be queued before BrowseRemove was
+        // processed, so by the time we consume it the peer might already be gone.
+        // Without this, we'd resurrect the device entry and re-open an addrInfo for
+        // a removed peer.
+        if (name !in activeResolves) return
         pendingPorts[name] = port
         emitIfReady(name)
         if (activeAddrInfos.add(name)) {
@@ -59,6 +64,9 @@ internal class BonjourState(
 
     fun onAddrInfoFound(name: String, ipv4: String, isAdd: Boolean) {
         if (name == ownName) return
+        // Same membership gate as onResolved — drop stale addrInfo callbacks
+        // queued before BrowseRemove cleaned up the peer.
+        if (name !in activeAddrInfos) return
         if (isAdd) {
             pendingIps[name] = ipv4
             emitIfReady(name)
