@@ -15,14 +15,14 @@ AppContainer            (commonMain)        — abstract: fileServer, mdnsDiscov
 ├── JvmAppContainer     (jvmMain)           — provides FileServer(port, downloadsDir)
 │   ├── AndroidAppContainer  (androidMain)  — provides MdnsDiscovery(context)
 │   └── DesktopAppContainer  (desktopMain)  — provides MdnsDiscovery() no-arg
-└── AppleAppContainer   (appleMain)         — provides FileServer() stub + MdnsDiscovery() no-arg
+└── AppleAppContainer   (appleMain)         — provides FileServer(port = 0) + MdnsDiscovery() no-arg
     ├── IosAppContainer     (iosMain)
     └── MacosAppContainer   (macosMain)
 ```
 
-`AppContainer` is `abstract` and declares both `fileServer` and `mdnsDiscovery` abstractly — construction lives in the platform leaves because the `MdnsDiscovery` constructor needs `Context` on Android but no args on Desktop/Apple, and `FileServer` is JVM-implementation-only with an Apple stub. `JvmAppContainer` is also `abstract`: it provides `FileServer` (sharing the construction across Android + Desktop) but cannot construct `MdnsDiscovery`.
+`AppContainer` is `abstract` and declares both `fileServer` and `mdnsDiscovery` abstractly — construction lives in the platform leaves because the `MdnsDiscovery` constructor needs `Context` on Android but no args on Desktop/Apple, and `FileServer`'s constructor differs between actuals (JVM takes a `java.io.File` downloads dir, Apple takes an optional `String?` path). `JvmAppContainer` is also `abstract`: it provides `FileServer` (sharing the construction across Android + Desktop) but cannot construct `MdnsDiscovery`.
 
-`FileServer` itself is declared in `commonMain` as an `expect class` so common code can reference the type. The JVM `actual` ([`FileServer.kt`](../../composeApp/src/jvmMain/kotlin/com/tubetoast/tether/network/FileServer.kt)) holds the real Ktor implementation; the Apple `actual` ([`FileServer.apple.kt`](../../composeApp/src/appleMain/kotlin/com/tubetoast/tether/network/FileServer.apple.kt)) is a stub that throws on `start()` — a real Apple implementation will land when the iOS receive-side is built.
+`FileServer` is declared in `commonMain` as an `expect class` so common code can reference the type. Both the JVM `actual` ([`FileServer.kt`](../../composeApp/src/jvmMain/kotlin/com/tubetoast/tether/network/FileServer.kt)) and the Apple `actual` ([`FileServer.apple.kt`](../../composeApp/src/appleMain/kotlin/com/tubetoast/tether/network/FileServer.apple.kt)) run a real Ktor CIO server (Ktor 3.0+ publishes the server engine for Native too — see [adr/adr-apple-fileserver-engine.md](adr/adr-apple-fileserver-engine.md)). Endpoint behavior is defined once in `commonMain` ([`FileServerRoutes.kt`](../../composeApp/src/commonMain/kotlin/com/tubetoast/tether/network/FileServerRoutes.kt) — `installFileServerRoutes`); each actual provides only the platform-specific `UploadStorage` adapter (file I/O, logging).
 
 Every container takes an `AppConfig` interface in its constructor. `AppConfig` is the input — the values the entry point chooses (device name, port, downloads dir, Android `Application`). The hierarchy of `*AppConfig` interfaces tracks the container hierarchy: [`AppConfig`](../../composeApp/src/commonMain/kotlin/com/tubetoast/tether/di/AppConfig.kt), [`JvmAppConfig`](../../composeApp/src/jvmMain/kotlin/com/tubetoast/tether/di/JvmAppConfig.kt), [`AndroidAppConfig`](../../composeApp/src/androidMain/kotlin/com/tubetoast/tether/di/AndroidAppConfig.kt), etc.
 

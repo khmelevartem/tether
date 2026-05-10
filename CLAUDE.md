@@ -37,9 +37,9 @@ All git naming in English. **Все commit messages обязаны начина�
 Все Gradle команды запускай с `-q` (убирает бойлерплейт).
 
 ```bash
-./gradlew allTests -q                       # pre-commit / pre-push хуки прогонят это сами
-./gradlew :composeApp:run                   # Desktop CLI (см. README.md → How to run)
-./gradlew :composeApp:assembleDebug         # Android APK
+./gradlew allTests -q                            # pre-commit / pre-push хуки прогонят это сами
+./gradlew :composeApp:installJar -q && tether    # Desktop CLI (см. README.md → Desktop CLI)
+./gradlew :composeApp:assembleDebug              # Android APK
 ```
 
 **KtLint — никогда не запускай вручную.** Git hook делает это сам при коммите. Стилевые ошибки не правь руками — просто коммить.

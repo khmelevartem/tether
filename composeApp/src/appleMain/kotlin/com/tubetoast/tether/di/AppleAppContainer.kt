@@ -6,6 +6,6 @@ import com.tubetoast.tether.network.FileServer
 open class AppleAppContainer(
     config: AppleAppConfig,
 ) : AppContainer(config) {
-    override val fileServer: FileServer = FileServer()
+    override val fileServer: FileServer = FileServer(port = 0)
     override val mdnsDiscovery: MdnsDiscovery = MdnsDiscovery()
 }

@@ -26,14 +26,17 @@ P2P-передача файлов между устройствами на ра�
 Стартует `FileServer` + mDNS-дискавери, читает команды из stdin (`list`, `send <peer> <path>`, `quit`).
 
 ```bash
-# дефолт: случайный порт, имя устройства = "Tether-$USER"
-./gradlew :composeApp:run
+# первый раз — собрать uber JAR и поставить wrapper в ~/.local/bin
+./gradlew :composeApp:installJar -q
+
+# убедись, что ~/.local/bin в PATH
+export PATH="$PATH:$HOME/.local/bin"
+
+# запуск с дефолтами (случайный порт, имя устройства = "Tether-$USER")
+tether
 
 # свои имя и порт
-./gradlew :composeApp:run --args="--name MyMac --port 8080"
-
-# сборка uber JAR и запуск через него
-./gradlew :composeApp:runJar
+tether --name MyMac --port 8080
 ```
 
 Проверка, что сервер живой: `curl http://localhost:<port>/health` → `Tether OK`.
