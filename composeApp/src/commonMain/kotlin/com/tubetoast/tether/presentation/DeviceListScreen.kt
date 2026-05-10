@@ -1,6 +1,7 @@
 package com.tubetoast.tether.presentation
 
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -22,15 +23,16 @@ fun DeviceListScreen(component: DeviceListComponent, modifier: Modifier = Modifi
     val state by component.state.subscribeAsState()
 
     if (state.devices.isEmpty()) {
-        Box(
+        Column(
             modifier = modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
         ) {
             CircularProgressIndicator()
             Text(
                 text = "Ищем устройства в сети…",
                 style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(top = 72.dp),
+                modifier = Modifier.padding(top = 16.dp),
             )
         }
     } else {
