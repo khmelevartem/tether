@@ -37,7 +37,7 @@ All git naming in English. **Все commit messages обязаны начина�
 Все Gradle команды запускай с `-q` (убирает бойлерплейт).
 
 ```bash
-./gradlew allTests -q                       # обязательно перед commit/push
+./gradlew allTests -q                       # pre-commit / pre-push хуки прогонят это сами
 ./gradlew :composeApp:run                   # Desktop CLI (см. README.md → How to run)
 ./gradlew :composeApp:assembleDebug         # Android APK
 ```

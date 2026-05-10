@@ -27,7 +27,7 @@ NSRunLoop нужно качать вручную — подробнее в [`doc
 ## Запуск
 
 ```bash
-./gradlew allTests -q                                    # все тесты (обязательно перед commit/push)
+./gradlew allTests -q                                    # все тесты; pre-commit / pre-push хуки прогонят их сами
 ./gradlew :composeApp:desktopTest -q                     # только Desktop JVM
 ./gradlew :composeApp:commonTest -q                      # только common
 ./gradlew :composeApp:desktopTest --tests "com.tubetoast.tether.network.FileServerTest"
