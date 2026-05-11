@@ -29,7 +29,7 @@ fun DeviceListScreen(component: DeviceListComponent, modifier: Modifier = Modifi
             verticalArrangement = Arrangement.Center,
         ) {
             CircularProgressIndicator()
-            // TODO: move to resources after i18n approach is picked — #100
+            // TODO: move to resources after an approach is picked — #100
             Text(
                 text = "Ищем устройства в сети…",
                 style = MaterialTheme.typography.bodyMedium,
