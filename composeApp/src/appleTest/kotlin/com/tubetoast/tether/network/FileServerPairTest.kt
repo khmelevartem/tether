@@ -41,8 +41,7 @@ class FileServerPairTest {
     @BeforeTest
     fun setup() {
         configDir = newTempDir()
-        // Apple TrustedDeviceStore is currently backed by NSUserDefaults (single global keyspace);
-        // construct without args — the test asserts behavior at the protocol level, not storage isolation.
+        // NSUserDefaults has no per-test isolation; assertions key on publicKey-derived deviceIds, not on a fresh store.
         store = TrustedDeviceStore()
         keyPair = DeviceKeyPair(configDir)
         server = FileServer(

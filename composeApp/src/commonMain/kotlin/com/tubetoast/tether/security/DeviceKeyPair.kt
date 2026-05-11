@@ -1,9 +1,6 @@
 package com.tubetoast.tether.security
 
-/**
- * Long-lived EC P-256 key pair persisted across launches. Public part is exposed for the
- * pairing handshake; private part stays inside the actual implementation.
- */
+/** Per-install identity persisted across launches; [publicKey] is the bytes a peer pins on pairing. */
 expect class DeviceKeyPair {
     val publicKey: ByteArray
 }

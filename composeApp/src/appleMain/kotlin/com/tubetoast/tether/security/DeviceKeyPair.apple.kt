@@ -21,10 +21,8 @@ import platform.Security.SecRandomCopyBytes
 import platform.Security.kSecRandomDefault
 import platform.posix.memcpy
 
-// Issue #9 explicitly defers signature verification ("Шифрование трафика — следующий этап"),
-// so the pairing handshake stores opaque public-key bytes without using them for crypto yet.
-// 32 random bytes are stable across launches and large enough to look like an EC P-256 key to
-// future verifiers. SecKey/Keychain migration is tracked separately (Apple Keychain follow-up).
+// Placeholder until a real EC P-256 keypair lands via Keychain (#9 defers signature verification).
+// Until then the protocol treats these bytes as an opaque per-install identifier.
 private const val PUBLIC_KEY_BYTES = 32
 private const val FILE_PUBLIC = "device_public.key"
 

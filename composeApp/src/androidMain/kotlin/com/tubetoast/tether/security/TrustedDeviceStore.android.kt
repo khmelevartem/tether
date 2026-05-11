@@ -8,11 +8,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 
-// Trust-store contents are *public* keys of paired peers — not secrets — so the storage layer
-// only needs persistence and integrity, not confidentiality. AndroidX DataStore replaces the
-// deprecated EncryptedSharedPreferences (security-crypto is on life support; the suggested
-// MasterKey/security-crypto 1.1 line stalled — see the 2026 migration guide). Tink AEAD on
-// top of DataStore is a follow-up if we ever need at-rest confidentiality.
+// Stored values are public keys, so confidentiality at rest is intentionally not provided.
 private val Context.trustedDevicesDataStore: androidx.datastore.core.DataStore<Preferences> by
     preferencesDataStore(name = "tether_trusted_devices")
 
