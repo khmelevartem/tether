@@ -218,9 +218,9 @@ When a test needs a fake container instead of the real one, define a `TestApplic
 
 ## Per-screen scoping
 
-`AppContainer` is a singleton. There is no separate per-screen DI scope and no `ViewModelStoreOwner` integration — per-screen state and lifecycle are owned by Decompose Components, not by an Android-style ViewModel container. Each Component receives the dependencies it needs from `AppContainer` (or from its parent Component) and constructs its children directly.
+`AppContainer` is a singleton. There is no separate per-screen DI scope — per-screen state and lifecycle are owned by Decompose Components, not by an Android-style ViewModel container. Each Component receives the dependencies it needs from `AppContainer` (or from its parent Component) and constructs its children directly.
 
-The platform entry point also builds the **root Component** (Decompose), passing `AppContainer` to it. The root creates its children with the dependencies they need. See [presentation-layer.md](presentation-layer.md).
+The platform entry point builds the **root Component** (Decompose), passing `AppContainer` to it. The root creates its children with the dependencies they need. On Android we use Decompose's `retainedComponent { ... }`, which stores the Component in the Activity's `ViewModelStore` for config-change retention only — not as a DI scope. See [presentation-layer.md](presentation-layer.md).
 
 ## Open questions
 

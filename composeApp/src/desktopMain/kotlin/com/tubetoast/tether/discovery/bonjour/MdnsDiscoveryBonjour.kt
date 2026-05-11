@@ -3,7 +3,7 @@ package com.tubetoast.tether.discovery.bonjour
 import com.sun.jna.Memory
 import com.sun.jna.Pointer
 import com.sun.jna.ptr.PointerByReference
-import com.tubetoast.tether.discovery.MdnsDiscoveryDelegate
+import com.tubetoast.tether.discovery.DeviceDiscovery
 import com.tubetoast.tether.protocol.Device
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -33,7 +33,7 @@ import java.util.concurrent.CopyOnWriteArrayList
  * `DNSServiceRefDeallocate` in its own `finally` block — the pattern required
  * by `dns_sd.h` to avoid a concurrent-deallocate race.
  */
-internal class MdnsDiscoveryBonjour : MdnsDiscoveryDelegate {
+internal class MdnsDiscoveryBonjour : DeviceDiscovery {
     private val _discoveredDevices = MutableStateFlow<List<Device>>(emptyList())
     override val discoveredDevices: StateFlow<List<Device>> = _discoveredDevices.asStateFlow()
 

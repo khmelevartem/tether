@@ -20,9 +20,9 @@ private const val SERVICE_TYPE = "_tether._tcp."
 // from the same thread (main thread via DisposableEffect in Compose), all accesses to
 // mutable state are single-threaded — no @Synchronized or @Volatile needed.
 // @Synchronized is a JVM-only annotation and is not available in Kotlin/Native.
-actual class MdnsDiscovery {
+actual class MdnsDiscovery : DeviceDiscovery {
     private val _discoveredDevices = MutableStateFlow<List<Device>>(emptyList())
-    actual val discoveredDevices: StateFlow<List<Device>> = _discoveredDevices.asStateFlow()
+    actual override val discoveredDevices: StateFlow<List<Device>> = _discoveredDevices.asStateFlow()
 
     private var netService: NSNetService? = null
     private var browser: NSNetServiceBrowser? = null
@@ -34,7 +34,7 @@ actual class MdnsDiscovery {
     private var browserDelegate: BrowserDelegate? = null
     private val resolutionDelegates = mutableListOf<ResolutionDelegate>()
 
-    actual fun start(deviceName: String, port: Int) {
+    actual override fun start(deviceName: String, port: Int) {
         if (netService != null || browser != null) {
             throw IllegalStateException("MdnsDiscovery already started; call stop() first")
         }
@@ -67,7 +67,7 @@ actual class MdnsDiscovery {
         NSLog("mDNS: started discovery for %s", SERVICE_TYPE)
     }
 
-    actual fun stop() {
+    actual override fun stop() {
         try {
             netService?.stop()
         } catch (e: Exception) {

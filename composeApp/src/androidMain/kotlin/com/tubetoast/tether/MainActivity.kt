@@ -10,10 +10,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.ContextCompat
+import com.arkivanov.decompose.retainedComponent
+import com.tubetoast.tether.di.AppContainerProvider
 import com.tubetoast.tether.network.TetherForegroundService
+import com.tubetoast.tether.presentation.DeviceListComponent
 
 private const val TAG = "MainActivity"
 
@@ -42,8 +43,15 @@ class MainActivity : ComponentActivity() {
 
         startService()
 
+        val container = (application as AppContainerProvider).container
+        val component = retainedComponent { componentContext ->
+            DeviceListComponent(
+                componentContext = componentContext,
+                discovery = container.mdnsDiscovery,
+            )
+        }
         setContent {
-            App()
+            App(component)
         }
     }
 
@@ -67,10 +75,4 @@ class MainActivity : ComponentActivity() {
             Intent(this, TetherForegroundService::class.java),
         )
     }
-}
-
-@Preview
-@Composable
-private fun AppAndroidPreview() {
-    App()
 }

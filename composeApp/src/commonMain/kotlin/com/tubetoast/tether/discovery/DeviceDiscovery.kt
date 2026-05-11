@@ -1,0 +1,12 @@
+package com.tubetoast.tether.discovery
+
+import com.tubetoast.tether.protocol.Device
+import kotlinx.coroutines.flow.StateFlow
+
+interface DeviceDiscovery {
+    val discoveredDevices: StateFlow<List<Device>>
+
+    fun start(deviceName: String, port: Int)
+
+    fun stop()
+}
