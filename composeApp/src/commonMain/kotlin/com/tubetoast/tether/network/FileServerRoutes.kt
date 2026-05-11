@@ -46,7 +46,17 @@ internal fun Application.installFileServerRoutes(
         post("/pair") {
             val request = call.receive<PairRequest>()
             val deviceId = deviceIdFromPublicKey(request.publicKey)
-            trustedDeviceStore.saveTrustedKey(deviceId, request.publicKey)
+            try {
+                trustedDeviceStore.saveTrustedKey(deviceId, request.publicKey)
+            } catch (e: Exception) {
+                // Explicit 500 instead of relying on Ktor's default exception handler:
+                // a silent 200 on persistence failure would tell the peer we trust them while we don't.
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    mapOf("error" to (e.message ?: "failed to persist trusted device")),
+                )
+                return@post
+            }
             call.respond(HttpStatusCode.OK, PairResponse(publicKey = serverPublicKey))
         }
         post("/upload") {

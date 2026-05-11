@@ -51,4 +51,18 @@ class PairingProtocolTest {
         val decoded = json.decodeFromString<PairResponse>(json.encodeToString(PairResponse.serializer(), original))
         assertEquals(original, decoded)
     }
+
+    @Test
+    fun `PairRequest with empty publicKey round-trips through JSON`() {
+        val original = PairRequest(publicKey = byteArrayOf(), deviceName = "Empty")
+        val decoded = json.decodeFromString<PairRequest>(json.encodeToString(PairRequest.serializer(), original))
+        assertEquals(original, decoded)
+    }
+
+    @Test
+    fun `PairResponse with empty publicKey round-trips through JSON`() {
+        val original = PairResponse(publicKey = byteArrayOf())
+        val decoded = json.decodeFromString<PairResponse>(json.encodeToString(PairResponse.serializer(), original))
+        assertEquals(original, decoded)
+    }
 }

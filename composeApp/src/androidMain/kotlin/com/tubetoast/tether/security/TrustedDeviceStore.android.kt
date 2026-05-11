@@ -27,6 +27,9 @@ actual class TrustedDeviceStore(
         }
     }
 
+    // Read-side parse errors are swallowed (logged + null) so a corrupted entry behaves as "untrusted"
+    // and the peer re-pairs; write-side errors propagate so /pair returns 500 instead of falsely
+    // claiming we trust a peer we failed to persist.
     actual fun getPublicKey(deviceId: String): ByteArray? {
         val value = runBlocking {
             store.data.first()[stringPreferencesKey(deviceId)]

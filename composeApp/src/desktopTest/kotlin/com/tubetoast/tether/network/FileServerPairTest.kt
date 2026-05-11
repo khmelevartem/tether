@@ -120,6 +120,25 @@ class FileServerPairTest {
     }
 
     @Test
+    fun `pair with empty publicKey is accepted and stored under SHA-256 of empty input`() {
+        val configDir = newConfigDir()
+        val store = TrustedDeviceStore(configDir)
+        val (_, port) = startServer(store, DeviceKeyPair(configDir))
+        val emptyKey = byteArrayOf()
+        val deviceId = deviceIdFromPublicKey(emptyKey)
+        runBlocking {
+            val response = client.post("http://localhost:$port/pair") {
+                contentType(ContentType.Application.Json)
+                setBody(PairRequest(publicKey = emptyKey, deviceName = "EmptyKeyPeer"))
+            }
+            assertEquals(HttpStatusCode.OK, response.status)
+        }
+        val stored = store.getPublicKey(deviceId)
+        assertNotNull(stored, "empty publicKey must still produce a deterministic deviceId entry")
+        assertEquals(0, stored.size, "stored bytes must round-trip the empty array")
+    }
+
+    @Test
     fun `pair with invalid body returns 400`() {
         val configDir = newConfigDir()
         val (_, port) = startServer(TrustedDeviceStore(configDir), DeviceKeyPair(configDir))
