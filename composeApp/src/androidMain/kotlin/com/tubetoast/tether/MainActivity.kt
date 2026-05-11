@@ -11,7 +11,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
-import com.arkivanov.decompose.defaultComponentContext
+import com.arkivanov.decompose.retainedComponent
 import com.tubetoast.tether.di.AppContainerProvider
 import com.tubetoast.tether.network.TetherForegroundService
 import com.tubetoast.tether.presentation.DeviceListComponent
@@ -44,10 +44,13 @@ class MainActivity : ComponentActivity() {
         startService()
 
         val container = (application as AppContainerProvider).container
-        val component = DeviceListComponent(
-            componentContext = defaultComponentContext(),
-            discovery = container.mdnsDiscovery,
-        )
+        // retainedComponent: survives configuration changes (rotation) via the Activity's ViewModelStore.
+        val component = retainedComponent { componentContext ->
+            DeviceListComponent(
+                componentContext = componentContext,
+                discovery = container.mdnsDiscovery,
+            )
+        }
         setContent {
             App(component)
         }

@@ -4,14 +4,6 @@ import com.tubetoast.tether.discovery.bonjour.MdnsDiscoveryBonjour
 import com.tubetoast.tether.protocol.Device
 import kotlinx.coroutines.flow.StateFlow
 
-internal interface MdnsDiscoveryDelegate {
-    val discoveredDevices: StateFlow<List<Device>>
-
-    fun start(deviceName: String, port: Int)
-
-    fun stop()
-}
-
 /**
  * macOS → [MdnsDiscoveryBonjour] (DNS-SD IPC; JmDNS can't see external WiFi peers on macOS).
  * Linux/Windows → [MdnsDiscoveryJmdns].
@@ -19,7 +11,7 @@ internal interface MdnsDiscoveryDelegate {
  * [stop] may block up to ~200 ms on macOS; invoke from a background dispatcher in UI code.
  */
 actual class MdnsDiscovery : DeviceDiscovery {
-    private val delegate: MdnsDiscoveryDelegate =
+    private val delegate: DeviceDiscovery =
         if (isMacOsHost()) MdnsDiscoveryBonjour() else MdnsDiscoveryJmdns()
 
     actual override val discoveredDevices: StateFlow<List<Device>> get() = delegate.discoveredDevices

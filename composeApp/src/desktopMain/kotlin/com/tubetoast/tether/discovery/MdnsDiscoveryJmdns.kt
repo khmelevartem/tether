@@ -31,7 +31,7 @@ private const val REQUERY_MAX_INTERVAL_MS = 60_000L
  * re-arms `ServiceResolver` — re-verified in JmDNS 3.5.9 `JmDNSImpl`.
  * Re-verify if JmDNS is upgraded.
  */
-internal class MdnsDiscoveryJmdns : MdnsDiscoveryDelegate {
+internal class MdnsDiscoveryJmdns : DeviceDiscovery {
     private val requeryContext: CoroutineContext
 
     constructor() {
