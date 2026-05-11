@@ -2,7 +2,7 @@
 
 **Area:** UI
 **Status:** `in progress`
-**GitHub Issues:** [#7](https://github.com/khmelevartem/tether/issues/7) (Android, done); iOS, Desktop — _tbd_
+**GitHub Issues:** [#7](https://github.com/khmelevartem/tether/issues/7) (Android — done; iOS — done via Compose Multiplatform reuse, manually verified on simulator); Desktop — _tbd_ (entry point is CLI-only; `App()` not yet wired from desktop runner)
 
 ---
 
