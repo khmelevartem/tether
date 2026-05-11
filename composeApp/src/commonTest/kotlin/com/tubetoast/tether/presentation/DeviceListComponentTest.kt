@@ -6,12 +6,14 @@ import com.arkivanov.essenty.lifecycle.resume
 import com.tubetoast.tether.discovery.FakeDeviceDiscovery
 import com.tubetoast.tether.protocol.Device
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class DeviceListComponentTest {
     private val deviceA = Device(id = "a", name = "DeviceA", host = "192.168.1.1", port = 8080)
     private val deviceB = Device(id = "b", name = "DeviceB", host = "192.168.1.2", port = 8080)
