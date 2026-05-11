@@ -30,15 +30,11 @@ Clean Architecture and adjacent patterns are full of ceremony that doesn't pay r
 
 ## Common-first across KMP targets
 
-`CLAUDE.md` says: всё, что может жить в `commonMain` — там и лежит; платформенные source sets только для кода, требующего platform API. Это применимо ко всему — domain, network, presentation, UI. Реализация в `commonMain` ships на все активные таргеты одной кодовой базой.
+Всё, что может жить в `commonMain` — там и лежит; платформенные source sets только для кода, требующего platform API. Это применимо ко всему — domain, network, presentation, UI. Реализация в `commonMain` поставляется на все активные таргеты одной кодовой базой.
 
-**Operational rules** (выводы из принципа, относятся ко всему common-коду — не только к UI):
+- Компиляция ≠ корректность: код едет на все таргеты, но визуальная/runtime-корректность на каждом не гарантирована билдом. **Ручной smoke обязателен на каждой платформе** перед запросом ревью (см. `/work-on-issue` Step 7).
 
-- Одна задача = одна общая реализация для всех shipping-платформ. Не создавай per-platform issues для функциональности, которая живёт в `commonMain`. Строки в `docs/product/features/README.md` отражают это.
-- `size:*` оценивается per-feature, не per-platform.
-- Компиляция ≠ корректность: код едет на все таргеты, но визуальная/runtime-корректность на каждом не гарантирована билдом. **Ручной smoke обязателен на каждой shipping-платформе** перед запросом ревью (см. `/work-on-issue` Step 7).
-
-**UI specifically** — самый видимый multiplier: Compose Multiplatform в `commonMain` ships на Android, iOS и Desktop (когда entry point вызывает `App()`) одной имплементацией. Подтверждено в #7 — экран написан под Android, на iOS заработал без модификаций.
+**UI specifically** — самый видимый multiplier: Compose Multiplatform в `commonMain` едет на Android, iOS и Desktop (когда entry point вызывает `App()`) одной имплементацией.
 
 Per-platform composables / `actual`-имплементации — исключение и требуют обоснования реальным API-ограничением (system share sheet, hardware sensor), не предпочтением.
 

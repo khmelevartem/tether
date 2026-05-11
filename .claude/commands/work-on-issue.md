@@ -58,10 +58,6 @@
 
    **a. Сначала — расширь smoke, если нужно.** PR ввёл новую критическую функциональность, которой нет в `/smoke-test`? Критическая = точка отказа на старте, happy-path фичи, cross-platform reusable UI, новый внешний интерфейс. Если да — допиши блок в `.claude/skills/smoke-test/SKILL.md` в этом же PR. **Не раздувай:** помни, что смоук прогоняется часто, а тесты в нем дорогие по времени.
 
-   **b. Затем прогоняй и записывай verdict.** Категории из `smoke-test/SKILL.md`: entry points → Android + iOS compile + Desktop CLI; FGS/manifest/Info.plist → Android; FileServer/CLI/mDNS → Desktop send; native source sets → native compile; `commonMain` UI → ручной smoke на **каждой** shipping-платформе (KMP-специфика: код едет на все таргеты, проверять надо все). Verdict в тело PR:
-   ```
-   ## Smoke verdict
-   - Block 3 (Android FGS): 🟢
-   - Manual iOS UI (KMP reuse): 🟢
-   ```
+   **b. Затем прогоняй релевантные блоки и записывай verdict** в тело PR:
+   
    🟡/🔴 — не отправляй в ревью до резолва.
