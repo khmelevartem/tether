@@ -115,7 +115,7 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.activity.compose)
             implementation(libs.androidx.lifecycle.service)
-            implementation("androidx.security:security-crypto:1.0.0")
+            implementation("androidx.datastore:datastore-preferences:1.1.1")
         }
 
         androidUnitTest.dependencies {

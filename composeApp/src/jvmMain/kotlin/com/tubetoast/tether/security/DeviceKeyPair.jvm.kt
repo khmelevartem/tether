@@ -8,10 +8,10 @@ import java.security.KeyFactory
 import java.security.KeyPairGenerator
 import java.security.spec.X509EncodedKeySpec
 
-class DeviceKeyPair(
+actual class DeviceKeyPair(
     private val configDir: File = File(System.getProperty("user.home"), ".config/tether"),
 ) {
-    val publicKey: ByteArray
+    actual val publicKey: ByteArray
 
     init {
         val publicKeyFile = File(configDir, "device_public.key")

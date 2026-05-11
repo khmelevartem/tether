@@ -2,6 +2,8 @@
 
 package com.tubetoast.tether.network
 
+import com.tubetoast.tether.security.DeviceKeyPair
+import com.tubetoast.tether.security.TrustedDeviceStore
 import io.ktor.server.cio.CIO
 import io.ktor.server.cio.CIOApplicationEngine
 import io.ktor.server.engine.EmbeddedServer
@@ -24,6 +26,8 @@ import platform.posix.fwrite
 actual class FileServer(
     private val port: Int,
     downloadsDir: String? = null,
+    private val trustedDeviceStore: TrustedDeviceStore,
+    private val deviceKeyPair: DeviceKeyPair,
 ) {
     private val downloadsDir: String = downloadsDir ?: defaultDownloadsDir()
     private var server: EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration>? = null
@@ -33,7 +37,7 @@ actual class FileServer(
         val storage = AppleUploadStorage(downloadsDir)
         storage.ensureRoot()
         val srv = embeddedServer(CIO, port = port) {
-            installFileServerRoutes(storage)
+            installFileServerRoutes(storage, trustedDeviceStore, deviceKeyPair.publicKey)
         }.start(wait = false)
         server = srv
         return runBlocking { srv.engine.resolvedConnectors() }.first().port

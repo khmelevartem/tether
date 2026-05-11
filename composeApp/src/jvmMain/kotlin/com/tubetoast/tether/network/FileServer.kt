@@ -1,20 +1,11 @@
 package com.tubetoast.tether.network
 
-import com.tubetoast.tether.protocol.PairRequest
-import com.tubetoast.tether.protocol.PairResponse
 import com.tubetoast.tether.security.DeviceKeyPair
 import com.tubetoast.tether.security.TrustedDeviceStore
-import com.tubetoast.tether.security.deviceIdFromPublicKey
-import io.ktor.http.HttpStatusCode
-import io.ktor.server.application.Application
 import io.ktor.server.cio.CIO
 import io.ktor.server.cio.CIOApplicationEngine
 import io.ktor.server.engine.EmbeddedServer
 import io.ktor.server.engine.embeddedServer
-import io.ktor.server.request.receive
-import io.ktor.server.response.respond
-import io.ktor.server.routing.post
-import io.ktor.server.routing.routing
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.jvm.javaio.toInputStream
 import kotlinx.coroutines.runBlocking
@@ -33,8 +24,7 @@ actual class FileServer(
         val storage = JvmUploadStorage(downloadsDir)
         storage.ensureRoot()
         val srv = embeddedServer(CIO, port = port) {
-            installFileServerRoutes(storage)
-            installPairRoute(trustedDeviceStore, deviceKeyPair)
+            installFileServerRoutes(storage, trustedDeviceStore, deviceKeyPair.publicKey)
         }.start(wait = false)
         server = srv
         // resolvedConnectors() returns the actual OS-assigned port when port=0 was specified,
@@ -45,20 +35,6 @@ actual class FileServer(
     actual fun stop() {
         server?.stop(gracePeriodMillis = 500, timeoutMillis = 1_000)
         server = null
-    }
-}
-
-private fun Application.installPairRoute(
-    trustedDeviceStore: TrustedDeviceStore,
-    deviceKeyPair: DeviceKeyPair,
-) {
-    routing {
-        post("/pair") {
-            val request = call.receive<PairRequest>()
-            val deviceId = deviceIdFromPublicKey(request.publicKey)
-            trustedDeviceStore.saveTrustedKey(deviceId, request.publicKey)
-            call.respond(HttpStatusCode.OK, PairResponse(publicKey = deviceKeyPair.publicKey))
-        }
     }
 }
 

@@ -7,7 +7,11 @@ import com.tubetoast.tether.security.TrustedDeviceStore
 open class AppleAppContainer(
     config: AppleAppConfig,
 ) : AppContainer(config) {
-    override val fileServer: FileServer = FileServer(port = 0)
+    override val trustedDeviceStore: TrustedDeviceStore = config.trustedDeviceStore
+    override val fileServer: FileServer = FileServer(
+        port = 0,
+        trustedDeviceStore = config.trustedDeviceStore,
+        deviceKeyPair = config.deviceKeyPair,
+    )
     override val mdnsDiscovery: MdnsDiscovery = MdnsDiscovery()
-    override val trustedDeviceStore: TrustedDeviceStore = TrustedDeviceStore()
 }

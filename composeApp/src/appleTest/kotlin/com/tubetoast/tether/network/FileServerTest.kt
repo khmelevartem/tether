@@ -2,6 +2,8 @@
 
 package com.tubetoast.tether.network
 
+import com.tubetoast.tether.security.DeviceKeyPair
+import com.tubetoast.tether.security.TrustedDeviceStore
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
@@ -69,9 +71,19 @@ class FileServerTest {
 
     private fun makeClient(): HttpClient = HttpClient(CIO) { install(ContentNegotiation) { json() } }
 
+    private fun newTestServer(downloadsDir: String): FileServer {
+        val configDir = newTempDir()
+        return FileServer(
+            port = 0,
+            downloadsDir = downloadsDir,
+            trustedDeviceStore = TrustedDeviceStore(),
+            deviceKeyPair = DeviceKeyPair(configDir),
+        )
+    }
+
     @Test
     fun health_endpoint_returns_200() {
-        val server = FileServer(port = 0, downloadsDir = newTempDir())
+        val server = newTestServer(newTempDir())
         val port = server.start()
         val client = makeClient()
         try {
@@ -88,7 +100,7 @@ class FileServerTest {
 
     @Test
     fun start_returns_valid_port() {
-        val server = FileServer(port = 0, downloadsDir = newTempDir())
+        val server = newTestServer(newTempDir())
         val port = server.start()
         try {
             assertTrue(port in 1024..65535, "Expected ephemeral port, got $port")
@@ -99,12 +111,12 @@ class FileServerTest {
 
     @Test
     fun stop_on_unstarted_does_not_throw() {
-        FileServer(port = 0, downloadsDir = newTempDir()).stop()
+        newTestServer(newTempDir()).stop()
     }
 
     @Test
     fun double_start_throws() {
-        val server = FileServer(port = 0, downloadsDir = newTempDir())
+        val server = newTestServer(newTempDir())
         server.start()
         try {
             assertFailsWith<IllegalStateException> { server.start() }
@@ -116,7 +128,7 @@ class FileServerTest {
     @Test
     fun upload_saves_file_with_correct_content() {
         val dir = newTempDir()
-        val server = FileServer(port = 0, downloadsDir = dir)
+        val server = newTestServer(dir)
         val port = server.start()
         val client = makeClient()
         try {
@@ -141,7 +153,7 @@ class FileServerTest {
 
     @Test
     fun upload_without_name_returns_400() {
-        val server = FileServer(port = 0, downloadsDir = newTempDir())
+        val server = newTestServer(newTempDir())
         val port = server.start()
         val client = makeClient()
         try {
@@ -161,7 +173,7 @@ class FileServerTest {
     @Test
     fun upload_duplicate_filename_gets_numeric_suffix() {
         val dir = newTempDir()
-        val server = FileServer(port = 0, downloadsDir = dir)
+        val server = newTestServer(dir)
         val port = server.start()
         val client = makeClient()
         try {
@@ -192,7 +204,7 @@ class FileServerTest {
     @Test
     fun upload_strips_path_traversal() {
         val dir = newTempDir()
-        val server = FileServer(port = 0, downloadsDir = dir)
+        val server = newTestServer(dir)
         val port = server.start()
         val client = makeClient()
         try {
@@ -224,7 +236,7 @@ class FileServerTest {
         val parent = newTempDir()
         val regularFile = "$parent/not-a-dir.txt"
         NSFileManager.defaultManager.createFileAtPath(regularFile, contents = null, attributes = null)
-        val server = FileServer(port = 0, downloadsDir = regularFile)
+        val server = newTestServer(regularFile)
         val port = server.start()
         val client = makeClient()
         try {
@@ -265,7 +277,7 @@ class FileServerTest {
         val parent = newTempDir()
         val nested = "$parent/deep/nested"
         assertFalse(NSFileManager.defaultManager.fileExistsAtPath(nested))
-        val server = FileServer(port = 0, downloadsDir = nested)
+        val server = newTestServer(nested)
         val port = server.start()
         val client = makeClient()
         try {
@@ -284,7 +296,7 @@ class FileServerTest {
 
     @Test
     fun restart_after_stop_succeeds() {
-        val server = FileServer(port = 0, downloadsDir = newTempDir())
+        val server = newTestServer(newTempDir())
         val port1 = server.start()
         assertTrue(port1 in 1024..65535)
         server.stop()
@@ -301,7 +313,7 @@ class FileServerTest {
         // Native impl uses POSIX fopen/fwrite directly — non-trivial payload pins
         // down the streaming guarantee where JVM's copyTo and Apple's loop diverge.
         val dir = newTempDir()
-        val server = FileServer(port = 0, downloadsDir = dir)
+        val server = newTestServer(dir)
         val port = server.start()
         val client = makeClient()
         try {
@@ -329,7 +341,7 @@ class FileServerTest {
         // SlowContent declares Content-Length and paces with per-chunk delay so
         // withTimeout fires mid-transfer deterministically across platforms.
         val dir = newTempDir()
-        val server = FileServer(port = 0, downloadsDir = dir)
+        val server = newTestServer(dir)
         val port = server.start()
         val client = makeClient()
         try {
