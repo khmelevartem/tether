@@ -28,6 +28,20 @@ Clean Architecture and adjacent patterns are full of ceremony that doesn't pay r
 - **Triple-layer DTO ↔ domain ↔ presentation mapping when there's no real divergence yet.** This one is nuanced: as the project matures, layers *do* legitimately need different shapes (DTO has serialization quirks, domain has invariants, presentation has display fields). The rule is not "never map" — it's "don't force three types up front." Start with one. Split when the second shape *actually* diverges (e.g. a UI list state with `selected`, `lastSeen`, `signal` is genuinely not the same as a network `Device`). Don't fight that growth in the name of brevity, and don't pre-empt it in the name of layering.
 - **Interfaces for things with one implementation.** An interface earns its place when there are at least two implementations, or it's a seam for testing. Otherwise the concrete class is the contract.
 
+## Common-first across KMP targets
+
+`CLAUDE.md` says: всё, что может жить в `commonMain` — там и лежит; платформенные source sets только для кода, требующего platform API. Это применимо ко всему — domain, network, presentation, UI. Реализация в `commonMain` ships на все активные таргеты одной кодовой базой.
+
+**Operational rules** (выводы из принципа, относятся ко всему common-коду — не только к UI):
+
+- Одна задача = одна общая реализация для всех shipping-платформ. Не создавай per-platform issues для функциональности, которая живёт в `commonMain`. Строки в `docs/product/features/README.md` отражают это.
+- `size:*` оценивается per-feature, не per-platform.
+- Компиляция ≠ корректность: код едет на все таргеты, но визуальная/runtime-корректность на каждом не гарантирована билдом. **Ручной smoke обязателен на каждой shipping-платформе** перед запросом ревью (см. `/work-on-issue` Step 7).
+
+**UI specifically** — самый видимый multiplier: Compose Multiplatform в `commonMain` ships на Android, iOS и Desktop (когда entry point вызывает `App()`) одной имплементацией. Подтверждено в #7 — экран написан под Android, на iOS заработал без модификаций.
+
+Per-platform composables / `actual`-имплементации — исключение и требуют обоснования реальным API-ограничением (system share sheet, hardware sensor), не предпочтением.
+
 ## Named classes over anonymous objects
 
 When you need to implement an interface — even with a trivial body that's just data (e.g. a config interface filled with constants) — **prefer a named class in its own file** over `object : Interface { ... }` inline.
@@ -67,21 +81,6 @@ When refactoring existing code, the same questions apply in reverse: a layer tha
 
 - **Presentation layer is built on [Decompose](https://github.com/arkivanov/Decompose).** Components hold state and lifecycle in plain Kotlin; Compose subscribes via `subscribeAsState` and is treated as a thin, replaceable renderer. Conventions and how to write/test components: [presentation-layer.md](presentation-layer.md). Rationale, alternatives considered, and per-platform notes: [adr/adr-presentation-and-navigation.md](adr/adr-presentation-and-navigation.md).
 - **Unidirectional data flow** (state down, events up) is the default. The specific framework — MVI library, Molecule, plain Compose state — is chosen per component as it appears, not declared globally up front.
-
-## Compose Multiplatform UI: common-first, cross-platform reuse
-
-UI implemented in `commonMain` with Compose Multiplatform ships to **every active KMP target with a Compose entry point** in a single implementation — Android and iOS today, Desktop when its entry point wires `App()` (currently CLI-only). This is the strongest free leverage in the project, and it changes how we plan UI work.
-
-**Operational rules:**
-
-- **Common-first.** A new UI feature defaults to `commonMain`. Per-platform composables are the exception and require justification rooted in real API constraints (e.g. platform-only sensor preview, system share sheet), not preference.
-- **Don't create per-platform issues for common UI.** A single issue covers the feature across all shipping platforms; rows in `docs/product/features/README.md` reflect this, not separate "Android version" / "iOS version" tickets.
-- **`size:*` reflects per-feature, not per-platform effort.** A common UI feature is one M, not three S.
-- **Multi-platform reuse requires multi-platform manual smoke.** Compose Multiplatform ships the code, but visual correctness on each target is not guaranteed by compilation. When `commonMain` UI lands, the implementer runs the relevant UI smoke on **every shipping platform** before requesting review (`/work-on-issue` Step 7). Skipping platforms means shipping unverified UI to them.
-
-**Confirmed in practice:** #7 (device list screen) — written targeting Android, worked on iOS without modification. The cost of writing it once is the only cost.
-
-When a single-platform UI implementation is genuinely required (real platform-only API surface), put the platform-specific composable in `androidMain` / `iosMain` / etc. and call it from a `commonMain` `expect`/`actual` pair if cross-platform call sites need it. Don't reach for per-platform UI as a default just because the rest of the file lives in a platform set.
 
 ## Open questions
 

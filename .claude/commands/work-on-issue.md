@@ -38,20 +38,11 @@
 
 4. **составь план реализации и стратегию валидации.** Явно отметь, если что-то в технических деталях issue вызывает сомнение или конфликтует с подгруженными гайдами — не переделывай молча, а покажи альтернативу.
 
-   **Проверка статуса зависимостей.** Если план предполагает добавление новой библиотеки или мажорный апгрейд существующей — до начала кодинга проверь её статус:
-
-   - последний релиз (когда — недели/месяцы/годы назад);
-   - deprecation notices от AndroidX / Apple / Kotlin / других ecosystem-owner'ов;
-   - предупреждения в release notes или в `@Deprecated` аннотациях самой библиотеки;
-   - альтернативы и миграционный путь, если библиотека deprecated.
-
-   Это легко пропустить — особенно с экосистемными пакетами, у которых deprecation идёт быстрее, чем обновляются обучающие материалы. Пропустишь — окажешься писать 200 строк против устаревшей API и переделывать.
-
-   Verdict записывается в **тело PR отдельным разделом** `## Dependency check` — появляется только когда зависимости меняются. Пример:
+   Если план добавляет новую библиотеку или мажорный апгрейд — до кодинга проверь её статус (последний релиз, deprecation от AndroidX/Apple/Kotlin, альтернативы). Verdict в тело PR разделом `## Dependency check`:
    ```
    ## Dependency check
-   - androidx.security:security-crypto:1.1.0 — DEPRECATED by AndroidX (2024), Google рекомендует DataStore + custom crypto. Беру альтернативу X.
-   - com.arkivanov.decompose:decompose:3.2.2 — current, активный maintainer (last release < 30 days).
+   - foo:1.2.3 — DEPRECATED, беру альтернативу X
+   - bar:4.5.6 — current
    ```
 
 5. дождись ОК от пользователя, потом реализуй по гайду в `CLAUDE.md`.
@@ -63,35 +54,14 @@
 
    Цель — поймать тихое расхождение между планом и кодом до того, как его поймает ревьюер. Если расхождение есть и не обосновано — почини до запроса review. Чек на уровне плана не заменяет этот: план и реализация легко расходятся по дороге.
 
-7. **runtime self-check (smoke).** Static-чек кода против гайдов не ловит рантайм-баги (theme-крэши на старте, неработающую инициализацию, разломанный send-roundtrip). До запроса ревью **исполнитель сам прогоняет релевантные блоки `/smoke-test`** — это не задача ревьюера, ревьюер только проверяет наличие verdict'а в теле PR.
+7. **runtime self-check (smoke).** До запроса ревью прогоняй релевантные блоки `/smoke-test` — задача исполнителя, не ревьюера. Ревьюер только проверяет наличие verdict'а в теле PR.
 
-   Классифицируй diff по категориям из `.claude/skills/smoke-test/SKILL.md`:
+   **a. Сначала — расширь smoke, если нужно.** PR ввёл новую критическую функциональность, которой нет в `/smoke-test`? Критическая = точка отказа на старте, happy-path фичи, cross-platform reusable UI, новый внешний интерфейс. Если да — допиши блок в `.claude/skills/smoke-test/SKILL.md` в этом же PR; крупное расширение — issue типа INFRA. **Не раздувай:** косметика и edge cases — в unit-тесты, не в smoke.
 
-   - меняются entry points (`MainActivity`, `MainViewController`, `Main.kt`) → Android-блок + iOS sanity-компиляция + Desktop CLI;
-   - меняется FGS / manifest / Apple Info.plist → Android-блок;
-   - меняется FileServer / CLI / mDNS → Desktop CLI + Desktop↔Desktop send;
-   - меняются native source sets (`appleMain/`, `iosMain/`, `macosMain/`) → native compile-блок;
-   - меняется common UI (`commonMain` Compose-код, и фича заехала на N платформ автоматом) → **ручной smoke на КАЖДОЙ из N shipping-платформ**, не только на той, где разрабатывал. Это специфика KMP UI — реализация уезжает по платформам без перекомпиляции каждой, но проверять надо все.
-   - DOCS-only / `.claude/`-only / комментарии — обычно ничего гонять не надо.
-
-   Прогоняй релевантные блоки, записывай verdict в **тело PR отдельным разделом** `## Smoke verdict`. Пример:
+   **b. Затем прогоняй и записывай verdict.** Категории из `smoke-test/SKILL.md`: entry points → Android + iOS compile + Desktop CLI; FGS/manifest/Info.plist → Android; FileServer/CLI/mDNS → Desktop send; native source sets → native compile; `commonMain` UI → ручной smoke на **каждой** shipping-платформе (KMP-специфика: код едет на все таргеты, проверять надо все). Verdict в тело PR:
    ```
    ## Smoke verdict
-   - Block 1 (Desktop CLI): 🟢
-   - Block 3 (Android FGS, manual rotation + Stop button): 🟢
-   - Block 4 (native compile macosArm64 + iosSimulatorArm64): 🟢
-   - Manual iOS UI (KMP UI reuse): 🟢 — opened simulator, list rendered, EmptyState shown
-   - Skipped: blocks 2 (no FileServer/CLI changes), block 5 (no manual-only path changed)
+   - Block 3 (Android FGS): 🟢
+   - Manual iOS UI (KMP reuse): 🟢
    ```
-   Если что-то 🟡/🔴 — **не отправляй в ревью** до резолва.
-
-8. **расширение smoke под новую критическую функциональность.** Сразу после smoke self-check'а, пока контекст реализации свежий, ответь себе: **реализована ли в этом PR новая критическая функциональность, которую следует включить в `/smoke-test`?** Критерий «критическая» — это:
-
-   - точка отказа на старте (entry point, init order, theme, manifest);
-   - happy-path фичи, без которой остальное теряет смысл (send roundtrip, FGS живёт, mDNS публикует/находит);
-   - cross-platform reusable UI, у которого ломка на одной платформе незаметна без её прогона;
-   - новый внешний интерфейс (CLI команда, новый HTTP endpoint), который другие компоненты будут использовать.
-
-   Если да — расширь `.claude/skills/smoke-test/SKILL.md` соответствующим блоком (или дополни существующий), в этом же PR. Если расширение крупное — отдельным issue типа INFRA с пометкой «следствие #<этой задачи>».
-
-   **Не раздувай smoke ради полноты.** Smoke — это «за 1-3 минуты увидеть, что ничего фундаментально не сломано», не полная регресс-сюита. Если новая функциональность некритическая (UI косметика, дополнительный edge case, optional path) — её место в unit/integration тестах, не в smoke. Каждый добавленный блок smoke удорожает каждый будущий close-issue.
+   🟡/🔴 — не отправляй в ревью до резолва.
