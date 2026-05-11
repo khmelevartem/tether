@@ -56,7 +56,7 @@
 
 7. **runtime self-check (smoke).** До запроса ревью прогоняй релевантные блоки `/smoke-test` — задача исполнителя, не ревьюера. Ревьюер только проверяет наличие verdict'а в теле PR.
 
-   **a. Сначала — расширь smoke, если нужно.** PR ввёл новую критическую функциональность, которой нет в `/smoke-test`? Критическая = точка отказа на старте, happy-path фичи, cross-platform reusable UI, новый внешний интерфейс. Если да — допиши блок в `.claude/skills/smoke-test/SKILL.md` в этом же PR; крупное расширение — issue типа INFRA. **Не раздувай:** косметика и edge cases — в unit-тесты, не в smoke.
+   **a. Сначала — расширь smoke, если нужно.** PR ввёл новую критическую функциональность, которой нет в `/smoke-test`? Критическая = точка отказа на старте, happy-path фичи, cross-platform reusable UI, новый внешний интерфейс. Если да — допиши блок в `.claude/skills/smoke-test/SKILL.md` в этом же PR. **Не раздувай:** помни, что смоук прогоняется часто, а тесты в нем дорогие по времени.
 
    **b. Затем прогоняй и записывай verdict.** Категории из `smoke-test/SKILL.md`: entry points → Android + iOS compile + Desktop CLI; FGS/manifest/Info.plist → Android; FileServer/CLI/mDNS → Desktop send; native source sets → native compile; `commonMain` UI → ручной smoke на **каждой** shipping-платформе (KMP-специфика: код едет на все таргеты, проверять надо все). Verdict в тело PR:
    ```
