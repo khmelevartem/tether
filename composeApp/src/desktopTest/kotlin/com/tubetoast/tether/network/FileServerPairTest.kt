@@ -19,7 +19,6 @@ import kotlinx.coroutines.runBlocking
 import java.io.File
 import java.nio.file.Files
 import kotlin.test.AfterTest
-import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -27,32 +26,33 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class FileServerPairTest {
-    private lateinit var configDir: File
-    private lateinit var store: TrustedDeviceStore
-    private lateinit var keyPair: DeviceKeyPair
-    private lateinit var server: FileServer
-    private lateinit var client: HttpClient
-    private var port: Int = 0
-
-    @BeforeTest
-    fun setup() {
-        configDir = Files.createTempDirectory("tether-pair-test").toFile()
-        store = TrustedDeviceStore(configDir)
-        keyPair = DeviceKeyPair(configDir)
-        server = FileServer(port = 0, trustedDeviceStore = store, deviceKeyPair = keyPair)
-        port = server.start()
-        client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
-    }
+    private val cleanupPaths = mutableListOf<File>()
+    private var startedServer: FileServer? = null
+    private val client: HttpClient = HttpClient(CIO) { install(ContentNegotiation) { json() } }
 
     @AfterTest
     fun teardown() {
         client.close()
-        server.stop()
-        configDir.deleteRecursively()
+        startedServer?.stop()
+        startedServer = null
+        cleanupPaths.forEach { it.deleteRecursively() }
+        cleanupPaths.clear()
+    }
+
+    private fun newConfigDir(): File =
+        Files.createTempDirectory("tether-pair-test").toFile().also(cleanupPaths::add)
+
+    private fun startServer(store: TrustedDeviceStore, keyPair: DeviceKeyPair): Pair<FileServer, Int> {
+        val server = FileServer(port = 0, trustedDeviceStore = store, deviceKeyPair = keyPair)
+        startedServer = server
+        return server to server.start()
     }
 
     @Test
     fun `pair endpoint returns 200 with server public key`() {
+        val configDir = newConfigDir()
+        val keyPair = DeviceKeyPair(configDir)
+        val (_, port) = startServer(TrustedDeviceStore(configDir), keyPair)
         runBlocking {
             val response = client.post("http://localhost:$port/pair") {
                 contentType(ContentType.Application.Json)
@@ -70,6 +70,8 @@ class FileServerPairTest {
 
     @Test
     fun `pair saves initiator public key under publicKey-derived deviceId`() {
+        val configDir = newConfigDir()
+        val (_, port) = startServer(TrustedDeviceStore(configDir), DeviceKeyPair(configDir))
         val peerKey = byteArrayOf(10, 20, 30)
         val expectedDeviceId = deviceIdFromPublicKey(peerKey)
         runBlocking {
@@ -91,6 +93,9 @@ class FileServerPairTest {
 
     @Test
     fun `name collision with different keys produces distinct trust entries`() {
+        val configDir = newConfigDir()
+        val store = TrustedDeviceStore(configDir)
+        val (_, port) = startServer(store, DeviceKeyPair(configDir))
         val keyAlice = byteArrayOf(1, 1, 1)
         val keyMallory = byteArrayOf(2, 2, 2)
         runBlocking {
@@ -116,12 +121,30 @@ class FileServerPairTest {
 
     @Test
     fun `pair with invalid body returns 400`() {
+        val configDir = newConfigDir()
+        val (_, port) = startServer(TrustedDeviceStore(configDir), DeviceKeyPair(configDir))
         runBlocking {
             val response = client.post("http://localhost:$port/pair") {
                 contentType(ContentType.Application.Json)
                 setBody("not valid json at all")
             }
             assertEquals(HttpStatusCode.BadRequest, response.status)
+        }
+    }
+
+    @Test
+    fun `pair returns 500 when store fails to persist`() {
+        // Regular file in place of configDir → store's writeText throws, same path as a real disk failure.
+        val notADirectory = Files.createTempFile("tether-pair-fail", ".not-a-dir").toFile()
+        cleanupPaths.add(notADirectory)
+        val keyPairDir = newConfigDir()
+        val (_, port) = startServer(TrustedDeviceStore(notADirectory), DeviceKeyPair(keyPairDir))
+        runBlocking {
+            val response = client.post("http://localhost:$port/pair") {
+                contentType(ContentType.Application.Json)
+                setBody(PairRequest(publicKey = byteArrayOf(7, 7, 7), deviceName = "Whatever"))
+            }
+            assertEquals(HttpStatusCode.InternalServerError, response.status)
         }
     }
 }

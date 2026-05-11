@@ -32,19 +32,19 @@ actual class DeviceKeyPair(
     actual val publicKey: ByteArray
 
     init {
-        val dir = configDir ?: defaultConfigDir()
-        ensureDir(dir)
-        val publicPath = "$dir/$FILE_PUBLIC"
+        val directory = configDir ?: defaultConfigDir()
+        ensureDirectory(directory)
+        val publicPath = "$directory/$FILE_PUBLIC"
         publicKey = loadOrGenerate(publicPath)
     }
 
     private fun loadOrGenerate(publicPath: String): ByteArray {
-        val fm = NSFileManager.defaultManager
-        if (fm.fileExistsAtPath(publicPath)) {
+        val fileManager = NSFileManager.defaultManager
+        if (fileManager.fileExistsAtPath(publicPath)) {
             val existing = readFile(publicPath)
             if (existing != null && existing.size == PUBLIC_KEY_BYTES) return existing
             NSLog("WARN: device key corrupted (size=%lu), regenerating", (existing?.size ?: 0).toULong())
-            fm.removeItemAtPath(publicPath, error = null)
+            fileManager.removeItemAtPath(publicPath, error = null)
         }
         val fresh = randomBytes(PUBLIC_KEY_BYTES)
         if (!writeFile(publicPath, fresh)) {
@@ -53,11 +53,11 @@ actual class DeviceKeyPair(
         return fresh
     }
 
-    private fun ensureDir(dir: String) {
-        val fm = NSFileManager.defaultManager
-        if (!fm.fileExistsAtPath(dir)) {
-            fm.createDirectoryAtPath(
-                path = dir,
+    private fun ensureDirectory(directory: String) {
+        val fileManager = NSFileManager.defaultManager
+        if (!fileManager.fileExistsAtPath(directory)) {
+            fileManager.createDirectoryAtPath(
+                path = directory,
                 withIntermediateDirectories = true,
                 attributes = null,
                 error = null,
@@ -75,20 +75,20 @@ actual class DeviceKeyPair(
 }
 
 private fun randomBytes(size: Int): ByteArray = memScoped {
-    val buf = allocArray<kotlinx.cinterop.UByteVar>(size)
-    val rc = SecRandomCopyBytes(kSecRandomDefault, size.toULong(), buf)
-    if (rc != 0) error("DeviceKeyPair: SecRandomCopyBytes failed rc=$rc")
-    buf.readBytes(size)
+    val buffer = allocArray<kotlinx.cinterop.UByteVar>(size)
+    val status = SecRandomCopyBytes(kSecRandomDefault, size.toULong(), buffer)
+    if (status != 0) error("DeviceKeyPair: SecRandomCopyBytes failed status=$status")
+    buffer.readBytes(size)
 }
 
 private fun defaultConfigDir(): String {
-    val docs = NSSearchPathForDirectoriesInDomains(
+    val documentsDir = NSSearchPathForDirectoriesInDomains(
         NSDocumentDirectory,
         NSUserDomainMask,
         true,
     ).firstOrNull() as? String
         ?: error("DeviceKeyPair: NSDocumentDirectory unavailable")
-    return "$docs/Tether/security"
+    return "$documentsDir/Tether/security"
 }
 
 private fun ByteArray.toNSData(): NSData? {
@@ -99,11 +99,11 @@ private fun ByteArray.toNSData(): NSData? {
 }
 
 private fun NSData.toByteArray(): ByteArray {
-    val len = length.toInt()
-    val out = ByteArray(len)
-    if (len == 0) return out
-    out.usePinned { pinned ->
+    val byteCount = length.toInt()
+    val result = ByteArray(byteCount)
+    if (byteCount == 0) return result
+    result.usePinned { pinned ->
         memcpy(pinned.addressOf(0), bytes, length)
     }
-    return out
+    return result
 }

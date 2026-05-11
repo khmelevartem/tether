@@ -23,9 +23,9 @@ actual fun deviceIdFromPublicKey(publicKey: ByteArray): String = memScoped {
     }
     digest.readBytes(CC_SHA256_DIGEST_LENGTH).joinToString("") { byte ->
         val unsigned = byte.toInt() and 0xff
-        val hi = unsigned ushr 4
-        val lo = unsigned and 0xf
-        "${HEX[hi]}${HEX[lo]}"
+        val highNibble = unsigned ushr 4
+        val lowNibble = unsigned and 0xf
+        "${HEX[highNibble]}${HEX[lowNibble]}"
     }
 }
 
