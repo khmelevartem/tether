@@ -1,8 +1,8 @@
 # Device list screen
 
 **Area:** UI
-**Status:** `scoped`
-**GitHub Issues:** [#7](https://github.com/khmelevartem/tether/issues/7) (Android); iOS, Desktop — _tbd_
+**Status:** `in progress`
+**GitHub Issues:** [#7](https://github.com/khmelevartem/tether/issues/7) (Android, done); iOS, Desktop — _tbd_
 
 ---
 

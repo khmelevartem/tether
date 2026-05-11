@@ -2,7 +2,7 @@
 
 The presentation layer in Tether is built on [Decompose](https://github.com/arkivanov/Decompose). This document describes how it's structured and how to add to it. For the *why* — variants considered and trade-offs — see [adr/adr-presentation-and-navigation.md](adr/adr-presentation-and-navigation.md).
 
-> **Status.** The skeleton (root Component + first screen + `decompose` dependency) lands in the task that follows the ADR. The conventions below are what the skeleton installs and what every screen written after it should follow.
+> **Status.** Skeleton landed in #7 (`DeviceListComponent` + `DeviceListScreen`, Android wiring). Conventions below are what the skeleton installs and what every screen written after it should follow.
 
 ## How it works
 
@@ -24,7 +24,7 @@ Compose talks down to the Component. The Component talks down to `AppContainer` 
 ```kotlin
 class DeviceListComponent(
     componentContext: ComponentContext,
-    private val discovery: MdnsDiscovery,
+    private val discovery: DeviceDiscovery,
     coroutineScope: CoroutineScope = componentContext.coroutineScope(),
 ) : ComponentContext by componentContext {
 
@@ -33,8 +33,8 @@ class DeviceListComponent(
 
     init {
         coroutineScope.launch {
-            discovery.devices.collect { devices ->
-                _state.update { it.copy(devices = devices) }
+            discovery.discoveredDevices.collect { devices ->
+                _state.update { DeviceListState(devices) }
             }
         }
     }
@@ -42,6 +42,8 @@ class DeviceListComponent(
     fun onDeviceClicked(id: DeviceId) { /* ... */ }
 }
 ```
+
+Components depend on **interfaces from `commonMain`** (e.g. `DeviceDiscovery`), not on platform actuals (`MdnsDiscovery`). The actual class implements the interface; the Component never sees the platform type. This keeps presentation tests in `commonTest` and allows fakes without `expect`/`actual` plumbing.
 
 Conventions:
 
@@ -94,7 +96,21 @@ See [Decompose: Navigation overview](https://arkivanov.github.io/Decompose/navig
 
 ## Configuration change (Android)
 
-Decompose hooks into `AppCompatActivity` via `defaultComponentContext(...)`. When the activity is recreated on rotation, the root Component is rebuilt, but `StateKeeper` restores serializable view state and the underlying `AppContainer` repositories are untouched. No work needed in individual Components beyond putting any session-local view state through `stateKeeper.consume(...)` / `register(...)`.
+The root Component is created via Decompose's `retainedComponent { ... }` extension on `ComponentActivity` — **not** `AppCompatActivity` (we don't take that dependency; nothing in the app needs Material-AppCompat themes). `retainedComponent` stores the Component in the Activity's `ViewModelStore`, so it survives rotation without being rebuilt. The underlying `AppContainer` repositories are untouched.
+
+```kotlin
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        val component = retainedComponent { componentContext ->
+            DeviceListComponent(componentContext = componentContext, discovery = container.mdnsDiscovery)
+        }
+        setContent { App(component) }
+    }
+}
+```
+
+Session-local view state that is *not* in a repository (transient UI flags, scroll position) can go through `stateKeeper.consume(...)` / `register(...)`, but the default for domain state is: don't duplicate it inside the Component — observe the `AppContainer` repository.
 
 Process-death state restoration is **not currently a goal** — Tether's flows are short-lived enough that a killed process means a fresh start. Revisit if persistence requirements emerge.
 
@@ -106,15 +122,15 @@ Components are testable as plain Kotlin — no Compose runtime, no Robolectric:
 class DeviceListComponentTest {
 
     @Test fun emits_devices_from_discovery() = runTest {
-        val discovery = FakeDiscovery()
-        val context = DefaultComponentContext(LifecycleRegistry())
+        val flow = MutableStateFlow<List<Device>>(emptyList())
+        val lifecycle = LifecycleRegistry().apply { resume() }
         val component = DeviceListComponent(
-            componentContext = context,
-            discovery = discovery,
+            componentContext = DefaultComponentContext(lifecycle),
+            discovery = FakeDeviceDiscovery(flow),
             coroutineScope = backgroundScope,
         )
 
-        discovery.emit(listOf(deviceA, deviceB))
+        flow.value = listOf(deviceA, deviceB)
         runCurrent()
 
         assertEquals(listOf(deviceA, deviceB), component.state.value.devices)
@@ -126,7 +142,7 @@ Patterns:
 
 - Construct with `DefaultComponentContext(LifecycleRegistry())` — the registry becomes the test's lifecycle handle. Drive lifecycle transitions with `lifecycle.resume()` / `destroy()` when the test depends on them.
 - Inject the test's `backgroundScope` (or a `TestScope`) as `coroutineScope` so coroutines run under the test dispatcher.
-- Use **fakes**, not mocks of `HttpClient` / `MdnsDiscovery` (see [dependency-injection.md](dependency-injection.md)).
+- Use **fakes**, not mocks of `HttpClient` / `MdnsDiscovery` (see [dependency-injection.md](dependency-injection.md)). Fakes live in `commonTest/.../<area>/Fake<Interface>.kt` next to the interface they implement — discoverable for the next test that needs the same fake without inlining or DRY-violation.
 - Assert against `component.state.value` snapshots, or capture emissions via `Value.subscribe { ... }` for sequences.
 - Common-test placement: presentation tests live in `commonTest` because the Component itself is `commonMain`.
 
