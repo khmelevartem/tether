@@ -28,7 +28,12 @@ try {
     { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] }
   ).trim();
   if (!title) process.exit(0);
-  console.log(JSON.stringify({ sessionTitle: `#${issueNum} ${type}: ${title}` }));
+  console.log(JSON.stringify({
+    hookSpecificOutput: {
+      hookEventName: 'UserPromptSubmit',
+      sessionTitle: `#${issueNum} ${type}: ${title}`,
+    },
+  }));
 } catch (_) {
   process.exit(0);
 }
