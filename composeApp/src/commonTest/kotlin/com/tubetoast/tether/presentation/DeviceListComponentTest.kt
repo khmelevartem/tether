@@ -3,11 +3,10 @@ package com.tubetoast.tether.presentation
 import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.resume
-import com.tubetoast.tether.discovery.DeviceDiscovery
+import com.tubetoast.tether.discovery.FakeDeviceDiscovery
 import com.tubetoast.tether.protocol.Device
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -61,14 +60,4 @@ class DeviceListComponentTest {
             coroutineScope = coroutineScope,
         )
     }
-}
-
-private class FakeDeviceDiscovery(
-    private val flow: StateFlow<List<Device>>,
-) : DeviceDiscovery {
-    override val discoveredDevices: StateFlow<List<Device>> = flow
-
-    override fun start(deviceName: String, port: Int) = Unit
-
-    override fun stop() = Unit
 }

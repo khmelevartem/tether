@@ -44,7 +44,6 @@ class MainActivity : ComponentActivity() {
         startService()
 
         val container = (application as AppContainerProvider).container
-        // retainedComponent: survives configuration changes (rotation) via the Activity's ViewModelStore.
         val component = retainedComponent { componentContext ->
             DeviceListComponent(
                 componentContext = componentContext,
