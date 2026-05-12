@@ -24,6 +24,12 @@
 
 NSRunLoop нужно качать вручную — подробнее в [`docs/knowledge/apple-platform.md`](../knowledge/apple-platform.md).
 
+## Test seams для `expect` классов
+
+Если actual-имплементация в принципе не может failить в тесте без мока платформенного API (`NSUserDefaults.synchronize()` всегда true в Robolectric/sim, DataStore не валится по запросу) — объявляй `expect open class` с `open fun` для методов, которые нужно подменять. Тест объявляет анонимный `object : TrustedDeviceStore(...)` с `override fun saveTrustedKey(...) = throw ...` и подкладывает в production-код через тот же DI-вход, что и реальный store. Это сохраняет DI-граф (тот же тип течёт в `FileServer`) и не плодит интерфейс-обёртку ради одной точки подмены.
+
+Не делай это превентивно — только когда контракт «при ошибке actual должен бросить» нужно проверить end-to-end (HTTP-уровень в нашем случае), а триггер ошибки на платформе недостижим. Пример — `TrustedDeviceStore` в #9: HTTP `/pair → 500` тестируется на каждом actual через throwing-subclass.
+
 ## Запуск
 
 ```bash
