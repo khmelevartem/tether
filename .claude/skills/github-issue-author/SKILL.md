@@ -136,7 +136,7 @@ Feature-спек имеет приоритет над тем, что польз�
 GitHub поддерживает:
 
 1. **Sub-issues / parent** — нативный механизм через GraphQL (`addSubIssue` / `removeSubIssue`), виден в UI как иерархия.
-2. **Blocked by / blocks** — нативные issue dependencies (запущены GitHub в 2024), GraphQL-мутации `addIssueDependency` / `removeIssueDependency`. В UI показываются в правом сайдбаре issue.
+2. **Blocked by / blocks (Relationships в UI)** — нативные issue dependencies. Экспонируются через **REST**, а не GraphQL: `POST /repos/{owner}/{repo}/issues/{issue_number}/dependencies/blocked_by` с телом `{"issue_id": <database_id>}`. В UI показываются в сайдбаре issue как "Relationships". GraphQL-мутации `addIssueDependency` **не существует** — не пытайся её вызывать.
 3. **Related** — нативного поля нет; используем упоминание `#123` в теле, либо общий parent/epic, либо тег labels.
 
 **Текстовый блок `**Связи:**` в теле issue не используем** — он дублирует то, что уже есть в нативных полях, и расходится с ним при правках. Исключение — fallback, если конкретная мутация недоступна в репозитории (см. ниже).
@@ -172,21 +172,23 @@ gh api graphql -f query='
 
 Если `addSubIssue` возвращает ошибку про неизвестное поле — у репозитория не включена фича sub-issues. Сообщи об этом пользователю и предложи fallback через упоминания в теле parent.
 
-### Blocked by / blocks (issue dependencies)
+### Blocked by / blocks (Relationships)
+
+В UI GitHub это поле называется **Relationships**, в REST API — **issue dependencies**. Используется **REST**, не GraphQL.
 
 ```bash
-# node_id обоих issue получаются тем же запросом, что для sub-issue (см. выше)
+# Получи database id (целое число, поле `id` в REST-ответе, НЕ node_id) блокирующего issue
+BLOCKER_DB_ID=$(gh api repos/OWNER/REPO/issues/BLOCKER_NUMBER --jq .id)
 
 # A блокирует B  ⇄  B blocked by A
-gh api graphql -f query='
-  mutation($issueId: ID!, $blockedById: ID!) {
-    addIssueDependency(input: { issueId: $issueId, blockedById: $blockedById }) {
-      issue { number }
-    }
-  }' -F issueId="$BLOCKED_ID" -F blockedById="$BLOCKER_ID"
+# Вызываем на blocked issue (B), передаём database id блокирующего (A)
+gh api repos/OWNER/REPO/issues/BLOCKED_NUMBER/dependencies/blocked_by \
+  -X POST -F issue_id=$BLOCKER_DB_ID
 ```
 
-`addIssueDependency` — относительно свежая мутация (2024). Если возвращает ошибку про неизвестное поле/мутацию — фича в репозитории не включена. В этом случае fallback: добавить в тело blocked issue одну строку `Blocked by #N` и попросить пользователя поднять вопрос про включение dependencies в репозитории.
+Проверить текущие связи: `gh api repos/OWNER/REPO/issues/N/dependencies/blocked_by` (возвращает массив issue, блокирующих N).
+
+Если endpoint возвращает 404 на `POST` — фича Relationships в репозитории не включена. Fallback: добавить в тело blocked issue одну строку `Blocked by #N` и попросить пользователя включить Relationships в settings репозитория.
 
 ### Related
 
