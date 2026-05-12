@@ -33,9 +33,9 @@ if (expected != null && bytesCopied < expected) {
 }
 ```
 
-If Content-Length is *not* set (the client used chunked transfer encoding without declaring a size), there is no reliable way to detect truncation from the body channel alone — make the client send Content-Length whenever the body size is known.
+If Content-Length is *not* set (the client used chunked transfer encoding without declaring a size), there is no reliable way to detect truncation from the body channel alone — make the client send Content-Length whenever the body size is known. Our `FileClient` does this via `OutgoingContent.ReadChannelContent.contentLength` when `totalBytes` is provided (#93); plain `setBody(channel)` would silently fall back to chunked encoding.
 
-**Reference:** [`FileServerRoutes.kt`](../../composeApp/src/commonMain/kotlin/com/tubetoast/tether/network/FileServerRoutes.kt) — `installFileServerRoutes`.
+**Reference:** [`FileServerRoutes.kt`](../../composeApp/src/commonMain/kotlin/com/tubetoast/tether/network/FileServerRoutes.kt) — `installFileServerRoutes`; [`FileClient.kt`](../../composeApp/src/commonMain/kotlin/com/tubetoast/tether/network/FileClient.kt) — `asOctetStreamContent`.
 
 ---
 

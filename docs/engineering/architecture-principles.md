@@ -28,6 +28,16 @@ Clean Architecture and adjacent patterns are full of ceremony that doesn't pay r
 - **Triple-layer DTO ↔ domain ↔ presentation mapping when there's no real divergence yet.** This one is nuanced: as the project matures, layers *do* legitimately need different shapes (DTO has serialization quirks, domain has invariants, presentation has display fields). The rule is not "never map" — it's "don't force three types up front." Start with one. Split when the second shape *actually* diverges (e.g. a UI list state with `selected`, `lastSeen`, `signal` is genuinely not the same as a network `Device`). Don't fight that growth in the name of brevity, and don't pre-empt it in the name of layering.
 - **Interfaces for things with one implementation.** An interface earns its place when there are at least two implementations, or it's a seam for testing. Otherwise the concrete class is the contract.
 
+## Common-first across KMP targets
+
+Всё, что может жить в `commonMain` — там и лежит; платформенные source sets только для кода, требующего platform API. Это применимо ко всему — domain, network, presentation, UI. Реализация в `commonMain` поставляется на все активные таргеты одной кодовой базой.
+
+- Компиляция ≠ корректность: код едет на все таргеты, но визуальная/runtime-корректность на каждом не гарантирована билдом. **Ручной smoke обязателен на каждой платформе** перед запросом ревью (`/implement` Step 7 / `/work-on-issue` Step 7).
+
+**UI specifically** — самый видимый multiplier: Compose Multiplatform в `commonMain` едет на Android, iOS и Desktop (когда entry point вызывает `App()`) одной имплементацией.
+
+Per-platform composables / `actual`-имплементации — исключение и требуют обоснования реальным API-ограничением (system share sheet, hardware sensor), не предпочтением.
+
 ## Named classes over anonymous objects
 
 When you need to implement an interface — even with a trivial body that's just data (e.g. a config interface filled with constants) — **prefer a named class in its own file** over `object : Interface { ... }` inline.

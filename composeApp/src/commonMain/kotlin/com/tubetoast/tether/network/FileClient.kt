@@ -11,7 +11,7 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
-import io.ktor.http.contentType
+import io.ktor.http.content.OutgoingContent
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.utils.io.ByteChannel
 import io.ktor.utils.io.ByteReadChannel
@@ -38,7 +38,7 @@ class FileClient : Closeable {
         totalBytes: Long? = null,
         onProgress: ((bytesTransferred: Long, totalBytes: Long?) -> Unit)? = null,
     ): SendResult = if (onProgress == null) {
-        doSend(device, channel, fileName)
+        doSend(device, channel, fileName, totalBytes)
     } else {
         // Launch the copy into a pipe concurrently with the Ktor upload so that
         // Ktor reads from the pipe while we are filling it. coroutineScope waits
@@ -46,7 +46,7 @@ class FileClient : Closeable {
         coroutineScope {
             val pipe = ByteChannel(autoFlush = true)
             launch { copyWithProgress(channel, pipe, totalBytes, onProgress) }
-            doSend(device, pipe, fileName)
+            doSend(device, pipe, fileName, totalBytes)
         }
     }
 
@@ -58,11 +58,11 @@ class FileClient : Closeable {
         device: Device,
         channel: ByteReadChannel,
         fileName: String,
+        totalBytes: Long?,
     ): SendResult = try {
         val response = client.post("http://${device.host}:${device.port}/upload") {
             parameter("name", fileName)
-            contentType(ContentType.Application.OctetStream)
-            setBody(channel)
+            setBody(channel.asOctetStreamContent(totalBytes))
         }
         if (response.status == HttpStatusCode.OK) {
             val body = response.body<Map<String, String>>()
@@ -75,6 +75,14 @@ class FileClient : Closeable {
         SendResult.Failure(e.message ?: "unknown error")
     }
 }
+
+private fun ByteReadChannel.asOctetStreamContent(totalBytes: Long?): OutgoingContent =
+    object : OutgoingContent.ReadChannelContent() {
+        override val contentType: ContentType = ContentType.Application.OctetStream
+        override val contentLength: Long? = totalBytes
+
+        override fun readFrom(): ByteReadChannel = this@asOctetStreamContent
+    }
 
 private const val COPY_BUFFER_SIZE = 8 * 1024
 
