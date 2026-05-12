@@ -48,7 +48,13 @@ All git naming in English. **Все commit messages обязаны начина�
 
 ## Slash commands и скиллы
 
-В `.claude/commands/` лежат рабочие команды (`/work-on-issue`, `/close-issue`, `/code-review`, `/check-review`, `/grooming`, `/retro`, `/quick-issue`).
+**Скиллы** (`.claude/skills/`) — основной путь, multi-agent оркестрация:
+- `/implement <N>` — end-to-end оркестратор задачи. Планирует, гоняет coder↔reviewers цикл, smoke, доводит до PR. Пользователь только в гейтах G1-G5 (см. SKILL.md).
+- `/code-review <PR>` — параллельный multi-agent review с постингом в GitHub.
+
+**Команды** (`.claude/commands/`):
+- `/close-issue`, `/check-review`, `/grooming`, `/retro`, `/quick-issue` — рабочий процесс вокруг issue/PR.
+- `/work-on-issue` — **manual fallback** для `/implement`. Используется когда хочешь пройти процесс руками: отладка оркестратора, нестандартная семантика, эксперимент.
 
 `/smoke-test` — runtime happy-path по платформам (Desktop CLI, Desktop↔Desktop send, Android если adb подключён, native compile macosArm64/iosSimulatorArm64). Прогоняй когда сомневаешься в рантайме после нетривиальных правок в сетевой части / FileServer / mDNS / FGS, перед merge runtime-changing PR, и в `/close-issue`. Skip для DOCS-only / `.claude/`-only / comment-only изменений. Smoke не заменяет `allTests`.
 

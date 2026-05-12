@@ -17,14 +17,14 @@ Issue number `<N>`.
 
 You MUST stop and ask the user in these cases (and only these):
 - **G1. Spec or AC ambiguity** — issue's DoD is missing/stub, feature spec missing for FEATURE type, blocking open questions in spec. **Mitigation:** dispatch `spec-writer` first; only stop at user if `spec-writer` has clarifying questions or the issue is non-FEATURE without DoD.
-- **G2. BUGFIX root cause** — root cause must be confirmed before any fix. **Mitigation:** dispatch `bug-reproducer`; only stop at user if it reports CANNOT REPRODUCE or none of the listed hypotheses match.
+- **G2. BUGFIX root cause** — root cause must be confirmed before any fix. **Mitigation:** dispatch `bug-reproducer`; only stop at user if it reports CANNOT REPRODUCE or none of the listed hypotheses match. Publication of confirmed cause to the issue is the orchestrator's decision, not the agent's.
 - **G3. Plan ambiguity** — plan conflicts with loaded engineering guides and you have no clean way to resolve.
 - **G4. Smoke red/yellow** — smoke verdict is not 🟢 after the inner loop.
-- **G5. Final approval** — after the inner loop converges to APPROVE and smoke is green, present the result for the user's manual verification before merge.
+- **G5. Final approval before push** — after the inner loop converges to APPROVE and smoke is green, present the committed-but-not-pushed diff to the user for approval. Push + PR creation happen only after the user OKs.
 
 Everything else — implementation details, reviewer findings, fix iterations — you handle internally without the user.
 
-## Step 1 — Read issue + load guides
+## Step 1 — Read issue + worktree setup
 
 ```bash
 gh issue view <N> --json title,body,labels,comments
@@ -32,9 +32,22 @@ gh issue view <N> --json title,body,labels,comments
 
 Classify PR type. For FEATURE, look up `docs/product/features/README.md` for spec.
 
-**G1 handling.** If FEATURE and (no spec, or spec is `(stub)`, or spec has blocking open questions) → dispatch `spec-writer` agent. It will draft questions for the user or produce a scoped spec. Only escalate to user with `spec-writer`'s question list — don't escalate before dispatching it.
+**Worktree setup — do this BEFORE dispatching any agent that edits files.** If you are not already in `.claude/worktrees/<branch>/`:
 
-**G2 handling.** If BUGFIX → dispatch `bug-reproducer` agent before any planning. It reproduces locally, verifies each hypothesis, and posts the confirmed root cause as a comment on the issue. Only escalate to user if it returns CANNOT REPRODUCE or "none of the listed hypotheses match". The confirmed root cause becomes a hard constraint for the `coder` in step 3.
+```bash
+git worktree add .claude/worktrees/feature-<N>-<short-slug> -b feature/<N>-<short-slug> main
+cd .claude/worktrees/feature-<N>-<short-slug>
+```
+
+All subsequent agent dispatches happen with this as cwd. Skipping this step means `spec-writer` would edit main checkout.
+
+## Step 2 — Resolve gates G1, G2
+
+**G1 handling.** If FEATURE and (no spec, or spec is `(stub)`, or spec has blocking open questions) → dispatch `spec-writer`. It will draft questions for the user or produce a scoped spec. Only escalate to user with `spec-writer`'s question list.
+
+**G2 handling.** If BUGFIX → dispatch `bug-reproducer`. It reproduces locally and verifies each hypothesis. It returns the confirmed cause as structured output to you (it does NOT post to GitHub itself). You decide whether to publish: typically yes, once the cause is confirmed — post the comment to the issue via `gh issue comment <N>` so the team sees it. If reproduction failed or no hypothesis matched → escalate to user.
+
+The confirmed root cause becomes a hard constraint for the `coder` in Step 4.
 
 Load relevant engineering guides from `docs/engineering/` — only those actually touching the task:
 
@@ -45,22 +58,15 @@ Load relevant engineering guides from `docs/engineering/` — only those actuall
 | UI / Compose | `presentation-layer.md` |
 | new tests | `testing.md` |
 
-## Step 2 — Plan
+## Step 3 — Plan
 
-Use the built-in `Plan` agent (or `general-purpose` if plan unavailable) to produce a short implementation plan: phases, files to touch, validation strategy. For large issues, split into independent tracks (waves) like the video pattern.
+Use the built-in `Plan` agent (or `general-purpose` if plan unavailable) to produce a short implementation plan: phases, files to touch, validation strategy.
+
+**Track splitting.** Default is **sequential single-track** execution. Split into parallel tracks ONLY if the plan can enumerate file-level disjoint sets: track A's files ∩ track B's files = ∅. The plan must list explicit file paths per track. If any file appears in two tracks → tracks are not independent → execute sequentially.
 
 Apply Gate G3 if the plan conflicts with guides → present to user, stop. Otherwise, accept and continue.
 
-**Worktree setup.** If you are not already in `.claude/worktrees/<branch>/`:
-
-```bash
-git worktree add .claude/worktrees/feature-<N>-<short-slug> -b feature/<N>-<short-slug> main
-cd .claude/worktrees/feature-<N>-<short-slug>
-```
-
-All subsequent work happens in the worktree.
-
-## Step 3 — Inner loop: coder ↔ fast reviewers
+## Step 4 — Inner loop: coder ↔ fast reviewers
 
 Per track (or sequentially if single track):
 
@@ -69,16 +75,16 @@ Per track (or sequentially if single track):
 1. Dispatch the implementing agent with the plan slice:
    - **UI work** (Compose, screens, components, theming, navigation) → `ui-expert`
    - **Everything else** (network, discovery, protocol, persistence, build, infra) → `coder`
-   - **Mixed** (UI + backend in same track) — split into two sub-tracks if independent, else dispatch `coder` and let it pull in `ui-expert` via Agent tool. Wait for completion.
-2. Once `coder` reports green tests, dispatch a **fast reviewer wave** — a subset of review agents in parallel:
+   - **Mixed** — split into sub-tracks if disjoint files, else dispatch `coder` which can pull in `ui-expert` via Agent tool.
+2. Once the implementing agent reports green tests, dispatch a **fast reviewer wave** in parallel:
    - `review-dod` (always)
    - `review-correctness` (always unless DOCS/REFACTOR)
    - `review-guides` (always)
    - `review-tests` (always unless DOCS/INFRA)
    - `review-platform` (if diff touches platform source sets)
-   Skip `review-reuse` and `review-adversarial` in the inner loop — they belong to the final review only.
-3. If every reviewer says `APPROVE` and zero `[REQUIRED]` items → track done, go to Step 4.
-4. Else → aggregate `[REQUIRED]` findings, dispatch `coder` again with the findings as input:
+   Skip `review-reuse` and `review-adversarial` here — they run in the simplify wave (Step 5) and the full review (Step 6).
+3. If every reviewer says `APPROVE` and zero `[REQUIRED]` → track done.
+4. Else → aggregate `[REQUIRED]` findings, dispatch the implementing agent again with the findings as input:
 
 > Previous review found these issues that block the PR. Address each. Do not change anything outside their scope.
 >
@@ -86,19 +92,23 @@ Per track (or sequentially if single track):
 
    Go back to step 2.
 
-**Iteration limit:** 4 inner iterations per track. If not converged after 4 — escalate to user with the remaining findings; this signals a plan or scope problem the loop cannot fix.
+**Iteration limit:** 4 inner iterations per track. If not converged after 4 — escalate to user with remaining findings; this signals a plan/scope problem the loop cannot fix.
 
-5. **Final simplify pass** (after track converges). Iterative review-fix cycles tend to accumulate scaffolding: temp helpers, defensive checks added on a finding then never removed, narrow `when` branches. Dispatch `coder` once more with a narrow instruction:
+## Step 5 — Simplify wave
 
-> All findings on this track are resolved. Now make one simplification pass over the diff: remove dead branches, inline single-use helpers, drop comments restating code, collapse trivial wrappers. Do not change behavior; do not touch anything outside the diff. Run `./gradlew allTests -q` after.
+After all tracks converge. Iterative fix cycles accumulate scaffolding (temp helpers added then never removed, defensive branches, comments restating code) AND duplication (each iteration adds private helpers that fast reviewers don't cross-check across tracks).
 
-If anything was simplified — re-run the fast reviewer wave once on the simplified diff (catches accidental behavior change). If clean, track is done.
+Dispatch the implementing agent once more:
 
-## Step 4 — Full review
+> All findings are resolved. Make one simplification pass over the diff: remove dead branches, inline single-use helpers, drop comments restating code, collapse trivial wrappers. Do not change behavior; do not touch anything outside the diff. Run `./gradlew allTests -q` after.
 
-After all tracks converge, run the full `/code-review` skill on the local diff (not yet a PR — review the working tree against the issue). Apply any `[REQUIRED]` findings via `coder`. Re-run until full review approves or iteration cap hit.
+If anything was simplified — re-run the fast reviewer wave **plus `review-reuse`** on the simplified diff. `review-reuse` is critical here because duplication is what most likely accumulated across iterations and tracks. If clean, proceed.
 
-## Step 5 — Smoke
+## Step 6 — Full review
+
+Run the full `/code-review` skill on the local diff (no PR yet — review working tree against the issue). Apply any `[REQUIRED]` findings via the implementing agent. Re-run until approved or cap hit.
+
+## Step 7 — Smoke
 
 Run `/smoke-test` blocks relevant to the diff. Selection heuristic:
 
@@ -112,35 +122,42 @@ Run `/smoke-test` blocks relevant to the diff. Selection heuristic:
 
 If the PR introduces a new critical happy-path not covered by smoke (start-time failure point, cross-platform UI, new external interface) — extend `.claude/skills/smoke-test/SKILL.md` in this same PR before running. Keep blocks lean; smoke runs often.
 
-Record the verdict (🟢/🟡/🔴) and the list of blocks executed.
+Record the verdict (🟢/🟡/🔴) and blocks executed.
 
 Apply Gate G4: if 🟡/🔴 → present to user, stop.
 
-## Step 6 — Commit + push + PR
+## Step 8 — Commit locally, present to user (Gate G5)
 
-Only after Step 5 is 🟢:
+Only after Step 7 is 🟢. Commit on the feature branch (no push):
 
 ```bash
 git add <relevant files>
 git commit -m "#<N>: <message>"
+```
+
+Present to user:
+- Files changed (summary)
+- AC: all `[DONE]` (from review-dod)
+- Smoke: 🟢 with blocks
+- Any `[UNVERIFIABLE]` from reviewers
+- Proposed PR title and body
+
+Ask: "Push and create PR?" Wait for explicit OK.
+
+## Step 9 — Push + PR (only after G5 OK)
+
+```bash
 git push -u origin feature/<N>-<short-slug>
 gh pr create --title "<title>" --body "<...>"
 ```
 
 PR body must include: AC verdict (DONE checklist), `## Dependency check` (if new deps), smoke verdict.
 
-## Step 7 — Gate G5: hand off
-
-Report to user:
-- PR URL
-- AC: all `[DONE]` (from review-dod)
-- Smoke: 🟢 with list of blocks run
-- Any `[UNVERIFIABLE]` items the reviewers flagged as questions for the author — needs the user's call
-- Next step: manual verification, then `/close-issue <N>`
+Report PR URL to user. Next step is manual verification, then `/close-issue <N>`.
 
 ## Notes
 
 - This orchestrator does NOT call `/close-issue` automatically. Merge is always a user decision.
-- If at any iteration `coder` reports an open question (not a fixable finding — e.g., "the issue says X but the existing pattern is Y, which to follow?") — escalate to user immediately. The coder cannot decide architectural questions.
-- Token discipline: every sub-agent runs in its own context. Your main thread holds only the plan, the per-iteration finding summaries, and the user-gate decisions. If your context exceeds 50% — pause and summarize before continuing.
+- If at any iteration the implementing agent reports an open question (not a fixable finding — e.g., "the issue says X but the existing pattern is Y, which to follow?") — escalate to user immediately. Agents cannot decide architectural questions.
+- Token discipline: every sub-agent runs in its own context. Your main thread holds only the plan, per-iteration finding summaries, and gate decisions. If context exceeds 50% — pause and summarize before continuing.
 - This skill is for one issue at a time. Multiple parallel issues = multiple invocations on multiple worktrees.

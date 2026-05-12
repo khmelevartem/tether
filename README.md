@@ -72,7 +72,8 @@ dns-sd -B _tether._tcp.    # должно появиться _tether._tcp.
 
 - [CLAUDE.md](CLAUDE.md) — что обязан знать AI-агент или новый контрибьютор: архитектурные инварианты, git conventions, worktree-дисциплина.
 - [docs/engineering/](docs/engineering/README.md) — архитектура и правила написания кода (DI, modules, testing).
-- [.claude/commands/](.claude/commands/) — slash-команды для типовых workflow (`/work-on-issue`, `/close-issue`, `/code-review`).
+- [.claude/skills/](.claude/skills/) — multi-agent скиллы: `/implement` (issue → PR оркестратор), `/code-review` (параллельный multi-agent review).
+- [.claude/commands/](.claude/commands/) — slash-команды для типовых workflow (`/close-issue`, `/check-review`, `/grooming`, `/retro`, `/quick-issue`; `/work-on-issue` — manual fallback).
 
 Тесты:
 ```bash

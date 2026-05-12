@@ -54,12 +54,15 @@ Run the experiment. Record verdict for each hypothesis:
 
 Stop. Report tested hypotheses, what you observed that doesn't fit, and (optionally) a new hypothesis as a **proposal** — not a conclusion. The user decides next step.
 
-### 4. Post confirmed cause to the issue
+### 4. Return result to caller
 
-Once exactly one hypothesis is CONFIRMED:
+Once exactly one hypothesis is CONFIRMED — return structured result to whoever invoked you. Do **NOT** post to GitHub yourself. Publication to the issue is the orchestrator's (or user's) decision, because:
+- A hidden side effect visible to the team must not happen without an explicit gate.
+- If reproduction turns out imperfect later, the comment is harder to retract than to never publish.
 
-```bash
-gh issue comment <N> --body "$(cat <<'EOF'
+Return text suitable for the caller to paste verbatim into a GitHub comment:
+
+```
 ## Confirmed root cause
 
 <one paragraph: what is actually happening, with file:line where applicable>
@@ -73,18 +76,17 @@ gh issue comment <N> --body "$(cat <<'EOF'
 - <hypothesis B> — <how rejected>
 
 Source: /bug-reproducer
-EOF
-)"
 ```
 
-This comment is the contract between you and the `coder`: the fix must address this cause, not the symptom and not some other guess.
+This becomes the contract between you and the `coder`: the fix must address this cause.
 
 ## Output to caller
 
-- Reproduction status; confirmed cause OR "none match"; link to GitHub comment; whether bug is in this codebase or an external dependency (changes fix approach).
+- Reproduction status; confirmed cause block (text above) OR "none match"; whether bug is in this codebase or an external dependency (changes fix approach).
 
 ## What you do NOT do
 
+- Post to GitHub — orchestrator decides.
 - Write the fix — different role, even if cause is obvious.
 - Leave diagnostic code modifications in place — revert before returning.
 - Accept "it works in tests" as evidence; tests can mock around the real bug.

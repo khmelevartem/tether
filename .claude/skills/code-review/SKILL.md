@@ -67,11 +67,21 @@ REQUIRED_BEFORE_MERGE:
 
 `DECISION: APPROVE` only if every agent's decision is APPROVE AND there are zero `[REQUIRED]` items.
 
-## Step 6 — Post to GitHub
+## Step 6 — Post to GitHub (idempotent)
+
+Before posting, check whether this skill already left a review on this PR:
+
+```bash
+gh pr view <PR> --json reviews --jq '.reviews[] | select(.body | startswith("## Code Review")) | .submittedAt' | wc -l
+```
+
+If `0` → this is the first review, post as-is with header `## Code Review`.
+
+If `≥1` → this is a re-review. Increment a round counter and post with header `## Code Review — round <N+1>` where N is the previous count. Do NOT edit the prior review; reviewers and authors rely on history.
 
 ```bash
 gh pr review <PR> --comment --body "$(cat <<'EOF'
-<paste aggregated review>
+<aggregated review with appropriate header>
 EOF
 )"
 ```
