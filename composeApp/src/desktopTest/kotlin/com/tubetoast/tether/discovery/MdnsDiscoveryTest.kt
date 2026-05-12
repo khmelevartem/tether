@@ -211,11 +211,8 @@ class MdnsDiscoveryTest {
     // probing is timing-dependent and cannot reliably complete within a fixed timeout.
     // The correctness guarantee is documented in MdnsDiscovery.jvm.kt instead.
 
-    // JmDNS-specific tests below use MdnsDiscoveryJmdns directly.
-    // On macOS, JmDNS cannot obtain IPv4 addresses from mDNSResponder for local loopback
-    // services — peers always appear with no IPv4 and are never added to discoveredDevices.
-    // These tests are skipped on macOS; they run on Linux/Windows where JmDNS works fully.
-
+    // Skipped on macOS: this test injects a TestDispatcher into MdnsDiscoveryJmdns, and
+    // JmDNS on macOS cannot resolve IPv4 from mDNSResponder for local loopback services.
     @Test
     fun `late-joining peer is discovered after initial browse cycle`() = runTest {
         org.junit.Assume.assumeFalse("JmDNS IPv4 resolution unavailable on macOS", isMacOs())
@@ -241,7 +238,6 @@ class MdnsDiscoveryTest {
                 if (a.discoveredDevices.value.any { it.port == 19071 }) break
                 Thread.sleep(100)
             }
-            // Filter to our specific port — external same-named services on other ports ignored.
             val lateB = a.discoveredDevices.value.filter { it.port == 19071 }
             assertEquals(1, lateB.size, "LateB not discovered within 10 s after re-query")
             assertEquals(19071, lateB[0].port)
@@ -253,10 +249,10 @@ class MdnsDiscoveryTest {
 
     @Test
     fun `three instances with same name each discover two others`() = runTest {
-        org.junit.Assume.assumeFalse("JmDNS IPv4 resolution unavailable on macOS", isMacOs())
-        val a = MdnsDiscoveryJmdns()
-        val b = MdnsDiscoveryJmdns()
-        val c = MdnsDiscoveryJmdns()
+        org.junit.Assume.assumeFalse("#111: BonjourState same-name bug (macOS path)", isMacOs())
+        val a = MdnsDiscovery()
+        val b = MdnsDiscovery()
+        val c = MdnsDiscovery()
         try {
             a.start("SameName", 19080)
             b.start("SameName", 19081)
@@ -277,7 +273,6 @@ class MdnsDiscoveryTest {
                 Thread.sleep(200)
             }
 
-            // Filter to test ports only — external _tether._tcp. services on other ports ignored.
             val testPorts = setOf(19080, 19081, 19082)
             assertEquals(
                 2,
