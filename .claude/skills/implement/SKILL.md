@@ -17,7 +17,8 @@ Issue number `<N>`.
 
 You MUST stop and ask the user in these cases (and only these):
 - **G1. Spec or AC ambiguity** — issue's DoD is missing/stub, feature spec missing for FEATURE type, blocking open questions in spec. **Mitigation:** dispatch `spec-writer` first; only stop at user if `spec-writer` has clarifying questions or the issue is non-FEATURE without DoD.
-- **G2. BUGFIX root cause** — root cause must be confirmed before any fix. **Mitigation:** dispatch `bug-reproducer`; only stop at user if it reports CANNOT REPRODUCE or none of the listed hypotheses match. Publication of confirmed cause to the issue is the orchestrator's decision, not the agent's.
+- **G2. BUGFIX root cause** — root cause must be confirmed before any fix. **Mitigation:** dispatch `bug-reproducer`; only stop at user if it reports CANNOT REPRODUCE or none of the listed hypotheses match.
+- **G2.5. Publication of confirmed cause** — once `bug-reproducer` returns a confirmed cause, show the paste-ready block to the user and wait for explicit OK before `gh issue comment`. Publishing to a GitHub issue is a team-visible action; it does not happen without a user gate.
 - **G3. Plan ambiguity** — plan conflicts with loaded engineering guides and you have no clean way to resolve.
 - **G4. Smoke red/yellow** — smoke verdict is not 🟢 after the inner loop.
 - **G5. Final approval before push** — after the inner loop converges to APPROVE and smoke is green, present the committed-but-not-pushed diff to the user for approval. Push + PR creation happen only after the user OKs.
@@ -45,9 +46,11 @@ All subsequent agent dispatches happen with this as cwd. Skipping this step mean
 
 **G1 handling.** If FEATURE and (no spec, or spec is `(stub)`, or spec has blocking open questions) → dispatch `spec-writer`. It will draft questions for the user or produce a scoped spec. Only escalate to user with `spec-writer`'s question list.
 
-**G2 handling.** If BUGFIX → dispatch `bug-reproducer`. It reproduces locally and verifies each hypothesis. It returns the confirmed cause as structured output to you (it does NOT post to GitHub itself). You decide whether to publish: typically yes, once the cause is confirmed — post the comment to the issue via `gh issue comment <N>` so the team sees it. If reproduction failed or no hypothesis matched → escalate to user.
+**G2 handling.** If BUGFIX → dispatch `bug-reproducer`. It reproduces locally, verifies each hypothesis, and returns a confirmed cause as structured paste-ready text. It does NOT post to GitHub. If reproduction failed or no hypothesis matched → escalate to user.
 
-The confirmed root cause becomes a hard constraint for the `coder` in Step 4.
+**G2.5 handling.** After receiving a confirmed cause from `bug-reproducer`, show the paste-ready block to the user and ask: «Опубликовать как комментарий к issue #<N>?» Wait for explicit OK before `gh issue comment <N>`. Reason: a team-visible side effect must not happen without an explicit gate, even if the orchestrator is doing it instead of the agent — that just moves the problem one level up. If the user says no — keep the cause locally as a constraint for `coder`; do not publish.
+
+The confirmed root cause becomes a hard constraint for the `coder` in Step 4 regardless of whether it was published.
 
 Load relevant engineering guides from `docs/engineering/` — only those actually touching the task:
 
@@ -102,11 +105,17 @@ Dispatch the implementing agent once more:
 
 > All findings are resolved. Make one simplification pass over the diff: remove dead branches, inline single-use helpers, drop comments restating code, collapse trivial wrappers. Do not change behavior; do not touch anything outside the diff. Run `./gradlew allTests -q` after.
 
-If anything was simplified — re-run the fast reviewer wave **plus `review-reuse`** on the simplified diff. `review-reuse` is critical here because duplication is what most likely accumulated across iterations and tracks. If clean, proceed.
+If anything was simplified — re-run **the same set of agents that ran in Step 4 for this PR type** (i.e. dod + guides + correctness + tests + platform-if-touched) **plus `review-reuse`** on the simplified diff. `review-reuse` is critical here because duplication is what most likely accumulated across iterations and tracks. `review-platform` runs only if the diff actually touches a platform source set — same skip rule as Step 4. If clean, proceed.
 
-## Step 6 — Full review
+## Step 6 — Full pre-PR review (inline, not via /code-review skill)
 
-Run the full `/code-review` skill on the local diff (no PR yet — review working tree against the issue). Apply any `[REQUIRED]` findings via the implementing agent. Re-run until approved or cap hit.
+`/code-review` skill requires an existing PR (it posts via `gh pr review`). At this step the PR does not exist yet — Step 9 creates it. So instead of calling the skill, **orchestrate the same agent fan-out inline, without GitHub publication**:
+
+1. Wave A in parallel: `review-dod`, `review-guides`, `review-reuse`, plus (if applicable to PR type / diff) `review-correctness`, `review-tests`, `review-platform`. Each agent receives the issue number and is told to review the local working tree (`git diff main...HEAD`) instead of a PR.
+2. Wave B: `review-adversarial` with the combined Wave A findings as input.
+3. Aggregate. Apply any `[REQUIRED]` via the implementing agent (with the symmetry-pass instruction). Re-run until approved or 2 iterations.
+
+No `gh pr review` here — findings are consumed locally only. The post-PR `/code-review` skill will be invoked separately after Step 9 if a reviewer requests it, or as part of normal team review.
 
 ## Step 7 — Smoke
 
@@ -158,6 +167,7 @@ Report PR URL to user. Next step is manual verification, then `/close-issue <N>`
 ## Notes
 
 - This orchestrator does NOT call `/close-issue` automatically. Merge is always a user decision.
+- Worktree cleanup: `.claude/scripts/cleanup-worktrees.sh` runs on `Stop` hook and removes any worktree whose remote branch is gone and whose PR is merged — it iterates **all** worktrees regardless of naming, so the `feature/<N>-<slug>` pattern is auto-cleaned after merge. No manual cleanup needed.
 - If at any iteration the implementing agent reports an open question (not a fixable finding — e.g., "the issue says X but the existing pattern is Y, which to follow?") — escalate to user immediately. Agents cannot decide architectural questions.
 - Token discipline: every sub-agent runs in its own context. Your main thread holds only the plan, per-iteration finding summaries, and gate decisions. If context exceeds 50% — pause and summarize before continuing.
 - This skill is for one issue at a time. Multiple parallel issues = multiple invocations on multiple worktrees.
