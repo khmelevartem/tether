@@ -173,7 +173,7 @@ rg "swr|stale-while-revalidate"      # есть ли уже паттерн в п
 Задачи, которые непосредственно вытекают из этой, но не помещаются в её скоуп. Будущие issue, которые надо завести после мержа.
 ```
 
-**Связи (parent / blocked-by / blocks) в теле не пишем** — они проставляются через нативные GitHub-поля (sub-issues API + issue dependencies API), см. раздел «Связи между issue» в [SKILL.md](SKILL.md). В теле issue остаётся только сама задача.
+**Связи (parent / blocked-by / blocks) в теле не пишем** — они проставляются через нативные GitHub-поля: sub-issues (GraphQL) + Relationships, известные в REST как issue dependencies (REST `POST /repos/{o}/{r}/issues/{n}/dependencies/blocked_by`). См. раздел «Связи между issue» в [SKILL.md](SKILL.md). В теле issue остаётся только сама задача.
 
 «Related» — упоминание `#N` встраивается в раздел «Контекст» или «Зачем» там, где это естественно по смыслу, либо выражается через общий parent/labels.
 
