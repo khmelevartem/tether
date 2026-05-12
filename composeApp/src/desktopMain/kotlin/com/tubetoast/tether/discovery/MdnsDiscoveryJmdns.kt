@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 import javax.jmdns.JmDNS
 import javax.jmdns.ServiceEvent
 import javax.jmdns.ServiceInfo
@@ -55,6 +56,13 @@ internal class MdnsDiscoveryJmdns : DeviceDiscovery {
 
     @Volatile private var ownPort: Int = -1
 
+    /**
+     * Maps JmDNS service instance name → resolved Device so that [serviceRemoved]
+     * can remove the exact device by [Device.id] rather than by name. Without this,
+     * removing "Tether" would also drop peers whose name happened to match.
+     */
+    private val instanceToDevice = ConcurrentHashMap<String, Device>()
+
     private lateinit var requeryScope: CoroutineScope
     private var requeryJob: Job? = null
 
@@ -74,8 +82,9 @@ internal class MdnsDiscoveryJmdns : DeviceDiscovery {
 
             override fun serviceRemoved(event: ServiceEvent) {
                 System.err.println("INFO: serviceRemoved '${event.name}'")
+                val removed = instanceToDevice.remove(event.name) ?: return
                 _discoveredDevices.value = _discoveredDevices.value
-                    .filterNot { it.name == event.name }
+                    .filterNot { it.id == removed.id }
             }
 
             override fun serviceResolved(event: ServiceEvent) {
@@ -94,8 +103,9 @@ internal class MdnsDiscoveryJmdns : DeviceDiscovery {
                         host = ipv4,
                         port = info.port,
                     )
+                    instanceToDevice[event.name] = device
                     _discoveredDevices.value = _discoveredDevices.value
-                        .filterNot { it.name == device.name } + device
+                        .filterNot { it.name == device.name && it.host == device.host } + device
                 } catch (e: Exception) {
                     System.err.println("WARN: serviceResolved error for '${event.name}' — ${e.message}")
                 }
@@ -154,6 +164,7 @@ internal class MdnsDiscoveryJmdns : DeviceDiscovery {
             jmdns = null
             ownIp = null
             ownPort = -1
+            instanceToDevice.clear()
             _discoveredDevices.value = emptyList()
         }
     }
