@@ -38,16 +38,14 @@
 **ВСЕГДА** отвечай **в треде исходного комментария**, никогда отдельным top-level комментом к PR. Связь «предложение → реакция» должна быть видна в одном месте — иначе ревьюер не понимает, что именно ты ответил, и тред остаётся «висящим». Используй:
 
 ```bash
-# Ответ на inline review comment (pulls/comments)
+# Inline review comment — отвечать в том же треде через in_reply_to
 gh api repos/OWNER/REPO/pulls/PR/comments \
   -X POST \
   -F in_reply_to=COMMENT_ID \
   -F body="текст ответа"
 
-# Ответ на общий PR comment (issues/comments)
-gh api repos/OWNER/REPO/issues/PR/comments \
-  -X POST \
-  -F body="текст ответа"
+# Review-level comment (на весь review): найти его commentId через
+# `gh api repos/OWNER/REPO/pulls/PR/reviews/REVIEW_ID/comments` и ответить тем же in_reply_to.
 ```
 
-Объяснения и обоснования пиши именно там — ревьюер получит нотификацию и увидит ответ в контексте кода.
+Объяснения и обоснования пиши именно там — ревьюер получит нотификацию и увидит ответ в контексте кода. `issues/PR/comments` — это top-level conversation, не тред: для ответов на ревью **не использовать**.
