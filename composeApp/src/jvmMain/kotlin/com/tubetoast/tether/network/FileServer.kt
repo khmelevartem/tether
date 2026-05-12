@@ -1,5 +1,7 @@
 package com.tubetoast.tether.network
 
+import com.tubetoast.tether.security.DeviceKeyPair
+import com.tubetoast.tether.security.TrustedDeviceStore
 import io.ktor.server.cio.CIO
 import io.ktor.server.cio.CIOApplicationEngine
 import io.ktor.server.engine.EmbeddedServer
@@ -12,6 +14,8 @@ import java.io.File
 actual class FileServer(
     private val port: Int,
     private val downloadsDir: File = File(System.getProperty("user.home"), "Downloads/Tether"),
+    private val trustedDeviceStore: TrustedDeviceStore,
+    private val deviceKeyPair: DeviceKeyPair,
 ) {
     private var server: EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration>? = null
 
@@ -20,7 +24,7 @@ actual class FileServer(
         val storage = JvmUploadStorage(downloadsDir)
         storage.ensureRoot()
         val srv = embeddedServer(CIO, port = port) {
-            installFileServerRoutes(storage)
+            installFileServerRoutes(storage, trustedDeviceStore, deviceKeyPair.publicKey)
         }.start(wait = false)
         server = srv
         // resolvedConnectors() returns the actual OS-assigned port when port=0 was specified,

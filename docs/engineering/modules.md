@@ -9,16 +9,16 @@ hierarchy (configured via `applyHierarchyTemplate` in `build.gradle.kts`):
 
 ```
 composeApp/src/
-├── commonMain/      protocol, FileClient, MdnsDiscovery (expect), FileServer (expect), FileServerRoutes (UploadStorage seam), Platform (expect), App.kt
-├── commonTest/      DeviceTest
+├── commonMain/      protocol, FileClient, MdnsDiscovery (expect), FileServer (expect), FileServerRoutes (UploadStorage seam), TrustedDeviceStore (expect), Platform (expect), App.kt
+├── commonTest/      DeviceTest, PairingProtocolTest
 ├── androidMain/     MainActivity, TetherApp, TetherForegroundService, MdnsDiscovery.android, Platform.android
 ├── iosMain/         MainViewController, Platform.ios
 ├── appleMain/       MdnsDiscovery.apple, FileServer.apple (Ktor CIO Native + POSIX storage)
 ├── macosMain/       Platform.macos
-├── jvmMain/         FileServer (JVM actual + storage), FileClientJvm   ← shared Android + Desktop JVM
-├── jvmTest/         FileServerTest                                       ← runs in both desktopTest and androidUnitTest
-├── desktopMain/     Main.kt (CLI), MdnsDiscovery.jvm, Platform.jvm     ← Desktop JVM leaf
-└── desktopTest/     FileClientTest, MdnsDiscoveryTest
+├── jvmMain/         FileServer (JVM actual + storage), FileClientJvm, DeviceKeyPair   ← shared Android + Desktop JVM
+├── jvmTest/         (empty — FileServerTest moved to desktopTest in #9)
+├── desktopMain/     Main.kt (CLI), MdnsDiscovery.jvm, Platform.jvm, TrustedDeviceStore.desktop  ← Desktop JVM leaf
+└── desktopTest/     FileClientTest, MdnsDiscoveryTest, FileServerTest, FileServerPairTest, TrustedDeviceStoreTest, DeviceKeyPairTest
 ```
 
 Hierarchy: `jvmMain` is the intermediate parent for both `androidMain` and `desktopMain`,

@@ -1,11 +1,16 @@
 package com.tubetoast.tether.network
 
+import com.tubetoast.tether.protocol.PairRequest
+import com.tubetoast.tether.protocol.PairResponse
+import com.tubetoast.tether.security.TrustedDeviceStore
+import com.tubetoast.tether.security.deviceIdFromPublicKey
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.request.contentLength
+import io.ktor.server.request.receive
 import io.ktor.server.request.receiveChannel
 import io.ktor.server.response.respond
 import io.ktor.server.routing.get
@@ -30,10 +35,30 @@ internal interface UploadStorage {
     fun logError(message: String)
 }
 
-internal fun Application.installFileServerRoutes(storage: UploadStorage) {
+internal fun Application.installFileServerRoutes(
+    storage: UploadStorage,
+    trustedDeviceStore: TrustedDeviceStore,
+    serverPublicKey: ByteArray,
+) {
     install(ContentNegotiation) { json() }
     routing {
         get("/health") { call.respond(HttpStatusCode.OK, "Tether OK") }
+        post("/pair") {
+            val request = call.receive<PairRequest>()
+            val deviceId = deviceIdFromPublicKey(request.publicKey)
+            try {
+                trustedDeviceStore.saveTrustedKey(deviceId, request.publicKey)
+            } catch (e: Exception) {
+                // Explicit 500 instead of relying on Ktor's default exception handler:
+                // a silent 200 on persistence failure would tell the peer we trust them while we don't.
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    mapOf("error" to (e.message ?: "failed to persist trusted device")),
+                )
+                return@post
+            }
+            call.respond(HttpStatusCode.OK, PairResponse(publicKey = serverPublicKey))
+        }
         post("/upload") {
             val rawName = call.request.queryParameters["name"]
             if (rawName.isNullOrBlank()) {

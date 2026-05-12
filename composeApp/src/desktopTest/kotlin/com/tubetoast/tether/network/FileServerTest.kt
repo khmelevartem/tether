@@ -1,5 +1,7 @@
 package com.tubetoast.tether.network
 
+import com.tubetoast.tether.security.DeviceKeyPair
+import com.tubetoast.tether.security.TrustedDeviceStore
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
@@ -21,6 +23,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import java.io.File
 import java.nio.file.Files
+import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -30,60 +33,77 @@ import kotlin.test.fail
 import kotlin.time.Duration.Companion.milliseconds
 
 class FileServerTest {
+    private val cleanupPaths = mutableListOf<File>()
+    private var startedServer: FileServer? = null
+
+    @AfterTest
+    fun teardown() {
+        startedServer?.stop()
+        startedServer = null
+        cleanupPaths.forEach { it.deleteRecursively() }
+        cleanupPaths.clear()
+    }
+
+    private fun newServer(downloadsDir: File? = null): FileServer {
+        val configDir = Files.createTempDirectory("tether-fs-test-keys").toFile().also(cleanupPaths::add)
+        val resolvedDownloads = downloadsDir ?: Files
+            .createTempDirectory("tether-fs-test-dl")
+            .toFile()
+            .also(cleanupPaths::add)
+        val server = FileServer(
+            port = 0,
+            downloadsDir = resolvedDownloads,
+            trustedDeviceStore = TrustedDeviceStore(configDir),
+            deviceKeyPair = DeviceKeyPair(configDir),
+        )
+        startedServer = server
+        return server
+    }
+
     @Test
     fun `health endpoint returns 200 with Tether OK`() {
-        val server = FileServer(0)
+        val server = newServer()
         val port = server.start()
+        val client = HttpClient(CIO)
         try {
-            val client = HttpClient(CIO)
             runBlocking {
                 val response = client.get("http://localhost:$port/health")
                 assertEquals(HttpStatusCode.OK, response.status)
                 assertEquals("Tether OK", response.bodyAsText())
             }
-            client.close()
         } finally {
-            server.stop()
+            client.close()
         }
     }
 
     @Test
     fun `start returns a valid port in usable range`() {
-        val server = FileServer(0)
-        val port = server.start()
-        try {
-            assertTrue(port in 1024..65535, "Expected ephemeral port, got $port")
-        } finally {
-            server.stop()
-        }
+        val port = newServer().start()
+        assertTrue(port in 1024..65535, "Expected ephemeral port, got $port")
     }
 
     @Test
     fun `stop on unstarted server does not throw`() {
-        FileServer(0).stop()
+        newServer().stop()
     }
 
     @Test
     fun `double start throws IllegalStateException`() {
-        val server = FileServer(0)
+        val server = newServer()
         server.start()
+        var threw = false
         try {
-            var threw = false
-            try {
-                server.start()
-            } catch (e: IllegalStateException) {
-                threw = true
-            }
-            assertTrue(threw, "Expected IllegalStateException on double start")
-        } finally {
-            server.stop()
+            server.start()
+        } catch (e: IllegalStateException) {
+            threw = true
         }
+        assertTrue(threw, "Expected IllegalStateException on double start")
     }
 
     @Test
     fun `upload saves file with correct content`() {
-        val tmpDir = Files.createTempDirectory("tether-test").toFile()
-        val server = FileServer(0, downloadsDir = tmpDir)
+        val tmpDir = Files.createTempDirectory("tether-test").toFile().also(cleanupPaths::add)
+        val server = newServer(downloadsDir = tmpDir)
         val port = server.start()
         val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
         try {
@@ -102,15 +122,12 @@ class FileServerTest {
             }
         } finally {
             client.close()
-            server.stop()
-            tmpDir.deleteRecursively()
         }
     }
 
     @Test
     fun `upload without name returns 400`() {
-        val tmpDir = Files.createTempDirectory("tether-test").toFile()
-        val server = FileServer(0, downloadsDir = tmpDir)
+        val server = newServer()
         val port = server.start()
         val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
         try {
@@ -123,15 +140,13 @@ class FileServerTest {
             }
         } finally {
             client.close()
-            server.stop()
-            tmpDir.deleteRecursively()
         }
     }
 
     @Test
     fun `upload duplicate filename gets numeric suffix`() {
-        val tmpDir = Files.createTempDirectory("tether-test").toFile()
-        val server = FileServer(0, downloadsDir = tmpDir)
+        val tmpDir = Files.createTempDirectory("tether-test").toFile().also(cleanupPaths::add)
+        val server = newServer(downloadsDir = tmpDir)
         val port = server.start()
         val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
         try {
@@ -155,17 +170,15 @@ class FileServerTest {
             }
         } finally {
             client.close()
-            server.stop()
-            tmpDir.deleteRecursively()
         }
     }
 
     @Test
     fun `upload creates downloads dir if missing`() {
-        val tmpDir = Files.createTempDirectory("tether-test").toFile()
+        val tmpDir = Files.createTempDirectory("tether-test").toFile().also(cleanupPaths::add)
         val nested = File(tmpDir, "deep/nested")
         assertFalse(nested.exists())
-        val server = FileServer(0, downloadsDir = nested)
+        val server = newServer(downloadsDir = nested)
         val port = server.start()
         val client = HttpClient(CIO)
         try {
@@ -178,15 +191,13 @@ class FileServerTest {
             assertTrue(nested.exists())
         } finally {
             client.close()
-            server.stop()
-            tmpDir.deleteRecursively()
         }
     }
 
     @Test
     fun `upload strips path traversal from filename`() {
-        val tmpDir = Files.createTempDirectory("tether-test").toFile()
-        val server = FileServer(0, downloadsDir = tmpDir)
+        val tmpDir = Files.createTempDirectory("tether-test").toFile().also(cleanupPaths::add)
+        val server = newServer(downloadsDir = tmpDir)
         val port = server.start()
         val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
         try {
@@ -205,29 +216,23 @@ class FileServerTest {
             }
         } finally {
             client.close()
-            server.stop()
-            tmpDir.deleteRecursively()
         }
     }
 
     @Test
     fun `restart after stop succeeds`() {
-        val server = FileServer(0)
+        val server = newServer()
         val port1 = server.start()
         assertTrue(port1 in 1024..65535)
         server.stop()
         val port2 = server.start()
-        try {
-            assertTrue(port2 in 1024..65535)
-        } finally {
-            server.stop()
-        }
+        assertTrue(port2 in 1024..65535)
     }
 
     @Test
     fun `upload streams 5MB body byte identical`() {
-        val tmpDir = Files.createTempDirectory("tether-test").toFile()
-        val server = FileServer(0, downloadsDir = tmpDir)
+        val tmpDir = Files.createTempDirectory("tether-test").toFile().also(cleanupPaths::add)
+        val server = newServer(downloadsDir = tmpDir)
         val port = server.start()
         val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
         try {
@@ -246,8 +251,6 @@ class FileServerTest {
             }
         } finally {
             client.close()
-            server.stop()
-            tmpDir.deleteRecursively()
         }
     }
 
@@ -255,8 +258,8 @@ class FileServerTest {
     fun `client disconnect mid upload leaves no partial file`() {
         // SlowContent declares Content-Length and paces with per-chunk delay so
         // withTimeout fires mid-transfer deterministically across platforms.
-        val tmpDir = Files.createTempDirectory("tether-test").toFile()
-        val server = FileServer(0, downloadsDir = tmpDir)
+        val tmpDir = Files.createTempDirectory("tether-test").toFile().also(cleanupPaths::add)
+        val server = newServer(downloadsDir = tmpDir)
         val port = server.start()
         val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
         try {
@@ -284,8 +287,6 @@ class FileServerTest {
             }
         } finally {
             client.close()
-            server.stop()
-            tmpDir.deleteRecursively()
         }
     }
 }

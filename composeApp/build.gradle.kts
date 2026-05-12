@@ -115,6 +115,7 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.activity.compose)
             implementation(libs.androidx.lifecycle.service)
+            implementation("androidx.datastore:datastore-preferences:1.1.1")
         }
 
         androidUnitTest.dependencies {
