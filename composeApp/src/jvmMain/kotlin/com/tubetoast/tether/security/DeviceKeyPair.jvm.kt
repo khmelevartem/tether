@@ -6,6 +6,7 @@ import java.nio.file.Files
 import java.nio.file.attribute.PosixFilePermission
 import java.security.KeyFactory
 import java.security.KeyPairGenerator
+import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
 
 actual class DeviceKeyPair(
@@ -17,26 +18,50 @@ actual class DeviceKeyPair(
         val publicKeyFile = File(configDir, "device_public.key")
         val privateKeyFile = File(configDir, "device_private.key")
 
-        publicKey = if (publicKeyFile.exists() && privateKeyFile.exists()) {
-            try {
-                loadPublicKey(publicKeyFile)
-            } catch (e: Exception) {
-                System.err.println("WARN: device key corrupted, regenerating — ${e.message}")
+        publicKey = when {
+            !publicKeyFile.exists() && !privateKeyFile.exists() ->
+                generateAndPersist(publicKeyFile, privateKeyFile)
+
+            publicKeyFile.exists() && privateKeyFile.exists() ->
+                loadOrRegenerate(publicKeyFile, privateKeyFile)
+
+            else ->
+                throw IllegalStateException(
+                    "Inconsistent device key state in $configDir: " +
+                        "${publicKeyFile.name}=${publicKeyFile.exists()} " +
+                        "${privateKeyFile.name}=${privateKeyFile.exists()}. " +
+                        "Refusing to silently rotate identity. Remove both files to regenerate.",
+                )
+        }
+    }
+
+    private fun loadOrRegenerate(publicKeyFile: File, privateKeyFile: File): ByteArray {
+        val publicValid = runCatching { validatePublicKeyBytes(publicKeyFile.readBytes()) }.isSuccess
+        val privateValid = runCatching { validatePrivateKeyBytes(privateKeyFile.readBytes()) }.isSuccess
+        return when {
+            publicValid && privateValid -> publicKeyFile.readBytes()
+            !publicValid && !privateValid -> {
+                System.err.println("WARN: device key pair corrupted, regenerating in $configDir")
                 publicKeyFile.delete()
                 privateKeyFile.delete()
                 generateAndPersist(publicKeyFile, privateKeyFile)
             }
-        } else {
-            generateAndPersist(publicKeyFile, privateKeyFile)
+            else ->
+                throw IllegalStateException(
+                    "Partial corruption of device key pair in $configDir " +
+                        "(public valid=$publicValid, private valid=$privateValid). " +
+                        "Refusing to discard the surviving half. " +
+                        "Restore from backup or remove both files to regenerate identity.",
+                )
         }
-    }
-
-    private fun loadPublicKey(publicKeyFile: File): ByteArray = publicKeyFile.readBytes().also { encoded ->
-        validatePublicKeyBytes(encoded)
     }
 
     private fun validatePublicKeyBytes(encoded: ByteArray) {
         KeyFactory.getInstance("EC").generatePublic(X509EncodedKeySpec(encoded))
+    }
+
+    private fun validatePrivateKeyBytes(encoded: ByteArray) {
+        KeyFactory.getInstance("EC").generatePrivate(PKCS8EncodedKeySpec(encoded))
     }
 
     private fun generateAndPersist(
@@ -59,7 +84,7 @@ actual class DeviceKeyPair(
         val view = Files.getFileAttributeView(
             file.toPath(),
             java.nio.file.attribute.PosixFileAttributeView::class.java,
-        ) ?: return // non-POSIX filesystem (e.g. Android internal storage already per-app, Windows)
+        ) ?: return
         view.setPermissions(setOf(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE))
     }
 }

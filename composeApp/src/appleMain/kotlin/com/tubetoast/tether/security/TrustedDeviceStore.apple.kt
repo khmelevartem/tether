@@ -11,7 +11,9 @@ actual class TrustedDeviceStore {
     actual fun saveTrustedKey(deviceId: String, publicKey: ByteArray) {
         val encoded = publicKey.joinToString(",")
         defaults.setObject(encoded, forKey = "tether_trust_$deviceId")
-        defaults.synchronize()
+        if (!defaults.synchronize()) {
+            throw IllegalStateException("NSUserDefaults.synchronize() returned false for deviceId=$deviceId")
+        }
     }
 
     actual fun getPublicKey(deviceId: String): ByteArray? {

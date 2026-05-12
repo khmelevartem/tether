@@ -1,7 +1,12 @@
 package com.tubetoast.tether.security
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
 import java.nio.file.Files
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -83,6 +88,35 @@ class TrustedDeviceStoreTest {
             val loaded = TrustedDeviceStore(configDir).getPublicKey("device-neg")
             assertNotNull(loaded)
             assertTrue(loaded.contentEquals(key), "negative byte values must survive serialization round-trip")
+        } finally {
+            configDir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `50 parallel saveTrustedKey calls all persist atomically`() {
+        val configDir = Files.createTempDirectory("tether-store-test").toFile()
+        try {
+            val store = TrustedDeviceStore(configDir)
+            val n = 50
+            runBlocking(Dispatchers.IO) {
+                (0 until n)
+                    .map { i ->
+                        async {
+                            store.saveTrustedKey(
+                                "device-$i",
+                                byteArrayOf(i.toByte(), (i + 1).toByte(), (i + 2).toByte()),
+                            )
+                        }
+                    }.awaitAll()
+            }
+            val reloaded = TrustedDeviceStore(configDir)
+            for (i in 0 until n) {
+                val key = reloaded.getPublicKey("device-$i")
+                assertNotNull(key, "device-$i must be present after concurrent writes")
+                assertEquals(3, key.size)
+                assertEquals(i.toByte(), key[0])
+            }
         } finally {
             configDir.deleteRecursively()
         }
