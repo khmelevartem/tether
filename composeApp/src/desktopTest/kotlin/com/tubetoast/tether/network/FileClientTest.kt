@@ -30,10 +30,11 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
-import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeSource
 
 class FileClientTest {
     private val device
@@ -174,8 +175,14 @@ class FileClientTest {
                     fileName = "trunc-prod.bin",
                     totalBytes = declared,
                 )
-                assertNotEquals(SendResult.Success::class, result::class)
-                delay(200.milliseconds) // let server-side catch/finally settle
+                assertIs<SendResult.Failure>(result)
+                // Poll until server-side finally{ deleteIfExists } completes — robuster than fixed delay.
+                val deadline = TimeSource.Monotonic.markNow() + 3.seconds
+                while (deadline.hasNotPassedNow()) {
+                    val partial = tmpDir.listFiles()?.any { it.name.startsWith("trunc-prod") } ?: false
+                    if (!partial) break
+                    delay(20.milliseconds)
+                }
                 val partial = tmpDir.listFiles()?.filter { it.name.startsWith("trunc-prod") } ?: emptyList()
                 assertTrue(
                     partial.isEmpty(),
