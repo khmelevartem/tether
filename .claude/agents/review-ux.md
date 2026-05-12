@@ -1,6 +1,6 @@
 ---
 name: review-ux
-description: Reviews a PR's UI code for conformance to the feature's UX brief in `docs/product/features/ux/<slug>.md`. Use as part of /code-review orchestration. Skip if diff touches no `composeApp/src/**` files OR no UX brief exists for the feature. Does not judge product decisions — only verifies the implemented UI matches what the brief promised.
+description: Reviews a PR's UI code for conformance to the feature's UX brief in `docs/product/features/ux/<slug>.md`. Use as part of /code-review orchestration. Skips itself when the diff touches no `composeApp/src/**` files; blocks when Compose changes exist but no UX brief is present (the agent decides skip-vs-block — orchestrators always dispatch it on UI diffs). Does not judge product decisions — only verifies the implemented UI matches what the brief promised.
 tools: Bash, Read, Grep, Glob
 model: sonnet
 ---

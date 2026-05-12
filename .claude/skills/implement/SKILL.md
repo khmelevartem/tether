@@ -111,7 +111,7 @@ Per track (or sequentially if single track):
    - `review-guides` (always)
    - `review-tests` (always unless DOCS/INFRA)
    - `review-platform` (if diff touches platform source sets)
-   - `review-ux` (if diff touches `composeApp/src/**` AND UX brief exists for the feature)
+   - `review-ux` (if diff touches `composeApp/src/**` — the agent itself decides skip vs. block on missing brief)
    Skip `review-reuse` and `review-adversarial` here — they run in the simplify wave (Step 5) and the full review (Step 6).
 3. If every reviewer says `APPROVE` and zero `[REQUIRED]` → track done.
 4. Else → aggregate `[REQUIRED]` findings, dispatch the implementing agent again with the findings as input:
@@ -132,13 +132,13 @@ Dispatch the implementing agent once more:
 
 > All findings are resolved. Make one simplification pass over the diff: remove dead branches, inline single-use helpers, drop comments restating code, collapse trivial wrappers. Do not change behavior; do not touch anything outside the diff. Run `./gradlew allTests -q` after.
 
-If anything was simplified — re-run **the same set of agents that ran in Step 4 for this PR type** (i.e. dod + guides + correctness + tests + platform-if-touched + ux-if-touched) **plus `review-reuse`** on the simplified diff. `review-reuse` is critical here because duplication is what most likely accumulated across iterations and tracks. `review-platform` and `review-ux` follow the same skip rules as Step 4 (platform set touched / `composeApp/src/**` touched + UX brief exists). If clean, proceed.
+If anything was simplified — re-run **the same set of agents that ran in Step 4 for this PR type** (i.e. dod + guides + correctness + tests + platform-if-touched + ux-if-touched) **plus `review-reuse`** on the simplified diff. `review-reuse` is critical here because duplication is what most likely accumulated across iterations and tracks. `review-platform` and `review-ux` follow the same skip rules as Step 4 (platform set touched / `composeApp/src/**` touched). If clean, proceed.
 
 ## Step 6 — Full pre-PR review (inline, not via /code-review skill)
 
 `/code-review` skill requires an existing PR (it posts via `gh pr review`). At this step the PR does not exist yet — Step 9 creates it. So instead of calling the skill, **orchestrate the same agent fan-out inline, without GitHub publication**:
 
-1. Wave A in parallel: `review-dod`, `review-guides`, `review-reuse`, plus (if applicable to PR type / diff) `review-correctness`, `review-tests`, `review-platform`, `review-ux`. Each agent receives the issue number and is told to review the local working tree (`git diff main...HEAD`) instead of a PR. `review-ux` follows the same skip rule as Step 4 (`composeApp/src/**` touched + UX brief exists).
+1. Wave A in parallel: `review-dod`, `review-guides`, `review-reuse`, plus (if applicable to PR type / diff) `review-correctness`, `review-tests`, `review-platform`, `review-ux`. Each agent receives the issue number and is told to review the local working tree (`git diff main...HEAD`) instead of a PR. `review-ux` runs whenever the diff touches `composeApp/src/**`; the agent itself decides skip vs. block.
 2. Wave B: `review-adversarial` with the combined Wave A findings as input.
 3. Aggregate. Apply any `[REQUIRED]` via the implementing agent (with the symmetry-pass instruction). Re-run until approved or 2 iterations.
 

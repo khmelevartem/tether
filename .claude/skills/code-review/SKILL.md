@@ -30,7 +30,7 @@ Skip matrix:
 - `INFRA` → skip `review-tests`
 - pure `REFACTOR` → skip `review-correctness` (only behavior-preserving)
 - diff doesn't touch any platform source set → skip `review-platform`
-- diff doesn't touch `composeApp/src/**` OR no UX brief exists for the feature → skip `review-ux`
+- diff doesn't touch `composeApp/src/**` → skip `review-ux` (when Compose is touched always dispatch; the agent itself decides skip vs. block on missing brief)
 
 ## Step 3 — Wave 1: launch all applicable reviewers in parallel
 
