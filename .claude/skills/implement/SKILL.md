@@ -73,6 +73,21 @@ Load relevant engineering guides from `docs/engineering/` — only those actuall
 | UI / Compose | `presentation-layer.md` |
 | new tests | `testing.md` |
 
+## Step 2.5 — UX brief (FEATURE with user-facing UI only)
+
+Skip unless **all** of:
+- Issue type is `FEATURE`.
+- Feature spec has user-facing screens (non-empty `User flows` / `What "working" looks like` describing UI, not backend-only behaviour).
+- The task scope includes UI work (a screen, a component, navigation — not pure logic/network/infra).
+
+If applicable: dispatch `ux-expert` with the spec slug. It produces or updates `docs/product/features/ux/<slug>.md` — the UX brief that `ui-expert` will consume as a contract in Step 4.
+
+**Open UX questions** returned by `ux-expert` fold into Gate G1: surface them to the user, collect answers, re-dispatch `ux-expert` to fold answers into the brief. Do not proceed to Step 3 with an unresolved UX-questions section.
+
+The brief itself is committed as part of the PR (separate commit, see Step 8).
+
+If the issue scope is backend/infra/refactor only — skip this step entirely. No brief, no `ux-expert` dispatch.
+
 ## Step 3 — Plan
 
 Use the built-in `Plan` agent (or `general-purpose` if plan unavailable) to produce a short implementation plan: phases, files to touch, validation strategy.
@@ -99,6 +114,7 @@ Per track (or sequentially if single track):
    - `review-guides` (always)
    - `review-tests` (always unless DOCS/INFRA)
    - `review-platform` (if diff touches platform source sets)
+   - `review-ux` (if diff touches `composeApp/src/**` AND UX brief exists for the feature)
    Skip `review-reuse` and `review-adversarial` here — they run in the simplify wave (Step 5) and the full review (Step 6).
 3. If every reviewer says `APPROVE` and zero `[REQUIRED]` → track done.
 4. Else → aggregate `[REQUIRED]` findings, dispatch the implementing agent again with the findings as input:

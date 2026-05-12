@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: Multi-agent code review for a PR. Fans out to specialized sub-agents in parallel (DoD, guides, platform, reuse, correctness, tests), then runs the adversarial agent on their combined findings, aggregates, and posts to GitHub. Use when reviewing a PR or when /close-issue triggers review.
+description: Multi-agent code review for a PR. Fans out to specialized sub-agents in parallel (DoD, guides, platform, reuse, correctness, tests, UX-conformance), then runs the adversarial agent on their combined findings, aggregates, and posts to GitHub. Use when reviewing a PR or when /close-issue triggers review.
 ---
 
 # /code-review — Multi-agent orchestrator
@@ -26,10 +26,11 @@ Note the PR number `<PR>` and issue number `<N>` — pass both to every agent.
 Read PR body and diff. Classify once: `FEATURE | BUGFIX | REFACTOR | INFRA | DOCS | DEPENDENCY`. Some agents skip based on type (see their frontmatter). Note which agents to skip; do not launch skipped ones.
 
 Skip matrix:
-- `DOCS` → skip `review-correctness`, `review-platform`, `review-tests`
+- `DOCS` → skip `review-correctness`, `review-platform`, `review-tests`, `review-ux`
 - `INFRA` → skip `review-tests`
 - pure `REFACTOR` → skip `review-correctness` (only behavior-preserving)
 - diff doesn't touch any platform source set → skip `review-platform`
+- diff doesn't touch `composeApp/src/**` OR no UX brief exists for the feature → skip `review-ux`
 
 ## Step 3 — Wave 1: launch all applicable reviewers in parallel
 
@@ -44,6 +45,7 @@ Agents to launch (subject to skip matrix):
 - `review-reuse`
 - `review-correctness`
 - `review-tests`
+- `review-ux`
 
 Each runs in its own context; their token usage does not pollute yours. Collect each `PHASE` block verbatim.
 
