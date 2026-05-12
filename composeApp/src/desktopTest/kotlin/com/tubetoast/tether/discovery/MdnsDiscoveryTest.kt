@@ -211,13 +211,11 @@ class MdnsDiscoveryTest {
     // probing is timing-dependent and cannot reliably complete within a fixed timeout.
     // The correctness guarantee is documented in MdnsDiscovery.jvm.kt instead.
 
-    // JmDNS-specific test: re-arm only applies on Linux/Windows where JmDNS is used in
-    // production. On macOS hosts MdnsDiscovery delegates to Bonjour and this regression
-    // never occurs (mDNSResponder maintains its own continuous browse). The test runs on
-    // any host because MdnsDiscoveryJmdns can be instantiated directly here.
+    // Skipped on macOS: this test injects a TestDispatcher into MdnsDiscoveryJmdns, and
+    // JmDNS on macOS cannot resolve IPv4 from mDNSResponder for local loopback services.
     @Test
-    @org.junit.Ignore("#90: discovery loses peers with identical service names — environment-dependent flake")
     fun `late-joining peer is discovered after initial browse cycle`() = runTest {
+        org.junit.Assume.assumeFalse("JmDNS IPv4 resolution unavailable on macOS", isMacOs())
         val testDispatcher = StandardTestDispatcher(testScheduler)
         val a = MdnsDiscoveryJmdns(testDispatcher)
         val b = MdnsDiscoveryJmdns(testDispatcher)
@@ -237,15 +235,64 @@ class MdnsDiscoveryTest {
             // and coroutine withTimeout would use virtual clock (routed through testScheduler).
             val deadline = System.currentTimeMillis() + 10_000
             while (System.currentTimeMillis() < deadline) {
-                if (a.discoveredDevices.value.any { it.name == "LateB" }) break
+                if (a.discoveredDevices.value.any { it.port == 19071 }) break
                 Thread.sleep(100)
             }
-            val lateB = a.discoveredDevices.value.filter { it.name == "LateB" }
+            val lateB = a.discoveredDevices.value.filter { it.port == 19071 }
             assertEquals(1, lateB.size, "LateB not discovered within 10 s after re-query")
             assertEquals(19071, lateB[0].port)
         } finally {
             a.stop()
             b.stop()
+        }
+    }
+
+    @Test
+    fun `three instances with same name each discover two others`() = runTest {
+        org.junit.Assume.assumeFalse("#111: same-name bug not yet fixed on macOS (Bonjour)", isMacOs())
+        val a = MdnsDiscovery()
+        val b = MdnsDiscovery()
+        val c = MdnsDiscovery()
+        try {
+            a.start("SameName", 19080)
+            b.start("SameName", 19081)
+            c.start("SameName", 19082)
+
+            val deadline = System.currentTimeMillis() + 15_000
+            while (System.currentTimeMillis() < deadline) {
+                val aOk = a.discoveredDevices.value
+                    .map { it.port }
+                    .containsAll(listOf(19081, 19082))
+                val bOk = b.discoveredDevices.value
+                    .map { it.port }
+                    .containsAll(listOf(19080, 19082))
+                val cOk = c.discoveredDevices.value
+                    .map { it.port }
+                    .containsAll(listOf(19080, 19081))
+                if (aOk && bOk && cOk) break
+                Thread.sleep(200)
+            }
+
+            val testPorts = setOf(19080, 19081, 19082)
+            assertEquals(
+                2,
+                a.discoveredDevices.value.count { it.port in testPorts },
+                "a should see b(19081) and c(19082)",
+            )
+            assertEquals(
+                2,
+                b.discoveredDevices.value.count { it.port in testPorts },
+                "b should see a(19080) and c(19082)",
+            )
+            assertEquals(
+                2,
+                c.discoveredDevices.value.count { it.port in testPorts },
+                "c should see a(19080) and b(19081)",
+            )
+        } finally {
+            a.stop()
+            b.stop()
+            c.stop()
         }
     }
 
@@ -270,3 +317,9 @@ class MdnsDiscoveryTest {
         }
     }
 }
+
+private fun isMacOs() = System
+    .getProperty("os.name")
+    .orEmpty()
+    .lowercase()
+    .startsWith("mac")
