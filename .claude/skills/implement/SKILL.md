@@ -29,9 +29,21 @@ Everything else — implementation details, reviewer findings, fix iterations �
 
 ```bash
 gh issue view <N> --json title,body,labels,comments
+gh pr list --search "issue:#<N>" --state open --json number,isDraft,headRefName
 ```
 
 Classify PR type. For FEATURE, look up `docs/product/features/README.md` for spec.
+
+**Critical reading.** Воспринимай описание issue как **стартовую точку, не как факт**. Подсвечивай и эскалируй пользователю до начала работы, если видишь хотя бы один пробел:
+- упомянута только одна платформа, хотя задача общая;
+- не описаны ошибки и fail-paths;
+- непонятно, как тестировать (нет указаний на edge cases / runtime check);
+- BUGFIX без хотя бы предполагаемой причины бага;
+- фразы-затычки: «дополни если есть чем», «должно работать корректно», «и так далее».
+
+Любой такой пробел — повод вернуться к G1, не «допилить по дороге».
+
+**Existing draft PR.** Если по issue уже есть открытый PR (даже draft) — НЕ пропускай Step 4 (inner loop) и Step 6 (full pre-PR review) на текущем diff'е. Без них orchestrator превращается в одного исполнителя, и весь quality framework обходится.
 
 **Worktree setup — do this BEFORE dispatching any agent that edits files.** If you are not already in `.claude/worktrees/<branch>/`:
 

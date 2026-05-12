@@ -35,19 +35,43 @@
 
 ## Важно: ответы на комментарии
 
-Если у комментария есть открытый тред (inline review comment или discussion thread) — отвечай **в самом треде через GitHub API**, а не в чате. Используй:
+**ВСЕГДА** отвечай **в треде исходного комментария**, никогда отдельным top-level комментом к PR. Связь «предложение → реакция» должна быть видна в одном месте — иначе ревьюер не понимает, что именно ты ответил, и тред остаётся «висящим».
+
+Любой inline review comment (в том числе прикреплённый к review-сабмишену) живёт в `pulls/PR/comments` и отвечается через `in_reply_to`:
 
 ```bash
-# Ответ на inline review comment (pulls/comments)
+# 1. Найти COMMENT_ID нужного комментария в треде
+gh api repos/OWNER/REPO/pulls/PR/comments \
+  --jq '.[] | {id, user: .user.login, path, line, in_reply_to_id, body}'
+
+# 2. Ответить в том же треде (in_reply_to можно указывать на любой комментарий
+#    треда — GitHub привяжет ответ к корню автоматически)
 gh api repos/OWNER/REPO/pulls/PR/comments \
   -X POST \
   -F in_reply_to=COMMENT_ID \
   -F body="текст ответа"
-
-# Ответ на общий PR comment (issues/comments)
-gh api repos/OWNER/REPO/issues/PR/comments \
-  -X POST \
-  -F body="текст ответа"
 ```
 
-Объяснения и обоснования пиши именно там — ревьюер получит нотификацию и увидит ответ в контексте кода.
+Объяснения и обоснования пиши именно там — ревьюер получит нотификацию и увидит ответ в контексте кода. `issues/PR/comments` — это top-level conversation, не тред: для ответов на ревью **не использовать**.
+
+У review body (общий текст ревью без привязки к строке) отдельного thread-API нет, поэтому **редактируй сам review body и дописывай свою реакцию в конец** — так при чтении ревью сразу видно, что на него ответили:
+
+```bash
+# Получить текущий body ревью
+gh api repos/OWNER/REPO/pulls/PR/reviews/REVIEW_ID --jq '.body'
+
+# Обновить body — оригинал + разделитель + реакция
+gh api repos/OWNER/REPO/pulls/PR/reviews/REVIEW_ID \
+  -X PUT \
+  -F body="$(printf '%s\n\n---\n\n%s' "ОРИГИНАЛЬНЫЙ_ТЕКСТ_РЕВЬЮ" "текст реакции")"
+```
+
+Формат:
+
+```
+ревью
+---
+реакция на ревью
+```
+
+Не отвечай на review body через top-level `issues/PR/comments` — связь с ревью теряется.
