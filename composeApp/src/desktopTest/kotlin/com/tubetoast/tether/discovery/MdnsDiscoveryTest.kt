@@ -252,7 +252,7 @@ class MdnsDiscoveryTest {
     }
 
     @Test
-    fun `three instances with same name each discover two others`() = runBlocking {
+    fun `three instances with same name each discover two others`() = runTest {
         org.junit.Assume.assumeFalse("JmDNS IPv4 resolution unavailable on macOS", isMacOs())
         val a = MdnsDiscoveryJmdns()
         val b = MdnsDiscoveryJmdns()
