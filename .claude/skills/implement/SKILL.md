@@ -16,8 +16,8 @@ Issue number `<N>`.
 ## Gate semantics — when to stop and ask the user
 
 You MUST stop and ask the user in these cases (and only these):
-- **G1. Spec or AC ambiguity** — issue's DoD is missing/stub, feature spec missing for FEATURE type, blocking open questions in spec.
-- **G2. BUGFIX root cause** — for BUGFIX, the root cause is not confirmed by reproduction or experiment (per `/work-on-issue` step 2).
+- **G1. Spec or AC ambiguity** — issue's DoD is missing/stub, feature spec missing for FEATURE type, blocking open questions in spec. **Mitigation:** dispatch `spec-writer` first; only stop at user if `spec-writer` has clarifying questions or the issue is non-FEATURE without DoD.
+- **G2. BUGFIX root cause** — root cause must be confirmed before any fix. **Mitigation:** dispatch `bug-reproducer`; only stop at user if it reports CANNOT REPRODUCE or none of the listed hypotheses match.
 - **G3. Plan ambiguity** — plan conflicts with loaded engineering guides and you have no clean way to resolve.
 - **G4. Smoke red/yellow** — smoke verdict is not 🟢 after the inner loop.
 - **G5. Final approval** — after the inner loop converges to APPROVE and smoke is green, present the result for the user's manual verification before merge.
@@ -30,9 +30,11 @@ Everything else — implementation details, reviewer findings, fix iterations �
 gh issue view <N> --json title,body,labels,comments
 ```
 
-Classify PR type. For FEATURE, look up `docs/product/features/README.md` for spec. Read it.
+Classify PR type. For FEATURE, look up `docs/product/features/README.md` for spec.
 
-Apply Gate G1 and G2 if applicable. If gated → present to user, stop.
+**G1 handling.** If FEATURE and (no spec, or spec is `(stub)`, or spec has blocking open questions) → dispatch `spec-writer` agent. It will draft questions for the user or produce a scoped spec. Only escalate to user with `spec-writer`'s question list — don't escalate before dispatching it.
+
+**G2 handling.** If BUGFIX → dispatch `bug-reproducer` agent before any planning. It reproduces locally, verifies each hypothesis, and posts the confirmed root cause as a comment on the issue. Only escalate to user if it returns CANNOT REPRODUCE or "none of the listed hypotheses match". The confirmed root cause becomes a hard constraint for the `coder` in step 3.
 
 Load relevant engineering guides per `/work-on-issue` step 3 mapping.
 
@@ -57,7 +59,10 @@ Per track (or sequentially if single track):
 
 **Iteration:**
 
-1. Dispatch `coder` agent with the plan slice. Wait for completion.
+1. Dispatch the implementing agent with the plan slice:
+   - **UI work** (Compose, screens, components, theming, navigation) → `ui-expert`
+   - **Everything else** (network, discovery, protocol, persistence, build, infra) → `coder`
+   - **Mixed** (UI + backend in same track) — split into two sub-tracks if independent, else dispatch `coder` and let it pull in `ui-expert` via Agent tool. Wait for completion.
 2. Once `coder` reports green tests, dispatch a **fast reviewer wave** — a subset of review agents in parallel:
    - `review-dod` (always)
    - `review-correctness` (always unless DOCS/REFACTOR)
