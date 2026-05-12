@@ -2,15 +2,38 @@ package com.tubetoast.tether.network
 
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.protocol.SendResult
+import io.ktor.http.HttpHeaders
+import io.ktor.serialization.kotlinx.json.json
+import io.ktor.server.application.call
+import io.ktor.server.application.install
+import io.ktor.server.cio.CIO
+import io.ktor.server.engine.embeddedServer
+import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.server.request.contentLength
+import io.ktor.server.request.receiveChannel
+import io.ktor.server.response.respond
+import io.ktor.server.routing.post
+import io.ktor.server.routing.routing
+import io.ktor.utils.io.ByteChannel
+import io.ktor.utils.io.readAvailable
+import io.ktor.utils.io.writeFully
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.io.FileNotFoundException
 import java.nio.file.Files
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.io.path.writeBytes
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
+import kotlin.test.assertNotEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.milliseconds
 
 class FileClientTest {
     private val device
@@ -77,6 +100,88 @@ class FileClientTest {
                 assertTrue(content.contentEquals(saved), "Saved content does not match sent content")
             }
             Files.deleteIfExists(file)
+        } finally {
+            teardown(client)
+        }
+    }
+
+    @Test
+    fun `send sets Content-Length and omits chunked transfer encoding when totalBytes known`() {
+        data class Captured(
+            val contentLength: Long?,
+            val transferEncoding: String?,
+        )
+        val captured = AtomicReference<Captured>()
+        val captureServer = embeddedServer(CIO, port = 0) {
+            install(ContentNegotiation) { json() }
+            routing {
+                post("/upload") {
+                    val channel = call.receiveChannel()
+                    val buf = ByteArray(8 * 1024)
+                    while (!channel.isClosedForRead) channel.readAvailable(buf)
+                    captured.set(
+                        Captured(
+                            contentLength = call.request.contentLength(),
+                            transferEncoding = call.request.headers[HttpHeaders.TransferEncoding],
+                        ),
+                    )
+                    call.respond(mapOf("savedPath" to "ignored"))
+                }
+            }
+        }.start(wait = false)
+        val port = runBlocking {
+            captureServer.engine
+                .resolvedConnectors()
+                .first()
+                .port
+        }
+        val client = FileClient()
+        try {
+            val payload = ByteArray(2048) { (it % 251).toByte() }
+            val file = Files.createTempFile("content-length-test", ".bin")
+            file.writeBytes(payload)
+            runBlocking {
+                client.send(
+                    device = Device(id = "x@127.0.0.1:$port", name = "x", host = "127.0.0.1", port = port),
+                    file = file,
+                )
+            }
+            Files.deleteIfExists(file)
+            val c = captured.get() ?: error("server did not capture request")
+            assertEquals(payload.size.toLong(), c.contentLength, "Content-Length must equal file size")
+            assertNull(c.transferEncoding, "Transfer-Encoding must be absent (no chunked)")
+        } finally {
+            client.close()
+            captureServer.stop(0, 0)
+        }
+    }
+
+    @Test
+    fun `truncated upload with known totalBytes fails and leaves no partial file`() {
+        val client = setup()
+        try {
+            val declared = 64L * 1024
+            val delivered = 4 * 1024
+            val partialChannel = ByteChannel(autoFlush = true)
+            runBlocking {
+                CoroutineScope(Dispatchers.IO).launch {
+                    partialChannel.writeFully(ByteArray(delivered) { 0x42 })
+                    partialChannel.cancel(java.io.IOException("simulated mid-upload disconnect"))
+                }
+                val result = client.send(
+                    device = device,
+                    channel = partialChannel,
+                    fileName = "trunc-prod.bin",
+                    totalBytes = declared,
+                )
+                assertNotEquals(SendResult.Success::class, result::class)
+                delay(200.milliseconds) // let server-side catch/finally settle
+                val partial = tmpDir.listFiles()?.filter { it.name.startsWith("trunc-prod") } ?: emptyList()
+                assertTrue(
+                    partial.isEmpty(),
+                    "no partial file should remain in $tmpDir, found: ${partial.map { it.name }}",
+                )
+            }
         } finally {
             teardown(client)
         }
