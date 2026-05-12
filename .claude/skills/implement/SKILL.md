@@ -86,7 +86,7 @@ Per track (or sequentially if single track):
 3. If every reviewer says `APPROVE` and zero `[REQUIRED]` → track done.
 4. Else → aggregate `[REQUIRED]` findings, dispatch the implementing agent again with the findings as input:
 
-> Previous review found these issues that block the PR. Address each. Do not change anything outside their scope.
+> Previous review found these issues that block the PR. Address each. For each finding, classify as pointwise or structural; for structural findings, do a symmetry pass per your agent definition — check sibling files, sibling methods, sibling platforms, sibling source sets for the same anti-pattern, and fix in this same pass. Do not change anything outside the PR's scope.
 >
 > <list of [REQUIRED] findings with file:line>
 
