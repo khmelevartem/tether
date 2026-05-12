@@ -36,7 +36,14 @@ Classify PR type. For FEATURE, look up `docs/product/features/README.md` for spe
 
 **G2 handling.** If BUGFIX → dispatch `bug-reproducer` agent before any planning. It reproduces locally, verifies each hypothesis, and posts the confirmed root cause as a comment on the issue. Only escalate to user if it returns CANNOT REPRODUCE or "none of the listed hypotheses match". The confirmed root cause becomes a hard constraint for the `coder` in step 3.
 
-Load relevant engineering guides per `/work-on-issue` step 3 mapping.
+Load relevant engineering guides from `docs/engineering/` — only those actually touching the task:
+
+| Task involves | Read |
+|---|---|
+| any code | `dependency-injection.md` (DI checklist) |
+| new component / layer / module split | `architecture-principles.md`, `modules.md` |
+| UI / Compose | `presentation-layer.md` |
+| new tests | `testing.md` |
 
 ## Step 2 — Plan
 
@@ -93,7 +100,19 @@ After all tracks converge, run the full `/code-review` skill on the local diff (
 
 ## Step 5 — Smoke
 
-Run `/smoke-test` blocks relevant to the diff (per `/work-on-issue` step 7 heuristics). Record the verdict.
+Run `/smoke-test` blocks relevant to the diff. Selection heuristic:
+
+| Diff touches | Run |
+|---|---|
+| `FileServer` / `FileClient` / CLI / network protocol | Desktop CLI + Desktop↔Desktop blocks |
+| Android FGS / mDNS / Android networking | Android block (if device attached) |
+| native source sets (`iosMain`, `macosMain`, `appleMain`) | native compile block |
+| DOCS-only, `.claude/`-only, comments-only | nothing |
+| Other production code | judgement call — when in doubt, run Desktop blocks |
+
+If the PR introduces a new critical happy-path not covered by smoke (start-time failure point, cross-platform UI, new external interface) — extend `.claude/skills/smoke-test/SKILL.md` in this same PR before running. Keep blocks lean; smoke runs often.
+
+Record the verdict (🟢/🟡/🔴) and the list of blocks executed.
 
 Apply Gate G4: if 🟡/🔴 → present to user, stop.
 
