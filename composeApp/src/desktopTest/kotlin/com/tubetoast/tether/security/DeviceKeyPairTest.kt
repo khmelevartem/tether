@@ -1,9 +1,12 @@
 package com.tubetoast.tether.security
 
 import java.nio.file.Files
+import java.nio.file.attribute.PosixFileAttributeView
+import java.nio.file.attribute.PosixFilePermission
 import java.security.KeyFactory
 import java.security.spec.X509EncodedKeySpec
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
@@ -62,6 +65,25 @@ class DeviceKeyPairTest {
             assertFailsWith<IllegalStateException> { DeviceKeyPair(configDir) }
             assertTrue(privateKeyFile.exists(), "private key must NOT be deleted on partial corruption")
             assertTrue(privateBefore.contentEquals(privateKeyFile.readBytes()), "private key bytes must be untouched")
+        } finally {
+            configDir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `device_private_key has POSIX 600 permissions on supporting filesystems`() {
+        val configDir = Files.createTempDirectory("tether-keypair-test").toFile()
+        try {
+            DeviceKeyPair(configDir)
+            val privateKeyPath = configDir.resolve("device_private.key").toPath()
+            val view = Files.getFileAttributeView(privateKeyPath, PosixFileAttributeView::class.java)
+                ?: return // non-POSIX FS (Windows) — restriction is documented no-op
+            val perms = view.readAttributes().permissions()
+            assertEquals(
+                setOf(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE),
+                perms,
+                "device_private.key must be readable/writable only by owner (POSIX 600)",
+            )
         } finally {
             configDir.deleteRecursively()
         }

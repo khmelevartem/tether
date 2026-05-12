@@ -1,9 +1,11 @@
 package com.tubetoast.tether.security
 
-expect class TrustedDeviceStore {
-    fun isTrusted(deviceId: String): Boolean
+// `open` so tests can substitute a throwing implementation to exercise the
+// /pair → 500 contract per platform. The actual classes remain platform-specific.
+expect open class TrustedDeviceStore {
+    open fun isTrusted(deviceId: String): Boolean
 
-    fun saveTrustedKey(deviceId: String, publicKey: ByteArray)
+    open fun saveTrustedKey(deviceId: String, publicKey: ByteArray)
 
-    fun getPublicKey(deviceId: String): ByteArray?
+    open fun getPublicKey(deviceId: String): ByteArray?
 }

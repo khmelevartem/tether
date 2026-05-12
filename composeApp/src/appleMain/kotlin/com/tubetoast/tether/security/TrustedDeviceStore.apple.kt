@@ -3,12 +3,12 @@ package com.tubetoast.tether.security
 import platform.Foundation.NSLog
 import platform.Foundation.NSUserDefaults
 
-actual class TrustedDeviceStore {
+actual open class TrustedDeviceStore {
     private val defaults = NSUserDefaults.standardUserDefaults
 
-    actual fun isTrusted(deviceId: String): Boolean = getPublicKey(deviceId) != null
+    actual open fun isTrusted(deviceId: String): Boolean = getPublicKey(deviceId) != null
 
-    actual fun saveTrustedKey(deviceId: String, publicKey: ByteArray) {
+    actual open fun saveTrustedKey(deviceId: String, publicKey: ByteArray) {
         val encoded = publicKey.joinToString(",")
         defaults.setObject(encoded, forKey = "tether_trust_$deviceId")
         if (!defaults.synchronize()) {
@@ -16,7 +16,7 @@ actual class TrustedDeviceStore {
         }
     }
 
-    actual fun getPublicKey(deviceId: String): ByteArray? {
+    actual open fun getPublicKey(deviceId: String): ByteArray? {
         val value = defaults.stringForKey("tether_trust_$deviceId") ?: return null
         if (value.isEmpty()) return ByteArray(0)
         return try {

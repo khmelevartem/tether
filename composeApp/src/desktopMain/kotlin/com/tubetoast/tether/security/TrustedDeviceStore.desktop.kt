@@ -14,23 +14,23 @@ import java.nio.file.StandardCopyOption
 
 private val defaultConfigDir = File(System.getProperty("user.home"), ".config/tether")
 
-actual class TrustedDeviceStore(
+actual open class TrustedDeviceStore(
     private val configDir: File = defaultConfigDir,
 ) {
     private val storageFile = File(configDir, "trusted.json")
     private val lock = Any()
     private val store: MutableMap<String, ByteArray> = loadFromDisk()
 
-    actual fun isTrusted(deviceId: String): Boolean = synchronized(lock) { store.containsKey(deviceId) }
+    actual open fun isTrusted(deviceId: String): Boolean = synchronized(lock) { store.containsKey(deviceId) }
 
-    actual fun saveTrustedKey(deviceId: String, publicKey: ByteArray) {
+    actual open fun saveTrustedKey(deviceId: String, publicKey: ByteArray) {
         synchronized(lock) {
             store[deviceId] = publicKey
             persistToDisk()
         }
     }
 
-    actual fun getPublicKey(deviceId: String): ByteArray? = synchronized(lock) { store[deviceId] }
+    actual open fun getPublicKey(deviceId: String): ByteArray? = synchronized(lock) { store[deviceId] }
 
     private fun loadFromDisk(): MutableMap<String, ByteArray> {
         if (!storageFile.exists()) return mutableMapOf()

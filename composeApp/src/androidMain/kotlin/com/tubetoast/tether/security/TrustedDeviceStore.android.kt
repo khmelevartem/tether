@@ -12,14 +12,14 @@ import kotlinx.coroutines.runBlocking
 private val Context.trustedDevicesDataStore: androidx.datastore.core.DataStore<Preferences> by
     preferencesDataStore(name = "tether_trusted_devices")
 
-actual class TrustedDeviceStore(
+actual open class TrustedDeviceStore(
     private val context: Context,
 ) {
     private val store get() = context.trustedDevicesDataStore
 
-    actual fun isTrusted(deviceId: String): Boolean = getPublicKey(deviceId) != null
+    actual open fun isTrusted(deviceId: String): Boolean = getPublicKey(deviceId) != null
 
-    actual fun saveTrustedKey(deviceId: String, publicKey: ByteArray) {
+    actual open fun saveTrustedKey(deviceId: String, publicKey: ByteArray) {
         runBlocking {
             store.edit { prefs ->
                 prefs[stringPreferencesKey(deviceId)] = publicKey.joinToString(",")
@@ -30,7 +30,7 @@ actual class TrustedDeviceStore(
     // Read-side parse errors are swallowed (logged + null) so a corrupted entry behaves as "untrusted"
     // and the peer re-pairs; write-side errors propagate so /pair returns 500 instead of falsely
     // claiming we trust a peer we failed to persist.
-    actual fun getPublicKey(deviceId: String): ByteArray? {
+    actual open fun getPublicKey(deviceId: String): ByteArray? {
         val value = runBlocking {
             store.data.first()[stringPreferencesKey(deviceId)]
         } ?: return null

@@ -93,6 +93,33 @@ class FileServerPairTest {
     }
 
     @Test
+    fun pair_returns_500_when_store_fails_to_persist() {
+        val throwingStore = object : TrustedDeviceStore() {
+            override fun saveTrustedKey(deviceId: String, publicKey: ByteArray): Unit = throw IllegalStateException(
+                "simulated NSUserDefaults.synchronize() failure",
+            )
+        }
+        val failServer = FileServer(
+            port = 0,
+            downloadsDir = newTempDir(),
+            trustedDeviceStore = throwingStore,
+            deviceKeyPair = keyPair,
+        )
+        val failPort = failServer.start()
+        try {
+            runBlocking {
+                val response = client.post("http://localhost:$failPort/pair") {
+                    contentType(ContentType.Application.Json)
+                    setBody(PairRequest(publicKey = byteArrayOf(9, 9, 9), deviceName = "FailPeer"))
+                }
+                assertEquals(HttpStatusCode.InternalServerError, response.status)
+            }
+        } finally {
+            failServer.stop()
+        }
+    }
+
+    @Test
     fun pair_saves_initiator_public_key_under_deviceId_derived_from_public_key() {
         val peerKey = byteArrayOf(10, 20, 30, 40, 50)
         val expectedDeviceId = deviceIdFromPublicKey(peerKey)
