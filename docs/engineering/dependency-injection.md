@@ -28,7 +28,9 @@ Concrete `*AppConfig` implementations are **named classes in their own files** (
 
 Each platform builds its container in its entry point and passes components down:
 
-- **Desktop** ([`Main.kt`](../../composeApp/src/desktopMain/kotlin/com/tubetoast/tether/Main.kt)): builds `DesktopAppContainer` from CLI args at the top of `runBlocking`.
+- **Desktop** — two entry points, both build `DesktopAppContainer` via the shared helpers in `DesktopBackend.kt`:
+  - [`Main.kt`](../../composeApp/src/desktopMain/kotlin/com/tubetoast/tether/Main.kt) — CLI runner (debug/automation), launched via `./gradlew :composeApp:run` or `installJar` + `tether` wrapper.
+  - [`MainUi.kt`](../../composeApp/src/desktopMain/kotlin/com/tubetoast/tether/MainUi.kt) — Compose UI runner (default for `nativeDistributions` packaging), launched via `./gradlew :composeApp:runDesktopUi`.
 - **Android** ([`TetherApp`](../../composeApp/src/androidMain/kotlin/com/tubetoast/tether/TetherApp.kt)): builds `AndroidAppContainer` lazily in the `Application` subclass and exposes it via the [`AppContainerProvider`](../../composeApp/src/androidMain/kotlin/com/tubetoast/tether/di/AppContainerProvider.kt) interface. [`TetherForegroundService`](../../composeApp/src/androidMain/kotlin/com/tubetoast/tether/network/TetherForegroundService.kt) reads it via `(application as AppContainerProvider).container`.
 - **iOS** ([`MainViewController`](../../composeApp/src/iosMain/kotlin/com/tubetoast/tether/MainViewController.kt)): builds `IosAppContainer` outside the `ComposeUIViewController { ... }` lambda so the composable does not act as a composition root (see rule 5 below).
 - **macOS**: container leaf and config exist; the entry point will follow the same shape as iOS once a macOS run target lands.

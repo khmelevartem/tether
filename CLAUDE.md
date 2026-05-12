@@ -43,8 +43,11 @@ All git naming in English. **Все commit messages обязаны начина�
 ```bash
 ./gradlew allTests -q                            # pre-commit / pre-push хуки прогонят это сами
 ./gradlew :composeApp:installJar -q && tether    # Desktop CLI (см. README.md → Desktop CLI)
+./gradlew :composeApp:runDesktopUi -q            # Desktop Compose UI
 ./gradlew :composeApp:assembleDebug              # Android APK
 ```
+
+Desktop distribution (`packageReleaseDistributionForCurrentOS`) пакует UI-приложение. CLI распространяется через `installJar`.
 
 **KtLint — никогда не запускай вручную.** Git hook делает это сам при коммите. Стилевые ошибки не правь руками — просто коммить.
 

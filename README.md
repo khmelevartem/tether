@@ -48,6 +48,20 @@ tether --name MyMac --port 8080
 [send] OK — 14523 ms  →  /tmp/tether-downloads/photo.jpg
 ```
 
+### Desktop UI
+
+Запускает Compose-интерфейс с реальным wiring (discovery + file server):
+
+```bash
+./gradlew :composeApp:runDesktopUi -q
+```
+
+Для распространения (native app bundle):
+
+```bash
+./gradlew :composeApp:packageReleaseDistributionForCurrentOS
+```
+
 ### Android
 
 ```bash

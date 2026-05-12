@@ -217,7 +217,7 @@ tasks.register("installJar") {
             localBinDir.mkdirs()
         }
 
-        val bashScript = "#!/bin/bash\nexec java -jar \"$sourceJar\" \"\$@\""
+        val bashScript = "#!/bin/bash\nexec java -cp \"$sourceJar\" com.tubetoast.tether.MainKt \"\$@\""
         wrapperScript.writeText(bashScript)
         wrapperScript.setExecutable(true)
         println("✓ Installed to ${wrapperScript.absolutePath}")
@@ -226,9 +226,24 @@ tasks.register("installJar") {
     }
 }
 
+tasks.register<JavaExec>("runDesktopUi") {
+    group = "application"
+    description = "Runs Compose Desktop UI"
+    val desktopCompilation = kotlin.targets.getByName("desktop").compilations.getByName("main")
+    classpath = desktopCompilation.output.allOutputs + requireNotNull(desktopCompilation.runtimeDependencyFiles) { "runtimeDependencyFiles missing for desktop main compilation" }
+    mainClass.set("com.tubetoast.tether.MainUiKt")
+    dependsOn("desktopMainClasses")
+}
+
+afterEvaluate {
+    tasks.named<JavaExec>("run").configure {
+        mainClass.set("com.tubetoast.tether.MainKt")
+    }
+}
+
 compose.desktop {
     application {
-        mainClass = "com.tubetoast.tether.MainKt"
+        mainClass = "com.tubetoast.tether.MainUiKt"
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
