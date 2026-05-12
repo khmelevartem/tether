@@ -20,6 +20,7 @@ docs/product/
     README.md      — feature list
     _template.md   — template for new feature docs
     *.md           — individual feature specs
+    ux/            — UX briefs per feature (authored by ux-expert agent)
 ```
 
 ## Sections

@@ -81,6 +81,10 @@ If applicable: dispatch `ux-expert` with the spec slug. It produces or updates `
 
 **Open UX questions** returned by `ux-expert` fold into Gate G1: surface them to the user, collect answers, re-dispatch `ux-expert`. Do not proceed to Step 3 with an unresolved UX-questions section.
 
+**Recovery in inner loop.** If `ui-expert` halts in Step 4 reporting "UX brief missing" (the Step 2.5 skip judgement was wrong, or new UI scope emerged mid-plan) — re-dispatch `ux-expert` and resume the inner loop. This is machine-resolvable; do not escalate to user.
+
+**Brief staleness in multi-track plans.** If Step 4 splits into multiple tracks AND a track adds new shared composables that subsequent tracks should reuse — re-dispatch `ux-expert` in "update" mode between tracks with the brief and the diff of completed tracks as input. It refreshes the "Reusing" / "New" sections so later tracks don't re-invent.
+
 ## Step 3 — Plan
 
 Use the built-in `Plan` agent (or `general-purpose` if plan unavailable) to produce a short implementation plan: phases, files to touch, validation strategy.
@@ -128,13 +132,13 @@ Dispatch the implementing agent once more:
 
 > All findings are resolved. Make one simplification pass over the diff: remove dead branches, inline single-use helpers, drop comments restating code, collapse trivial wrappers. Do not change behavior; do not touch anything outside the diff. Run `./gradlew allTests -q` after.
 
-If anything was simplified — re-run **the same set of agents that ran in Step 4 for this PR type** (i.e. dod + guides + correctness + tests + platform-if-touched) **plus `review-reuse`** on the simplified diff. `review-reuse` is critical here because duplication is what most likely accumulated across iterations and tracks. `review-platform` runs only if the diff actually touches a platform source set — same skip rule as Step 4. If clean, proceed.
+If anything was simplified — re-run **the same set of agents that ran in Step 4 for this PR type** (i.e. dod + guides + correctness + tests + platform-if-touched + ux-if-touched) **plus `review-reuse`** on the simplified diff. `review-reuse` is critical here because duplication is what most likely accumulated across iterations and tracks. `review-platform` and `review-ux` follow the same skip rules as Step 4 (platform set touched / `composeApp/src/**` touched + UX brief exists). If clean, proceed.
 
 ## Step 6 — Full pre-PR review (inline, not via /code-review skill)
 
 `/code-review` skill requires an existing PR (it posts via `gh pr review`). At this step the PR does not exist yet — Step 9 creates it. So instead of calling the skill, **orchestrate the same agent fan-out inline, without GitHub publication**:
 
-1. Wave A in parallel: `review-dod`, `review-guides`, `review-reuse`, plus (if applicable to PR type / diff) `review-correctness`, `review-tests`, `review-platform`. Each agent receives the issue number and is told to review the local working tree (`git diff main...HEAD`) instead of a PR.
+1. Wave A in parallel: `review-dod`, `review-guides`, `review-reuse`, plus (if applicable to PR type / diff) `review-correctness`, `review-tests`, `review-platform`, `review-ux`. Each agent receives the issue number and is told to review the local working tree (`git diff main...HEAD`) instead of a PR. `review-ux` follows the same skip rule as Step 4 (`composeApp/src/**` touched + UX brief exists).
 2. Wave B: `review-adversarial` with the combined Wave A findings as input.
 3. Aggregate. Apply any `[REQUIRED]` via the implementing agent (with the symmetry-pass instruction). Re-run until approved or 2 iterations.
 

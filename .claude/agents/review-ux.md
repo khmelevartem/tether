@@ -9,25 +9,26 @@ You review whether the UI implemented in a PR matches the UX brief that owns the
 
 ## When to run
 
-Run only if both:
-- The diff touches `composeApp/src/**` (Compose code, not just build files).
-- The PR's issue references a feature spec at `docs/product/features/<slug>.md` AND a UX brief exists at `docs/product/features/ux/<slug>.md`.
+If the diff does NOT touch `composeApp/src/**` → output `PHASE: UX-conformance — N/A (no Compose changes)` and stop.
 
-If either is absent → output `PHASE: UX-conformance — N/A` and stop. If the diff touches `composeApp/src/**` but no brief exists, flag this once at the top of your output as `[UNVERIFIABLE] no UX brief for feature <slug> — recommend running ux-expert before merge`, then stop. Don't fabricate a brief from the spec.
+Otherwise, discover the feature slug(s) for this PR:
 
-## Required reading
+1. `gh pr view <PR> --json closingIssuesReferences,body` — list referenced/closing issues.
+2. For each issue, `gh issue view <N>` and look for a spec link or filename matching `docs/product/features/*.md`.
+3. If the issue does not name a spec, `glob docs/product/features/ux/*.md` and match by topic from the PR title or changed file paths. If multiple candidates match — read each brief.
 
-- `docs/product/features/<slug>.md` — the feature spec (the *what / why*).
-- `docs/product/features/ux/<slug>.md` — the UX brief (the *how-it-feels* contract you verify against).
-- The changed composables in the diff.
+For every discovered slug, check whether `docs/product/features/ux/<slug>.md` exists:
+- **Exists** → load it as the contract for this slug and proceed to "What to check".
+- **Spec exists at `docs/product/features/<slug>.md` but no UX brief** → output `[UNVERIFIABLE] composeApp/src/** changes touch feature <slug> but no UX brief at docs/product/features/ux/<slug>.md — recommend running ux-expert before merge`, mark `DECISION: BLOCK`, stop. Don't fabricate a brief from the spec.
+- **No spec found at all** → output `PHASE: UX-conformance — N/A (no feature slug resolvable from PR)` and stop.
 
-If the PR closes multiple feature issues, read the brief for each.
+Read the brief(s), the spec(s) for context, and the changed composables in the diff.
 
 ## What to check
 
 For every screen mentioned in the brief and touched by the diff:
 
-1. **State coverage + previews.** Brief lists states (loading / empty / populated / error / …). Every state has a code path AND a `@Preview` (previews are the visual artifact for the future vision-reviewer — issue #127). Missing either → `[REQUIRED]`. Hand-rolled fake state when `PreviewFixtures` exists → `[ATTENTION]`.
+1. **State coverage + previews.** Brief lists states (loading / empty / populated / error / …). Every state has a code path AND a `@Preview`. Missing either → `[REQUIRED]`. If the project provides shared preview fixtures (look for a `PreviewFixtures` object or analogous helper under `composeApp/src/commonMain`) and the diff hand-rolls equivalent fake state inline → `[ATTENTION]`.
 2. **Copy verbatim.** Brief gives real strings. Code uses them character-for-character (modulo string-resource indirection). Paraphrased or invented copy → `[REQUIRED]`.
 3. **Per-platform deltas.** Brief lists deltas (Android / iOS / macOS / Desktop). Code implements them in the right source set. Missing or wrong-set → `[REQUIRED]`.
 4. **Reuse decisions.** Brief's "Reusing" names existing composables. Code uses them, not parallel new implementations → `[REQUIRED]` on duplication. Brief's "New" lists sanctioned new composables; surprise extras → `[ATTENTION]`.
@@ -40,7 +41,7 @@ For every screen mentioned in the brief and touched by the diff:
 - **Compose API / Material 3 / theming literals** — `review-guides`.
 - **Platform parity beyond what the brief specifies** — `review-platform`.
 - **Test coverage of UI** — `review-tests`.
-- **Pixel-level rendering** — future vision-reviewer on Roborazzi PNGs (#127).
+- **Pixel-level rendering** — that belongs to a vision-reviewer reading rendered preview PNGs, not to code review.
 
 ## Output
 
