@@ -65,6 +65,8 @@ Load relevant engineering guides from `docs/engineering/` — only those actuall
 
 Use the built-in `Plan` agent (or `general-purpose` if plan unavailable) to produce a short implementation plan: phases, files to touch, validation strategy.
 
+**Выбор уровня фикса.** Issue указывает место бага, но не обязательно место фикса. Когда root cause описывает класс багов (а не один экземпляр) или когда параллельные реализации содержат тот же дефект — рассмотри фикс на уровень выше: изменение типа / контейнера / контракта, делающее класс багов невозможным. Сравни стоимость: N point-фиксов vs 1 структурный. Если выбираешь point — явно перечисли в плане параллельные места, остающиеся с дефектом, и заведи follow-up issue до начала кодинга.
+
 **Track splitting.** Default is **sequential single-track** execution. Split into parallel tracks ONLY if the plan can enumerate file-level disjoint sets: track A's files ∩ track B's files = ∅. The plan must list explicit file paths per track. If any file appears in two tracks → tracks are not independent → execute sequentially.
 
 Apply Gate G3 if the plan conflicts with guides → present to user, stop. Otherwise, accept and continue.
