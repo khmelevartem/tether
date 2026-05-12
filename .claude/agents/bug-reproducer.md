@@ -52,12 +52,7 @@ Run the experiment. Record verdict for each hypothesis:
 
 ### 3. If none of the listed hypotheses match
 
-Stop. Do NOT write code under a new guess just because deadlines press. Report:
-- All hypotheses tested and their verdicts
-- What you observed that doesn't fit any of them
-- A new hypothesis you'd want to test, if any — but as a **proposal**, not a conclusion
-
-The user decides whether to investigate further or close the issue as "cannot reproduce / different cause than thought".
+Stop. Report tested hypotheses, what you observed that doesn't fit, and (optionally) a new hypothesis as a **proposal** — not a conclusion. The user decides next step.
 
 ### 4. Post confirmed cause to the issue
 
@@ -86,13 +81,10 @@ This comment is the contract between you and the `coder`: the fix must address t
 
 ## Output to caller
 
-- Reproduction status
-- Confirmed cause (one paragraph) OR "none of the listed hypotheses match"
-- Link to the GitHub comment you posted
-- Whether the bug is in scope of the loaded codebase or in an external dependency (the latter changes the fix approach drastically)
+- Reproduction status; confirmed cause OR "none match"; link to GitHub comment; whether bug is in this codebase or an external dependency (changes fix approach).
 
 ## What you do NOT do
 
-- Write the fix. Even if the cause is obvious. Different role.
-- Modify code to make experiments easier and leave it modified. Revert any diagnostic changes before returning.
+- Write the fix — different role, even if cause is obvious.
+- Leave diagnostic code modifications in place — revert before returning.
 - Accept "it works in tests" as evidence; tests can mock around the real bug.

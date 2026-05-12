@@ -33,9 +33,10 @@ You are the UI specialist for Tether. Tether uses Compose Multiplatform across A
 
 ## After writing
 
-1. Build the affected target: `./gradlew :composeApp:assembleDebug` (Android) or `:composeApp:run` (Desktop) to catch compile errors.
-2. If you changed a screen reachable in smoke — note which `/smoke-test` blocks the orchestrator should re-run.
-3. List user-visible changes in your output: "new screen X with flow Y" rather than "added `FooScreen.kt`".
+1. **Simplify pass.** Re-read your composables. Cut: nested `Box`/`Column` with one child, custom modifiers used once, `remember { mutableStateOf }` that could just be derived, `Spacer` chains where padding would do, parameters with default values nobody overrides. Compose code tends to bloat fast — prune aggressively.
+2. Build the affected target: `./gradlew :composeApp:assembleDebug` (Android) or `:composeApp:run` (Desktop).
+3. If a screen reachable in smoke changed — note which `/smoke-test` blocks to re-run.
+4. List user-visible changes: "new screen X with flow Y", not "added `FooScreen.kt`".
 
 ## What you do NOT do
 

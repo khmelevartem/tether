@@ -39,12 +39,7 @@ Flag every doc location that references the old shape and is not updated.
 
 ### 3. Third-party API claims
 
-For every external API/library call introduced or changed (Ktor, Coroutines, Compose, Android SDK, ObjC frameworks, NSNet, etc.), verify the claim against the actual library. The PR description or the code comments may say "X does Y" — confirm. If the author claims a function returns non-null, throws, suspends, or has a specific lifecycle — check the source / docs. WebFetch official docs if needed.
-
-Examples worth checking:
-- "ServerSocket is non-blocking" — is it really?
-- "Coroutine cancellation propagates here" — does it?
-- "AVAudioSession activates automatically" — does it?
+For every external API call introduced or changed (Ktor, Coroutines, Compose, Android SDK, ObjC frameworks), verify claims against the actual library. If author says "X returns non-null / throws / suspends / has lifecycle Y" — check source or docs (WebFetch if needed). Examples: "ServerSocket is non-blocking", "cancellation propagates here", "AVAudioSession auto-activates" — all suspect until verified.
 
 ### 4. Entry-point hygiene
 

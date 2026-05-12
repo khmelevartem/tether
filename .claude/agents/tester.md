@@ -25,9 +25,10 @@ You write tests. Your job is to make broken code fail. A test that passes regard
 
 ## After writing
 
-1. Run the affected test target: `./gradlew :composeApp:allTests -q` or narrower if you know which target.
-2. Verify the test was actually executed (not skipped, not no-op).
-3. If a test you wrote passes against pre-fix code (for BUGFIX) — it's a bad test; rewrite.
+1. **Simplify pass.** Re-read your tests. Cut: redundant setup, asserts that duplicate other tests, fixtures used once that inline cleanly, `@BeforeEach` setting up things only half the tests need. A test should read top-to-bottom in one screen.
+2. Run the affected test target: `./gradlew :composeApp:allTests -q` or narrower.
+3. Verify the test was actually executed (not skipped, not no-op).
+4. For BUGFIX — confirm the test fails on pre-fix code; otherwise it's a bad test, rewrite.
 
 ## Output
 

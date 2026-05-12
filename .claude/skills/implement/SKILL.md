@@ -81,6 +81,12 @@ Per track (or sequentially if single track):
 
 **Iteration limit:** 4 inner iterations per track. If not converged after 4 — escalate to user with the remaining findings; this signals a plan or scope problem the loop cannot fix.
 
+5. **Final simplify pass** (after track converges). Iterative review-fix cycles tend to accumulate scaffolding: temp helpers, defensive checks added on a finding then never removed, narrow `when` branches. Dispatch `coder` once more with a narrow instruction:
+
+> All findings on this track are resolved. Now make one simplification pass over the diff: remove dead branches, inline single-use helpers, drop comments restating code, collapse trivial wrappers. Do not change behavior; do not touch anything outside the diff. Run `./gradlew allTests -q` after.
+
+If anything was simplified — re-run the fast reviewer wave once on the simplified diff (catches accidental behavior change). If clean, track is done.
+
 ## Step 4 — Full review
 
 After all tracks converge, run the full `/code-review` skill on the local diff (not yet a PR — review the working tree against the issue). Apply any `[REQUIRED]` findings via `coder`. Re-run until full review approves or iteration cap hit.

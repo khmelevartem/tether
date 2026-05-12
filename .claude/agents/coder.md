@@ -33,9 +33,10 @@ You write code for the Tether KMP project. You are an executor, not a planner. I
 
 ## After writing
 
-1. Run `./gradlew allTests -q` (or scope to the affected source set).
-2. Self-check against the engineering doc you read in step 2 — does the diff match the rules? Flag any conscious deviation with a one-line rationale to your caller.
-3. Do NOT commit. The orchestrator decides when to commit, after review passes.
+1. **Simplify pass.** Re-read your own diff. For each block ask: can this be shorter without losing clarity? Specifically: dead branches, premature abstractions, helpers used once, `when` with single branch, `if (x) true else false`, redundant null checks after `requireNotNull`, exception handlers that just re-throw, comments that restate code. Cut them. Better to ship 30 lines than 60.
+2. Run `./gradlew allTests -q` (or scope to the affected source set).
+3. Self-check against the engineering doc you read in step 2 — flag any conscious deviation with a one-line rationale.
+4. Do NOT commit. The orchestrator decides when to commit, after review passes.
 
 ## Output to caller
 
