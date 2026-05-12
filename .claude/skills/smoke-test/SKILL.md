@@ -86,11 +86,21 @@ PORT_A=$(grep -oE 'port[[:space:]]*:[[:space:]]*[0-9]+' $LOG_A | grep -oE '[0-9]
 Сценарии:
 1. **Startup** — port распарсен, java pid жив (`ps -p $JPID_A`). PASS если оба условия.
 2. **`/health`** — `curl -sf --max-time 5 http://localhost:$PORT_A/health` → должно вернуть `Tether OK`.
-3. **Port LISTEN** — `lsof -nP -iTCP:$PORT_A | head -3` показывает java listener.
-4. **mDNS publish (primary)** — поллим CLI-лог, ищем `mDNS started → advertising 'SmokeMacA' on port`. Это уже подтверждение публикации (CLI сам пишет это после успешного `discovery.start()`).
-5. **mDNS publish (secondary, опционально)** — `( dns-sd -B _tether._tcp. local. 2>&1 & DNSSD_PID=$!; sleep 8; kill $DNSSD_PID 2>/dev/null ) | grep SmokeMacA`. Если `dns-sd` нет (Linux) — этот шаг SKIP, общий результат всё равно PASS по primary.
-6. **stdin `list`** — `echo "list" > /tmp/smoke-cliA-in &; sleep 1; tail $LOG_A` — должен напечатать `[list]` или `[peers]` строку.
-7. **stdin `quit` graceful** — `echo "quit" > /tmp/smoke-cliA-in &`, ждать до 8 сек, проверить `ps -p $JPID_A` — процесс должен умереть. Если не умер — FAIL «не graceful», `kill -9` и идти дальше.
+3. **`/pair` — формат публичного ключа.** Эндпоинт возвращает X.509-encoded EC P-256 SubjectPublicKeyInfo: ровно 91 байт, первый байт `0x30` (DER `SEQUENCE`), байт 26 — `0x04` (uncompressed EC point marker). Проверяем форму, не только что-то-вернулось — иначе placeholder ровно как на Apple (#116) пройдёт проверку «непустого» ответа. Это также валит регрессию JSON-кодировки `ByteArray` (если кто-то переключит kotlinx-serialization на base64-строку — формат массива сломается).
+   ```bash
+   PAIR_RESP=$(curl -sf --max-time 5 -X POST http://localhost:$PORT_A/pair \
+     -H "Content-Type: application/json" \
+     -d '{"publicKey":[1,2,3], "deviceName":"smoke"}')
+   echo "$PAIR_RESP" | jq -e '.publicKey | length == 91 and .[0] == 48 and .[26] == 4' > /dev/null \
+     && echo "PASS: X.509 EC P-256 SubjectPublicKeyInfo" \
+     || { echo "FAIL: bad publicKey shape: $PAIR_RESP"; }
+   ```
+   На текущей версии скилла (Desktop CLI на JVM) формат гарантирован. Когда добавится macOS runtime entry-point (#41) и Apple начнёт возвращать настоящий EC (#116) — этот же шаг будет валидным smoke на нативный таргет; до тех пор проверка только на JVM-инстансе A.
+4. **Port LISTEN** — `lsof -nP -iTCP:$PORT_A | head -3` показывает java listener.
+5. **mDNS publish (primary)** — поллим CLI-лог, ищем `mDNS started → advertising 'SmokeMacA' on port`. Это уже подтверждение публикации (CLI сам пишет это после успешного `discovery.start()`).
+6. **mDNS publish (secondary, опционально)** — `( dns-sd -B _tether._tcp. local. 2>&1 & DNSSD_PID=$!; sleep 8; kill $DNSSD_PID 2>/dev/null ) | grep SmokeMacA`. Если `dns-sd` нет (Linux) — этот шаг SKIP, общий результат всё равно PASS по primary.
+7. **stdin `list`** — `echo "list" > /tmp/smoke-cliA-in &; sleep 1; tail $LOG_A` — должен напечатать `[list]` или `[peers]` строку.
+8. **stdin `quit` graceful** — `echo "quit" > /tmp/smoke-cliA-in &`, ждать до 8 сек, проверить `ps -p $JPID_A` — процесс должен умереть. Если не умер — FAIL «не graceful», `kill -9` и идти дальше.
 
 **Замечание для Блока 2:** инстанс A держим живым до конца Блока 2, `quit` шлём только после успешного send. Иначе придётся перезапускать.
 
@@ -261,6 +271,7 @@ PASS если exit=0. FAIL — приложить последние ~30 стр�
 | Build | uber jar | ✓ PASS | <Ns>, jar=<name> |
 | Desktop CLI A | startup + port | ✓ PASS | port=49507, pid=83952 |
 | Desktop CLI A | /health | ✓ PASS | "Tether OK" |
+| Desktop CLI A | /pair X.509 EC P-256 | ✓ PASS | 91 bytes, DER prefix OK |
 | Desktop CLI A | port LISTEN | ✓ PASS | java *:49507 |
 | Desktop CLI A | mDNS publish (log) | ✓ PASS | advertising 'SmokeMacA' |
 | Desktop CLI A | mDNS publish (dns-sd) | ✓ PASS | SmokeMacA в browse |
