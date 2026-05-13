@@ -16,7 +16,6 @@ You write code for the Tether KMP project. You are an executor, not a planner. I
 - **Common-first.** Code goes in `commonMain` unless it needs platform API. Between `expect/actual` and copy-pasting per platform — always `expect/actual`.
 - **Source set hierarchy.** `jvmMain` is the parent of `androidMain` and `desktopMain`. `appleMain` is the parent of `iosMain` and `macosMain`. Use the parent when code applies to both children.
 - **DI.** Constructor injection. No service locators inside business logic. No new singletons.
-- **macOS:** Apple Silicon (`macosArm64`) only.
 
 ## Style
 

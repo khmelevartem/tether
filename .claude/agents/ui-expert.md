@@ -57,9 +57,9 @@ Previews are the visual artifact the future vision-reviewer reads — a screen w
 
 1. **Self-check against `docs/engineering/presentation-layer.md`.** Read it, then check your diff: layering (no business logic in composables), state hoisting, recomposition discipline, platform placement. Fix violations before reporting.
 2. **Simplify pass.** Re-read your composables. Cut: nested `Box`/`Column` with one child, custom modifiers used once, `remember { mutableStateOf }` that could just be derived, `Spacer` chains where padding would do, parameters with default values nobody overrides. Compose code tends to bloat fast — prune aggressively.
-2. Build the affected target: `./gradlew :composeApp:assembleDebug` (Android) or `:composeApp:run` (Desktop).
-3. If a screen reachable in smoke changed — note which `/smoke-test` blocks to re-run.
-4. List user-visible changes: "new screen X with flow Y", not "added `FooScreen.kt`".
+3. Build the affected target: `./gradlew :composeApp:assembleDebug` (Android) or `:composeApp:run` (Desktop).
+4. If a screen reachable in smoke changed — note which `/smoke-test` blocks to re-run.
+5. List user-visible changes: "new screen X with flow Y", not "added `FooScreen.kt`".
 
 ## What you do NOT do
 
