@@ -2,7 +2,7 @@
 
 **Status:** Accepted — 2026-05-13
 **Issue:** [#123](https://github.com/khmelevartem/tether/issues/123)
-**POC:** _placeholder — filled after the spike PR is closed_
+**POC:** [#138](https://github.com/khmelevartem/tether/pull/138) (closed without merge — decision-history artifact)
 
 ## Context
 
