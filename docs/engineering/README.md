@@ -14,11 +14,11 @@ Product-side docs (vision, audience, features) live in [`docs/product/`](../prod
 
 ## Writing style for these guides
 
-These documents codify principles, not the current shape of the codebase. They should age slowly.
+These documents codify principles, not the current shape of the codebase — they should age slowly.
 
-- **Code examples use abstract types** (`SomeService`, `SomeRepository`, `PlatformContext`), not real project classes. A guide that names `FileClient`, `MdnsDiscovery` or specific `actual` constructors in its examples will rot whenever those classes are renamed, refactored or split — and will be subtly wrong well before anyone notices.
-- **Do not restate what the code already shows.** Class hierarchies, `abstract`/`provides` annotations, constructor signatures and source set layout are visible in the IDE. A guide that duplicates them is two sources of truth — the code is the one that drifts last. Reference real classes by markdown link when an example is genuinely needed; don't pin their current shape into the prose.
-- **Lead with the rule.** Concrete examples and rationale follow. A reader who scans the heading and the first paragraph should already know what the rule is.
+- **Code examples on abstract types**, not on real project classes. Examples pinned to concrete names rot at every rename.
+- **Don't restate what the code already shows** (hierarchies, signatures, source set layout). The code is the one source of truth that drifts last; link to it instead of copying.
+- **Lead with the rule.** Rationale and examples follow.
 
 ## Architecture Decision Records
 
