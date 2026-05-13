@@ -17,9 +17,11 @@ docs/product/
   monetization.md  — free vs. paid, working hypothesis
   roadmap.md       — MVP / Post-MVP / Later
   features/
-    README.md      — feature list
-    _template.md   — template for new feature docs
-    *.md           — individual feature specs
+    README.md         — feature list
+    _template.md      — spec template for new features
+    <slug>/
+      spec.md         — product spec (what & why, authored by spec-writer)
+      ux-brief.md     — UX brief (how-it-feels, authored by ux-expert, optional for non-UI features)
 ```
 
 ## Sections

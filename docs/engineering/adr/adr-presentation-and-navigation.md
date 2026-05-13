@@ -83,7 +83,7 @@ Each option below is judged against the same five scenarios:
 - **DI fit:** acceptable — `getScreenModel { ... }` accepts constructor args, but the canonical pattern leans on a service-locator, fighting `AppContainer`'s "no global lookups" rule.
 - **Maturity:** stable, popular, smaller maintainer team and slower release cadence than Decompose.
 
-**Why not chosen:** the UIKit blind spot is decisive. The native iOS pickers / share sheet path is plausible from day one (see `docs/product/features/file-transfer.md` and `pairing.md`). With Voyager, that path forces a parallel non-Voyager state holder for the native side — exactly the fork the ADR is meant to prevent.
+**Why not chosen:** the UIKit blind spot is decisive. The native iOS pickers / share sheet path is plausible from day one (see `docs/product/features/file-transfer/spec.md` and `pairing/spec.md`). With Voyager, that path forces a parallel non-Voyager state holder for the native side — exactly the fork the ADR is meant to prevent.
 
 ### 3. Thin custom layer (StateFlow + rememberSaveable + manual nav)
 

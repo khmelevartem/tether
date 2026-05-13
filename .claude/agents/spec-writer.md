@@ -52,7 +52,7 @@ Stop and wait for answers. Do NOT proceed to step 3 with unanswered questions.
 
 ### Step 3 — Write the spec
 
-Create `docs/product/features/<slug>.md` from the template. Rules:
+Create `docs/product/features/<slug>/spec.md` from the template (creating the per-feature directory). Rules:
 
 - **One spec per feature, all platforms.** Don't write "Android X" + "iOS X" separately — see template comment.
 - **No module names, file paths, gradle tasks** in the spec. If a sentence reads like a how-to, it belongs in the issue, not here.

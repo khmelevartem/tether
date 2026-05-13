@@ -10,7 +10,7 @@
 
 ## Why
 
-After picking a device on the [device list](device-list.md), the user needs to actually move a file and see what is happening — both as the sender and as the receiver. Without this Tether cannot deliver its core value: picking a peer with no follow-through is worse than not having a list at all.
+After picking a device on the [device list](../device-list/spec.md), the user needs to actually move a file and see what is happening — both as the sender and as the receiver. Without this Tether cannot deliver its core value: picking a peer with no follow-through is worse than not having a list at all.
 
 This feature also carries Tether's two non-negotiable transport promises (see [vision.md](../vision.md)): **original bytes, untouched** (no compression, no conversion) and **any size** (no in-memory buffering, no silent failures on large files). They apply to both directions and to every platform.
 
@@ -46,7 +46,7 @@ This feature also carries Tether's two non-negotiable transport promises (see [v
 ## Not in this feature
 
 - Resume after interrupted transfer — Post-MVP, see [roadmap.md](../roadmap.md).
-- Multi-file send semantics (batching, aggregate progress) — separate feature, see [multi-file-transfer.md](multi-file-transfer.md).
+- Multi-file send semantics (batching, aggregate progress) — separate feature, see [multi-file-transfer.md](../multi-file-transfer/spec.md).
 - "Show in folder" / "Open file" affordances after receive — Post-MVP.
 - Pairing prompts — owned by [pairing-pin-confirmation.md](pairing-pin-confirmation.md).
 
