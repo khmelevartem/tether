@@ -107,6 +107,8 @@ Per track (or sequentially if single track):
 >
 > <list of [REQUIRED] findings with file:line>
 
+   **Точность передачи ревью.** Coder получает контекст cold и не верифицирует orchestrator'а — если ты перепаковал «снеси X» в «оправдай X через KDoc», coder сделает ровно последнее. Передавай findings максимально близко к исходным формулировкам ревьюера; не сужай и не смягчай. Если несколько findings сходятся на одном принципе — назови принцип явно в инструкции и перечисли ВСЕ сайты, где он применяется, даже если в комментариях упомянуты не все. Сомневаешься в интерпретации — эскалируй пользователю ДО dispatch'а, не после следующего раунда ревью.
+
    Go back to step 2.
 
 **Iteration limit:** 4 inner iterations per track. If not converged after 4 — escalate to user with remaining findings; this signals a plan/scope problem the loop cannot fix.

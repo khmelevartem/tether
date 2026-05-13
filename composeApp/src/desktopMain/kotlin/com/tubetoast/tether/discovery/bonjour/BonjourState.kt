@@ -67,8 +67,7 @@ internal class BonjourState(
     private fun cleanupName(name: String) {
         pendingPorts.remove(name)
         pendingIps.remove(name)
-        val device = store.devices.value.firstOrNull { it.name == name } ?: return
-        store.removeById(device.id)
+        store.removeByName(name)
     }
 
     private fun emitIfReady(name: String) {
@@ -76,8 +75,6 @@ internal class BonjourState(
         val port = pendingPorts[name] ?: return
         if (isSelf(ip, port)) return
         val device = Device(id = "$name@$ip:$port", name = name, host = ip, port = port)
-        val previous = store.devices.value.firstOrNull { it.name == name }
-        if (previous != null && previous.id != device.id) store.removeById(previous.id)
         store.upsert(device)
     }
 

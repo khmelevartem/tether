@@ -25,17 +25,19 @@ class DiscoveredDevicesStoreTest {
     }
 
     @Test
-    fun `removeById removes correct entry`() {
+    fun `removeByName removes all entries with matching name`() {
+        store.upsert(device("a@1.0.0.1:80", name = "Peer"))
+        store.upsert(device("b@1.0.0.2:80", name = "Peer"))
+        store.upsert(device("c@1.0.0.3:80", name = "Other"))
+        store.removeByName("Peer")
+        assertEquals(listOf(device("c@1.0.0.3:80", name = "Other")), store.devices.value)
+    }
+
+    @Test
+    fun `removeByName on missing name is a no-op`() {
         store.upsert(device("a@1.2.3.4:1"))
-        store.upsert(device("b@1.2.3.4:2"))
-        store.removeById("a@1.2.3.4:1")
+        store.removeByName("nope")
         assertEquals(1, store.devices.value.size)
-        assertEquals(
-            "b@1.2.3.4:2",
-            store.devices.value
-                .single()
-                .id,
-        )
     }
 
     @Test
@@ -49,11 +51,11 @@ class DiscoveredDevicesStoreTest {
     @Test
     fun `devices StateFlow value reflects each mutation`() = runTest {
         assertEquals(emptyList(), store.devices.value)
-        store.upsert(device("a@1.2.3.4:1"))
+        store.upsert(device("a@1.2.3.4:1", name = "A"))
         assertEquals(1, store.devices.value.size)
-        store.upsert(device("b@1.2.3.4:2"))
+        store.upsert(device("b@1.2.3.4:2", name = "B"))
         assertEquals(2, store.devices.value.size)
-        store.removeById("a@1.2.3.4:1")
+        store.removeByName("A")
         assertEquals(1, store.devices.value.size)
         assertEquals(
             "b@1.2.3.4:2",
@@ -64,12 +66,21 @@ class DiscoveredDevicesStoreTest {
     }
 
     @Test
-    fun `three different ids with same name all present after upserts`() {
-        store.upsert(device("a@1.0.0.1:80", name = "Peer"))
-        store.upsert(device("b@1.0.0.2:80", name = "Peer"))
-        store.upsert(device("c@1.0.0.3:80", name = "Peer"))
-        assertEquals(3, store.devices.value.size)
-        assertTrue(store.devices.value.all { it.name == "Peer" })
+    fun `upsert with same name and new id evicts stale entry`() {
+        val old = device("a@1.0.0.1:80", name = "Peer")
+        val fresh = device("a@1.0.0.2:80", name = "Peer")
+        store.upsert(old)
+        store.upsert(fresh)
+        assertEquals(listOf(fresh), store.devices.value)
+    }
+
+    @Test
+    fun `upsert preserves entries with different names`() {
+        val a = device("a@1.2.3.4:1", name = "A")
+        val b = device("b@1.2.3.4:2", name = "B")
+        store.upsert(a)
+        store.upsert(b)
+        assertEquals(listOf(a, b), store.devices.value)
     }
 
     @Test

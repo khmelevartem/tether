@@ -61,8 +61,7 @@ internal class MdnsDiscoveryJmdns(
 
             override fun serviceRemoved(event: ServiceEvent) {
                 System.err.println("INFO: serviceRemoved '${event.name}'")
-                val device = store.devices.value.firstOrNull { it.name == event.name } ?: return
-                store.removeById(device.id)
+                store.removeByName(event.name)
             }
 
             override fun serviceResolved(event: ServiceEvent) {
@@ -81,8 +80,6 @@ internal class MdnsDiscoveryJmdns(
                         host = ipv4,
                         port = info.port,
                     )
-                    val previous = store.devices.value.firstOrNull { it.name == event.name }
-                    if (previous != null && previous.id != device.id) store.removeById(previous.id)
                     store.upsert(device)
                 } catch (e: Exception) {
                     System.err.println("WARN: serviceResolved error for '${event.name}' — ${e.message}")

@@ -107,8 +107,7 @@ actual class MdnsDiscovery(
     private fun onServiceRemoved(service: NSNetService) {
         val serviceName = service.name
         NSLog("mDNS: service removed %s", serviceName)
-        val device = store.devices.value.firstOrNull { it.name == serviceName } ?: return
-        store.removeById(device.id)
+        store.removeByName(serviceName)
     }
 
     private fun onServiceResolved(service: NSNetService) {
@@ -135,8 +134,6 @@ actual class MdnsDiscovery(
         )
 
         NSLog("mDNS: peer discovered: %s@%s:%d", device.name, device.host, device.port)
-        val previous = store.devices.value.firstOrNull { it.name == serviceName }
-        if (previous != null && previous.id != device.id) store.removeById(previous.id)
         store.upsert(device)
     }
 

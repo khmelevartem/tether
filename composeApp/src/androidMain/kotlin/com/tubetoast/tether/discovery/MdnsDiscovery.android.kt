@@ -73,8 +73,7 @@ actual class MdnsDiscovery(
         override fun onServiceLost(serviceInfo: NsdServiceInfo) {
             if (nsdManager == null) return
             Log.d(TAG, "NSD service lost: ${serviceInfo.serviceName}")
-            val device = store.devices.value.firstOrNull { it.name == serviceInfo.serviceName } ?: return
-            store.removeById(device.id)
+            store.removeByName(serviceInfo.serviceName)
         }
     }
 
@@ -114,8 +113,6 @@ actual class MdnsDiscovery(
                 port = port,
             )
             Log.d(TAG, "NSD peer discovered: $device")
-            val previous = store.devices.value.firstOrNull { it.name == serviceInfo.serviceName }
-            if (previous != null && previous.id != device.id) store.removeById(previous.id)
             store.upsert(device)
             onResolveComplete()
         }
