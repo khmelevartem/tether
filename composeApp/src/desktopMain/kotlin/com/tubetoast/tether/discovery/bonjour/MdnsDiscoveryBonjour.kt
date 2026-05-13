@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import java.net.NetworkInterface
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 
@@ -113,7 +114,6 @@ internal class MdnsDiscoveryBonjour(
         private suspend fun consumeEvents() {
             for (event in events) {
                 when (event) {
-                    is Event.OwnNameAssigned -> state.ownNameAssigned(event.canonicalName)
                     is Event.BrowseAdd -> state.onBrowseAdd(event.name, event.interfaceIndex)
                     is Event.BrowseRemove -> state.onBrowseRemove(event.name)
                     is Event.Resolved -> state.onResolved(event.name, event.host, event.port)
@@ -243,10 +243,6 @@ internal class MdnsDiscoveryBonjour(
         }
 
         sealed class Event {
-            data class OwnNameAssigned(
-                val canonicalName: String,
-            ) : Event()
-
             data class BrowseAdd(
                 val name: String,
                 val interfaceIndex: Int,
@@ -281,11 +277,14 @@ internal class MdnsDiscoveryBonjour(
                 val events = Channel<Event>(Channel.UNLIMITED)
                 val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
+                val ownAddresses = localAddresses()
                 val session = Session(store, scope, events)
-                val state = BonjourState(deviceName, store, session)
+                val state = BonjourState(store, session) { host, resolvedPort ->
+                    resolvedPort == port && ownAddresses.contains(host)
+                }
                 session.bindState(state)
 
-                val registerRef = openRegisterRef(deviceName, port, events) { session.callbackAnchors.add(it) }
+                val registerRef = openRegisterRef(deviceName, port) { session.callbackAnchors.add(it) }
 
                 val browseCallback = object : DnsSd.BrowseReply {
                     override fun invoke(
@@ -352,7 +351,6 @@ internal class MdnsDiscoveryBonjour(
             private fun openRegisterRef(
                 deviceName: String,
                 port: Int,
-                events: Channel<Event>,
                 anchor: (Any) -> Unit,
             ): Pointer? {
                 val outRef = PointerByReference()
@@ -368,10 +366,7 @@ internal class MdnsDiscoveryBonjour(
                     ) {
                         if (errorCode != DnsSd.NO_ERROR) {
                             System.err.println("WARN: DNSServiceRegister callback errorCode=$errorCode")
-                            return
                         }
-                        val canonical = name ?: return
-                        events.trySend(Event.OwnNameAssigned(canonical))
                     }
                 }
                 anchor(callback)
@@ -403,6 +398,15 @@ internal class MdnsDiscoveryBonjour(
                     System.err.println("WARN: Bonjour $label deallocate failed — ${e.message}")
                 }
             }
+
+            private fun localAddresses(): Set<String> =
+                NetworkInterface
+                    .getNetworkInterfaces()
+                    ?.asSequence()
+                    ?.flatMap { it.inetAddresses.asSequence() }
+                    ?.map { it.hostAddress }
+                    ?.toSet()
+                    ?: emptySet()
         }
     }
 }

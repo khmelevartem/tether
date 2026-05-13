@@ -7,38 +7,33 @@ import com.tubetoast.tether.protocol.Device
  * State machine over the Browse → Resolve → GetAddrInfo callback chain. Pure
  * Kotlin, no JNA — effects go through [Sink] and [DiscoveredDevicesStore].
  *
- * [ownName] starts as the configured `deviceName`; mDNSResponder may rename on
- * conflict (e.g. `Foo` → `Foo (2)`) and delivers the canonical name via
- * [ownNameAssigned]. [onResolved] and [onAddrInfoFound] gate on
- * [activeResolves] / [activeAddrInfos] to drop events queued before a
- * BrowseRemove was processed.
+ * Self-filter: a resolved device is skipped if [isSelf] returns `true` for its
+ * (host, port) pair. This is rename-proof — mDNSResponder may assign a canonical
+ * name different from the requested name, but the self-filter never depends on the name.
+ *
+ * [onResolved] and [onAddrInfoFound] gate on [activeResolves] / [activeAddrInfos]
+ * to drop events queued before a BrowseRemove was processed.
  */
 internal class BonjourState(
-    deviceName: String,
     private val store: DiscoveredDevicesStore,
     private val sink: Sink,
+    /** Returns `true` when the given (host, port) pair identifies this device. */
+    private val isSelf: (host: String, port: Int) -> Boolean,
 ) {
-    private var ownName: String = deviceName
+    /** Platform translation: native callbacks identify services by name; we track name → Device for id-based store ops. */
+    private val nameToDevice = mutableMapOf<String, Device>()
 
     private val activeResolves = mutableSetOf<String>()
     private val activeAddrInfos = mutableSetOf<String>()
     private val pendingPorts = mutableMapOf<String, Int>()
     private val pendingIps = mutableMapOf<String, String>()
 
-    fun ownNameAssigned(canonicalName: String) {
-        if (canonicalName == ownName) return
-        ownName = canonicalName
-        cleanupName(canonicalName)
-    }
-
     fun onBrowseAdd(name: String, interfaceIndex: Int) {
-        if (name == ownName) return
         if (!activeResolves.add(name)) return
         sink.openResolve(name, interfaceIndex)
     }
 
     fun onBrowseRemove(name: String) {
-        if (name == ownName) return
         val hadResolve = activeResolves.remove(name)
         val hadAddr = activeAddrInfos.remove(name)
         if (hadResolve) sink.closeResolve(name)
@@ -47,7 +42,6 @@ internal class BonjourState(
     }
 
     fun onResolved(name: String, hostname: String, port: Int) {
-        if (name == ownName) return
         if (name !in activeResolves) return
         pendingPorts[name] = port
         emitIfReady(name)
@@ -64,7 +58,6 @@ internal class BonjourState(
      *   removing the device on every routine IP rotation would flicker the UI.
      */
     fun onAddrInfoFound(name: String, ipv4: String, isAdd: Boolean) {
-        if (name == ownName) return
         if (name !in activeAddrInfos) return
         if (isAdd) {
             pendingIps[name] = ipv4
@@ -77,14 +70,18 @@ internal class BonjourState(
     private fun cleanupName(name: String) {
         pendingPorts.remove(name)
         pendingIps.remove(name)
-        store.removeByName(name)
+        val device = nameToDevice.remove(name) ?: return
+        store.removeById(device.id)
     }
 
     private fun emitIfReady(name: String) {
         val ip = pendingIps[name] ?: return
         val port = pendingPorts[name] ?: return
+        if (isSelf(ip, port)) return
         val device = Device(id = "$name@$ip:$port", name = name, host = ip, port = port)
-        store.upsertByName(device)
+        val previous = nameToDevice.put(name, device)
+        if (previous != null && previous.id != device.id) store.removeById(previous.id)
+        store.upsert(device)
     }
 
     internal interface Sink {

@@ -249,11 +249,6 @@ class MdnsDiscoveryTest {
 
     @Test
     fun `three instances with same name each discover two others`() = runTest {
-        // On macOS, mDNSResponder renames conflicting services. If the local device's canonical
-        // name is assigned the same value as a peer already being resolved, BonjourState silently
-        // drops that peer (ownName filter). This is a pre-existing BonjourState race unrelated to
-        // DiscoveredDevicesStore. The test covers the JmDNS dedup fix (non-macOS).
-        org.junit.Assume.assumeFalse("BonjourState ownName race on macOS", isMacOs())
         val a = MdnsDiscovery(DiscoveredDevicesStore())
         val b = MdnsDiscovery(DiscoveredDevicesStore())
         val c = MdnsDiscovery(DiscoveredDevicesStore())

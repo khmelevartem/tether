@@ -44,10 +44,7 @@ internal class MdnsDiscoveryJmdns(
 
     @Volatile private var ownPort: Int = -1
 
-    /**
-     * Maps JmDNS service instance name → [Device.id] so that [serviceRemoved]
-     * can call [DiscoveredDevicesStore.removeById] rather than a name-based lookup.
-     */
+    /** Platform translation: JmDNS callbacks identify services by instance name; we operate on Device.id. */
     private val instanceToId = ConcurrentHashMap<String, String>()
 
     private var requeryJob: Job? = null

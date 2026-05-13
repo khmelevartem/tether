@@ -27,15 +27,17 @@ class BonjourStateTest {
         }
     }
 
-    private fun makeStateWithSink(deviceName: String): Triple<BonjourState, DiscoveredDevicesStore, RecordingSink> {
+    private fun makeState(
+        isSelf: (String, Int) -> Boolean = { _, _ -> false },
+    ): Triple<BonjourState, DiscoveredDevicesStore, RecordingSink> {
         val store = DiscoveredDevicesStore()
         val sink = RecordingSink()
-        return Triple(BonjourState(deviceName, store, sink), store, sink)
+        return Triple(BonjourState(store, sink, isSelf), store, sink)
     }
 
     @Test
     fun `device emits only when both port and ip present`() {
-        val (state, store, _) = makeStateWithSink("self")
+        val (state, store, _) = makeState()
 
         state.onBrowseAdd("PeerA", interfaceIndex = 0)
         assertEquals(0, store.devices.value.size, "no device until resolve+addrinfo")
@@ -49,7 +51,7 @@ class BonjourStateTest {
 
     @Test
     fun `resolve with new port replaces existing device`() {
-        val (state, store, _) = makeStateWithSink("self")
+        val (state, store, _) = makeState()
 
         state.onBrowseAdd("PeerA", 0)
         state.onResolved("PeerA", "peera.local", 19999)
@@ -73,7 +75,7 @@ class BonjourStateTest {
 
     @Test
     fun `browse remove cleans up device, pending state, and active subordinates`() {
-        val (state, store, sink) = makeStateWithSink("self")
+        val (state, store, sink) = makeState()
 
         state.onBrowseAdd("PeerA", 0)
         state.onResolved("PeerA", "peera.local", 19999)
@@ -100,7 +102,7 @@ class BonjourStateTest {
 
     @Test
     fun `addrInfo with isAdd=false drops pending IP without removing device`() {
-        val (state, store, _) = makeStateWithSink("self")
+        val (state, store, _) = makeState()
 
         state.onBrowseAdd("PeerA", 0)
         state.onResolved("PeerA", "peera.local", 19999)
@@ -113,14 +115,35 @@ class BonjourStateTest {
     }
 
     @Test
-    fun `self filter ignores configured device name`() {
-        val (state, store, sink) = makeStateWithSink("Self")
+    fun `self filter by host and port — self never enters the store`() {
+        val (state, store, sink) = makeState(isSelf = { host, port -> host == "10.0.0.1" && port == 18000 })
 
         state.onBrowseAdd("Self", 0)
         state.onResolved("Self", "self.local", 18000)
         state.onAddrInfoFound("Self", "10.0.0.1", isAdd = true)
         assertEquals(0, store.devices.value.size, "own service must never appear in devices list")
-        assertTrue(sink.opened.none { it.first == "openResolve" }, "no resolve for self")
+    }
+
+    @Test
+    fun `self filter — different port on same host is not self`() {
+        val (state, store, _) = makeState(isSelf = { host, port -> host == "10.0.0.1" && port == 18000 })
+
+        state.onBrowseAdd("Peer", 0)
+        state.onResolved("Peer", "peer.local", 19000)
+        state.onAddrInfoFound("Peer", "10.0.0.1", isAdd = true)
+        assertEquals(1, store.devices.value.size, "peer on same host but different port must be kept")
+    }
+
+    @Test
+    fun `self filter is name-independent — renamed service on own host+port is excluded`() {
+        // mDNSResponder may rename conflicting services (e.g. "X" → "X (2)"). The
+        // self-filter uses host+port only — the renamed entry is still excluded.
+        val (state, store, _) = makeState(isSelf = { host, port -> host == "10.0.0.1" && port == 18000 })
+
+        state.onBrowseAdd("Self (2)", 0)
+        state.onResolved("Self (2)", "self.local", 18000)
+        state.onAddrInfoFound("Self (2)", "10.0.0.1", isAdd = true)
+        assertEquals(0, store.devices.value.size, "renamed self must still be excluded")
     }
 
     @Test
@@ -128,7 +151,7 @@ class BonjourStateTest {
         // Reproduces the small race the reviewer flagged: with Channel.UNLIMITED, a
         // Resolved callback can be queued before BrowseRemove and then consumed after
         // it. Without the membership gate, this resurrects the peer.
-        val (state, store, sink) = makeStateWithSink("self")
+        val (state, store, sink) = makeState()
 
         state.onBrowseAdd("PeerA", 0)
         state.onResolved("PeerA", "peera.local", 19999)
@@ -145,7 +168,7 @@ class BonjourStateTest {
 
     @Test
     fun `late AddrInfoFound arriving after BrowseRemove is dropped`() {
-        val (state, store, _) = makeStateWithSink("self")
+        val (state, store, _) = makeState()
 
         state.onBrowseAdd("PeerA", 0)
         state.onResolved("PeerA", "peera.local", 19999)
@@ -154,21 +177,5 @@ class BonjourStateTest {
 
         state.onAddrInfoFound("PeerA", "10.0.0.6", isAdd = true)
         assertTrue(store.devices.value.isEmpty(), "stale AddrInfoFound must not resurrect peer")
-    }
-
-    @Test
-    fun `canonical name from RegisterReply removes self entry that slipped in`() {
-        // mDNSResponder may rename us on conflict ("Self" → "Self (2)"). Until the
-        // canonical name is known, the configured name is used as a self-filter, so
-        // a device under the renamed name can briefly appear in the list.
-        val (state, store, _) = makeStateWithSink("Self")
-
-        state.onBrowseAdd("Self (2)", 0)
-        state.onResolved("Self (2)", "self.local", 18000)
-        state.onAddrInfoFound("Self (2)", "10.0.0.1", isAdd = true)
-        assertEquals(1, store.devices.value.size, "before canonical name we publish the renamed entry")
-
-        state.ownNameAssigned("Self (2)")
-        assertTrue(store.devices.value.isEmpty(), "self entry removed once canonical name known")
     }
 }

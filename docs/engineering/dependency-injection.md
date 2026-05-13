@@ -11,18 +11,14 @@ A container — `AppContainer` — is the single place where shared components a
 The container hierarchy mirrors the source set hierarchy. Every layer adds only what its source set can actually see:
 
 ```
-AppContainer            (commonMain)        — abstract: fileServer, mdnsDiscovery
-├── JvmAppContainer     (jvmMain)           — provides FileServer(port, downloadsDir)
-│   ├── AndroidAppContainer  (androidMain)  — provides MdnsDiscovery(context, store)
-│   └── DesktopAppContainer  (desktopMain)  — provides MdnsDiscovery(store)
-└── AppleAppContainer   (appleMain)         — provides FileServer(port = 0) + MdnsDiscovery(store)
+AppContainer            (commonMain)
+├── JvmAppContainer     (jvmMain)
+│   ├── AndroidAppContainer  (androidMain)
+│   └── DesktopAppContainer  (desktopMain)
+└── AppleAppContainer   (appleMain)
     ├── IosAppContainer     (iosMain)
     └── MacosAppContainer   (macosMain)
 ```
-
-`AppContainer` is `abstract` and declares both `fileServer` and `mdnsDiscovery` abstractly — construction lives in the platform leaves because the `MdnsDiscovery` constructor needs `Context` on Android (plus a `DiscoveredDevicesStore`) and only a `DiscoveredDevicesStore` on Desktop/Apple, and `FileServer`'s constructor differs between actuals (JVM takes a `java.io.File` downloads dir, Apple takes an optional `String?` path). `JvmAppContainer` is also `abstract`: it provides `FileServer` (sharing the construction across Android + Desktop) but cannot construct `MdnsDiscovery`.
-
-`FileServer` is declared in `commonMain` as an `expect class` so common code can reference the type. Both the JVM `actual` ([`FileServer.kt`](../../composeApp/src/jvmMain/kotlin/com/tubetoast/tether/network/FileServer.kt)) and the Apple `actual` ([`FileServer.apple.kt`](../../composeApp/src/appleMain/kotlin/com/tubetoast/tether/network/FileServer.apple.kt)) run a real Ktor CIO server (Ktor 3.0+ publishes the server engine for Native too — see [adr/adr-apple-fileserver-engine.md](adr/adr-apple-fileserver-engine.md)). Endpoint behavior is defined once in `commonMain` ([`FileServerRoutes.kt`](../../composeApp/src/commonMain/kotlin/com/tubetoast/tether/network/FileServerRoutes.kt) — `installFileServerRoutes`); each actual provides only the platform-specific `UploadStorage` adapter (file I/O, logging).
 
 Every container takes an `AppConfig` interface in its constructor. `AppConfig` is the input — the values the entry point chooses (device name, port, downloads dir, Android `Application`). The hierarchy of `*AppConfig` interfaces tracks the container hierarchy: [`AppConfig`](../../composeApp/src/commonMain/kotlin/com/tubetoast/tether/di/AppConfig.kt), [`JvmAppConfig`](../../composeApp/src/jvmMain/kotlin/com/tubetoast/tether/di/JvmAppConfig.kt), [`AndroidAppConfig`](../../composeApp/src/androidMain/kotlin/com/tubetoast/tether/di/AndroidAppConfig.kt), etc.
 
@@ -81,64 +77,60 @@ Until then, a compiler plugin is more apparatus than the problem deserves.
 
 These apply now, in Phase 1, and survive into Phase 2 unchanged.
 
-### 1. Do not `new` your collaborators
+### 1. Constructor injection only — don't `new` your collaborators
 
 ❌
 ```kotlin
-class FileClient {
-    private val http = HttpClient { ... }   // owns HttpClient — can't be replaced in tests
+class SomeService {
+    private val repo = SomeRepository()  // owns its collaborator — can't be replaced in tests
 }
 ```
 
 ✅
 ```kotlin
-class FileClient(private val http: HttpClient) { ... }
+class SomeService(private val repo: SomeRepository) { ... }
 ```
 
-The composition root creates the `HttpClient` once and hands it to every component that needs it. Tests construct a fake or test client.
+No `lateinit var repo: SomeRepository` set after construction. No service-locator lookups inside methods. Dependencies are explicit constructor arguments — a class's constructor signature is its honest dependency list. Anything reached through globals is invisible.
 
-### 2. Constructor injection only
+The composition root creates shared instances once and hands them to every component that needs them. Tests construct fakes.
 
-No `lateinit var http: HttpClient` set after construction. No service-locator lookups inside methods (`AppContainer.http.send(...)`). Dependencies are explicit constructor arguments.
-
-Reason: a class's constructor signature is its honest dependency list. Anything reached through globals is invisible.
-
-### 3. Platform context is a dependency, not a global
+### 2. Platform context is a dependency, not a global
 
 ❌
 ```kotlin
-// MdnsDiscovery.android.kt
-actual class MdnsDiscovery {
-    private val nsd = TetherApp.context.getSystemService(...)  // global lookup
+// platformMain
+actual class SomeService {
+    private val manager = GlobalApp.context.getSystemService(...)  // global lookup
 }
 ```
 
 ✅
 ```kotlin
-actual class MdnsDiscovery(context: Context, store: DiscoveredDevicesStore) {
-    private val nsd = context.getSystemService(...)
+actual class SomeService(context: PlatformContext) {
+    private val manager = context.getSystemService(...)
 }
 ```
 
-The composition root in `TetherApp.onCreate()` already has `applicationContext` — pass it in.
+The composition root in the platform entry point already has the application context — pass it in.
 
-### 4. One singleton, one owner
+### 3. One singleton, one owner
 
-If a component is supposed to be a singleton (`HttpClient`, `FileServer`, `MdnsDiscovery`), it is created exactly once in the composition root. Don't put it in a Kotlin `object`. Don't lazy-init it from inside another component.
+If a component is supposed to be a singleton, it is created exactly once in the composition root. Don't put it in a Kotlin `object`. Don't lazy-init it from inside another component.
 
 The composition root is the only place that knows lifecycles. Everywhere else, you receive what's already alive.
 
-### 5. Don't instantiate dependencies inside composables
+### 4. Don't instantiate dependencies inside composables
 
 ❌
 ```kotlin
 @Composable
-fun MainViewController() = ComposeUIViewController {
-    val store = DiscoveredDevicesStore()
-    val discovery = MdnsDiscovery(store)   // wrong — new instance on every recomposition
+fun SomeScreen() = ComposeUIViewController {
+    val repo = SomeRepository()
+    val service = SomeService(repo)   // wrong — new instance on every recomposition
     DisposableEffect(Unit) {
-        discovery.start(...)
-        onDispose { discovery.stop() }
+        service.start()
+        onDispose { service.stop() }
     }
 }
 ```
@@ -146,21 +138,19 @@ fun MainViewController() = ComposeUIViewController {
 This is a DI violation: the composable is acting as a composition root. It creates a dependency itself instead of receiving it.
 
 Two problems:
-1. `DisposableEffect(Unit)` runs once, capturing the instance from the first composition. On every recomposition, a new `MdnsDiscovery(store)` is created and immediately discarded — never started, never stopped. Memory leak.
-2. Even with `remember { MdnsDiscovery(store) }` to fix the leak, the composable still owns the lifecycle of a singleton — it shouldn't.
+1. `DisposableEffect(Unit)` runs once, capturing the instance from the first composition. On every recomposition, a new `SomeService(repo)` is created and immediately discarded — never started, never stopped. Memory leak.
+2. Even with `remember { SomeService(repo) }` to fix the leak, the composable still owns the lifecycle of a singleton — it shouldn't.
 
 ✅ The correct shape: build the container in the platform entry point, pass components into the composable.
 
 ```kotlin
-// iosMain — MainViewController.kt (platform entry point = composition root)
-fun MainViewController() = run {
-    val container = IosAppContainer(
-        DefaultIosAppConfig(deviceName = UIDevice.currentDevice.name),
-    )
+// platform entry point = composition root
+fun entryPoint() = run {
+    val container = Container(DefaultConfig())
     ComposeUIViewController {
         DisposableEffect(Unit) {
-            container.mdnsDiscovery.start(container.deviceName, port = 8080)
-            onDispose { container.mdnsDiscovery.stop() }
+            container.service.start()
+            onDispose { container.service.stop() }
         }
         App()
     }
@@ -169,18 +159,18 @@ fun MainViewController() = run {
 
 The container is created **outside** the `ComposeUIViewController { ... }` lambda; the composable receives ready-made components, never calls a constructor.
 
-### 6. Don't introduce an interface for one implementation
+### 5. Don't introduce an interface for one implementation
 
 This rule contradicts the cargo-cult version of Clean Architecture. We follow it consciously (see [architecture-principles.md](architecture-principles.md)). An interface earns its place when:
 
 - there is a fake/test implementation, OR
 - there are two real implementations (e.g. JVM and iOS file servers).
 
-A `FileTransferRepository` interface with one `FileTransferRepositoryImpl` adds noise, not safety.
+A `SomeTransferRepository` interface with one `SomeTransferRepositoryImpl` adds noise, not safety.
 
-### 7. Test seams use fakes, not mocks of `HttpClient`
+### 6. Test seams use fakes, not wrapper interfaces
 
-When you do need to test a class that depends on `HttpClient`, prefer Ktor's `MockEngine` or a hand-rolled fake — don't introduce a `HttpClientWrapper` interface just to mock it. Same logic for `MdnsDiscovery`: fake the `Flow<List<Device>>` it exposes, don't abstract the platform API behind another layer.
+When you do need to test a class that depends on a collaborator, prefer a hand-rolled fake or a test-double provided by the library — don't introduce a wrapper interface just to mock it. If a fake is hard to write because the component is too coupled to its collaborators, fix the component.
 
 ## Testability
 
@@ -188,25 +178,25 @@ The container is also the seam tests use to substitute fakes. Three levels of te
 
 ### 1. Unit tests of components (no container needed)
 
-Components like `FileServer` and `MdnsDiscovery` take their dependencies through the constructor and are tested directly. The container exists for production wiring only — tests construct what they need. See [`FileServerTest`](../../composeApp/src/jvmTest/kotlin/com/tubetoast/tether/network/FileServerTest.kt).
+Components take their dependencies through the constructor and are tested directly. The container exists for production wiring only — tests construct what they need.
 
 ### 2. Tests of consumers that depend on container components
 
-When a class (e.g. a future Decompose Component or `TrustedDeviceStore`) takes container components, the test builds a fake container by subclassing and overriding `open val`s — exactly what the `open val mdnsDiscovery` declarations are for:
+When a class takes container components, the test builds a fake container by subclassing and overriding `open val`s — exactly what the `open val` declarations are for:
 
 ```kotlin
-class FakeAppContainer(deviceName: String = "test") : AppContainer(
-    object : AppConfig { override val deviceName = deviceName },
+class FakeContainer(name: String = "test") : Container(
+    object : Config { override val deviceName = name },
 ) {
-    override val mdnsDiscovery: MdnsDiscovery = FakeMdnsDiscovery()
+    override val service: SomeService = FakeSomeService()
 }
 ```
 
-(For one-shot test fakes, an inline `object : AppConfig` literal is acceptable — the named-class rule has its exception there. Reused fakes get extracted to a named class.)
+(For one-shot test fakes, an inline `object : Config` literal is acceptable — the named-class rule has its exception there. Reused fakes get extracted to a named class.)
 
 ### 3. Tests of Android framework components
 
-`Service`/`Activity` tests under Robolectric need an `Application` that implements `AppContainerProvider`. The simplest path is `@Config(application = TetherApp::class)` — Robolectric instantiates the real `TetherApp`, the lazy container builds against the Robolectric-shadowed `getExternalFilesDir`, etc. See [`TetherForegroundServiceTest`](../../composeApp/src/androidUnitTest/kotlin/com/tubetoast/tether/network/TetherForegroundServiceTest.kt).
+`Service`/`Activity` tests under Robolectric need an `Application` that implements `AppContainerProvider`. The simplest path is `@Config(application = TetherApp::class)` — Robolectric instantiates the real `TetherApp`, the lazy container builds against the Robolectric-shadowed `getExternalFilesDir`, etc.
 
 When a test needs a fake container instead of the real one, define a `TestApplication : Application(), AppContainerProvider` that exposes a `FakeAndroidAppContainer`, and switch `@Config(application = TestApplication::class)`. This stays out of any global static — each test method gets a fresh instance through Robolectric.
 
@@ -215,7 +205,7 @@ When a test needs a fake container instead of the real one, define a `TestApplic
 1. **Container fields are `open val`.** Override is the substitution mechanism. No setters, no `lateinit var`.
 2. **`AppConfig` and its subtypes are interfaces.** Tests implement them with named classes (or, exceptionally, anonymous objects for one-shot test cases).
 3. **Common-logic tests don't reach for a platform container.** They construct a minimal `AppContainer` subclass in `commonTest`.
-4. **Don't mock components, fake them.** Mock frameworks force a layer of indirection that pollutes production code. If a fake is hard to write because the component is too coupled to its collaborators, fix the component.
+4. **Don't mock components, fake them.** Mock frameworks force a layer of indirection that pollutes production code.
 
 ## Per-screen scoping
 

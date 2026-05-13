@@ -4,9 +4,6 @@ import com.tubetoast.tether.protocol.Device
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -38,21 +35,6 @@ class DiscoveredDevicesStoreTest {
             store.devices.value
                 .single()
                 .id,
-        )
-    }
-
-    @Test
-    fun `removeByName removes all entries with that name`() {
-        store.upsert(device("n@1.2.3.4:1", name = "Peer"))
-        store.upsert(device("n@5.6.7.8:1", name = "Peer"))
-        store.upsert(device("n@1.2.3.4:2", name = "Other"))
-        store.removeByName("Peer")
-        assertEquals(1, store.devices.value.size)
-        assertEquals(
-            "Other",
-            store.devices.value
-                .single()
-                .name,
         )
     }
 
@@ -91,14 +73,6 @@ class DiscoveredDevicesStoreTest {
     }
 
     @Test
-    fun `removeByName on missing name leaves store unchanged`() {
-        store.upsert(device("a@1.2.3.4:1"))
-        val before = store.devices.value
-        store.removeByName("nonexistent")
-        assertEquals(before, store.devices.value)
-    }
-
-    @Test
     fun `insertion order preserved — upsert A B C yields A B C`() {
         val a = device("a@1.2.3.4:1", name = "A")
         val b = device("b@1.2.3.4:2", name = "B")
@@ -107,51 +81,6 @@ class DiscoveredDevicesStoreTest {
         store.upsert(b)
         store.upsert(c)
         assertEquals(listOf(a, b, c), store.devices.value)
-    }
-
-    @Test
-    fun `upsertByName replaces existing entry by name`() {
-        val original = device("a@1.2.3.4:8080", name = "Peer")
-        store.upsert(original)
-        val updated = device("a@5.6.7.8:8080", name = "Peer")
-        store.upsertByName(updated)
-        assertEquals(listOf(updated), store.devices.value)
-    }
-
-    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    @Test
-    fun `upsertByName produces single emission when replacing`() = runTest(UnconfinedTestDispatcher()) {
-        val original = device("a@1.2.3.4:8080", name = "Peer")
-        store.upsert(original)
-
-        val snapshots = mutableListOf<List<Device>>()
-        val collector = launch { store.devices.collect { snapshots.add(it) } }
-        val before = snapshots.size
-
-        store.upsertByName(device("a@5.6.7.8:8080", name = "Peer"))
-        collector.cancel()
-
-        assertEquals(1, snapshots.size - before, "expected exactly one emission from upsertByName")
-    }
-
-    @Test
-    fun `upsertByName adds when name absent`() {
-        val device = device("a@1.2.3.4:8080", name = "Peer")
-        store.upsertByName(device)
-        assertEquals(listOf(device), store.devices.value)
-    }
-
-    @Test
-    fun `upsertByName preserves position when replacing existing entry by name`() {
-        val a = device("a@1.2.3.4:1", name = "A")
-        val b = device("b@1.2.3.4:2", name = "B")
-        val c = device("c@1.2.3.4:3", name = "C")
-        store.upsertByName(a)
-        store.upsertByName(b)
-        store.upsertByName(c)
-        val bUpdated = device("b@5.6.7.8:2", name = "B")
-        store.upsertByName(bUpdated)
-        assertEquals(listOf(a, bUpdated, c), store.devices.value)
     }
 
     @Test
