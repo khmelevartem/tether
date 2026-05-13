@@ -229,8 +229,15 @@ tasks.register("installJar") {
 tasks.register<JavaExec>("runDesktopUi") {
     group = "application"
     description = "Runs Compose Desktop UI"
-    val desktopCompilation = kotlin.targets.getByName("desktop").compilations.getByName("main")
-    classpath = desktopCompilation.output.allOutputs + requireNotNull(desktopCompilation.runtimeDependencyFiles) { "runtimeDependencyFiles missing for desktop main compilation" }
+    val desktopCompilation = kotlin.targets
+        .getByName("desktop")
+        .compilations
+        .getByName("main")
+    classpath =
+        desktopCompilation.output.allOutputs +
+        requireNotNull(desktopCompilation.runtimeDependencyFiles) {
+            "runtimeDependencyFiles missing for desktop main compilation"
+        }
     mainClass.set("com.tubetoast.tether.MainUiKt")
     dependsOn("desktopMainClasses")
 }
