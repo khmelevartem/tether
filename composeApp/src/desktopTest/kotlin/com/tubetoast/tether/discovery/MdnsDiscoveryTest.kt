@@ -5,6 +5,9 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -203,6 +206,43 @@ class MdnsDiscoveryTest {
     }
 
     @Test
+    fun `late-joining peer is discovered after initial browse cycle`() = runTest {
+        org.junit.Assume.assumeTrue(
+            "JmDNS multicast not functional on this host (likely mDNSResponder owns port 5353)",
+            jmDnsCanSeeOwnAnnounce(),
+        )
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val a = MdnsDiscoveryJmdns(DiscoveredDevicesStore(), testDispatcher)
+        val b = MdnsDiscoveryJmdns(DiscoveredDevicesStore(), testDispatcher)
+        try {
+            a.start("LateA", 19070)
+            // JmDNS's ServiceResolver fires 3 PTR queries over ~675 ms of real time.
+            // Thread.sleep keeps us in real time so the burst finishes before b joins.
+            Thread.sleep(1_000)
+            b.start("LateB", 19071)
+            // JmDNS probes the service name before advertising (~3 × 250 ms). Wait for
+            // b to be reachable on the network before triggering a's re-query.
+            Thread.sleep(1_000)
+            // Advance virtual clock past the initial re-query interval: triggers
+            // addServiceListener in a's re-query coroutine, which re-arms ServiceResolver.
+            advanceTimeBy(REQUERY_INITIAL_INTERVAL_MS + 1)
+            // Poll with real time — discoveredDevices is updated from JmDNS's own threads
+            // and coroutine withTimeout would use virtual clock (routed through testScheduler).
+            val deadline = System.currentTimeMillis() + 10_000
+            while (System.currentTimeMillis() < deadline) {
+                if (a.discoveredDevices.value.any { it.port == 19071 }) break
+                Thread.sleep(100)
+            }
+            val lateB = a.discoveredDevices.value.filter { it.port == 19071 }
+            assertEquals(1, lateB.size, "LateB not discovered within 10 s after re-query")
+            assertEquals(19071, lateB[0].port)
+        } finally {
+            a.stop()
+            b.stop()
+        }
+    }
+
+    @Test
     fun `three instances with same name each discover two others`(): Unit = runBlocking {
         val a = MdnsDiscovery(DiscoveredDevicesStore())
         val b = MdnsDiscovery(DiscoveredDevicesStore())
@@ -257,6 +297,30 @@ class MdnsDiscoveryTest {
         } finally {
             a.stop()
             b.stop()
+        }
+    }
+
+    private fun jmDnsCanSeeOwnAnnounce(): Boolean {
+        val seen = java.util.concurrent.atomic
+            .AtomicBoolean(false)
+        val probe = javax.jmdns.JmDNS.create()
+        try {
+            probe.addServiceListener(
+                "_tetherprobe._tcp.local.",
+                object : javax.jmdns.ServiceListener {
+                    override fun serviceAdded(event: javax.jmdns.ServiceEvent) = seen.set(true)
+
+                    override fun serviceRemoved(event: javax.jmdns.ServiceEvent) = Unit
+
+                    override fun serviceResolved(event: javax.jmdns.ServiceEvent) = Unit
+                },
+            )
+            probe.registerService(javax.jmdns.ServiceInfo.create("_tetherprobe._tcp.local.", "Probe", 19099, ""))
+            val deadline = System.currentTimeMillis() + 3_000
+            while (System.currentTimeMillis() < deadline && !seen.get()) Thread.sleep(50)
+            return seen.get()
+        } finally {
+            probe.close()
         }
     }
 }
