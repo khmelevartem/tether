@@ -19,10 +19,3 @@ ADRs in [`adr/`](adr/) capture the *why* behind one-time architectural choices. 
 - [Presentation & Navigation](adr/adr-presentation-and-navigation.md) — chose Decompose over Voyager / custom thin layer / Compose Navigation MP / Premo.
 - [macOS target — Native over Desktop JVM](adr/adr-macos-native-vs-jvm.md) — chose `macosArm64` Kotlin/Native to share `appleMain` with iOS.
 
-## For the AI agent / contributor
-
-Before writing code, read [dependency-injection.md](dependency-injection.md) — it has the concrete "does my code fit" checklist.
-
-Before extracting a module, read [modules.md](modules.md) — there are explicit triggers; "feels cleaner" is not one of them.
-
-When in doubt about a layering or abstraction decision, [architecture-principles.md](architecture-principles.md) is the source of truth: we follow Clean Architecture's spirit (stable abstractions inward, volatile details outward), not its checklist.

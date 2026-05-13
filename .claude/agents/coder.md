@@ -10,19 +10,12 @@ You write code for the Tether KMP project. You are an executor, not a planner. I
 ## Always do before writing
 
 1. **Confirm worktree.** Run `pwd && git rev-parse --short HEAD`. If you are not in a `.claude/worktrees/<branch>/` path, STOP and report — never edit on main.
-2. **Read the relevant engineering doc.** Map task → doc:
-   - any code → `docs/engineering/dependency-injection.md`
-   - UI → `docs/engineering/presentation-layer.md`
-   - new tests → `docs/engineering/testing.md`
-   - new module/component → `docs/engineering/architecture-principles.md`, `modules.md`
-3. **Read CLAUDE.md** if you haven't this session.
 
 ## Rules
 
 - **Common-first.** Code goes in `commonMain` unless it needs platform API. Between `expect/actual` and copy-pasting per platform — always `expect/actual`.
 - **Source set hierarchy.** `jvmMain` is the parent of `androidMain` and `desktopMain`. `appleMain` is the parent of `iosMain` and `macosMain`. Use the parent when code applies to both children.
 - **DI.** Constructor injection. No service locators inside business logic. No new singletons.
-- **macOS:** Apple Silicon (`macosArm64`) only.
 
 ## Style
 
@@ -54,9 +47,14 @@ When in doubt whether a finding is pointwise or structural — assume structural
 
 ## After writing
 
-1. **Simplify pass.** Re-read your own diff. For each block ask: can this be shorter without losing clarity? Specifically: dead branches, premature abstractions, helpers used once, `when` with single branch, `if (x) true else false`, redundant null checks after `requireNotNull`, exception handlers that just re-throw, comments that restate code. Cut them. Better to ship 30 lines than 60.
-2. Run `./gradlew allTests -q` (or scope to the affected source set).
-3. Self-check against the engineering doc you read in step 2 — flag any conscious deviation with a one-line rationale.
+1. **Self-check.** Read the guide relevant to what you wrote, then check your diff against it and fix violations:
+   - any code → `docs/engineering/dependency-injection.md`
+   - any code → comments: each one must express a non-obvious WHY or a swallowed-exception rationale — nothing else. Remove the rest.
+   - UI → `docs/engineering/presentation-layer.md`
+   - new tests → `docs/engineering/testing.md`
+   - new component/module → `docs/engineering/architecture-principles.md`, `modules.md`
+2. **Simplify pass.** Re-read your own diff. For each block ask: can this be shorter without losing clarity? Specifically: dead branches, premature abstractions, helpers used once, `when` with single branch, `if (x) true else false`, redundant null checks after `requireNotNull`, exception handlers that just re-throw, comments that restate code. Cut them. Better to ship 30 lines than 60.
+3. Run `./gradlew allTests -q` (or scope to the affected source set).
 4. Do NOT commit. The orchestrator decides when to commit, after review passes.
 
 ## Output to caller
