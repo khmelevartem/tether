@@ -13,14 +13,14 @@ The container hierarchy mirrors the source set hierarchy. Every layer adds only 
 ```
 AppContainer            (commonMain)        — abstract: fileServer, mdnsDiscovery
 ├── JvmAppContainer     (jvmMain)           — provides FileServer(port, downloadsDir)
-│   ├── AndroidAppContainer  (androidMain)  — provides MdnsDiscovery(context)
-│   └── DesktopAppContainer  (desktopMain)  — provides MdnsDiscovery() no-arg
-└── AppleAppContainer   (appleMain)         — provides FileServer(port = 0) + MdnsDiscovery() no-arg
+│   ├── AndroidAppContainer  (androidMain)  — provides MdnsDiscovery(context, store)
+│   └── DesktopAppContainer  (desktopMain)  — provides MdnsDiscovery(store)
+└── AppleAppContainer   (appleMain)         — provides FileServer(port = 0) + MdnsDiscovery(store)
     ├── IosAppContainer     (iosMain)
     └── MacosAppContainer   (macosMain)
 ```
 
-`AppContainer` is `abstract` and declares both `fileServer` and `mdnsDiscovery` abstractly — construction lives in the platform leaves because the `MdnsDiscovery` constructor needs `Context` on Android but no args on Desktop/Apple, and `FileServer`'s constructor differs between actuals (JVM takes a `java.io.File` downloads dir, Apple takes an optional `String?` path). `JvmAppContainer` is also `abstract`: it provides `FileServer` (sharing the construction across Android + Desktop) but cannot construct `MdnsDiscovery`.
+`AppContainer` is `abstract` and declares both `fileServer` and `mdnsDiscovery` abstractly — construction lives in the platform leaves because the `MdnsDiscovery` constructor needs `Context` on Android (plus a `DiscoveredDevicesStore`) and only a `DiscoveredDevicesStore` on Desktop/Apple, and `FileServer`'s constructor differs between actuals (JVM takes a `java.io.File` downloads dir, Apple takes an optional `String?` path). `JvmAppContainer` is also `abstract`: it provides `FileServer` (sharing the construction across Android + Desktop) but cannot construct `MdnsDiscovery`.
 
 `FileServer` is declared in `commonMain` as an `expect class` so common code can reference the type. Both the JVM `actual` ([`FileServer.kt`](../../composeApp/src/jvmMain/kotlin/com/tubetoast/tether/network/FileServer.kt)) and the Apple `actual` ([`FileServer.apple.kt`](../../composeApp/src/appleMain/kotlin/com/tubetoast/tether/network/FileServer.apple.kt)) run a real Ktor CIO server (Ktor 3.0+ publishes the server engine for Native too — see [adr/adr-apple-fileserver-engine.md](adr/adr-apple-fileserver-engine.md)). Endpoint behavior is defined once in `commonMain` ([`FileServerRoutes.kt`](../../composeApp/src/commonMain/kotlin/com/tubetoast/tether/network/FileServerRoutes.kt) — `installFileServerRoutes`); each actual provides only the platform-specific `UploadStorage` adapter (file I/O, logging).
 
@@ -115,7 +115,7 @@ actual class MdnsDiscovery {
 
 ✅
 ```kotlin
-actual class MdnsDiscovery(context: Context) {
+actual class MdnsDiscovery(context: Context, store: DiscoveredDevicesStore) {
     private val nsd = context.getSystemService(...)
 }
 ```
@@ -134,7 +134,8 @@ The composition root is the only place that knows lifecycles. Everywhere else, y
 ```kotlin
 @Composable
 fun MainViewController() = ComposeUIViewController {
-    val discovery = MdnsDiscovery()   // wrong — new instance on every recomposition
+    val store = DiscoveredDevicesStore()
+    val discovery = MdnsDiscovery(store)   // wrong — new instance on every recomposition
     DisposableEffect(Unit) {
         discovery.start(...)
         onDispose { discovery.stop() }
@@ -145,8 +146,8 @@ fun MainViewController() = ComposeUIViewController {
 This is a DI violation: the composable is acting as a composition root. It creates a dependency itself instead of receiving it.
 
 Two problems:
-1. `DisposableEffect(Unit)` runs once, capturing the instance from the first composition. On every recomposition, a new `MdnsDiscovery()` is created and immediately discarded — never started, never stopped. Memory leak.
-2. Even with `remember { MdnsDiscovery() }` to fix the leak, the composable still owns the lifecycle of a singleton — it shouldn't.
+1. `DisposableEffect(Unit)` runs once, capturing the instance from the first composition. On every recomposition, a new `MdnsDiscovery(store)` is created and immediately discarded — never started, never stopped. Memory leak.
+2. Even with `remember { MdnsDiscovery(store) }` to fix the leak, the composable still owns the lifecycle of a singleton — it shouldn't.
 
 ✅ The correct shape: build the container in the platform entry point, pass components into the composable.
 

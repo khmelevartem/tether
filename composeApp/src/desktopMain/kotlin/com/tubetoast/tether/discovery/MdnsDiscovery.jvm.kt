@@ -2,6 +2,7 @@ package com.tubetoast.tether.discovery
 
 import com.tubetoast.tether.discovery.bonjour.MdnsDiscoveryBonjour
 import com.tubetoast.tether.protocol.Device
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -10,9 +11,11 @@ import kotlinx.coroutines.flow.StateFlow
  *
  * [stop] may block up to ~200 ms on macOS; invoke from a background dispatcher in UI code.
  */
-actual class MdnsDiscovery : DeviceDiscovery {
+actual class MdnsDiscovery(
+    store: DiscoveredDevicesStore,
+) : DeviceDiscovery {
     private val delegate: DeviceDiscovery =
-        if (isMacOsHost()) MdnsDiscoveryBonjour() else MdnsDiscoveryJmdns()
+        if (isMacOsHost()) MdnsDiscoveryBonjour(store) else MdnsDiscoveryJmdns(store, Dispatchers.IO)
 
     actual override val discoveredDevices: StateFlow<List<Device>> get() = delegate.discoveredDevices
 

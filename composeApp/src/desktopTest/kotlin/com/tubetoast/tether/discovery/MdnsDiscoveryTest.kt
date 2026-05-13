@@ -16,12 +16,12 @@ import kotlin.test.assertTrue
 class MdnsDiscoveryTest {
     @Test
     fun `stop before start does not throw`() {
-        MdnsDiscovery().stop()
+        MdnsDiscovery(DiscoveredDevicesStore()).stop()
     }
 
     @Test
     fun `start twice without stop throws IllegalStateException`() {
-        val discovery = MdnsDiscovery()
+        val discovery = MdnsDiscovery(DiscoveredDevicesStore())
         discovery.start("DoubleStart", 19001)
         try {
             assertFailsWith<IllegalStateException> {
@@ -34,7 +34,7 @@ class MdnsDiscoveryTest {
 
     @Test
     fun `stop emits empty list`() = runBlocking {
-        val discovery = MdnsDiscovery()
+        val discovery = MdnsDiscovery(DiscoveredDevicesStore())
         discovery.start("StopEmits", 19003)
         discovery.stop()
         assertTrue(discovery.discoveredDevices.first().isEmpty())
@@ -42,8 +42,8 @@ class MdnsDiscoveryTest {
 
     @Test
     fun `two instances discover each other`() = runBlocking {
-        val a = MdnsDiscovery()
-        val b = MdnsDiscovery()
+        val a = MdnsDiscovery(DiscoveredDevicesStore())
+        val b = MdnsDiscovery(DiscoveredDevicesStore())
         try {
             a.start("PeerA", 19010)
             b.start("PeerB", 19011)
@@ -90,8 +90,8 @@ class MdnsDiscoveryTest {
 
     @Test
     fun `instances do not discover themselves`() = runBlocking {
-        val a = MdnsDiscovery()
-        val b = MdnsDiscovery()
+        val a = MdnsDiscovery(DiscoveredDevicesStore())
+        val b = MdnsDiscovery(DiscoveredDevicesStore())
         try {
             a.start("SelfA", 19020)
             b.start("SelfB", 19021)
@@ -130,8 +130,8 @@ class MdnsDiscoveryTest {
 
     @Test
     fun `restart — stop then start works correctly`() = runBlocking {
-        val a = MdnsDiscovery()
-        val b = MdnsDiscovery()
+        val a = MdnsDiscovery(DiscoveredDevicesStore())
+        val b = MdnsDiscovery(DiscoveredDevicesStore())
         try {
             a.start("RestartA", 19050)
             b.start("RestartB", 19051)
@@ -157,8 +157,8 @@ class MdnsDiscoveryTest {
 
     @Test
     fun `stop clears previously discovered peers`() = runBlocking {
-        val a = MdnsDiscovery()
-        val b = MdnsDiscovery()
+        val a = MdnsDiscovery(DiscoveredDevicesStore())
+        val b = MdnsDiscovery(DiscoveredDevicesStore())
         try {
             a.start("ClearA", 19030)
             b.start("ClearB", 19031)
@@ -176,8 +176,8 @@ class MdnsDiscoveryTest {
 
     @Test
     fun `peer re-resolved with new port replaces old entry`() = runBlocking {
-        val a = MdnsDiscovery()
-        val b = MdnsDiscovery()
+        val a = MdnsDiscovery(DiscoveredDevicesStore())
+        val b = MdnsDiscovery(DiscoveredDevicesStore())
         try {
             a.start("PortChangeA", 19060)
             b.start("PortChangeB", 19061)
@@ -217,8 +217,8 @@ class MdnsDiscoveryTest {
     fun `late-joining peer is discovered after initial browse cycle`() = runTest {
         org.junit.Assume.assumeFalse("JmDNS IPv4 resolution unavailable on macOS", isMacOs())
         val testDispatcher = StandardTestDispatcher(testScheduler)
-        val a = MdnsDiscoveryJmdns(testDispatcher)
-        val b = MdnsDiscoveryJmdns(testDispatcher)
+        val a = MdnsDiscoveryJmdns(DiscoveredDevicesStore(), testDispatcher)
+        val b = MdnsDiscoveryJmdns(DiscoveredDevicesStore(), testDispatcher)
         try {
             a.start("LateA", 19070)
             // JmDNS's ServiceResolver fires 3 PTR queries over ~675 ms of real time.
@@ -248,11 +248,15 @@ class MdnsDiscoveryTest {
     }
 
     @Test
-    @org.junit.Ignore("#111: dedup pulled into commonMain DiscoveredDevicesStore; unignore there")
     fun `three instances with same name each discover two others`() = runTest {
-        val a = MdnsDiscovery()
-        val b = MdnsDiscovery()
-        val c = MdnsDiscovery()
+        // On macOS, mDNSResponder renames conflicting services. If the local device's canonical
+        // name is assigned the same value as a peer already being resolved, BonjourState silently
+        // drops that peer (ownName filter). This is a pre-existing BonjourState race unrelated to
+        // DiscoveredDevicesStore. The test covers the JmDNS dedup fix (non-macOS).
+        org.junit.Assume.assumeFalse("BonjourState ownName race on macOS", isMacOs())
+        val a = MdnsDiscovery(DiscoveredDevicesStore())
+        val b = MdnsDiscovery(DiscoveredDevicesStore())
+        val c = MdnsDiscovery(DiscoveredDevicesStore())
         try {
             a.start("SameName", 19080)
             b.start("SameName", 19081)
@@ -298,8 +302,8 @@ class MdnsDiscoveryTest {
 
     @Test
     fun `discovered device has correct host and port`() = runBlocking {
-        val a = MdnsDiscovery()
-        val b = MdnsDiscovery()
+        val a = MdnsDiscovery(DiscoveredDevicesStore())
+        val b = MdnsDiscovery(DiscoveredDevicesStore())
         try {
             a.start("HostA", 19040)
             b.start("HostB", 19041)

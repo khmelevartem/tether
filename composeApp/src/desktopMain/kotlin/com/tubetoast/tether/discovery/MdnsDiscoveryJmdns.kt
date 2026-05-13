@@ -2,13 +2,10 @@ package com.tubetoast.tether.discovery
 
 import com.tubetoast.tether.protocol.Device
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
@@ -32,22 +29,13 @@ private const val REQUERY_MAX_INTERVAL_MS = 60_000L
  * re-arms `ServiceResolver` — re-verified in JmDNS 3.5.9 `JmDNSImpl`.
  * Re-verify if JmDNS is upgraded.
  */
-internal class MdnsDiscoveryJmdns : DeviceDiscovery {
-    private val requeryContext: CoroutineContext
+internal class MdnsDiscoveryJmdns(
+    private val store: DiscoveredDevicesStore,
+    private val requeryContext: CoroutineContext,
+) : DeviceDiscovery {
+    private val requeryScope = CoroutineScope(SupervisorJob() + requeryContext)
 
-    constructor() {
-        requeryContext = Dispatchers.IO
-        requeryScope = CoroutineScope(SupervisorJob() + requeryContext)
-    }
-
-    /** Test-only — inject a `TestDispatcher` to control re-query timing via `advanceTimeBy`. */
-    internal constructor(testContext: CoroutineContext) {
-        requeryContext = testContext
-        requeryScope = CoroutineScope(SupervisorJob() + requeryContext)
-    }
-
-    private val _discoveredDevices = MutableStateFlow<List<Device>>(emptyList())
-    override val discoveredDevices: StateFlow<List<Device>> = _discoveredDevices.asStateFlow()
+    override val discoveredDevices: StateFlow<List<Device>> = store.devices
 
     @Volatile private var jmdns: JmDNS? = null
 
@@ -57,13 +45,11 @@ internal class MdnsDiscoveryJmdns : DeviceDiscovery {
     @Volatile private var ownPort: Int = -1
 
     /**
-     * Maps JmDNS service instance name → resolved Device so that [serviceRemoved]
-     * can remove the exact device by [Device.id] rather than by name. Without this,
-     * removing "Tether" would also drop peers whose name happened to match.
+     * Maps JmDNS service instance name → [Device.id] so that [serviceRemoved]
+     * can call [DiscoveredDevicesStore.removeById] rather than a name-based lookup.
      */
-    private val instanceToDevice = ConcurrentHashMap<String, Device>()
+    private val instanceToId = ConcurrentHashMap<String, String>()
 
-    private lateinit var requeryScope: CoroutineScope
     private var requeryJob: Job? = null
 
     @Synchronized
@@ -82,9 +68,8 @@ internal class MdnsDiscoveryJmdns : DeviceDiscovery {
 
             override fun serviceRemoved(event: ServiceEvent) {
                 System.err.println("INFO: serviceRemoved '${event.name}'")
-                val removed = instanceToDevice.remove(event.name) ?: return
-                _discoveredDevices.value = _discoveredDevices.value
-                    .filterNot { it.id == removed.id }
+                val id = instanceToId.remove(event.name) ?: return
+                store.removeById(id)
             }
 
             override fun serviceResolved(event: ServiceEvent) {
@@ -103,9 +88,8 @@ internal class MdnsDiscoveryJmdns : DeviceDiscovery {
                         host = ipv4,
                         port = info.port,
                     )
-                    instanceToDevice[event.name] = device
-                    _discoveredDevices.value = _discoveredDevices.value
-                        .filterNot { it.name == device.name && it.host == device.host } + device
+                    instanceToId[event.name] = device.id
+                    store.upsert(device)
                 } catch (e: Exception) {
                     System.err.println("WARN: serviceResolved error for '${event.name}' — ${e.message}")
                 }
@@ -164,8 +148,8 @@ internal class MdnsDiscoveryJmdns : DeviceDiscovery {
             jmdns = null
             ownIp = null
             ownPort = -1
-            instanceToDevice.clear()
-            _discoveredDevices.value = emptyList()
+            instanceToId.clear()
+            store.clear()
         }
     }
 

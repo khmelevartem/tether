@@ -1,10 +1,11 @@
 package com.tubetoast.tether.discovery.bonjour
 
+import com.tubetoast.tether.discovery.DiscoveredDevicesStore
 import com.tubetoast.tether.protocol.Device
 
 /**
  * State machine over the Browse → Resolve → GetAddrInfo callback chain. Pure
- * Kotlin, no JNA — effects go through [Sink].
+ * Kotlin, no JNA — effects go through [Sink] and [DiscoveredDevicesStore].
  *
  * [ownName] starts as the configured `deviceName`; mDNSResponder may rename on
  * conflict (e.g. `Foo` → `Foo (2)`) and delivers the canonical name via
@@ -14,6 +15,7 @@ import com.tubetoast.tether.protocol.Device
  */
 internal class BonjourState(
     deviceName: String,
+    private val store: DiscoveredDevicesStore,
     private val sink: Sink,
 ) {
     private var ownName: String = deviceName
@@ -22,14 +24,11 @@ internal class BonjourState(
     private val activeAddrInfos = mutableSetOf<String>()
     private val pendingPorts = mutableMapOf<String, Int>()
     private val pendingIps = mutableMapOf<String, String>()
-    private var devices: List<Device> = emptyList()
 
     fun ownNameAssigned(canonicalName: String) {
         if (canonicalName == ownName) return
         ownName = canonicalName
-        if (cleanupName(canonicalName)) {
-            sink.publishDevices(devices)
-        }
+        cleanupName(canonicalName)
     }
 
     fun onBrowseAdd(name: String, interfaceIndex: Int) {
@@ -44,7 +43,7 @@ internal class BonjourState(
         val hadAddr = activeAddrInfos.remove(name)
         if (hadResolve) sink.closeResolve(name)
         if (hadAddr) sink.closeAddrInfo(name)
-        if (cleanupName(name)) sink.publishDevices(devices)
+        cleanupName(name)
     }
 
     fun onResolved(name: String, hostname: String, port: Int) {
@@ -75,26 +74,17 @@ internal class BonjourState(
         }
     }
 
-    private fun cleanupName(name: String): Boolean {
+    private fun cleanupName(name: String) {
         pendingPorts.remove(name)
         pendingIps.remove(name)
-        val updated = devices.filterNot { it.name == name }
-        if (updated.size != devices.size) {
-            devices = updated
-            return true
-        }
-        return false
+        store.removeByName(name)
     }
 
     private fun emitIfReady(name: String) {
         val ip = pendingIps[name] ?: return
         val port = pendingPorts[name] ?: return
         val device = Device(id = "$name@$ip:$port", name = name, host = ip, port = port)
-        val updated = devices.filterNot { it.name == name } + device
-        if (updated != devices) {
-            devices = updated
-            sink.publishDevices(devices)
-        }
+        store.upsertByName(device)
     }
 
     internal interface Sink {
@@ -105,7 +95,5 @@ internal class BonjourState(
         fun openAddrInfo(name: String, hostname: String)
 
         fun closeAddrInfo(name: String)
-
-        fun publishDevices(devices: List<Device>)
     }
 }

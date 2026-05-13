@@ -4,6 +4,7 @@ import com.sun.jna.Memory
 import com.sun.jna.Pointer
 import com.sun.jna.ptr.PointerByReference
 import com.tubetoast.tether.discovery.DeviceDiscovery
+import com.tubetoast.tether.discovery.DiscoveredDevicesStore
 import com.tubetoast.tether.protocol.Device
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -13,9 +14,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -33,9 +32,10 @@ import java.util.concurrent.CopyOnWriteArrayList
  * `DNSServiceRefDeallocate` in its own `finally` block — the pattern required
  * by `dns_sd.h` to avoid a concurrent-deallocate race.
  */
-internal class MdnsDiscoveryBonjour : DeviceDiscovery {
-    private val _discoveredDevices = MutableStateFlow<List<Device>>(emptyList())
-    override val discoveredDevices: StateFlow<List<Device>> = _discoveredDevices.asStateFlow()
+internal class MdnsDiscoveryBonjour(
+    private val store: DiscoveredDevicesStore,
+) : DeviceDiscovery {
+    override val discoveredDevices: StateFlow<List<Device>> = store.devices
 
     private val lifecycleLock = Any()
 
@@ -44,7 +44,7 @@ internal class MdnsDiscoveryBonjour : DeviceDiscovery {
     override fun start(deviceName: String, port: Int) {
         synchronized(lifecycleLock) {
             if (session != null) throw IllegalStateException("MdnsDiscovery already started; call stop() first")
-            session = Session.start(deviceName, port, _discoveredDevices)
+            session = Session.start(deviceName, port, store)
         }
     }
 
@@ -55,11 +55,11 @@ internal class MdnsDiscoveryBonjour : DeviceDiscovery {
             current
         }
         toClose?.close()
-        _discoveredDevices.value = emptyList()
+        store.clear()
     }
 
     private class Session(
-        private val discoveredDevices: MutableStateFlow<List<Device>>,
+        private val store: DiscoveredDevicesStore,
         private val scope: CoroutineScope,
         private val events: Channel<Event>,
     ) : BonjourState.Sink {
@@ -104,10 +104,6 @@ internal class MdnsDiscoveryBonjour : DeviceDiscovery {
 
         override fun closeAddrInfo(name: String) {
             addrInfoJobs.remove(name)?.cancel()
-        }
-
-        override fun publishDevices(devices: List<Device>) {
-            discoveredDevices.value = devices
         }
 
         private fun bindState(state: BonjourState) {
@@ -280,13 +276,13 @@ internal class MdnsDiscoveryBonjour : DeviceDiscovery {
             fun start(
                 deviceName: String,
                 port: Int,
-                discoveredDevices: MutableStateFlow<List<Device>>,
+                store: DiscoveredDevicesStore,
             ): Session {
                 val events = Channel<Event>(Channel.UNLIMITED)
                 val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-                val session = Session(discoveredDevices, scope, events)
-                val state = BonjourState(deviceName, session)
+                val session = Session(store, scope, events)
+                val state = BonjourState(deviceName, store, session)
                 session.bindState(state)
 
                 val registerRef = openRegisterRef(deviceName, port, events) { session.callbackAnchors.add(it) }

@@ -2,9 +2,7 @@ package com.tubetoast.tether.discovery
 
 import com.tubetoast.tether.protocol.Device
 import kotlinx.cinterop.ObjCSignatureOverride
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import platform.Foundation.NSLog
 import platform.Foundation.NSNetService
 import platform.Foundation.NSNetServiceBrowser
@@ -20,9 +18,10 @@ private const val SERVICE_TYPE = "_tether._tcp."
 // from the same thread (main thread via DisposableEffect in Compose), all accesses to
 // mutable state are single-threaded — no @Synchronized or @Volatile needed.
 // @Synchronized is a JVM-only annotation and is not available in Kotlin/Native.
-actual class MdnsDiscovery : DeviceDiscovery {
-    private val _discoveredDevices = MutableStateFlow<List<Device>>(emptyList())
-    actual override val discoveredDevices: StateFlow<List<Device>> = _discoveredDevices.asStateFlow()
+actual class MdnsDiscovery(
+    private val store: DiscoveredDevicesStore,
+) : DeviceDiscovery {
+    actual override val discoveredDevices: StateFlow<List<Device>> = store.devices
 
     private var netService: NSNetService? = null
     private var browser: NSNetServiceBrowser? = null
@@ -86,7 +85,7 @@ actual class MdnsDiscovery : DeviceDiscovery {
         serviceDelegate = null
         browserDelegate = null
         resolutionDelegates.clear()
-        _discoveredDevices.value = emptyList()
+        store.clear()
 
         NSLog("mDNS: stopped")
     }
@@ -107,8 +106,7 @@ actual class MdnsDiscovery : DeviceDiscovery {
 
     private fun onServiceRemoved(serviceName: String) {
         NSLog("mDNS: service removed %s", serviceName)
-        _discoveredDevices.value = _discoveredDevices.value
-            .filterNot { it.name == serviceName }
+        store.removeByName(serviceName)
     }
 
     private fun onServiceResolved(service: NSNetService) {
@@ -135,8 +133,7 @@ actual class MdnsDiscovery : DeviceDiscovery {
         )
 
         NSLog("mDNS: peer discovered: %s@%s:%d", device.name, device.host, device.port)
-        _discoveredDevices.value = _discoveredDevices.value
-            .filterNot { it.name == device.name } + device
+        store.upsertByName(device)
     }
 
     private fun onServiceResolutionFailed(serviceName: String) {
