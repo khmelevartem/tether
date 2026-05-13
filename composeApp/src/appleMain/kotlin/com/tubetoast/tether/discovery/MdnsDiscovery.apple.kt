@@ -127,7 +127,6 @@ actual class MdnsDiscovery(
         }
 
         val device = Device(
-            id = "$serviceName@$host:$port",
             name = serviceName,
             host = host,
             port = port,

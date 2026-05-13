@@ -40,7 +40,7 @@ class BonjourStateTest {
         assertEquals(0, store.devices.value.size, "still no device — IP missing")
 
         state.onAddrInfoFound("PeerA", "10.0.0.5", isAdd = true)
-        assertEquals(listOf(Device("PeerA@10.0.0.5:19999", "PeerA", "10.0.0.5", 19999)), store.devices.value)
+        assertEquals(listOf(Device("PeerA", "10.0.0.5", 19999)), store.devices.value)
     }
 
     @Test

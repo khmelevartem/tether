@@ -56,7 +56,7 @@ internal class BonjourState(
         val ip = pendingIps[name] ?: return
         val port = pendingPorts[name] ?: return
         if (isSelf(ip, port)) return
-        val device = Device(id = "$name@$ip:$port", name = name, host = ip, port = port)
+        val device = Device(name = name, host = ip, port = port)
         store.upsert(device)
     }
 

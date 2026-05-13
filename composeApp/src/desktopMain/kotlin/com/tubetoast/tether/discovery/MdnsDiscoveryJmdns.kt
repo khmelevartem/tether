@@ -75,7 +75,6 @@ internal class MdnsDiscoveryJmdns(
                     val ipv4 = resolveIPv4(info, event.name) ?: return
                     if (isSelf(ipv4, info.port)) return
                     val device = Device(
-                        id = "${event.name}@$ipv4:${info.port}",
                         name = event.name,
                         host = ipv4,
                         port = info.port,

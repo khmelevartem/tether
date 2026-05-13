@@ -49,7 +49,7 @@ class FileClientTest {
     private var serverPort: Int = 0
 
     private val device
-        get() = Device(id = "test@127.0.0.1:$serverPort", name = "test", host = "127.0.0.1", port = serverPort)
+        get() = Device(name = "test", host = "127.0.0.1", port = serverPort)
 
     @BeforeTest
     fun setup() {
@@ -146,7 +146,7 @@ class FileClientTest {
             file.writeBytes(payload)
             runBlocking {
                 captureClient.send(
-                    device = Device(id = "x@127.0.0.1:$port", name = "x", host = "127.0.0.1", port = port),
+                    device = Device(name = "x", host = "127.0.0.1", port = port),
                     file = file,
                 )
             }
@@ -195,7 +195,7 @@ class FileClientTest {
     fun `send returns Failure when server is not running`() {
         val file = Files.createTempFile("no-server", ".txt")
         file.writeBytes("data".toByteArray())
-        val unreachable = Device(id = "x@127.0.0.1:1", name = "x", host = "127.0.0.1", port = 1)
+        val unreachable = Device(name = "x", host = "127.0.0.1", port = 1)
         runBlocking {
             val result = client.send(unreachable, file)
             assertIs<SendResult.Failure>(result)

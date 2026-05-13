@@ -12,38 +12,36 @@ import kotlin.test.assertTrue
 class DiscoveredDevicesStoreTest {
     private val store = DiscoveredDevicesStore()
 
-    private fun device(id: String, name: String = id) =
-        Device(id = id, name = name, host = "1.2.3.4", port = 8080)
+    private fun device(name: String, host: String = "1.2.3.4", port: Int = 8080) =
+        Device(name = name, host = host, port = port)
 
     @Test
-    fun `upsert replaces by id`() {
-        val original = device("a@1.2.3.4:8080")
-        val updated = original.copy(host = "5.6.7.8")
-        store.upsert(original)
-        store.upsert(updated)
-        assertEquals(listOf(updated), store.devices.value)
+    fun `upsert with same device is idempotent`() {
+        val d = device("Peer")
+        store.upsert(d)
+        store.upsert(d)
+        assertEquals(listOf(d), store.devices.value)
     }
 
     @Test
     fun `removeByName removes all entries with matching name`() {
-        store.upsert(device("a@1.0.0.1:80", name = "Peer"))
-        store.upsert(device("b@1.0.0.2:80", name = "Peer"))
-        store.upsert(device("c@1.0.0.3:80", name = "Other"))
+        store.upsert(device("Peer", host = "1.0.0.1"))
+        store.upsert(device("Other", host = "1.0.0.2"))
         store.removeByName("Peer")
-        assertEquals(listOf(device("c@1.0.0.3:80", name = "Other")), store.devices.value)
+        assertEquals(listOf(device("Other", host = "1.0.0.2")), store.devices.value)
     }
 
     @Test
     fun `removeByName on missing name is a no-op`() {
-        store.upsert(device("a@1.2.3.4:1"))
+        store.upsert(device("a"))
         store.removeByName("nope")
         assertEquals(1, store.devices.value.size)
     }
 
     @Test
     fun `clear removes all entries`() {
-        store.upsert(device("a@1.2.3.4:1"))
-        store.upsert(device("b@1.2.3.4:2"))
+        store.upsert(device("a"))
+        store.upsert(device("b"))
         store.clear()
         assertTrue(store.devices.value.isEmpty())
     }
@@ -51,54 +49,37 @@ class DiscoveredDevicesStoreTest {
     @Test
     fun `devices StateFlow value reflects each mutation`() = runTest {
         assertEquals(emptyList(), store.devices.value)
-        store.upsert(device("a@1.2.3.4:1", name = "A"))
+        store.upsert(device("A"))
         assertEquals(1, store.devices.value.size)
-        store.upsert(device("b@1.2.3.4:2", name = "B"))
+        store.upsert(device("B"))
         assertEquals(2, store.devices.value.size)
         store.removeByName("A")
-        assertEquals(1, store.devices.value.size)
-        assertEquals(
-            "b@1.2.3.4:2",
-            store.devices.value
-                .single()
-                .id,
-        )
+        assertEquals(listOf(device("B")), store.devices.value)
     }
 
     @Test
-    fun `upsert with same name and new id evicts stale entry`() {
-        val old = device("a@1.0.0.1:80", name = "Peer")
-        val fresh = device("a@1.0.0.2:80", name = "Peer")
+    fun `upsert with same name and new address evicts stale entry`() {
+        val old = device("Peer", host = "1.0.0.1")
+        val fresh = device("Peer", host = "1.0.0.2")
         store.upsert(old)
         store.upsert(fresh)
         assertEquals(listOf(fresh), store.devices.value)
     }
 
     @Test
-    fun `three peers requesting the same name but renamed by mDNS all coexist`() {
-        val a = Device("Tether@10.0.0.1:8000", "Tether", "10.0.0.1", 8000)
-        val b = Device("Tether (2)@10.0.0.2:8000", "Tether (2)", "10.0.0.2", 8000)
-        val c = Device("Tether (3)@10.0.0.3:8000", "Tether (3)", "10.0.0.3", 8000)
-        store.upsert(a)
-        store.upsert(b)
-        store.upsert(c)
-        assertEquals(listOf(a, b, c), store.devices.value)
-    }
-
-    @Test
     fun `upsert preserves entries with different names`() {
-        val a = device("a@1.2.3.4:1", name = "A")
-        val b = device("b@1.2.3.4:2", name = "B")
+        val a = device("A")
+        val b = device("B", port = 81)
         store.upsert(a)
         store.upsert(b)
         assertEquals(listOf(a, b), store.devices.value)
     }
 
     @Test
-    fun `insertion order preserved — upsert A B C yields A B C`() {
-        val a = device("a@1.2.3.4:1", name = "A")
-        val b = device("b@1.2.3.4:2", name = "B")
-        val c = device("c@1.2.3.4:3", name = "C")
+    fun `insertion order preserved`() {
+        val a = device("A")
+        val b = device("B", port = 81)
+        val c = device("C", port = 82)
         store.upsert(a)
         store.upsert(b)
         store.upsert(c)
@@ -108,15 +89,17 @@ class DiscoveredDevicesStoreTest {
     @Test
     fun `concurrent upserts — all N entries land with no lost updates`() = runTest {
         val n = 50
-        val devices = (1..n).map { device("id$it@1.2.3.4:$it", name = "Peer$it") }
+        val devices = (1..n).map { device("Peer$it", port = it) }
         devices
             .map { d ->
                 async(Dispatchers.Default) { store.upsert(d) }
             }.awaitAll()
         assertEquals(n, store.devices.value.size)
-        val ids = store.devices.value
-            .map { it.id }
-            .toSet()
-        assertEquals(devices.map { it.id }.toSet(), ids)
+        assertEquals(
+            devices.map { it.id }.toSet(),
+            store.devices.value
+                .map { it.id }
+                .toSet(),
+        )
     }
 }
