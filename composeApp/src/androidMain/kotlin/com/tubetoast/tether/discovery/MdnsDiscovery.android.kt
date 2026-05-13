@@ -6,9 +6,7 @@ import android.net.nsd.NsdServiceInfo
 import android.os.Build
 import android.util.Log
 import com.tubetoast.tether.protocol.Device
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import java.util.concurrent.ConcurrentLinkedQueue
 
 private const val SERVICE_TYPE = "_tether._tcp."
@@ -16,9 +14,9 @@ private const val TAG = "MdnsDiscovery"
 
 actual class MdnsDiscovery(
     private val context: Context,
+    private val store: DiscoveredDevicesStore,
 ) : DeviceDiscovery {
-    private val _discoveredDevices = MutableStateFlow<List<Device>>(emptyList())
-    actual override val discoveredDevices: StateFlow<List<Device>> = _discoveredDevices.asStateFlow()
+    actual override val discoveredDevices: StateFlow<List<Device>> = store.devices
 
     @Volatile private var nsdManager: NsdManager? = null
 
@@ -73,9 +71,10 @@ actual class MdnsDiscovery(
         }
 
         override fun onServiceLost(serviceInfo: NsdServiceInfo) {
+            if (nsdManager == null) return
             Log.d(TAG, "NSD service lost: ${serviceInfo.serviceName}")
-            _discoveredDevices.value = _discoveredDevices.value
-                .filterNot { it.name == serviceInfo.serviceName }
+            // NsdManager only populates serviceName here; host/port are null/0 — can't rebuild id.
+            store.removeByName(serviceInfo.serviceName)
         }
     }
 
@@ -109,14 +108,12 @@ actual class MdnsDiscovery(
                 return
             }
             val device = Device(
-                id = "${serviceInfo.serviceName}@$host:$port",
                 name = serviceInfo.serviceName,
                 host = host,
                 port = port,
             )
             Log.d(TAG, "NSD peer discovered: $device")
-            _discoveredDevices.value = _discoveredDevices.value
-                .filterNot { it.name == device.name } + device
+            store.upsert(device)
             onResolveComplete()
         }
     }
@@ -177,6 +174,6 @@ actual class MdnsDiscovery(
         ownName = null
         resolveQueue.clear()
         resolving = false
-        _discoveredDevices.value = emptyList()
+        store.clear()
     }
 }

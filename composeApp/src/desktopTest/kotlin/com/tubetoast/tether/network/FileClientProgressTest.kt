@@ -33,7 +33,7 @@ class FileClientProgressTest {
         )
         val port = server.start()
         client = FileClient()
-        device = Device(id = "test@127.0.0.1:$port", name = "test", host = "127.0.0.1", port = port)
+        device = Device(name = "test", host = "127.0.0.1", port = port)
     }
 
     @AfterTest

@@ -15,8 +15,8 @@ import kotlin.test.assertEquals
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DeviceListComponentTest {
-    private val deviceA = Device(id = "a", name = "DeviceA", host = "192.168.1.1", port = 8080)
-    private val deviceB = Device(id = "b", name = "DeviceB", host = "192.168.1.2", port = 8080)
+    private val deviceA = Device(name = "DeviceA", host = "192.168.1.1", port = 8080)
+    private val deviceB = Device(name = "DeviceB", host = "192.168.1.2", port = 8080)
 
     @Test
     fun `empty state when no devices discovered`() = runTest {

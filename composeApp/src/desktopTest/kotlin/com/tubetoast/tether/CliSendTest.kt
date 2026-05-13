@@ -34,7 +34,7 @@ class CliSendTest {
             deviceKeyPair = DeviceKeyPair(configDir),
         )
         val port = server.start()
-        device = Device(id = "cli-test@127.0.0.1:$port", name = "cli-test", host = "127.0.0.1", port = port)
+        device = Device(name = "cli-test", host = "127.0.0.1", port = port)
         client = FileClient()
     }
 
@@ -102,7 +102,7 @@ class CliSendTest {
         val file = Files.createTempFile("cli-dup", ".txt")
         file.writeBytes(content)
 
-        val duplicate = device.copy(id = "cli-test-2@127.0.0.1:${device.port}")
+        val duplicate = device.copy(host = "127.0.0.2")
         val errors = mutableListOf<String>()
         val messages = mutableListOf<String>()
         runBlocking {

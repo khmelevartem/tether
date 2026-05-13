@@ -9,19 +9,19 @@ class DeviceTest {
 
     @Test
     fun `Device round-trips through JSON`() {
-        val original = Device(
-            id = "abc-123",
-            name = "My Mac",
-            host = "192.168.1.10",
-            port = 8080,
-        )
+        val original = Device(name = "My Mac", host = "192.168.1.10", port = 8080)
         val decoded = json.decodeFromString<Device>(json.encodeToString(original))
         assertEquals(original, decoded)
     }
 
     @Test
     fun `Device serializes to expected wire format`() {
-        val device = Device(id = "x", name = "n", host = "h", port = 9)
-        assertEquals("""{"id":"x","name":"n","host":"h","port":9}""", json.encodeToString(device))
+        val device = Device(name = "n", host = "h", port = 9)
+        assertEquals("""{"name":"n","host":"h","port":9}""", json.encodeToString(device))
+    }
+
+    @Test
+    fun `id is derived from name host port`() {
+        assertEquals("My Mac@192.168.1.10:8080", Device(name = "My Mac", host = "192.168.1.10", port = 8080).id)
     }
 }

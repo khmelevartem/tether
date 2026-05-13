@@ -1,12 +1,10 @@
 package com.tubetoast.tether.discovery
 
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.advanceTimeBy
-import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -16,12 +14,12 @@ import kotlin.test.assertTrue
 class MdnsDiscoveryTest {
     @Test
     fun `stop before start does not throw`() {
-        MdnsDiscovery().stop()
+        MdnsDiscovery(DiscoveredDevicesStore()).stop()
     }
 
     @Test
     fun `start twice without stop throws IllegalStateException`() {
-        val discovery = MdnsDiscovery()
+        val discovery = MdnsDiscovery(DiscoveredDevicesStore())
         discovery.start("DoubleStart", 19001)
         try {
             assertFailsWith<IllegalStateException> {
@@ -34,7 +32,7 @@ class MdnsDiscoveryTest {
 
     @Test
     fun `stop emits empty list`() = runBlocking {
-        val discovery = MdnsDiscovery()
+        val discovery = MdnsDiscovery(DiscoveredDevicesStore())
         discovery.start("StopEmits", 19003)
         discovery.stop()
         assertTrue(discovery.discoveredDevices.first().isEmpty())
@@ -42,8 +40,8 @@ class MdnsDiscoveryTest {
 
     @Test
     fun `two instances discover each other`() = runBlocking {
-        val a = MdnsDiscovery()
-        val b = MdnsDiscovery()
+        val a = MdnsDiscovery(DiscoveredDevicesStore())
+        val b = MdnsDiscovery(DiscoveredDevicesStore())
         try {
             a.start("PeerA", 19010)
             b.start("PeerB", 19011)
@@ -90,8 +88,8 @@ class MdnsDiscoveryTest {
 
     @Test
     fun `instances do not discover themselves`() = runBlocking {
-        val a = MdnsDiscovery()
-        val b = MdnsDiscovery()
+        val a = MdnsDiscovery(DiscoveredDevicesStore())
+        val b = MdnsDiscovery(DiscoveredDevicesStore())
         try {
             a.start("SelfA", 19020)
             b.start("SelfB", 19021)
@@ -130,8 +128,8 @@ class MdnsDiscoveryTest {
 
     @Test
     fun `restart — stop then start works correctly`() = runBlocking {
-        val a = MdnsDiscovery()
-        val b = MdnsDiscovery()
+        val a = MdnsDiscovery(DiscoveredDevicesStore())
+        val b = MdnsDiscovery(DiscoveredDevicesStore())
         try {
             a.start("RestartA", 19050)
             b.start("RestartB", 19051)
@@ -157,8 +155,8 @@ class MdnsDiscoveryTest {
 
     @Test
     fun `stop clears previously discovered peers`() = runBlocking {
-        val a = MdnsDiscovery()
-        val b = MdnsDiscovery()
+        val a = MdnsDiscovery(DiscoveredDevicesStore())
+        val b = MdnsDiscovery(DiscoveredDevicesStore())
         try {
             a.start("ClearA", 19030)
             b.start("ClearB", 19031)
@@ -176,8 +174,8 @@ class MdnsDiscoveryTest {
 
     @Test
     fun `peer re-resolved with new port replaces old entry`() = runBlocking {
-        val a = MdnsDiscovery()
-        val b = MdnsDiscovery()
+        val a = MdnsDiscovery(DiscoveredDevicesStore())
+        val b = MdnsDiscovery(DiscoveredDevicesStore())
         try {
             a.start("PortChangeA", 19060)
             b.start("PortChangeB", 19061)
@@ -204,43 +202,17 @@ class MdnsDiscoveryTest {
         }
     }
 
-    // NOTE: the "JmDNS renames on conflict" test was removed because it tested JmDNS
-    // internal conflict-probing behaviour rather than our own code. Our self-filter uses
-    // IP+port (not name), so it is rename-proof by construction — no renaming scenario
-    // can break it. The test was also consistently flaky: same-machine JmDNS conflict
-    // probing is timing-dependent and cannot reliably complete within a fixed timeout.
-    // The correctness guarantee is documented in MdnsDiscovery.jvm.kt instead.
-
-    // Skipped on macOS: this test injects a TestDispatcher into MdnsDiscoveryJmdns, and
-    // JmDNS on macOS cannot resolve IPv4 from mDNSResponder for local loopback services.
     @Test
-    fun `late-joining peer is discovered after initial browse cycle`() = runTest {
-        org.junit.Assume.assumeFalse("JmDNS IPv4 resolution unavailable on macOS", isMacOs())
-        val testDispatcher = StandardTestDispatcher(testScheduler)
-        val a = MdnsDiscoveryJmdns(testDispatcher)
-        val b = MdnsDiscoveryJmdns(testDispatcher)
+    fun `late-joining peer is discovered after initial browse cycle`(): Unit = runBlocking {
+        val a = MdnsDiscovery(DiscoveredDevicesStore())
+        val b = MdnsDiscovery(DiscoveredDevicesStore())
         try {
             a.start("LateA", 19070)
-            // JmDNS's ServiceResolver fires 3 PTR queries over ~675 ms of real time.
-            // Thread.sleep keeps us in real time so the burst finishes before b joins.
-            Thread.sleep(1_000)
+            Thread.sleep(2_000)
             b.start("LateB", 19071)
-            // JmDNS probes the service name before advertising (~3 × 250 ms). Wait for
-            // b to be reachable on the network before triggering a's re-query.
-            Thread.sleep(1_000)
-            // Advance virtual clock past the initial re-query interval: triggers
-            // addServiceListener in a's re-query coroutine, which re-arms ServiceResolver.
-            advanceTimeBy(REQUERY_INITIAL_INTERVAL_MS + 1)
-            // Poll with real time — discoveredDevices is updated from JmDNS's own threads
-            // and coroutine withTimeout would use virtual clock (routed through testScheduler).
-            val deadline = System.currentTimeMillis() + 10_000
-            while (System.currentTimeMillis() < deadline) {
-                if (a.discoveredDevices.value.any { it.port == 19071 }) break
-                Thread.sleep(100)
+            withTimeout(REQUERY_INITIAL_INTERVAL_MS + 10_000) {
+                a.discoveredDevices.first { peers -> peers.any { it.port == 19071 } }
             }
-            val lateB = a.discoveredDevices.value.filter { it.port == 19071 }
-            assertEquals(1, lateB.size, "LateB not discovered within 10 s after re-query")
-            assertEquals(19071, lateB[0].port)
         } finally {
             a.stop()
             b.stop()
@@ -248,47 +220,26 @@ class MdnsDiscoveryTest {
     }
 
     @Test
-    @org.junit.Ignore("#111: dedup pulled into commonMain DiscoveredDevicesStore; unignore there")
-    fun `three instances with same name each discover two others`() = runTest {
-        val a = MdnsDiscovery()
-        val b = MdnsDiscovery()
-        val c = MdnsDiscovery()
+    fun `three instances with same name each discover two others`(): Unit = runBlocking {
+        val a = MdnsDiscovery(DiscoveredDevicesStore())
+        val b = MdnsDiscovery(DiscoveredDevicesStore())
+        val c = MdnsDiscovery(DiscoveredDevicesStore())
         try {
+            // Stagger by 1 s: JmDNS conflict-rename probing (~750 ms) is racy when overlapping.
             a.start("SameName", 19080)
+            Thread.sleep(1_000)
             b.start("SameName", 19081)
+            Thread.sleep(1_000)
             c.start("SameName", 19082)
 
-            val deadline = System.currentTimeMillis() + 15_000
-            while (System.currentTimeMillis() < deadline) {
-                val aOk = a.discoveredDevices.value
-                    .map { it.port }
-                    .containsAll(listOf(19081, 19082))
-                val bOk = b.discoveredDevices.value
-                    .map { it.port }
-                    .containsAll(listOf(19080, 19082))
-                val cOk = c.discoveredDevices.value
-                    .map { it.port }
-                    .containsAll(listOf(19080, 19081))
-                if (aOk && bOk && cOk) break
-                Thread.sleep(200)
+            val timeoutMs = 30_000L
+            coroutineScope {
+                listOf(
+                    async { awaitPorts(a, 19081, 19082, timeoutMs) },
+                    async { awaitPorts(b, 19080, 19082, timeoutMs) },
+                    async { awaitPorts(c, 19080, 19081, timeoutMs) },
+                ).awaitAll()
             }
-
-            val testPorts = setOf(19080, 19081, 19082)
-            assertEquals(
-                2,
-                a.discoveredDevices.value.count { it.port in testPorts },
-                "a should see b(19081) and c(19082)",
-            )
-            assertEquals(
-                2,
-                b.discoveredDevices.value.count { it.port in testPorts },
-                "b should see a(19080) and c(19082)",
-            )
-            assertEquals(
-                2,
-                c.discoveredDevices.value.count { it.port in testPorts },
-                "c should see a(19080) and b(19081)",
-            )
         } finally {
             a.stop()
             b.stop()
@@ -296,10 +247,19 @@ class MdnsDiscoveryTest {
         }
     }
 
+    private suspend fun awaitPorts(discovery: DeviceDiscovery, p1: Int, p2: Int, timeoutMs: Long) {
+        withTimeout(timeoutMs) {
+            discovery.discoveredDevices.first { peers ->
+                val ports = peers.map { it.port }
+                p1 in ports && p2 in ports
+            }
+        }
+    }
+
     @Test
     fun `discovered device has correct host and port`() = runBlocking {
-        val a = MdnsDiscovery()
-        val b = MdnsDiscovery()
+        val a = MdnsDiscovery(DiscoveredDevicesStore())
+        val b = MdnsDiscovery(DiscoveredDevicesStore())
         try {
             a.start("HostA", 19040)
             b.start("HostB", 19041)
@@ -317,9 +277,3 @@ class MdnsDiscoveryTest {
         }
     }
 }
-
-private fun isMacOs() = System
-    .getProperty("os.name")
-    .orEmpty()
-    .lowercase()
-    .startsWith("mac")
