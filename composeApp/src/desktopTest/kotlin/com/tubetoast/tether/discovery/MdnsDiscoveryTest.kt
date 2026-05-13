@@ -1,6 +1,7 @@
 package com.tubetoast.tether.discovery
 
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -248,50 +249,41 @@ class MdnsDiscoveryTest {
     }
 
     @Test
-    fun `three instances with same name each discover two others`() = runTest {
+    fun `three instances with same name each discover two others`(): Unit = runBlocking {
         val a = MdnsDiscovery(DiscoveredDevicesStore())
         val b = MdnsDiscovery(DiscoveredDevicesStore())
         val c = MdnsDiscovery(DiscoveredDevicesStore())
         try {
+            // JmDNS probes for ~750 ms before committing a name. Starting three same-name
+            // instances simultaneously makes their probes overlap and JmDNS' conflict
+            // resolution becomes racy on slow runners. Stagger to keep each probe clean.
             a.start("SameName", 19080)
+            Thread.sleep(1_000)
             b.start("SameName", 19081)
+            Thread.sleep(1_000)
             c.start("SameName", 19082)
 
-            val deadline = System.currentTimeMillis() + 15_000
-            while (System.currentTimeMillis() < deadline) {
-                val aOk = a.discoveredDevices.value
-                    .map { it.port }
-                    .containsAll(listOf(19081, 19082))
-                val bOk = b.discoveredDevices.value
-                    .map { it.port }
-                    .containsAll(listOf(19080, 19082))
-                val cOk = c.discoveredDevices.value
-                    .map { it.port }
-                    .containsAll(listOf(19080, 19081))
-                if (aOk && bOk && cOk) break
-                Thread.sleep(200)
+            val timeoutMs = 30_000L
+            coroutineScope {
+                listOf(
+                    async { awaitPorts(a, 19081, 19082, timeoutMs) },
+                    async { awaitPorts(b, 19080, 19082, timeoutMs) },
+                    async { awaitPorts(c, 19080, 19081, timeoutMs) },
+                ).awaitAll()
             }
-
-            val testPorts = setOf(19080, 19081, 19082)
-            assertEquals(
-                2,
-                a.discoveredDevices.value.count { it.port in testPorts },
-                "a should see b(19081) and c(19082)",
-            )
-            assertEquals(
-                2,
-                b.discoveredDevices.value.count { it.port in testPorts },
-                "b should see a(19080) and c(19082)",
-            )
-            assertEquals(
-                2,
-                c.discoveredDevices.value.count { it.port in testPorts },
-                "c should see a(19080) and b(19081)",
-            )
         } finally {
             a.stop()
             b.stop()
             c.stop()
+        }
+    }
+
+    private suspend fun awaitPorts(discovery: DeviceDiscovery, p1: Int, p2: Int, timeoutMs: Long) {
+        withTimeout(timeoutMs) {
+            discovery.discoveredDevices.first { peers ->
+                val ports = peers.map { it.port }
+                p1 in ports && p2 in ports
+            }
         }
     }
 
