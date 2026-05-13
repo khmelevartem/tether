@@ -12,6 +12,14 @@ Product-side docs (vision, audience, features) live in [`docs/product/`](../prod
 - [Presentation Layer](presentation-layer.md) — Decompose-based components; how to write them, subscribe from Compose, and test.
 - [Testing](testing.md) — структура тестов по source sets, стиль (`runTest`/виртуальное время), особенности Apple-таргетов.
 
+## Writing style for these guides
+
+These documents codify principles, not the current shape of the codebase. They should age slowly.
+
+- **Code examples use abstract types** (`SomeService`, `SomeRepository`, `PlatformContext`), not real project classes. A guide that names `FileClient`, `MdnsDiscovery` or specific `actual` constructors in its examples will rot whenever those classes are renamed, refactored or split — and will be subtly wrong well before anyone notices.
+- **Do not restate what the code already shows.** Class hierarchies, `abstract`/`provides` annotations, constructor signatures and source set layout are visible in the IDE. A guide that duplicates them is two sources of truth — the code is the one that drifts last. Reference real classes by markdown link when an example is genuinely needed; don't pin their current shape into the prose.
+- **Lead with the rule.** Concrete examples and rationale follow. A reader who scans the heading and the first paragraph should already know what the rule is.
+
 ## Architecture Decision Records
 
 ADRs in [`adr/`](adr/) capture the *why* behind one-time architectural choices. Living docs above; ADRs are append-only history. See [`adr/README.md`](adr/README.md) for conventions.

@@ -49,6 +49,21 @@ Do NOT require new tests. Verify instead:
 - test coverage has not decreased,
 - no test was deleted or weakened to make the refactor pass.
 
+### 5. `@Ignore` / `assumeTrue` / `assumeFalse` ≠ coverage
+
+A test annotated `@Ignore`, or guarded by `org.junit.Assume.assumeTrue(...)` / `assumeFalse(...)` so that it short-circuits on the platform/configuration where the bug lives, is **unfinished work** — not "coverage with a caveat". Flag every such test introduced or extended in this PR as `[REQUIRED]` unless the issue explicitly accepts the skip (and the reason is platform-permanent, e.g. "feature does not exist on macOS"). "We haven't fixed the underlying flake yet" is not a permanent reason.
+
+If the skip pattern existed before this PR and is unrelated to the change, leave it alone — that's separate scope. The check is only for skips the PR introduces or extends.
+
+### 6. Red CI test = broken code, not broken test
+
+If a previously-green test went red on CI inside this PR's history, the default fix is in the **code**, not in the test. Flag as `[REQUIRED]` any change in the PR that:
+- deletes a failing test without a replacement asserting the same behavior,
+- rewrites a failing integration/E2E test into a narrower unit-level fast-check,
+- weakens assertions, raises timeouts, or removes peers/inputs from a multi-actor test to make it pass.
+
+Each of these hides the symptom while keeping the underlying bug. Exception: the test itself was demonstrably testing the wrong invariant — the PR description and a code reviewer must say so explicitly.
+
 ## What you do NOT check
 
 - AC coverage → review-dod

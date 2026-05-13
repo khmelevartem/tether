@@ -83,6 +83,8 @@ Use the built-in `Plan` agent (or `general-purpose` if plan unavailable) to prod
 
 **Выбор уровня фикса.** Issue указывает место бага, но не обязательно место фикса. Когда root cause описывает класс багов (а не один экземпляр) или когда параллельные реализации содержат тот же дефект — рассмотри фикс на уровень выше: изменение типа / контейнера / контракта, делающее класс багов невозможным. Сравни стоимость: N point-фиксов vs 1 структурный. Если выбираешь point — явно перечисли в плане параллельные места, остающиеся с дефектом, и заведи follow-up issue до начала кодинга.
 
+**Scope issue — стартовая точка, не клетка.** Список файлов / классов в issue — отправная точка. Если во время планирования (или позже, во время ревью) выясняется, что для качественного решения надо тронуть смежные классы / соседние платформы / API, которое issue не упомянуло — расширяй scope в этом же PR. Follow-up issue заводится только когда расширение действительно ломает PR: новый таргет, изменение публичного контракта на широкую поверхность, объём в несколько раз больше исходного, или раскрытие скрытого бага, требующего отдельного бугрепорта. «Эти классы не в списке issue» — не причина оставить заведомо плохую форму на потом. Notes / TODO / "follow-up" комментарии, которые сам же исполнитель добавил по ходу работы, доделываются здесь же.
+
 **Track splitting.** Default is **sequential single-track** execution. Split into parallel tracks ONLY if the plan can enumerate file-level disjoint sets: track A's files ∩ track B's files = ∅. The plan must list explicit file paths per track. If any file appears in two tracks → tracks are not independent → execute sequentially.
 
 Apply Gate G3 if the plan conflicts with guides → present to user, stop. Otherwise, accept and continue.
@@ -111,6 +113,8 @@ Per track (or sequentially if single track):
 > Previous review found these issues that block the PR. Address each. For each finding, classify as pointwise or structural; for structural findings, do a symmetry pass per your agent definition — check sibling files, sibling methods, sibling platforms, sibling source sets for the same anti-pattern, and fix in this same pass. Do not change anything outside the PR's scope.
 >
 > <list of [REQUIRED] findings with file:line>
+
+   **Red CI test = broken code, not broken test.** Если в ходе inner loop coder/ui-expert обнаруживает, что ранее зелёный тест валится на CI после его изменений — дефолт чинить **код**, а не тест. Замена failing теста на narrower fast-check, удаление сценария, ослабление assertion, повышение таймаута, выпиливание peers/inputs ради того чтобы стало зелёное — запрещены без явного апрува пользователя. Если у coder'а есть гипотеза, что тест действительно проверял не то — это эскалация к пользователю, не самостоятельное решение.
 
    **Точность передачи ревью.** Coder получает контекст cold и не верифицирует orchestrator'а — если ты перепаковал «снеси X» в «оправдай X через KDoc», coder сделает ровно последнее. Передавай findings максимально близко к исходным формулировкам ревьюера; не сужай и не смягчай. Если несколько findings сходятся на одном принципе — назови принцип явно в инструкции и перечисли ВСЕ сайты, где он применяется, даже если в комментариях упомянуты не все. Сомневаешься в интерпретации — эскалируй пользователю ДО dispatch'а, не после следующего раунда ревью.
 
