@@ -8,7 +8,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import java.util.concurrent.ConcurrentHashMap
 import javax.jmdns.JmDNS
 import javax.jmdns.ServiceEvent
 import javax.jmdns.ServiceInfo
@@ -44,9 +43,6 @@ internal class MdnsDiscoveryJmdns(
 
     @Volatile private var ownPort: Int = -1
 
-    /** Platform translation: JmDNS callbacks identify services by instance name; we operate on Device.id. */
-    private val instanceToId = ConcurrentHashMap<String, String>()
-
     private var requeryJob: Job? = null
 
     @Synchronized
@@ -65,8 +61,8 @@ internal class MdnsDiscoveryJmdns(
 
             override fun serviceRemoved(event: ServiceEvent) {
                 System.err.println("INFO: serviceRemoved '${event.name}'")
-                val id = instanceToId.remove(event.name) ?: return
-                store.removeById(id)
+                val device = store.devices.value.firstOrNull { it.name == event.name } ?: return
+                store.removeById(device.id)
             }
 
             override fun serviceResolved(event: ServiceEvent) {
@@ -85,7 +81,8 @@ internal class MdnsDiscoveryJmdns(
                         host = ipv4,
                         port = info.port,
                     )
-                    instanceToId[event.name] = device.id
+                    val previous = store.devices.value.firstOrNull { it.name == event.name }
+                    if (previous != null && previous.id != device.id) store.removeById(previous.id)
                     store.upsert(device)
                 } catch (e: Exception) {
                     System.err.println("WARN: serviceResolved error for '${event.name}' — ${e.message}")
@@ -145,7 +142,6 @@ internal class MdnsDiscoveryJmdns(
             jmdns = null
             ownIp = null
             ownPort = -1
-            instanceToId.clear()
             store.clear()
         }
     }

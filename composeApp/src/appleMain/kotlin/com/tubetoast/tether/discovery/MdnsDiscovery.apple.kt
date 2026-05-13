@@ -27,9 +27,6 @@ actual class MdnsDiscovery(
     private var browser: NSNetServiceBrowser? = null
     private var ownServiceName: String? = null
 
-    /** Platform translation: NSNetService callbacks identify services by name; we operate on Device.id. */
-    private val nameToDevice = mutableMapOf<String, Device>()
-
     // Strong references to delegates — ObjC delegate properties are weak, so without
     // these Kotlin fields the delegates would be GC'd before their callbacks fire.
     private var serviceDelegate: ServiceDelegate? = null
@@ -88,7 +85,6 @@ actual class MdnsDiscovery(
         serviceDelegate = null
         browserDelegate = null
         resolutionDelegates.clear()
-        nameToDevice.clear()
         store.clear()
 
         NSLog("mDNS: stopped")
@@ -111,7 +107,7 @@ actual class MdnsDiscovery(
     private fun onServiceRemoved(service: NSNetService) {
         val serviceName = service.name
         NSLog("mDNS: service removed %s", serviceName)
-        val device = nameToDevice.remove(serviceName) ?: return
+        val device = store.devices.value.firstOrNull { it.name == serviceName } ?: return
         store.removeById(device.id)
     }
 
@@ -139,7 +135,7 @@ actual class MdnsDiscovery(
         )
 
         NSLog("mDNS: peer discovered: %s@%s:%d", device.name, device.host, device.port)
-        val previous = nameToDevice.put(serviceName, device)
+        val previous = store.devices.value.firstOrNull { it.name == serviceName }
         if (previous != null && previous.id != device.id) store.removeById(previous.id)
         store.upsert(device)
     }

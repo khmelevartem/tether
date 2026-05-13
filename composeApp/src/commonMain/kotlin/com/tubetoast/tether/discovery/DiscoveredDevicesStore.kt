@@ -7,9 +7,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
 /**
- * Insertion-ordered store for discovered peers. All mutations use [MutableStateFlow.update]
- * which CAS-loops until the snapshot is applied atomically. The list is never mutated in
- * place — each operation produces a fresh copy. Observers always see a consistent snapshot.
+ * Insertion-ordered store for discovered peers. Thread-safe — observers see a
+ * consistent snapshot.
  */
 class DiscoveredDevicesStore {
     private val _devices = MutableStateFlow<List<Device>>(emptyList())

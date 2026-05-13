@@ -7,7 +7,6 @@ import android.os.Build
 import android.util.Log
 import com.tubetoast.tether.protocol.Device
 import kotlinx.coroutines.flow.StateFlow
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 
 private const val SERVICE_TYPE = "_tether._tcp."
@@ -24,9 +23,6 @@ actual class MdnsDiscovery(
     @Volatile private var ownName: String? = null
     private var resolving = false
     private val resolveQueue = ConcurrentLinkedQueue<NsdServiceInfo>()
-
-    /** Platform translation: NSD callbacks identify services by name; we operate on Device.id. */
-    private val nameToDevice = ConcurrentHashMap<String, Device>()
 
     private val registrationListener = object : NsdManager.RegistrationListener {
         override fun onRegistrationFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
@@ -77,7 +73,7 @@ actual class MdnsDiscovery(
         override fun onServiceLost(serviceInfo: NsdServiceInfo) {
             if (nsdManager == null) return
             Log.d(TAG, "NSD service lost: ${serviceInfo.serviceName}")
-            val device = nameToDevice.remove(serviceInfo.serviceName) ?: return
+            val device = store.devices.value.firstOrNull { it.name == serviceInfo.serviceName } ?: return
             store.removeById(device.id)
         }
     }
@@ -118,7 +114,7 @@ actual class MdnsDiscovery(
                 port = port,
             )
             Log.d(TAG, "NSD peer discovered: $device")
-            val previous = nameToDevice.put(serviceInfo.serviceName, device)
+            val previous = store.devices.value.firstOrNull { it.name == serviceInfo.serviceName }
             if (previous != null && previous.id != device.id) store.removeById(previous.id)
             store.upsert(device)
             onResolveComplete()
@@ -181,7 +177,6 @@ actual class MdnsDiscovery(
         ownName = null
         resolveQueue.clear()
         resolving = false
-        nameToDevice.clear()
         store.clear()
     }
 }

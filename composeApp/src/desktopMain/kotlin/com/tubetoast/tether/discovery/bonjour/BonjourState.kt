@@ -20,9 +20,6 @@ internal class BonjourState(
     /** Returns `true` when the given (host, port) pair identifies this device. */
     private val isSelf: (host: String, port: Int) -> Boolean,
 ) {
-    /** Platform translation: native callbacks identify services by name; we track name → Device for id-based store ops. */
-    private val nameToDevice = mutableMapOf<String, Device>()
-
     private val activeResolves = mutableSetOf<String>()
     private val activeAddrInfos = mutableSetOf<String>()
     private val pendingPorts = mutableMapOf<String, Int>()
@@ -70,7 +67,7 @@ internal class BonjourState(
     private fun cleanupName(name: String) {
         pendingPorts.remove(name)
         pendingIps.remove(name)
-        val device = nameToDevice.remove(name) ?: return
+        val device = store.devices.value.firstOrNull { it.name == name } ?: return
         store.removeById(device.id)
     }
 
@@ -79,7 +76,7 @@ internal class BonjourState(
         val port = pendingPorts[name] ?: return
         if (isSelf(ip, port)) return
         val device = Device(id = "$name@$ip:$port", name = name, host = ip, port = port)
-        val previous = nameToDevice.put(name, device)
+        val previous = store.devices.value.firstOrNull { it.name == name }
         if (previous != null && previous.id != device.id) store.removeById(previous.id)
         store.upsert(device)
     }
