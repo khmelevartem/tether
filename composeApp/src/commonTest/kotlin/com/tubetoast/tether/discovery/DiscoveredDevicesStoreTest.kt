@@ -75,6 +75,17 @@ class DiscoveredDevicesStoreTest {
     }
 
     @Test
+    fun `three peers requesting the same name but renamed by mDNS all coexist`() {
+        val a = Device("Tether@10.0.0.1:8000", "Tether", "10.0.0.1", 8000)
+        val b = Device("Tether (2)@10.0.0.2:8000", "Tether (2)", "10.0.0.2", 8000)
+        val c = Device("Tether (3)@10.0.0.3:8000", "Tether (3)", "10.0.0.3", 8000)
+        store.upsert(a)
+        store.upsert(b)
+        store.upsert(c)
+        assertEquals(listOf(a, b, c), store.devices.value)
+    }
+
+    @Test
     fun `upsert preserves entries with different names`() {
         val a = device("a@1.2.3.4:1", name = "A")
         val b = device("b@1.2.3.4:2", name = "B")

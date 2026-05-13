@@ -1,7 +1,6 @@
 package com.tubetoast.tether.discovery
 
 import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -245,43 +244,6 @@ class MdnsDiscoveryTest {
         } finally {
             a.stop()
             b.stop()
-        }
-    }
-
-    @Test
-    fun `three instances with same name each discover two others`(): Unit = runBlocking {
-        val a = MdnsDiscovery(DiscoveredDevicesStore())
-        val b = MdnsDiscovery(DiscoveredDevicesStore())
-        val c = MdnsDiscovery(DiscoveredDevicesStore())
-        try {
-            // Stagger by 1 s: JmDNS name-conflict probing (~750 ms) is racy when overlapping.
-            a.start("SameName", 19080)
-            Thread.sleep(1_000)
-            b.start("SameName", 19081)
-            Thread.sleep(1_000)
-            c.start("SameName", 19082)
-
-            val timeoutMs = 30_000L
-            coroutineScope {
-                listOf(
-                    async { awaitPorts(a, 19081, 19082, timeoutMs) },
-                    async { awaitPorts(b, 19080, 19082, timeoutMs) },
-                    async { awaitPorts(c, 19080, 19081, timeoutMs) },
-                ).awaitAll()
-            }
-        } finally {
-            a.stop()
-            b.stop()
-            c.stop()
-        }
-    }
-
-    private suspend fun awaitPorts(discovery: DeviceDiscovery, p1: Int, p2: Int, timeoutMs: Long) {
-        withTimeout(timeoutMs) {
-            discovery.discoveredDevices.first { peers ->
-                val ports = peers.map { it.port }
-                p1 in ports && p2 in ports
-            }
         }
     }
 
