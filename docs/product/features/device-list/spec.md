@@ -42,7 +42,7 @@ Each row identifies one device clearly enough to pick the right one. Tapping a r
 
 ## Platform notes
 
-- **iOS / macOS:** the system asks for Local Network access on first launch — until the user grants it, the list stays in the "Searching…" state. The wording of the OS prompt is owned by the [permissions strategy](permissions-strategy.md) feature.
+- **iOS / macOS:** the system asks for Local Network access on first launch — until the user grants it, the list stays in the "Searching…" state. The wording of the OS prompt is owned by the [permissions strategy](../system/permissions/spec.md) feature.
 - **Android:** rotation must not blank the list or restart discovery (state survives `Activity` recreation).
 - **Desktop:** window resize must not reset state.
 
