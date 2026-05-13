@@ -254,9 +254,7 @@ class MdnsDiscoveryTest {
         val b = MdnsDiscovery(DiscoveredDevicesStore())
         val c = MdnsDiscovery(DiscoveredDevicesStore())
         try {
-            // JmDNS probes for ~750 ms before committing a name. Starting three same-name
-            // instances simultaneously makes their probes overlap and JmDNS' conflict
-            // resolution becomes racy on slow runners. Stagger to keep each probe clean.
+            // Stagger by 1 s: JmDNS name-conflict probing (~750 ms) is racy when overlapping.
             a.start("SameName", 19080)
             Thread.sleep(1_000)
             b.start("SameName", 19081)

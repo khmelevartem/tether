@@ -14,13 +14,7 @@ class DiscoveredDevicesStore {
     private val _devices = MutableStateFlow<List<Device>>(emptyList())
     val devices: StateFlow<List<Device>> = _devices.asStateFlow()
 
-    /**
-     * Adds or replaces by [Device.id]. Any other entry with the same
-     * [Device.name] but a different id is evicted in the same atomic step —
-     * mDNS re-resolution of the same service with a new address (port or IP
-     * change without a separate "lost" callback) yields a different id, and
-     * the previous one becomes stale.
-     */
+    /** Adds or replaces by id; same-name entries with different id are evicted atomically. */
     fun upsert(device: Device) {
         _devices.update { prev ->
             val result = ArrayList<Device>(prev.size + 1)
@@ -40,12 +34,6 @@ class DiscoveredDevicesStore {
         }
     }
 
-    /**
-     * Removes every entry whose [Device.name] equals [name]. Platform mDNS
-     * "service lost" callbacks (Android NSD, JmDNS, Bonjour, NSNetService)
-     * identify the disappearing peer by service name only — host/port are not
-     * preserved past resolution.
-     */
     fun removeByName(name: String) {
         _devices.update { prev -> prev.filter { it.name != name } }
     }

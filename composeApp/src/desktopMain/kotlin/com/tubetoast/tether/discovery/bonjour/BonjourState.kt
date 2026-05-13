@@ -3,21 +3,10 @@ package com.tubetoast.tether.discovery.bonjour
 import com.tubetoast.tether.discovery.DiscoveredDevicesStore
 import com.tubetoast.tether.protocol.Device
 
-/**
- * State machine over the Browse → Resolve → GetAddrInfo callback chain. Pure
- * Kotlin, no JNA — effects go through [Sink] and [DiscoveredDevicesStore].
- *
- * Self-filter: a resolved device is skipped if [isSelf] returns `true` for its
- * (host, port) pair. This is rename-proof — mDNSResponder may assign a canonical
- * name different from the requested name, but the self-filter never depends on the name.
- *
- * [onResolved] and [onAddrInfoFound] gate on [activeResolves] / [activeAddrInfos]
- * to drop events queued before a BrowseRemove was processed.
- */
+/** State machine over the Browse → Resolve → GetAddrInfo callback chain. */
 internal class BonjourState(
     private val store: DiscoveredDevicesStore,
     private val sink: Sink,
-    /** Returns `true` when the given (host, port) pair identifies this device. */
     private val isSelf: (host: String, port: Int) -> Boolean,
 ) {
     private val activeResolves = mutableSetOf<String>()
@@ -47,13 +36,6 @@ internal class BonjourState(
         }
     }
 
-    /**
-     * @param isAdd `true` for a new address (`kDNSServiceFlagsAdd`); `false`
-     *   means the address is going away. Per dns_sd.h, `false` should drop the
-     *   IP from any cached address list. We deliberately keep the device entry
-     *   in place — BrowseRemove is the canonical "peer gone" signal, and
-     *   removing the device on every routine IP rotation would flicker the UI.
-     */
     fun onAddrInfoFound(name: String, ipv4: String, isAdd: Boolean) {
         if (name !in activeAddrInfos) return
         if (isAdd) {
