@@ -50,6 +50,7 @@ When in doubt whether a finding is pointwise or structural — assume structural
 
 1. **Self-check.** Read the guide relevant to what you wrote, then check your diff against it and fix violations:
    - any code → `docs/engineering/dependency-injection.md`
+   - any code → comments: each one must express a non-obvious WHY or a swallowed-exception rationale — nothing else. Remove the rest.
    - UI → `docs/engineering/presentation-layer.md`
    - new tests → `docs/engineering/testing.md`
    - new component/module → `docs/engineering/architecture-principles.md`, `modules.md`
