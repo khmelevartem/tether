@@ -24,7 +24,7 @@ The user never sees keys, never types a code into a field, never picks an algori
 
 **Primary flow — first encounter**
 
-1. User on device A initiates a transfer to device B from the [device list](device-list.md).
+1. User on device A initiates a transfer to device B from the [device list](../device-list/spec.md).
 2. Both A and B show a dialog with the same 4-digit code and the name of the other device.
 3. User compares the codes. They match → user taps "Confirm" on both sides.
 4. The dialog closes; the transfer proceeds.

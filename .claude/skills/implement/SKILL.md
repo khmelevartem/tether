@@ -32,7 +32,7 @@ gh issue view <N> --json title,body,labels,comments
 gh pr list --search "issue:#<N>" --state open --json number,isDraft,headRefName
 ```
 
-Classify PR type. For FEATURE, look up `docs/product/features/README.md` for spec.
+Classify PR type. For FEATURE, look up `docs/product/features/README.md` for spec (specs live at `docs/product/features/<slug>/spec.md`).
 
 **Critical reading.** Воспринимай описание issue как **стартовую точку, не как факт**. Подсвечивай и эскалируй пользователю до начала работы, если видишь хотя бы один пробел:
 - упомянута только одна платформа, хотя задача общая;
@@ -43,7 +43,7 @@ Classify PR type. For FEATURE, look up `docs/product/features/README.md` for spe
 
 Любой такой пробел — повод вернуться к G1, не «допилить по дороге».
 
-**Existing draft PR.** Если по issue уже есть открытый PR (даже draft) — НЕ пропускай Step 4 (inner loop) и Step 6 (full pre-PR review) на текущем diff'е. Без них orchestrator превращается в одного исполнителя, и весь quality framework обходится.
+**Existing draft PR.** Если по issue уже есть открытый PR (даже draft) — НЕ пропускай Step 5 (inner loop) и Step 7 (full pre-PR review) на текущем diff'е. Без них orchestrator превращается в одного исполнителя, и весь quality framework обходится.
 
 **Worktree setup — do this BEFORE dispatching any agent that edits files.** If you are not already in `.claude/worktrees/<branch>/`:
 
@@ -62,7 +62,7 @@ All subsequent agent dispatches happen with this as cwd. Skipping this step mean
 
 **G2.5 handling.** After receiving a confirmed cause from `bug-reproducer`, show the paste-ready block to the user and ask: «Опубликовать как комментарий к issue #<N>?» Wait for explicit OK before `gh issue comment <N>`. Reason: a team-visible side effect must not happen without an explicit gate, even if the orchestrator is doing it instead of the agent — that just moves the problem one level up. If the user says no — keep the cause locally as a constraint for `coder`; do not publish.
 
-The confirmed root cause becomes a hard constraint for the `coder` in Step 4 regardless of whether it was published.
+The confirmed root cause becomes a hard constraint for the `coder` in Step 5 regardless of whether it was published.
 
 Load relevant engineering guides from `docs/engineering/` — only those actually touching the task:
 
@@ -73,19 +73,17 @@ Load relevant engineering guides from `docs/engineering/` — only those actuall
 | UI / Compose | `presentation-layer.md` |
 | new tests | `testing.md` |
 
-## Step 2.5 — UX brief (FEATURE with user-facing UI only)
+## Step 3 — UX brief (FEATURE with user-facing UI only)
 
 Skip unless the issue is `FEATURE` AND the task scope includes UI work (screen, component, navigation — not pure logic/network/infra).
 
-If applicable: dispatch `ux-expert` with the spec slug. It produces or updates `docs/product/features/ux/<slug>.md` — the UX brief that `ui-expert` will consume as a contract in Step 4. The brief is committed as part of the PR.
+If applicable: dispatch `ux-expert` with the spec slug. It produces or updates `docs/product/features/<slug>/ux-brief.md` — the UX brief that `ui-expert` will consume as a contract in Step 5. The brief is committed as part of the PR.
 
-**Open UX questions** returned by `ux-expert` fold into Gate G1: surface them to the user, collect answers, re-dispatch `ux-expert`. Do not proceed to Step 3 with an unresolved UX-questions section.
+**Open UX questions** returned by `ux-expert` fold into Gate G1: surface them to the user, collect answers, re-dispatch `ux-expert`. Do not proceed to Step 4 with an unresolved UX-questions section.
 
-**Recovery in inner loop.** If `ui-expert` halts in Step 4 reporting "UX brief missing" (the Step 2.5 skip judgement was wrong, or new UI scope emerged mid-plan) — re-dispatch `ux-expert` and resume the inner loop. This is machine-resolvable; do not escalate to user.
+**Recovery in inner loop.** If `ui-expert` halts in Step 5 reporting "UX brief missing" (the Step 3 skip judgement was wrong, or new UI scope emerged mid-plan) — re-dispatch `ux-expert` and resume the inner loop. This is machine-resolvable; do not escalate to user.
 
-**Brief staleness in multi-track plans.** If Step 4 splits into multiple tracks AND a track adds new shared composables that subsequent tracks should reuse — re-dispatch `ux-expert` in "update" mode between tracks with the brief and the diff of completed tracks as input. It refreshes the "Reusing" / "New" sections so later tracks don't re-invent.
-
-## Step 3 — Plan
+## Step 4 — Plan
 
 Use the built-in `Plan` agent (or `general-purpose` if plan unavailable) to produce a short implementation plan: phases, files to touch, validation strategy.
 
@@ -95,7 +93,7 @@ Use the built-in `Plan` agent (or `general-purpose` if plan unavailable) to prod
 
 Apply Gate G3 if the plan conflicts with guides → present to user, stop. Otherwise, accept and continue.
 
-## Step 4 — Inner loop: coder ↔ fast reviewers
+## Step 5 — Inner loop: coder ↔ fast reviewers
 
 Per track (or sequentially if single track):
 
@@ -112,7 +110,7 @@ Per track (or sequentially if single track):
    - `review-tests` (always unless DOCS/INFRA)
    - `review-platform` (if diff touches platform source sets)
    - `review-ux` (if diff touches `composeApp/src/**` — the agent itself decides skip vs. block on missing brief)
-   Skip `review-reuse` and `review-adversarial` here — they run in the simplify wave (Step 5) and the full review (Step 6).
+   Skip `review-reuse` and `review-adversarial` here — they run in the simplify wave (Step 6) and the full review (Step 7).
 3. If every reviewer says `APPROVE` and zero `[REQUIRED]` → track done.
 4. Else → aggregate `[REQUIRED]` findings, dispatch the implementing agent again with the findings as input:
 
@@ -124,7 +122,7 @@ Per track (or sequentially if single track):
 
 **Iteration limit:** 4 inner iterations per track. If not converged after 4 — escalate to user with remaining findings; this signals a plan/scope problem the loop cannot fix.
 
-## Step 5 — Simplify wave
+## Step 6 — Simplify wave
 
 After all tracks converge. Iterative fix cycles accumulate scaffolding (temp helpers added then never removed, defensive branches, comments restating code) AND duplication (each iteration adds private helpers that fast reviewers don't cross-check across tracks).
 
@@ -132,19 +130,19 @@ Dispatch the implementing agent once more:
 
 > All findings are resolved. Make one simplification pass over the diff: remove dead branches, inline single-use helpers, drop comments restating code, collapse trivial wrappers. Do not change behavior; do not touch anything outside the diff. Run `./gradlew allTests -q` after.
 
-If anything was simplified — re-run **the same set of agents that ran in Step 4 for this PR type** (i.e. dod + guides + correctness + tests + platform-if-touched + ux-if-touched) **plus `review-reuse`** on the simplified diff. `review-reuse` is critical here because duplication is what most likely accumulated across iterations and tracks. `review-platform` and `review-ux` follow the same skip rules as Step 4 (platform set touched / `composeApp/src/**` touched). If clean, proceed.
+If anything was simplified — re-run **the same set of agents that ran in Step 5 for this PR type** (i.e. dod + guides + correctness + tests + platform-if-touched + ux-if-touched) **plus `review-reuse`** on the simplified diff. `review-reuse` is critical here because duplication is what most likely accumulated across iterations and tracks. `review-platform` and `review-ux` follow the same skip rules as Step 5 (platform set touched / `composeApp/src/**` touched). If clean, proceed.
 
-## Step 6 — Full pre-PR review (inline, not via /code-review skill)
+## Step 7 — Full pre-PR review (inline, not via /code-review skill)
 
-`/code-review` skill requires an existing PR (it posts via `gh pr review`). At this step the PR does not exist yet — Step 9 creates it. So instead of calling the skill, **orchestrate the same agent fan-out inline, without GitHub publication**:
+`/code-review` skill requires an existing PR (it posts via `gh pr review`). At this step the PR does not exist yet — Step 10 creates it. So instead of calling the skill, **orchestrate the same agent fan-out inline, without GitHub publication**:
 
 1. Wave A in parallel: `review-dod`, `review-guides`, `review-reuse`, plus (if applicable to PR type / diff) `review-correctness`, `review-tests`, `review-platform`, `review-ux`. Each agent receives the issue number and is told to review the local working tree (`git diff main...HEAD`) instead of a PR. `review-ux` runs whenever the diff touches `composeApp/src/**`; the agent itself decides skip vs. block.
 2. Wave B: `review-adversarial` with the combined Wave A findings as input.
 3. Aggregate. Apply any `[REQUIRED]` via the implementing agent (with the symmetry-pass instruction). Re-run until approved or 2 iterations.
 
-No `gh pr review` here — findings are consumed locally only. The post-PR `/code-review` skill will be invoked separately after Step 9 if a reviewer requests it, or as part of normal team review.
+No `gh pr review` here — findings are consumed locally only. The post-PR `/code-review` skill will be invoked separately after Step 10 if a reviewer requests it, or as part of normal team review.
 
-## Step 7 — Smoke
+## Step 8 — Smoke
 
 Run `/smoke-test` blocks relevant to the diff. Selection heuristic:
 
@@ -162,9 +160,9 @@ Record the verdict (🟢/🟡/🔴) and blocks executed.
 
 Apply Gate G4: if 🟡/🔴 → present to user, stop.
 
-## Step 8 — Commit locally, present to user (Gate G5)
+## Step 9 — Commit locally, present to user (Gate G5)
 
-Only after Step 7 is 🟢. Commit on the feature branch (no push):
+Only after Step 8 is 🟢. Commit on the feature branch (no push):
 
 ```bash
 git add <relevant files>
@@ -180,7 +178,7 @@ Present to user:
 
 Ask: "Push and create PR?" Wait for explicit OK.
 
-## Step 9 — Push + PR (only after G5 OK)
+## Step 10 — Push + PR (only after G5 OK)
 
 ```bash
 git push -u origin feature/<N>-<short-slug>

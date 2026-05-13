@@ -26,7 +26,7 @@ This ADR records the engine choice for the Apple-side `FileServer.actual`.
 
 **The Apple `FileServer.actual` uses `ktor-server-cio` on Kotlin/Native**, mirroring the JVM implementation route-for-route. The server-stack dependencies (`ktor-server-core`, `ktor-server-cio`, `ktor-server-content-negotiation`) move from the `jvmMain` source set up to `commonMain`. Streaming the upload body to disk uses POSIX `fopen`/`fwrite` (the smallest dependency to express "write a `ByteReadChannel` to a file path on Native"). Filesystem metadata operations — directory creation, existence checks, deletion — go through `NSFileManager`.
 
-The server listens on port 0 (OS-assigned ephemeral) and writes received files to `<NSDocumentDirectory>/Tether/`. The downloads-directory choice and its UX implications (Files.app exposure via `UIFileSharingEnabled`, iCloud backup, receive-side notifications) are tracked as open product questions in [file-transfer.md](../../product/features/file-transfer.md) — out of scope for this ADR.
+The server listens on port 0 (OS-assigned ephemeral) and writes received files to `<NSDocumentDirectory>/Tether/`. The downloads-directory choice and its UX implications (Files.app exposure via `UIFileSharingEnabled`, iCloud backup, receive-side notifications) are tracked as open product questions in [file-transfer.md](../../product/features/file-transfer/spec.md) — out of scope for this ADR.
 
 ### Why CIO Native over hand-rolled
 

@@ -34,10 +34,10 @@ Note on `Status` here vs. GitHub Issues: an issue can exist (and even be in prog
 | Feature | Area | Status | Doc | Issues |
 |---------|------|--------|-----|--------|
 | mDNS peer discovery | Discovery | done | _tbd_ | #6 (iOS/macOS) |
-| Pairing | Pairing / Security | scoped | [pairing.md](pairing.md) | #9 (key exchange), #10 (PIN + CLI), #11 (Android UI); iOS, Desktop UI _tbd_ |
-| Device list screen | UI | in progress | [device-list.md](device-list.md) | #7 — Android + iOS done; Desktop _tbd_ |
-| File transfer | Transfer / UI | idea | [file-transfer.md](file-transfer.md) (stub) | #8 (Android send UI), #81 (iOS FileServer receive); iOS UI, Desktop send UI, receive-side UI _tbd_ |
-| Device name bootstrapping | Onboarding | idea | [device-name-bootstrapping.md](device-name-bootstrapping.md) (stub) | _tbd_ |
+| Pairing | Pairing / Security | scoped | [pairing/spec.md](pairing/spec.md) | #9 (key exchange), #10 (PIN + CLI), #11 (Android UI); iOS, Desktop UI _tbd_ |
+| Device list screen | UI | in progress | [device-list/spec.md](device-list/spec.md) | #7 — Android + iOS done; Desktop _tbd_ |
+| File transfer | Transfer / UI | idea | [file-transfer/spec.md](file-transfer/spec.md) (stub) | #8 (Android send UI), #81 (iOS FileServer receive); iOS UI, Desktop send UI, receive-side UI _tbd_ |
+| Device name bootstrapping | Onboarding | idea | [device-name-bootstrapping/spec.md](device-name-bootstrapping/spec.md) (stub) | _tbd_ |
 
 ### System integration
 
@@ -45,8 +45,8 @@ Small, separate features about how Tether reacts to the OS state around it. Each
 
 | Feature | Status | Doc | Issues |
 |---------|--------|-----|--------|
-| Permissions | idea | [system/permissions.md](system/permissions.md) (stub) | _tbd_ |
-| Wi-Fi availability | idea | [system/wifi-availability.md](system/wifi-availability.md) (stub) | _tbd_ |
+| Permissions | idea | [system/permissions/spec.md](system/permissions/spec.md) (stub) | _tbd_ |
+| Wi-Fi availability | idea | [system/wifi-availability/spec.md](system/wifi-availability/spec.md) (stub) | _tbd_ |
 
 ---
 
