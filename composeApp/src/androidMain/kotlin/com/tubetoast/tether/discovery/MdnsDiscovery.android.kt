@@ -73,6 +73,7 @@ actual class MdnsDiscovery(
         override fun onServiceLost(serviceInfo: NsdServiceInfo) {
             if (nsdManager == null) return
             Log.d(TAG, "NSD service lost: ${serviceInfo.serviceName}")
+            // NsdManager only populates serviceName here; host/port are null/0 — can't rebuild id.
             store.removeByName(serviceInfo.serviceName)
         }
     }
