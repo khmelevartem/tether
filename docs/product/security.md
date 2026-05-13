@@ -30,38 +30,32 @@ The 4-digit code defends against active MITM during pairing: an attacker who int
 
 Local key storage: per-platform secure storage (Keystore on Android, Keychain on Apple, OS keyring on Desktop). Specifics in implementation issues.
 
-## Channel Encryption
+## Channel Encryption — Open Question
 
-After pairing, file transfers between two paired devices run over **HTTPS with self-signed certificates pinned to the public keys exchanged during pairing**. From MVP onward, with no plain-HTTP intermediate stage.
+After pairing, file transfers happen over HTTP between the two devices. Whether and how to encrypt that channel is **not decided**. Three options on the table:
 
-**What the user gets.** A passive sniffer on open Wi-Fi sees no file bytes and no file names. An active attacker substituting their own certificate is rejected before the first byte of file data — no user prompt, no dialog. Tether can honestly claim "safe on open Wi-Fi" without qualification.
+### Option A — TLS with pinned, paired keys
 
-**What we accept in return.** Per-platform TLS work — building self-signed X.509 certificates from each device's EC P-256 keypair (reused from pairing), custom trust verification that pins on `SubjectPublicKeyInfo` without consulting the system trust store, and an asymmetric server implementation: Ktor CIO on JVM/Android, direct SecureTransport on Apple Native. The asymmetry is implementation detail — the wire protocol and observable behaviour are identical across all four targets.
+HTTPS, self-signed certificates whose public keys are exactly the keys exchanged during pairing.
 
-The engineering rationale (rejection of plain HTTP and application-level encryption alternatives, the verified Kotlin/Native TLS spike, the SecureTransport choice, and the implementation scheme) lives in [adr-channel-encryption.md](../engineering/adr/adr-channel-encryption.md).
+- **Pros:** Standard, well-understood. Ktor supports it on both client and server. Defeats passive eavesdropping and active MITM after pairing.
+- **Cons:** Cert handling on each platform adds complexity. Needs careful implementation to actually pin (not fall back to system trust store).
 
-### What this requires from pairing and Apple keys
+### Option B — Plain HTTP, trust the LAN
 
-- **Pairing ([#10](https://github.com/khmelevartem/tether/issues/10))** produces the EC P-256 public keys that become the TLS pinset. After pairing, each device stores its peer's `SubjectPublicKeyInfo` in `TrustedDeviceStore`. Every subsequent TLS handshake to that peer verifies the presented cert's public key matches the stored pin — system trust store is never consulted.
-- **Apple EC P-256 keys ([#116](https://github.com/khmelevartem/tether/issues/116))** provide the raw keypair material. The implementation issue wraps that material into a self-signed X.509 certificate at startup (cached for the life of the keypair).
+No transport encryption. Pairing only authenticates the peer; transfers ride raw HTTP.
 
-### Acceptance criteria for the implementation issue
+- **Pros:** Simplest. Fastest to ship. Matches the current code state.
+- **Cons:** Passive eavesdropper on an open Wi-Fi sees file contents. Acceptable on home networks; not acceptable on public ones.
 
-In product terms — what must be true for the user / the system after the implementation lands:
+### Option C — Application-level encryption (e.g. libsodium)
 
-1. After two devices have paired, every subsequent file transfer between them is end-to-end encrypted. A packet capture on the same Wi-Fi shows no file bytes and no file names in cleartext.
-2. An attacker substituting their own self-signed certificate mid-transfer is rejected by both sides before any file byte is transmitted — no user dialog, no override.
-3. Transport works on all four targets (Android, iOS, macOS, Desktop JVM) for files of arbitrary size, with throughput within ~15% of plain HTTP on the same hardware.
-4. The system trust store is never consulted. Removing a peer from `TrustedDeviceStore` causes the next connection to that peer to fail closed.
-5. `Expect: 100-continue` and the timeouts settled in [#119](https://github.com/khmelevartem/tether/issues/119) continue to behave as specified under TLS.
+Encrypt payload above HTTP, using session keys derived from paired identities.
 
-### When to revisit
+- **Pros:** Independent of TLS infrastructure. Easier to reason about correctness.
+- **Cons:** Reinventing what TLS does. Performance overhead on streaming. Library availability across all four targets needs verification.
 
-This decision is final for MVP. It is revisited only if:
-
-- **Throughput regression** measured at >15% on 1 GB between two devices on home Wi-Fi after the implementation lands. Mitigation: profile and tune (chunk size, cipher suite) before revisiting the choice itself.
-- **SecureTransport gets a removal date** from Apple. The choice of SecureTransport on Apple Native is a known structural cost — tracked in the ADR, retargeting path documented there.
-- **[KTOR-7262](https://youtrack.jetbrains.com/issue/KTOR-7262) closes** (Ktor ships TLS for Kotlin/Native). Reasonable migration path off the asymmetric server implementation.
+**Decision pending.** Likely path: ship Option B in MVP, upgrade to Option A before any public release. To be revisited when the pairing handshake is implemented.
 
 ## Privacy Invariants
 
@@ -85,5 +79,6 @@ Crash reporting and remote performance metrics are explicitly **out of scope for
 
 ## Open Questions
 
+- Channel encryption choice (above).
 - Auto-rotation of paired keys after N transfers / N days?
 - Visible "this device sent / received X files from Y" log — useful for trust, or privacy-leaky?
