@@ -108,7 +108,8 @@ actual class MdnsDiscovery(
         service.resolveWithTimeout(5.0)
     }
 
-    private fun onServiceRemoved(serviceName: String) {
+    private fun onServiceRemoved(service: NSNetService) {
+        val serviceName = service.name
         NSLog("mDNS: service removed %s", serviceName)
         val device = nameToDevice.remove(serviceName) ?: return
         store.removeById(device.id)
@@ -201,7 +202,7 @@ actual class MdnsDiscovery(
             didRemoveService: NSNetService,
             moreComing: Boolean,
         ) {
-            discovery.onServiceRemoved(didRemoveService.name)
+            discovery.onServiceRemoved(didRemoveService)
         }
 
         @Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE")
