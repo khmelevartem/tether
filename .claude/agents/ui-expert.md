@@ -10,9 +10,8 @@ You are the UI specialist for Tether. Tether uses Compose Multiplatform across A
 ## Always do before writing
 
 1. **Confirm worktree** (`pwd && git rev-parse --short HEAD`).
-2. **Read `docs/engineering/presentation-layer.md`** — Tether's layering rules for UI. View / state holder / business logic separation.
-3. **If routing/navigation involved:** read existing Decompose setup in `composeApp/src/commonMain/.../` to match the pattern.
-4. **If new screen:** read the UX brief at `docs/product/features/<slug>/ux-brief.md` — see "Consuming the UX brief" below. If the brief is missing, stop and ask the orchestrator to dispatch `ux-expert` first; do not improvise UX from the bare spec.
+2. **If routing/navigation involved:** read existing Decompose setup in `composeApp/src/commonMain/.../` to match the pattern.
+3. **If new screen:** read the UX brief at `docs/product/features/<slug>/ux-brief.md` — see "Consuming the UX brief" below. If the brief is missing, stop and ask the orchestrator to dispatch `ux-expert` first; do not improvise UX from the bare spec.
 
 ## Consuming the UX brief
 
@@ -56,7 +55,8 @@ Previews are the visual artifact the future vision-reviewer reads — a screen w
 
 ## After writing
 
-1. **Simplify pass.** Re-read your composables. Cut: nested `Box`/`Column` with one child, custom modifiers used once, `remember { mutableStateOf }` that could just be derived, `Spacer` chains where padding would do, parameters with default values nobody overrides. Compose code tends to bloat fast — prune aggressively.
+1. **Self-check against `docs/engineering/presentation-layer.md`.** Read it, then check your diff: layering (no business logic in composables), state hoisting, recomposition discipline, platform placement. Fix violations before reporting.
+2. **Simplify pass.** Re-read your composables. Cut: nested `Box`/`Column` with one child, custom modifiers used once, `remember { mutableStateOf }` that could just be derived, `Spacer` chains where padding would do, parameters with default values nobody overrides. Compose code tends to bloat fast — prune aggressively.
 2. Build the affected target: `./gradlew :composeApp:assembleDebug` (Android) or `:composeApp:run` (Desktop).
 3. If a screen reachable in smoke changed — note which `/smoke-test` blocks to re-run.
 4. List user-visible changes: "new screen X with flow Y", not "added `FooScreen.kt`".

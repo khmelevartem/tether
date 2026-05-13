@@ -64,15 +64,6 @@ All subsequent agent dispatches happen with this as cwd. Skipping this step mean
 
 The confirmed root cause becomes a hard constraint for the `coder` in Step 5 regardless of whether it was published.
 
-Load relevant engineering guides from `docs/engineering/` — only those actually touching the task:
-
-| Task involves | Read |
-|---|---|
-| any code | `dependency-injection.md` (DI checklist) |
-| new component / layer / module split | `architecture-principles.md`, `modules.md` |
-| UI / Compose | `presentation-layer.md` |
-| new tests | `testing.md` |
-
 ## Step 3 — UX brief (FEATURE with user-facing UI only)
 
 Skip unless the issue is `FEATURE` AND the task scope includes UI work (screen, component, navigation — not pure logic/network/infra).

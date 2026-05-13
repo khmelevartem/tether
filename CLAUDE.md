@@ -14,10 +14,10 @@ Read these on demand, not all upfront:
 - [`docs/engineering/`](docs/engineering/README.md) — architecture, modules, DI, presentation, testing. Source of truth for *how*.
 - [`docs/knowledge/`](docs/knowledge/) — solved problems (Apple platform quirks, FGS, etc.). Check here when something looks weird before debugging from scratch.
 
-**Before non-trivial implementation** — read by task type:
-- Any feature / refactor → [`dependency-injection.md`](docs/engineering/dependency-injection.md)
-- + UI changes → [`presentation-layer.md`](docs/engineering/presentation-layer.md)
-- + Module extraction → [`modules.md`](docs/engineering/modules.md) + [`architecture-principles.md`](docs/engineering/architecture-principles.md)
+**Self-check before marking done** — read by what you wrote:
+- Any code → [`dependency-injection.md`](docs/engineering/dependency-injection.md)
+- UI → [`presentation-layer.md`](docs/engineering/presentation-layer.md)
+- New module/component → [`modules.md`](docs/engineering/modules.md) + [`architecture-principles.md`](docs/engineering/architecture-principles.md)
 - Tests → [`testing.md`](docs/engineering/testing.md)
 
 ## Architecture invariants
