@@ -55,38 +55,29 @@ Obsidian's typographic and layout discipline (sharp corners, border lines, low m
 
 ### Palette
 
-| Token | Light | Dark |
-|---|---|---|
-| `surface` | `#FBFAF7` (warm off-white) | `#15171A` (near-dark earth) |
-| `surfaceRaised` | `#FFFFFF` | `#1E2125` |
-| `border` | `#E8E5DE` | `#2A2E33` |
-| `textPrimary` | `#1A1A1F` | `#ECECEE` |
-| `textMuted` | `#6B6B73` | `#9A9DA3` |
-| `accent` | `#2F7D6B` (deep teal) | `#3FA08A` (lifted teal) |
-| `error` | `#B4423A` | `#E26A60` |
-| `copper` | `#C77E47` (brand mark only) | `#D89968` (brand mark only) |
+Light theme: `surface` `#FBFAF7`, `surfaceRaised` `#FFFFFF`, `border` `#E8E5DE`, `textPrimary` `#1A1A1F`, `textMuted` `#6B6B73`, `accent` `#2F7D6B`, `copper` `#C77E47`, `error` `#B4423A`. Dark theme: `surface` `#15171A`, `surfaceRaised` `#1E2125`, `border` `#2A2E33`, `textPrimary` `#ECECEE`, `textMuted` `#9A9DA3`, `accent` `#3FA08A`, `copper` `#D89968`, `error` `#E26A60`. Live token table with WCAG ratios: see [ui-style-guide.md](../ui-style-guide.md).
 
 Copper is a brand-recall asset — it appears in the `•—•` mark, the app icon, and the splash. It is not a UI interactive accent. Tether has exactly one interactive accent color: teal.
 
 ### Typography
 
-Inter Variable, bundled in `composeApp/src/commonMain/composeResources/font/`. Two weights in use: 400 (body) and 600 (titles, device names, button labels). Tabular figures (`tnum` feature) for numeric output: file sizes, ETA, percentages. Letter-spacing: `-0.02em` on titles, `0` on body. `LineHeightStyle(alignment = Center, trim = None)` for cross-platform metric consistency.
+Inter Variable (bundled), weights 400 and 600, tabular figures (`tnum`) for numeric output, `-0.02em` letter-spacing on titles. Full scale: see [ui-style-guide.md § Typography](../ui-style-guide.md).
 
 ### Iconography
 
-Tabler Icons, via `br.com.devsrsouza.compose.icons:tabler-icons:1.1.1` (Compose Multiplatform). One stroke width across the app. No platform-native glyph mixing.
+Tabler Icons via `br.com.devsrsouza.compose.icons:tabler-icons:1.1.1`. One stroke width across the app. No platform-native glyph mixing. Coordinate pinning note in Open follow-ups below.
 
 ### Spacing scale
 
-`xs=4dp`, `sm=8dp`, `md=12dp`, `lg=16dp`, `xl=24dp`, `xxl=32dp`. Default to `sm`/`md` for list rows; `lg`/`xl` for state screens (empty, searching) where breathing room aids clarity. `xxl` for section-level separation only.
+Six steps: `xs=4dp` through `xxl=32dp`. Full scale and usage rules: see [ui-style-guide.md § Spacing scale](../ui-style-guide.md).
 
 ### Shapes
 
-`sm=6dp`, `md=10dp`, `lg=14dp` corner radius. Sharp relative to Material 3 defaults. No pill/fully-rounded surfaces.
+`sm=6dp`, `md=10dp`, `lg=14dp` corner radius. No pill/fully-rounded surfaces. Full usage: see [ui-style-guide.md § Shapes](../ui-style-guide.md).
 
 ### Motion
 
-Compose stdlib animations only: `animate*AsState`, `AnimatedVisibility`, `animateContentSize`. 200–300 ms, ease-out easing, for state-change confirmations only. Never decorative. "Searching" state: slow opacity breathing on the right dot of `•—•` (`0.4 ↔ 0.7` alpha, `2s` loop). No spinner. No `Modifier.shadow()` with large blur — use border lines and tonal surface steps for elevation.
+Compose stdlib only, 200–300ms ease-out, state-change confirmations only. Never decorative. No `Modifier.shadow()`. Full motion table: see [ui-style-guide.md § Motion](../ui-style-guide.md).
 
 ### Dark mode
 
@@ -98,20 +89,11 @@ Compose Foundation + `com.composables:core` (Compose Unstyled). Custom `TetherTh
 
 ### Brand mark — Interpretation I: "Two-Tone Tether" (chosen)
 
-Signature glyph: `•—•`
+Signature glyph: `•—•` — left dot teal, right dot copper, neutral `textPrimary` line. Full geometry, states, and design rationale: [ui-brand-mark.md](../ui-brand-mark.md).
 
-- Left dot: teal (`#2F7D6B` / `#3FA08A`). Semantics: "your device."
-- Right dot: copper (`#C77E47` / `#D89968`). Semantics: "the peer."
-- Line: `textPrimary` tone, stroke weight equal to dot radius × 1.2.
-- The line is NOT the accent color; it is a neutral connector.
+The mark literalizes the word *tether* — a line between two points under tension. It occupies an empty cell in the file-transfer icon space (competitors use radar arcs, arrows, planes, clouds) and earns triple duty as app icon, in-app status indicator, and transfer progress bar — meaning copper stays live on-screen during use and recall remains active between launches. Full alternatives analysis: [ui-brand-mark.md § Rationale](../ui-brand-mark.md).
 
-Appearances:
-- **App icon:** static glyph on the brand surface.
-- **Splash:** line draws itself L → R over ~400ms on first launch.
-- **In-app empty/searching state:** right dot hollow + slow opacity pulse (0.4 ↔ 0.7, 2s). Left dot solid teal. Communicates "your device is broadcasting; waiting for a peer."
-- **Transfer progress indicator:** the line fills with teal from left to right as bytes move. Right dot remains copper (peer identity). Left dot solid teal (you).
-
-The copper dot appears **only** in the brand mark contexts listed above. It is never used as a UI interactive accent, hover state, focus ring, or button color. Tether preserves the single-active-accent rule from `docs/product/design.md`: **teal is the sole interactive accent in the UI**.
+The copper dot appears **only** in the brand mark contexts listed above. It is never used as a UI interactive accent, hover state, focus ring, or button color. Teal is the sole interactive accent in the UI.
 
 ## Consequences
 
@@ -178,6 +160,7 @@ UI stays single-accent (teal only). The two-tone is icon-level only.
 
 - [docs/product/design.md](../../product/design.md) — visual language and locked palette
 - [docs/engineering/ui-style-guide.md](../ui-style-guide.md) — implementation reference
+- [docs/engineering/ui-brand-mark.md](../ui-brand-mark.md) — `•—•` geometry, states, and design rationale
 - [adr-presentation-and-navigation.md](adr-presentation-and-navigation.md) — Decompose presentation layer
 - [Inter typeface](https://rsms.me/inter/) — OFL-1.1
 - [Tabler Icons](https://tabler.io/icons) — MIT license

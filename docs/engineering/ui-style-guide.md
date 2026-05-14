@@ -108,28 +108,10 @@ Rules:
 
 ## Brand mark — `•—•`
 
-### Geometry
+Full spec: [ui-brand-mark.md](ui-brand-mark.md).
 
-The glyph consists of two filled circles connected by a straight horizontal line:
-
-- Each dot has radius R (derived from the component's height divided by 2).
-- The centers of the two dots are spaced 4R apart on a horizontal axis.
-- The connecting line has stroke weight 1.2R and runs horizontally between the two dot centers, visually butting into each dot with no gap.
-- Left dot color: `accent` (teal). Semantics: your device.
-- Right dot color: `copper`. Semantics: the peer.
-- Line color: `textPrimary`. Neutral connector — not the accent color.
-
-### States
-
-**Static / idle:** both dots filled, line fully drawn, at full opacity.
-
-**Searching:** the right dot is hollow (outlined, not filled) with stroke weight 1.2R. Its opacity oscillates between 0.4 and 0.7 in a linear loop: 2000ms from 0.4 to 0.7, then 2000ms back from 0.7 to 0.4, reversing direction at each endpoint, running indefinitely. The left dot remains solid teal. The line is fully drawn at full opacity. This state communicates "your device is broadcasting; waiting for a peer."
-
-**Transfer progress:** the line fills with `accent` color from left to right, proportional to bytes transferred out of total bytes. The right dot remains copper (peer identity). The left dot is solid teal. When progress reaches 100%, the line is fully filled with `accent`.
-
-**Success:** the line is fully filled. The right dot plays a brief scale pulse — ease-out, 200ms — then returns to normal size.
-
-Only compose the searching animation while the component is in the searching state. The infinite opacity loop runs continuously while the component is in the composition, so gate its instantiation at the call site rather than inside the component.
+The mark is the only place `copper` (`#C77E47` / `#D89968`) is allowed.
+Everywhere else, accent is teal.
 
 ## Motion
 
@@ -171,6 +153,7 @@ Previews must be self-contained: build fake state inline and pass it to a statel
 
 ## References
 
+- [ui-brand-mark.md](ui-brand-mark.md) — `•—•` geometry, states, and design rationale
 - [adr/adr-visual-identity.md](adr/adr-visual-identity.md) — rationale and options considered
 - [docs/product/design.md](../product/design.md) — product-side visual language
 - [presentation-layer.md](presentation-layer.md) — Decompose component conventions

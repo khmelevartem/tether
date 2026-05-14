@@ -14,48 +14,22 @@ How Tether looks and feels. This doc captures principles and key flows; per-scre
 
 | Aspect | Choice |
 |--------|--------|
-| Theme stack | Custom `TetherTheme` (Compose Foundation + Compose Unstyled); no Material 3 |
+| Theme stack | Custom `TetherTheme` (Compose Foundation + Compose Unstyled); no Material 3; see [style guide](../engineering/ui-style-guide.md) |
 | Typeface | Inter Variable (bundled), weights 400 and 600; tabular figures for numbers |
-| Palette | Warm off-white / near-dark-earth surfaces; **teal** as the sole interactive accent |
-| Brand accent | `#2F7D6B` (light) / `#3FA08A` (dark) |
-| Brand-only copper | `#C77E47` (light) / `#D89968` (dark) — appears only in the `•—•` mark and app icon |
-| Iconography | Tabler Icons (`br.com.devsrsouza.compose.icons:tabler-icons:1.1.1`); one stroke weight; no platform-native glyphs |
-| Density | Obsidian-restraint: `sm`/`md` spacing on lists; `lg`/`xl` only for state screens |
-| Dark mode | First-class; tokens switch via `TetherColors`; no platform workaround needed |
+| Palette | Warm off-white / near-dark-earth surfaces; teal as the sole interactive accent; copper for the brand mark only |
+| Iconography | Tabler Icons; one stroke weight; no platform-native glyphs |
+| Spacing | Six-step scale (4 / 8 / 12 / 16 / 24 / 32 dp); `sm`/`md` for lists, `lg`/`xl` for state screens; see [style guide](../engineering/ui-style-guide.md) |
+| Dark mode | First-class; tokens switch live at OS level; no app restart |
 | Motion | State-change confirmations only; 200–300 ms ease-out; no decorative animation |
 | Shapes | Sharp: `sm=6dp`, `md=10dp`, `lg=14dp`; no pill/fully-rounded surfaces |
 
-### Color tokens
+Palette is warm off-white in light theme, near-dark-earth in dark theme, with a single teal accent for active state and progress. Copper is reserved exclusively for the `•—•` brand mark — never as a UI accent. Full hex values and WCAG ratios: [docs/engineering/ui-style-guide.md](../engineering/ui-style-guide.md).
 
-| Token | Light | Dark | WCAG AA (on surface) |
-|---|---|---|---|
-| `surface` | `#FBFAF7` | `#15171A` | — |
-| `surfaceRaised` | `#FFFFFF` | `#1E2125` | — |
-| `border` | `#E8E5DE` | `#2A2E33` | — |
-| `textPrimary` | `#1A1A1F` | `#ECECEE` | ✅ |
-| `textMuted` | `#6B6B73` | `#9A9DA3` | ✅ (~4.8:1 / ~6.0:1) |
-| `accent` | `#2F7D6B` | `#3FA08A` | ✅ (~4.7:1 / ~5.7:1) |
-| `error` | `#B4423A` | `#E26A60` | ✅ |
-| `copper` *(brand mark only)* | `#C77E47` | `#D89968` | ⚠️ ~3.1:1 graphical only |
+Tether borrows Obsidian's discipline — single visual language across platforms, restraint, dark-first — but not its palette or information density. See [ADR](../engineering/adr/adr-visual-identity.md) for the full reasoning.
 
 ## Memorable Element — `•—•`
 
-The brand mark is a two-dot glyph: two filled circles connected by a single horizontal line of equal stroke weight.
-
-- **Left dot** — teal. Semantics: your device.
-- **Right dot** — copper. Semantics: the peer.
-- **Line** — `textPrimary` tone. Neutral connector; not the accent color.
-
-Appearances:
-
-| Context | Behaviour |
-|---|---|
-| App icon | Static glyph on brand surface |
-| Splash | Line draws itself left → right (~400ms) |
-| Empty / searching state | Right dot hollow + slow opacity pulse (0.4 ↔ 0.7, 2s); left dot solid teal |
-| Transfer progress | Line fills with teal left → right as bytes move; right dot stays copper |
-
-**Copper is brand-only.** It never appears as a button color, hover state, focus ring, or interactive accent anywhere in the UI. The sole interactive accent is teal. This rule preserves a clean "one active accent" signal throughout the product.
+The `•—•` mark is the visual primitive Tether is recognized by. Two dots and a line — the etymology of *tether* rendered geometrically. The same mark serves as app icon, in-app searching indicator, and transfer progress bar. Copper (right dot) is brand-only and never appears as a UI accent. Full geometry, states, and design rationale: [docs/engineering/ui-brand-mark.md](../engineering/ui-brand-mark.md).
 
 ## Key Screens
 

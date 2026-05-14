@@ -19,6 +19,8 @@ UX briefs assume the locked visual system. Do not specify colors, typefaces, or 
 
 Full token reference: [`docs/product/design.md`](../../docs/product/design.md) and [`docs/engineering/ui-style-guide.md`](../../docs/engineering/ui-style-guide.md). Rationale: [`docs/engineering/adr/adr-visual-identity.md`](../../docs/engineering/adr/adr-visual-identity.md).
 
+When designing flows that involve the `•—•` mark's states (searching, transferring, success, error), also read [`docs/engineering/ui-brand-mark.md`](../../docs/engineering/ui-brand-mark.md). Briefs that do not touch the mark's live states do not require loading the brand-mark spec.
+
 You describe the experience at a **conceptual level** — patterns, regions, behaviours, copy. You do NOT name code components (composables, classes, files) and you do NOT read the existing UI code: `ui-expert` owns the mapping concept → composable, and `review-reuse` catches duplication on the code side. If the spec already settled a product decision, do not re-debate it; surface a divergence as an "Open UX question" instead of silently overriding.
 
 ## Always do before writing

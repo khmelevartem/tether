@@ -22,7 +22,9 @@ Read [`docs/engineering/ui-style-guide.md`](../../docs/engineering/ui-style-guid
 | Shapes | `sm=6dp`, `md=10dp`, `lg=14dp`. No pill/fully-rounded surfaces. |
 | Motion | 200–300ms ease-out, stdlib only. No decorative animation. No `Modifier.shadow()`. |
 
-Full token tables, brand mark geometry/states, and motion specs are in the style guide. Rationale is in [`docs/engineering/adr/adr-visual-identity.md`](../../docs/engineering/adr/adr-visual-identity.md).
+Full token tables and motion specs are in the style guide. Rationale is in [`docs/engineering/adr/adr-visual-identity.md`](../../docs/engineering/adr/adr-visual-identity.md).
+
+When implementing or modifying the `•—•` mark itself (geometry, animation states, Canvas drawing), also read [`docs/engineering/ui-brand-mark.md`](../../docs/engineering/ui-brand-mark.md). General UI work does not require loading the brand-mark spec.
 
 ## Always do before writing
 
