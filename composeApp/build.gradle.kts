@@ -75,9 +75,12 @@ kotlin {
     // Combined with the custom hierarchy above, jvmMain becomes the intermediate parent
     // for both androidMain and desktopMain.
     //
-    // The cli compilation isolates Clikt (and any other CLI-only deps) from the main compilation.
+    // Compile-time isolation of CLI deps from the UI/main compilation.
     // desktopMain (main compilation) = shared backend + Compose UI — no Clikt on classpath.
     // desktopCli  (cli compilation)  = CLI entry point only, sees main via associateWith.
+    // Note: associateWith propagates main's runtime classpath to cli, so the cliJar fat jar
+    // transitively contains the full Compose/Skiko stack. Runtime artifact size isolation
+    // would require a separate :cli gradle module — out of scope here.
     jvm("desktop") {
         val main by compilations.getting
         compilations.create("cli") {

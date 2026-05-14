@@ -142,13 +142,12 @@ suspend fun handleSend(
     }
     val peer = matching.first()
 
-    val clock = TimeSource.Monotonic
-    val started = clock.markNow()
+    val started = TimeSource.Monotonic.markNow()
     var lastPrint = started
     var lastBytes = 0L
 
     val result = client.send(peer, file) { transferred, total ->
-        val now = clock.markNow()
+        val now = TimeSource.Monotonic.markNow()
         if ((now - lastPrint) >= 500.milliseconds) {
             val intervalSec = (now - lastPrint).inWholeMilliseconds / 1000.0
             val speed = if (intervalSec > 0) (transferred - lastBytes) / intervalSec else 0.0

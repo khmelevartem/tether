@@ -17,13 +17,16 @@ composeApp/src/
 ├── macosMain/       Platform.macos
 ├── jvmMain/         FileServer (JVM actual + storage), FileClientJvm, DeviceKeyPair   ← shared Android + Desktop JVM
 ├── jvmTest/         (empty — FileServerTest moved to desktopTest in #9)
-├── desktopMain/     Main.kt (CLI), MdnsDiscovery.jvm, Platform.jvm, TrustedDeviceStore.desktop  ← Desktop JVM leaf
-└── desktopTest/     FileClientTest, MdnsDiscoveryTest, FileServerTest, FileServerPairTest, TrustedDeviceStoreTest, DeviceKeyPairTest
+├── desktopMain/     MainUi, DesktopBackend, DesktopAppContainer, MdnsDiscovery.jvm, Platform.jvm, TrustedDeviceStore.desktop  ← Desktop JVM leaf (main compilation)
+├── desktopCli/      Main.kt  ← Desktop CLI runner (custom compilation, associateWith main; only place Clikt lives)
+└── desktopTest/     FileClientTest, MdnsDiscoveryTest, FileServerTest, FileServerPairTest, TrustedDeviceStoreTest, DeviceKeyPairTest, CliParseTokensTest, CliSendTest
 ```
 
 Hierarchy: `jvmMain` is the intermediate parent for both `androidMain` and `desktopMain`,
 enabling shared JVM code (Ktor server stack) to be visible to both without leaking
-desktop-only dependencies (Clikt, JmDNS, Compose Desktop) into Android. Ktor server
+desktop-only dependencies (JmDNS, Compose Desktop) into Android. Clikt is scoped one
+level further — only the `desktopCli` custom compilation depends on it, isolating CLI
+parsing from the UI/backend classpath. Ktor server
 itself is now also published for Kotlin/Native (Ktor 3.0+), so `FileServer`'s shared
 routing lives in `commonMain` with platform-specific I/O via the `UploadStorage` seam;
 see [adr/adr-apple-fileserver-engine.md](adr/adr-apple-fileserver-engine.md).
