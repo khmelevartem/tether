@@ -6,6 +6,7 @@ ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
 cd "$ROOT"
 
 git fetch --prune origin 2>/dev/null || true
+git pull origin main 2>/dev/null || true
 
 git worktree list --porcelain | awk '
     /^worktree / { path = substr($0, 10) }
