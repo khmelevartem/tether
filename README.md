@@ -27,7 +27,7 @@ P2P-передача файлов между устройствами на ра�
 
 ```bash
 # первый раз — собрать uber JAR и поставить wrapper в ~/.local/bin
-./gradlew :composeApp:installJar -q
+./gradlew :composeApp:installCli -q
 
 # убедись, что ~/.local/bin в PATH
 export PATH="$PATH:$HOME/.local/bin"
@@ -47,6 +47,14 @@ tether --name MyMac --port 8080
 [send] 12.3 MB / 50.0 MB  (3.4 MB/s)
 [send] OK — 14523 ms  →  /tmp/tether-downloads/photo.jpg
 ```
+
+### Desktop UI
+
+```bash
+./gradlew :composeApp:run -q
+```
+
+Native app bundle: `./gradlew :composeApp:packageReleaseDistributionForCurrentOS`.
 
 ### Android
 

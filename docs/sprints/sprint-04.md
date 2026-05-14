@@ -66,6 +66,6 @@
 
 1. **Криптография MVP решена** (#123) — снят последний архитектурный блокер pairing и transport. Реализация пойдёт со следующего спринта без архитектурных пересмотров.
 2. **Permissions strategy зафиксирована** (#122) — UI-волна (Android send UI, pairing PIN UI на всех платформах, Android service control) разблокирована единой стратегией, а не по три ad-hoc решения на платформу.
-3. **Desktop UI готов писаться** (#55) — `./gradlew :composeApp:runDesktopUi` и правильный дистрибутив на месте. Первый Desktop UI коммит не будет ломать CLI.
+3. **Desktop UI готов писаться** (#55) — `./gradlew :composeApp:run` (Compose plugin default, UI) и `:composeApp:runDesktopCli` (изолированная CLI compilation) на месте. Первый Desktop UI коммит не будет ломать CLI.
 4. **Discovery без race-conditions по identity** (#111) — единый `DiscoveredDevicesStore` в `commonMain`; класс багов с одинаковыми именами закрыт системно по всем 4 платформам, а не как ad-hoc патч на одну из них.
 5. **Device name MVP сформулирован** (#120) — defaults per platform, момент first-launch rename, mDNS conflict resolution зафиксированы. Имплементация settable device name (пункт MVP из roadmap) пойдёт в следующий спринт без продуктовых пробелов.
