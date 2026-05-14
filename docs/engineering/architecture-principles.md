@@ -38,6 +38,14 @@ Clean Architecture and adjacent patterns are full of ceremony that doesn't pay r
 
 Per-platform composables / `actual`-имплементации — исключение и требуют обоснования реальным API-ограничением (system share sheet, hardware sensor), не предпочтением.
 
+## Domain identity over display labels
+
+If a domain entity has an `id`, every layer operates on the entity by id — lookup, eviction, dedup, filter. Display labels (names, titles) exist only at the UI edge. Collisions on labels are normal and not the domain's problem to forbid; the first layer that falls back to a name-key introduces a class of bugs that then propagates by copy-paste to every sibling adapter. Adapters reconstruct id at the boundary; if a platform callback genuinely cannot, that's a constraint to call out — not a license to add a label-keyed API to common code.
+
+## Single source of truth — no mirror state
+
+When state has a designated owner (store, repository, service), other layers do not keep their own parallel copy. Adapters translate between native shapes and the owner's API on the fly; long-lived mirror maps drift, because every event has to remember to update both, and readers that hit the mirror see stale data.
+
 ## Named classes over anonymous objects
 
 When you need to implement an interface — even with a trivial body that's just data (e.g. a config interface filled with constants) — **prefer a named class in its own file** over `object : Interface { ... }` inline.

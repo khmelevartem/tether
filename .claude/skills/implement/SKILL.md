@@ -83,6 +83,8 @@ Use the built-in `Plan` agent (or `general-purpose` if plan unavailable) to prod
 
 **Выбор уровня фикса.** Issue указывает место бага, но не обязательно место фикса. Когда root cause описывает класс багов (а не один экземпляр) или когда параллельные реализации содержат тот же дефект — рассмотри фикс на уровень выше: изменение типа / контейнера / контракта, делающее класс багов невозможным. Сравни стоимость: N point-фиксов vs 1 структурный. Если выбираешь point — явно перечисли в плане параллельные места, остающиеся с дефектом, и заведи follow-up issue до начала кодинга.
 
+**Scope issue — стартовая точка, не клетка.** Список файлов в issue — отправная точка. Если для качественного решения нужно тронуть смежные классы или соседние платформы — расширяй scope в этом же PR. Follow-up issue только когда расширение реально ломает PR (новый таргет, широкая правка публичного контракта, кратный рост объёма, обнаружение отдельного бага). Notes / TODO, которые исполнитель сам добавил по ходу — доделываются здесь же.
+
 **Track splitting.** Default is **sequential single-track** execution. Split into parallel tracks ONLY if the plan can enumerate file-level disjoint sets: track A's files ∩ track B's files = ∅. The plan must list explicit file paths per track. If any file appears in two tracks → tracks are not independent → execute sequentially.
 
 Apply Gate G3 if the plan conflicts with guides → present to user, stop. Otherwise, accept and continue.
@@ -111,6 +113,8 @@ Per track (or sequentially if single track):
 > Previous review found these issues that block the PR. Address each. For each finding, classify as pointwise or structural; for structural findings, do a symmetry pass per your agent definition — check sibling files, sibling methods, sibling platforms, sibling source sets for the same anti-pattern, and fix in this same pass. Do not change anything outside the PR's scope.
 >
 > <list of [REQUIRED] findings with file:line>
+
+   **Red CI test = broken code, not broken test.** Дефолт — чинить код. Удаление failing теста, переписывание в narrower fast-check, ослабление assertion/таймаута/входов — без явного апрува пользователя запрещены. Гипотеза «тест проверял не то» — эскалация к пользователю, не самостоятельное решение.
 
    **Точность передачи ревью.** Coder получает контекст cold и не верифицирует orchestrator'а — если ты перепаковал «снеси X» в «оправдай X через KDoc», coder сделает ровно последнее. Передавай findings максимально близко к исходным формулировкам ревьюера; не сужай и не смягчай. Если несколько findings сходятся на одном принципе — назови принцип явно в инструкции и перечисли ВСЕ сайты, где он применяется, даже если в комментариях упомянуты не все. Сомневаешься в интерпретации — эскалируй пользователю ДО dispatch'а, не после следующего раунда ревью.
 
