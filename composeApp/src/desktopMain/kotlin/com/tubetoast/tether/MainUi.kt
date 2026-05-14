@@ -9,6 +9,9 @@ import com.arkivanov.essenty.lifecycle.resume
 import com.tubetoast.tether.di.DefaultDesktopAppConfig
 import com.tubetoast.tether.di.DesktopAppContainer
 import com.tubetoast.tether.presentation.DeviceListComponent
+import org.jetbrains.compose.resources.painterResource
+import tether.composeapp.generated.resources.Res
+import tether.composeapp.generated.resources.icon
 
 fun main() {
     val deviceName = defaultDesktopDeviceName()
@@ -35,6 +38,7 @@ fun main() {
                 exitApplication()
             },
             title = "Tether",
+            icon = painterResource(Res.drawable.icon),
         ) {
             App(component)
         }
