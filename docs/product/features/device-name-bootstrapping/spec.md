@@ -50,7 +50,6 @@ The name is not a unique identifier. Two devices on the same network can legitim
 - **Invalid name on rename.** Empty / whitespace-only input or input longer than 50 characters is rejected inline (save disabled or clear inline error); the previous name stays in effect.
 - **Storage write fails on rename.** The surface shows an inline error ("could not save"); the previous name stays in effect; nothing is re-announced.
 - **Republishing the mDNS announcement fails on rename.** The new name is persisted locally and visible on the user's own surface immediately. The previous announcement may still be live to peers until republishing succeeds; the surface shows an inline "could not announce — try again" affordance, and the user can re-save to retry.
-- **The "This device" surface fails to render.** Discovery and transfer still work; peers still see the device. The surface degrades to a placeholder ("naming is currently unavailable") rather than blocking the rest of the screen.
 - **Two devices announce the same user-visible name.** Tether does not auto-suffix the user-visible name. How peers handle the collision on a single list — keeping both entries, adding a secondary detail, or otherwise — is the device list's concern (see [device-list spec](../device-list/spec.md) → "Two devices share a display name"). This feature does not own that resolution.
 - **Rename during an in-flight transfer.** The transfer continues to completion; the name change only affects the mDNS announcement and what peers see in their device list, not active connections.
 
