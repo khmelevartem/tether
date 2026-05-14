@@ -17,7 +17,7 @@ description: Прогон базового smoke-теста (happy-path) по п
 - **macOS run** — у `macosArm64` нет entry point, только sanity-компиляция.
 - **iOS receive/send** — `FileServer.apple` это stub, на `start()` бросает `error()`. Только sanity-компиляция `iosSimulatorArm64`.
 - **iOS simulator runtime** — в текущей версии скилла не запускаем (требует Xcode-проекта и времени), только compile.
-- **Android-инициированный send (Android → Desktop)** — у Android нет CLI-входа. Скилл проверяет обратное направление: Desktop → Android через CLI `send`.
+- **Android-инициированный send (Android → Desktop)** — актуально пока на Android нет программного триггера отправки (intent / UI-кнопка / broadcast). Скилл проверяет обратное направление: Desktop → Android через CLI `send`. Когда такой триггер появится — добавить отдельный шаг в Блок 3.
 - **Тап по Notification «Stop»** — заменяется на `am force-stop` или broadcast. Что *кнопка нарисована и работает* — проверить вручную.
 - **Sleep/wake реального девайса** — `adb shell input keyevent SLEEP/WAKEUP` это аппроксимация, не настоящий power state.
 - **Rotation effects на FGS-выживаемость** — на эмуляторе ≠ на реальном устройстве.
