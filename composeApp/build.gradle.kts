@@ -166,7 +166,6 @@ kotlin {
                 implementation(libs.kotlinx.coroutines.test)
             }
         }
-
     }
 }
 
@@ -213,7 +212,11 @@ dependencies {
     // KMP does not auto-create a test compilation for custom compilations.
     "desktopTestImplementation"(
         files(
-            kotlin.targets.getByName("desktop").compilations.getByName("cli").output.allOutputs,
+            kotlin.targets
+                .getByName("desktop")
+                .compilations
+                .getByName("cli")
+                .output.allOutputs,
         ),
     )
 }
@@ -235,8 +238,7 @@ tasks.register<Jar>("cliJar") {
     from({
         requireNotNull(cliCompilation.runtimeDependencyFiles) {
             "runtimeDependencyFiles missing for desktop cli compilation"
-        }
-            .filter { it.exists() }
+        }.filter { it.exists() }
             .map { if (it.isDirectory) it else zipTree(it) }
     })
     manifest {
@@ -253,7 +255,12 @@ tasks.register("installJar") {
     dependsOn("cliJar")
     notCompatibleWithConfigurationCache("installJar performs file I/O and system operations")
     doLast {
-        val jarFile = tasks.named<Jar>("cliJar").get().archiveFile.get().asFile
+        val jarFile = tasks
+            .named<Jar>("cliJar")
+            .get()
+            .archiveFile
+            .get()
+            .asFile
 
         val userHome = System.getProperty("user.home")
         val localBinDir = File("$userHome/.local/bin")
