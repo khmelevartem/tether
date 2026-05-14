@@ -75,9 +75,14 @@ This is documented in `docs/product/features/file-transfer/spec.md` as the iOS p
 
 Android, macOS, and Desktop JVM all support listening sockets in the background (Android via foreground service; macOS and Desktop JVM as standard process privileges). Only iOS is asymmetric. Treat any "background behaviour" claim in feature specs as iOS-conditional unless explicitly stated otherwise.
 
+## Prior art: LocalSend
+
+The closest open-source architectural analog — LocalSend, a Flutter-based cross-platform P2P file transfer app — reaches the same conclusion. Their iOS build declares no `UIBackgroundModes` and accepts foreground-only behaviour. LocalSend [issue #1468 "iOS/iPadOS run in background"](https://github.com/localsend/localsend/issues/1468) is the maintainer's standing position: a 24/7-listening peer is not possible on iOS, and the workarounds the community proposes (location-services trick, Live Activities, PiP video) either fail App Review or do not actually enable a TCP listener. Tether's "iOS = foreground-active only" stance is the industry-standard outcome for this class of architecture, not a Tether-specific compromise.
+
 ## References
 
 - Apple, "URL Loading System — Downloading Files in the Background." Search Apple Developer Documentation, not linked here — link rot.
+- [LocalSend issue #1468 — iOS/iPadOS run in background](https://github.com/localsend/localsend/issues/1468) — prior art for the same architectural conclusion.
 - `docs/knowledge/apple-platform.md` — iOS Local Network Privacy and ObjC delegate GC issues, both also affect Tether's foreground transport.
 - `docs/knowledge/android-fgs.md` — symmetric problem on Android, and its solution (FGS), for contrast.
 - `composeApp/src/iosMain/kotlin/com/tubetoast/tether/MainViewController.kt` — current foreground-tied startup of `FileServer` and `MdnsDiscovery`.
