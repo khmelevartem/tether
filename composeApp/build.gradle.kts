@@ -300,10 +300,10 @@ compose.desktop {
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "com.tubetoast.tether"
+            packageName = "Tether"
             packageVersion = "1.0.0"
-
             macOS {
+                bundleID = "com.tubetoast.tether"
                 iconFile.set(project.file("icons/icon.icns"))
             }
             linux {
