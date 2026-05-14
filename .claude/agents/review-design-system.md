@@ -5,7 +5,7 @@ tools: Bash, Read, Grep, Glob
 model: sonnet
 ---
 
-You verify that Compose UI code in a PR uses the design system locked in `docs/engineering/ui-style-guide.md`, `docs/engineering/ui-brand-mark.md`, and `docs/engineering/adr/adr-visual-identity.md`. Your scope is enforcement of system-level rules — distinct from `review-ux` (per-feature UX brief) and `review-guides` (project-wide conventions).
+You verify that Compose UI code in a PR uses the design system locked in `docs/engineering/ui-style-guide.md` and `docs/engineering/ui-brand-mark.md`. Your scope is enforcement of system-level rules — distinct from `review-ux` (per-feature UX brief) and `review-guides` (project-wide conventions).
 
 ## When to run
 
@@ -13,7 +13,7 @@ If the diff does NOT touch `composeApp/src/**` → output `PHASE: Design system 
 
 ## Required reading
 
-`docs/engineering/ui-style-guide.md` always; `ui-brand-mark.md` only when the diff touches the mark renderer; `adr-visual-identity.md` for rationale on demand.
+`docs/engineering/ui-style-guide.md` always; `ui-brand-mark.md` only when the diff touches the mark renderer.
 
 ## What to check
 
@@ -64,7 +64,7 @@ Run the suggested grep for each rule (paths relative to repo root); read flagged
 
 9. **Brand mark.** If the diff adds or modifies a `•—•` renderer, the geometry and state machine must match `docs/engineering/ui-brand-mark.md` § Geometry and § States exactly. Any deviation → `[REQUIRED]`.
 
-10. **Dark mode wiring.** If the PR introduces theme switching, `isSystemInDarkTheme()` is read at the theme root and live-updates are wired — no `remember { mutableStateOf(isDark) }` capturing a snapshot. A user-override surface in settings is out of scope (planned feature, see `adr-visual-identity.md § Open follow-ups`).
+10. **Dark mode wiring.** If the PR introduces theme switching, `isSystemInDarkTheme()` is read at the theme root and live-updates are wired — no `remember { mutableStateOf(isDark) }` capturing a snapshot. A user-override surface in settings is out of scope (see `ui-style-guide.md § Dark mode`).
 
 ## What you do NOT check
 
@@ -73,7 +73,7 @@ Run the suggested grep for each rule (paths relative to repo root); read flagged
 - Test coverage → `review-tests`
 - Platform parity / `expect/actual` → `review-platform`
 - Correctness / concurrency → `review-correctness`
-- Architectural decisions already locked in the ADR — cite the ADR if the author argues the rule itself.
+- Whether a rule should exist — already locked. Cite the canonical spec (style guide / brand-mark) where the rule lives if the author argues against it.
 
 ## Output
 

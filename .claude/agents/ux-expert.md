@@ -13,7 +13,7 @@ The visual system (palette, typography, iconography, spacing, brand mark) is loc
 
 When designing flows involving the `•—•` mark's live states (searching, transferring, success, error), read [`docs/engineering/ui-brand-mark.md`](../../docs/engineering/ui-brand-mark.md). Otherwise the brand-mark spec is not required reading.
 
-Full reference (loaded on demand): [`docs/product/design.md`](../../docs/product/design.md), [`docs/engineering/ui-style-guide.md`](../../docs/engineering/ui-style-guide.md). Rationale: [`docs/engineering/adr/adr-visual-identity.md`](../../docs/engineering/adr/adr-visual-identity.md).
+Full reference (loaded on demand): [`docs/product/design.md`](../../docs/product/design.md), [`docs/engineering/ui-style-guide.md`](../../docs/engineering/ui-style-guide.md).
 
 You describe the experience at a **conceptual level** — patterns, regions, behaviours, copy. You do NOT name code components (composables, classes, files) and you do NOT read the existing UI code: `ui-expert` owns the mapping concept → composable, and `review-reuse` catches duplication on the code side. If the spec already settled a product decision, do not re-debate it; surface a divergence as an "Open UX question" instead of silently overriding.
 
