@@ -77,38 +77,38 @@ Sending N files is the same surface as sending one. Sending a folder is N files 
 
 ### Android
 
-- **Send UI entry points:** in-app picker via `ActivityResultContracts.PickMultipleVisualMedia` (Photo Picker) and `OpenMultipleDocuments` / `OpenDocumentTree` (SAF) for photos and arbitrary files / folders respectively. OS share sheet via `ACTION_SEND` / `ACTION_SEND_MULTIPLE` intent-filter — mandatory entry point.
-- **Receive-side background.** Receive runs inside a foreground service ([permissions strategy](../system/permissions/spec.md), [android-fgs.md](../../../knowledge/android-fgs.md)). On Android 15+ the OS enforces a cumulative ~6h/day cap on the FGS type Tether uses; this is an OS limit, not a Tether limit. Long-running receivers may need to be restarted by the user from the persistent notification.
-- **Save location:** `Downloads/Tether/` via MediaStore. Visible in the system Files app and Downloads without extra permissions.
-- **Notification → reveal:** tap on the completion notification opens the system Files app at the saved location with the file selected.
-- **Permissions** (`READ_MEDIA_*` on API 33+) — owned by [permissions strategy](../system/permissions/spec.md).
+- **Send UI entry points:** in-app system photo picker for visual media and the system file / folder picker for everything else. OS share sheet — mandatory equivalent entry point.
+- **Receive-side background.** Receive runs inside a foreground service ([permissions strategy](../system/permissions/spec.md), [android-fgs.md](../../../knowledge/android-fgs.md)). On Android 15+ the OS enforces a cumulative ~6h/day cap on the foreground-service category Tether uses; this is an OS limit, not a Tether limit. Long-running receivers may need to be restarted by the user from the persistent notification.
+- **Save location:** `Downloads/Tether/`, visible in the system Files app and the system Downloads UI without extra permissions.
+- **Notification → reveal:** tapping the completion notification opens the system Files app at the saved location.
+- **Permissions** (media permissions on modern Android) — owned by [permissions strategy](../system/permissions/spec.md).
 
 ### iOS
 
-- **Send UI entry points:** Photos via `PHPickerViewController` and Files via `UIDocumentPickerViewController` — both available, user-selectable. Folder picking via `UIDocumentPickerViewController` with `.folder`. OS share sheet via Share Extension target — mandatory entry point.
-- **Foreground-active only.** iOS does not permit listening TCP sockets, custom servers, or arbitrary mDNS browsing in the background. Both sending and receiving require Tether to be in the foreground; screen lock interrupts an active transfer. This is an architectural limit of iOS, not a Tether bug. See [ios-background-networking.md](../../../knowledge/ios-background-networking.md) for the full constraint analysis and the asymmetric URLSession-background path that is conditionally available Post-MVP for sender-only.
-- **Receiver after suspension / screen lock.** Any in-flight inbound transfer dies when the OS suspends Tether — no completion notification fires (the app is not running to fire it), and any partial file is discarded per the no-partial-file rule. On next foreground, Tether surfaces a one-time "Transfer from <peer> was interrupted" entry so the receiver knows they need to ask the sender to retry. The sender simultaneously sees the standard `<peer> is no longer reachable` failure.
-- **Save location:** Tether app container `Documents/Tether/`, exposed as `On My iPhone → Tether/` via `UIFileSharingEnabled` + `LSSupportsOpeningDocumentsInPlace` in Info.plist. Browseable in the Files app.
-- **Notification → reveal:** OS notification tap opens Tether. iOS does not let third-party apps deep-link the Files app at a specific path, so the realistic equivalent is an in-app "Received" screen naming the path with a "Show in Files" button that opens a `UIDocumentPickerViewController` rooted at the save folder.
+- **Send UI entry points:** the system Photos picker and the system Files picker, both available — user chooses which source per send. Folder picking is through the system Files picker. OS share sheet — mandatory equivalent entry point.
+- **Foreground-active only.** iOS does not permit listening sockets, custom servers, or arbitrary local-network browsing in the background. Both sending and receiving require Tether to be in the foreground; screen lock interrupts an active transfer. This is an architectural limit of iOS, not a Tether bug. See [ios-background-networking.md](../../../knowledge/ios-background-networking.md) for the full constraint analysis and the asymmetric Post-MVP sender-only path.
+- **Receiver after suspension / screen lock.** Any in-flight inbound transfer dies when the OS suspends Tether — no completion notification fires (the app is not running to fire it), and any partial file is discarded per the no-partial-file rule. On next foreground, Tether surfaces a one-time "Transfer from <peer> was interrupted" entry so the receiver knows they need to ask the sender to retry. The sender simultaneously sees the standard "<peer> is no longer reachable" failure.
+- **Save location:** the app's `Tether/` folder, exposed as `On My iPhone → Tether/` in the system Files app.
+- **Notification → reveal:** tapping the OS notification opens Tether. iOS does not let third-party apps deep-link the Files app at a specific path, so the realistic equivalent is an in-app "Received" screen naming the path with a "Show in Files" button that surfaces the save folder through the system Files picker.
 
 ### macOS
 
-- **Send UI entry points:** standard `NSOpenPanel` (in-app) and Share Extension for the system share menu — mandatory entry point.
+- **Send UI entry points:** the system file open dialog (in-app) and the system share menu — both supported.
 - **Save location:** `~/Downloads/Tether/`.
-- **Notification → reveal:** `UNUserNotificationCenter` tap activates the app, which calls `NSWorkspace.activateFileViewerSelecting` to reveal-and-select the file in Finder.
+- **Notification → reveal:** tapping the system notification activates Tether, which reveals and selects the file in Finder.
 
 ### Desktop JVM (Windows, Linux)
 
-- **Send UI entry points:** in-app via standard file dialogs. No OS-level "Send To" / share integration in MVP — desktop users open Tether and pick. The in-app surface includes drag-and-drop onto the window as an equally natural entry point.
-- **Save location:** `<user.home>/Downloads/Tether/`.
-- **Notification → reveal:** Windows — system tray notification tap calls `Desktop.browseFileDirectory` to open Explorer at the file's parent folder. File selection inside the folder is not guaranteed by the JDK contract; the user lands on the right directory. Linux — best-effort; tray-notification click action and "reveal in file manager" both vary by desktop environment, with GNOME particularly fragile. Fallback is opening the parent folder without selection; on some DEs the notification click may silently no-op.
+- **Send UI entry points:** in-app system file dialog. No OS-level "Send To" / share integration in MVP — desktop users open Tether and pick. Drag-and-drop onto the window is an equally natural entry point.
+- **Save location:** `Downloads/Tether/` under the user's home folder.
+- **Notification → reveal:** Windows — tapping the system-tray notification opens File Explorer at the file's parent folder; selecting the specific file inside the folder is not guaranteed and the user lands on the right directory. Linux — best-effort; both system-tray notification click actions and "reveal in file manager" vary by desktop environment, with GNOME particularly fragile. Fallback is opening the parent folder without selection; on some DEs the notification click may silently no-op.
 
 ## Not in this feature
 
 - **Resume after interrupted transfer.** Post-MVP, see [roadmap.md](../../roadmap.md).
 - **iOS background sending or receiving.** Architecturally constrained by iOS; see [ios-background-networking.md](../../../knowledge/ios-background-networking.md). A sender-only URLSession-background path remains a conditional Post-MVP option.
 - **Pairing PIN dialog.** Owned by [pairing](../pairing/spec.md). File-transfer surface only appears after PIN confirmation.
-- **Permission prompts** (`READ_MEDIA_*`, Local Network on iOS, etc.). Owned by [permissions strategy](../system/permissions/spec.md).
+- **Permission prompts** (media permissions on Android, Local Network on iOS, etc.). Owned by [permissions strategy](../system/permissions/spec.md).
 - **Fan-out: one file → N different peers in one action.** Different mechanism, per-peer pairing state, per-peer failure surfaces. Separate feature, Post-MVP — and a candidate for [monetization](../../monetization.md).
 - **Folder sync** (watched, continuous). Different product surface, Post-MVP and Pro candidate per [monetization](../../monetization.md).
 - **Sleep / suspend handling on macOS and Desktop.** OS sleep tears down sockets; Tether does not engineer around this for MVP. Document but don't compensate.
@@ -120,5 +120,5 @@ Sending N files is the same surface as sending one. Sending a folder is N files 
 - **Aggregate progress visual shape.** The product decision is byte-based progress with current file name and current speed. The exact arrangement (one bar vs. two, where the file name sits, whether failed files inside a batch are visible during the run or only at the end) is a UX-brief decision.
 - **"Auto-pick single online paired peer" toggle.** Default OFF, opt-in. Banner text, undo timeout, what happens when the second paired peer comes online mid-flow — all UX-brief decisions. Whether the toggle lives in app settings or as a one-time prompt after the first paired-and-sent moment is also open.
 - **Concurrent incoming from different peers.** MVP accepts them in parallel; receiver UI stacks two cards. Whether this stays free forever or whether a "many-at-once" capability is a future Pro shape (e.g., bulk inbox triage) is open — folded into the broader [monetization](../../monetization.md) read once usage signal exists.
-- **Linux completion-notification fidelity.** Tap-to-reveal-in-file-manager is best-effort on Linux because of DE variation. Whether to ship a JNA-based system-tray library (e.g., `dorkbox/SystemTray`) Post-MVP for parity, or accept the OS-fallback variance, is open.
+- **Linux completion-notification fidelity.** Tap-to-reveal-in-file-manager is best-effort on Linux because of DE variation. Whether to ship a third-party system-tray library Post-MVP for parity, or accept the OS-fallback variance, is open.
 - **Save-folder name and structure.** `Tether/` under each platform's downloads location is the proposal. Whether to add `Tether/<peer-name>/` sub-grouping (so files from Lena's laptop don't mix with files from the work iMac) is open — useful but adds an extra layer the user must navigate.
