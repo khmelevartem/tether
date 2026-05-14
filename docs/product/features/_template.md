@@ -7,9 +7,18 @@
 ---
 
 > A feature spec describes **what the user gets and why**, not how it is built.
-> Implementation details — file paths, module layout, code contracts, gradle tasks —
-> belong in the GitHub Issue. If a section here starts to read like a how-to,
-> move that part to the issue.
+>
+> **Code is not mentioned in the spec, in any form.** No class / interface /
+> function / property names; no API signatures; no module / source-set / gradle
+> task names; no file paths; no library or storage-backend choice. All of that
+> lives in the implementation GitHub Issue.
+>
+> If a section starts to read like a how-to, or you find yourself naming a
+> specific identifier from the codebase, move that part to the issue. If the
+> meaning would be lost without naming code — rephrase in user-visible terms
+> or as a product-level invariant ("pairing keyed by stable identity") rather
+> than as a description of the current implementation ("pairing uses
+> publicKey SHA-256").
 >
 > **One spec covers all platforms and all implementation milestones of the feature.**
 > Don't write a separate "Android X" and "iOS X" spec — write one and put per-platform
