@@ -1,6 +1,6 @@
 # Design
 
-How Tether looks and feels. This doc captures principles and key flows; per-screen specs live in feature docs.
+How Tether looks and feels. This doc captures principles and key flows; per-screen specs live in feature docs. Implementation details live in [`docs/engineering/ui-style-guide.md`](../engineering/ui-style-guide.md); the full rationale behind the choices below is in [`docs/engineering/adr/adr-visual-identity.md`](../engineering/adr/adr-visual-identity.md).
 
 ## Principles
 
@@ -14,12 +14,22 @@ How Tether looks and feels. This doc captures principles and key flows; per-scre
 
 | Aspect | Choice |
 |--------|--------|
-| Type system | One sans-serif across platforms (system-default fallback acceptable, but the same scale/weights everywhere) |
-| Palette | Neutral surface + one accent for active state and progress |
-| Iconography | One set, custom or from a single open-source family — no platform-native glyphs mixed in |
-| Density | Comfortable on touch; the same layout scales to desktop without becoming sparse |
-| Dark mode | First-class, not an afterthought |
-| Motion | Subtle. Used to confirm state changes (peer appeared, transfer started, transfer finished), never decorative |
+| Theme stack | Custom `TetherTheme` (Compose Foundation + Compose Unstyled); no Material 3; see [style guide](../engineering/ui-style-guide.md) |
+| Typeface | Inter Variable (bundled), weights 400 and 600; tabular figures for numbers |
+| Palette | Warm off-white / near-dark-earth surfaces; teal as the sole interactive accent; `peerIdentity` (warm copper/amber hue) for peer-identity contexts and the brand mark |
+| Iconography | Tabler Icons; one stroke weight; no platform-native glyphs |
+| Spacing | Six-step scale (4 / 8 / 12 / 16 / 24 / 32 dp); `sm`/`md` for lists, `lg`/`xl` for state screens; see [style guide](../engineering/ui-style-guide.md) |
+| Dark mode | First-class; tokens switch live at OS level; no app restart |
+| Motion | State-change confirmations only; 200–300 ms ease-out; no decorative animation |
+| Shapes | Sharp: `sm=6dp`, `md=10dp`, `lg=14dp`; no pill/fully-rounded surfaces |
+
+Palette is warm off-white in light theme, near-dark-earth in dark theme, with a single teal accent for active state and progress. `peerIdentity` (warm copper/amber hue) identifies peer devices — brand mark right dot, peer-device rows, and similar identity-display surfaces. Never as a UI interactive accent. Full hex values and WCAG ratios: [docs/engineering/ui-style-guide.md](../engineering/ui-style-guide.md).
+
+Tether borrows Obsidian's discipline — single visual language across platforms, restraint, dark-first — but not its palette or information density. See [ADR](../engineering/adr/adr-visual-identity.md) for the full reasoning.
+
+## Memorable Element — `•—•`
+
+The `•—•` mark is the visual primitive Tether is recognized by. Two dots and a line — the etymology of *tether* rendered geometrically. The same mark serves as app icon, in-app searching indicator, and transfer progress bar. `peerIdentity` (right dot) identifies the peer and is never used as a UI interactive accent. Full geometry, states, and design rationale: [docs/engineering/ui-brand-mark.md](../engineering/ui-brand-mark.md).
 
 ## Key Screens
 
@@ -28,7 +38,7 @@ How Tether looks and feels. This doc captures principles and key flows; per-scre
 The screen the user opens Tether to see.
 
 States:
-- **Empty / searching** — animated indicator + hint about Wi-Fi requirement.
+- **Empty / searching** — `•—•` with hollow right dot and slow pulse + hint about Wi-Fi requirement.
 - **Peers found** — list of devices with name, platform icon, and pairing status (paired vs. unknown).
 - **No network / Wi-Fi off** — clear instruction to turn it on; no list shown.
 
@@ -39,7 +49,7 @@ Key interactions: tap a peer to send → file picker opens. Long-press / right-c
 Visible on both sender and receiver during an active transfer.
 
 States:
-- **Sending** — file name, size, progress bar, ETA, cancel.
+- **Sending** — file name, size, `•—•` progress line, ETA (tabular figures), cancel.
 - **Receiving** — same, plus "Save to…" option (if applicable per platform).
 - **Done** — success affirmation, "Open" / "Show in folder" actions.
 - **Failed** — reason in plain language, retry action where applicable.
@@ -60,8 +70,3 @@ States:
 
 - Pairing screen and onboarding — described in their feature docs once written.
 - Settings — minimal in MVP; covered when the surface grows beyond device name.
-
-## Open Questions
-
-- Do we ship a custom icon set in MVP or borrow one (e.g. Lucide, Phosphor)?
-- Brand color: pick one in MVP or leave neutral until later?
