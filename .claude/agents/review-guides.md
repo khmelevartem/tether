@@ -23,6 +23,7 @@ Always read `CLAUDE.md`. Then read the engineering doc that maps to the diff:
 | UI / Compose | `presentation-layer.md` |
 | new tests | `testing.md` |
 | commonMain or expect/actual | `architecture-principles.md` (common-first rule) |
+| `docs/product/features/**/spec.md` | `docs/product/features/_template.md` (product-spec rules) |
 
 ## What to check
 
@@ -33,6 +34,9 @@ Always read `CLAUDE.md`. Then read the engineering doc that maps to the diff:
 5. **Commit naming** — every commit message starts with `#<issue>: `. Run `gh pr view <PR> --json commits --jq '.commits[].messageHeadline'`.
 6. **Idioms** — Kotlin official style is enforced by KtLint (do not flag style); flag non-idiomatic patterns: `!!` where nullable handling is expected, manual loops where `map`/`filter` fits, `runBlocking` in non-test code.
 7. **Doc-vs-code drift** — if PR changes an architectural pattern documented in `docs/engineering/`, the doc must be updated in the same PR (especially "doc-as-spec" for first real implementation of a skeleton).
+8. **Product spec is code-free** — when the diff touches `docs/product/features/**/spec.md`, the spec body must not name code identifiers: no class / interface / function names, no API signatures, no manifest keys, no module / source-set / gradle names, no file paths to source files, no library names. Source of rule: `docs/product/features/_template.md` header. Knowledge docs (`docs/knowledge/`) and engineering docs (`docs/engineering/`) are not subject to this rule — code identifiers there are expected.
+
+   **Detection cue.** Grep backticks in the spec body. For each backtick group, judge: user-visible string (save-folder path the user actually sees, status value from `features/README.md` legend, example filename) → OK; code identifier (CamelCase class, dotted-method, library/slash-prefixed name, manifest key, gradle module path) → `[REQUIRED]` violation, cite `_template.md` header.
 
 ## What you do NOT check
 

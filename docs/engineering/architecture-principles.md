@@ -86,6 +86,16 @@ When refactoring existing code, the same questions apply in reverse: a layer tha
 - **Presentation layer is built on [Decompose](https://github.com/arkivanov/Decompose).** Components hold state and lifecycle in plain Kotlin; Compose subscribes via `subscribeAsState` and is treated as a thin, replaceable renderer. Conventions and how to write/test components: [presentation-layer.md](presentation-layer.md). Rationale, alternatives considered, and per-platform notes: [adr/adr-presentation-and-navigation.md](adr/adr-presentation-and-navigation.md).
 - **Unidirectional data flow** (state down, events up) is the default. The specific framework — MVI library, Molecule, plain Compose state — is chosen per component as it appears, not declared globally up front.
 
+## Sanity-checking architectural calls against prior art
+
+When a conceptual / architectural call touches OS limits, transport, or other platform-level constraints — and the answer is unclear from Apple / Android / JVM docs alone — cross-check against [LocalSend](https://github.com/localsend/localsend) as a secondary signal. LocalSend is the closest open-source architectural analog (cross-platform LAN P2P file transfer); their issue tracker has accumulated years of hitting the same OS walls Tether faces.
+
+**Use it for:** "is this OS constraint really unavoidable, or did we miss a workaround?" Maintainer positions on architectural issues (e.g., iOS background networking) are prior-art-grade signal — a different team independently reaching the same conclusion strengthens confidence that the wall is real.
+
+**Do NOT use it for feature parity.** Tether is not LocalSend; their UX, scope, and product decisions are theirs. Borrowing implementation choices for transport / discovery / platform integration is fine when the choice is architecturally constrained anyway. Borrowing product features dilutes Tether's positioning.
+
+**Trigger sparingly.** Conceptual hard cases only, not routine implementation questions.
+
 ## Open questions
 
 - None right now — revisit this section as new architectural choices come up.
