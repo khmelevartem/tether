@@ -27,7 +27,7 @@ Permissions involved:
 ## Not in this feature
 
 - Wi-Fi availability — that is a system **state**, not a grant. See [wifi-availability.md](wifi-availability.md).
-- Android foreground service for background receive — that is a lifecycle question, surfaces inside [file-transfer.md](../file-transfer.md).
+- Android foreground service for background receive — that is a lifecycle question, surfaces inside [file-transfer](../../file-transfer/spec.md).
 - Desktop firewall prompts on first server bind — narrow, fixed as a Platform note in the relevant feature.
 
 ## Open product questions

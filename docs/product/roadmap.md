@@ -21,8 +21,6 @@ Done = a non-technical user can install Tether on their phone (Android/iOS) and 
 Things the user will ask for soon after MVP, but that the product can survive without at launch.
 
 - Resume after interrupted transfer.
-- Background receive on mobile (push / system notification when a file arrives).
-- "Show in folder" / "Open" affordances per platform.
 - Settings screen — device name, default save folder, UI theme, "share Tether" link.
 - Onboarding polish — first-launch experience, permission prompts.
 
