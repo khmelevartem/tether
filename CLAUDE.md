@@ -58,7 +58,7 @@ Desktop исходники разделены на два source set: `desktopMa
 ## Slash commands и скиллы
 
 **Скиллы** (`.claude/skills/`) — основной путь, multi-agent оркестрация:
-- `/implement <N>` — end-to-end оркестратор задачи. Планирует, гоняет coder↔reviewers цикл, smoke, доводит до PR. Пользователь только в гейтах G1-G5 (см. SKILL.md).
+- `/implement <N>` — end-to-end оркестратор задачи. Планирует, гоняет coder↔reviewers цикл, smoke, доводит до PR. Пользователь только в гейтах G1-G5 (см. SKILL.md). Идемпотентен: повторный вызов по issue с открытым PR — re-entry в inner loop + simplify + full review + smoke на свежем diff'е. Этот же вход используется для отработки ручного ревью на PR.
 - `/code-review <PR>` — параллельный multi-agent review с постингом в GitHub.
 
 **Команды** (`.claude/commands/`):

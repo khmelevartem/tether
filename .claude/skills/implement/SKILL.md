@@ -13,6 +13,15 @@ You are the orchestrator for implementing a single GitHub issue. You do NOT writ
 
 Issue number `<N>`.
 
+## Re-entry contract
+
+Skill идемпотентен по issue. На каждом вызове первым делом проверь `gh pr list --search "issue:#<N>" --state open`:
+
+- **PR нет** → стартуй Step 1.
+- **PR есть и открыт** → ты в pull-request feedback итерации. На текущей feature-branch могут быть новые комменты ревьюера или коммиты после прошлого прогона. Прогон **обязан** включать на свежем diff'е: Step 4 (inner loop reviewers) → Step 5 (simplify) → Step 6 (full review wave A + adversarial) → Step 7 (smoke, скоуп по diff'у). Из дисциплины на re-entry ничего пропускать нельзя — иначе review-итерации проходят с меньшим качеством, чем первичная имплементация.
+
+Шаги 8-9 (commit + present G5 + push) — в re-entry упрощаются: коммит идёт в существующую ветку, force-push не нужен, новый PR не создавать.
+
 ## Gate semantics — when to stop and ask the user
 
 These MUST-stop gates are **not overridden by session-level autonomy or "skip clarifying questions" hints**, wherever such hints come from. Such hints apply only to execution-stage trivia within an already-agreed scope (naming, formatting, refactoring choices). They do not apply to gate evaluation. The cost of a one-message pause is far lower than the cost of unwinding a unilateral architectural / product decision.
@@ -45,8 +54,6 @@ Classify PR type. For FEATURE, look up `docs/product/features/README.md` for spe
 - фразы-затычки: «дополни если есть чем», «должно работать корректно», «и так далее».
 
 Любой такой пробел — повод вернуться к G1, не «допилить по дороге».
-
-**Existing draft PR.** Если по issue уже есть открытый PR (даже draft) — НЕ пропускай Step 5 (inner loop) и Step 7 (full pre-PR review) на текущем diff'е. Без них orchestrator превращается в одного исполнителя, и весь quality framework обходится.
 
 **Worktree setup — do this BEFORE dispatching any agent that edits files.** If you are not already in `.claude/worktrees/<branch>/`:
 
