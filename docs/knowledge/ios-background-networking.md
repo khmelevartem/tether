@@ -2,7 +2,7 @@
 
 Why Tether on iOS cannot run its current P2P transport in the background, what iOS actually offers, and the asymmetric architecture option that *can* deliver background sends from iOS to non-iOS receivers.
 
-This document is product-relevant: the iOS background story is a hard architectural fork, not a tuning knob. Read before promising background behaviour in any iOS-touching feature spec.
+The iOS background story is a hard architectural fork, not a tuning knob.
 
 ---
 

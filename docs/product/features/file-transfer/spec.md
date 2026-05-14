@@ -43,19 +43,29 @@ Sending N files is the same surface as sending one. Sending a folder is N files 
 **Alternative paths**
 
 - **Single online paired peer (Post-MVP toggle).** When the user enables "Send to my only online device" and exactly one paired peer is currently visible in the mDNS cache, the device-list step is skipped after Share. A short banner says "Sending to <peer>" with an inline Cancel that returns the user to the device list. Default OFF; toggle in settings. Hard auto-skip is never the default because surprise sends are worse than an extra tap.
-- **Folder send.** Picking a folder sends its contents recursively. Structure is preserved relative to the picked folder's root: `Vacation/2024/IMG_001.jpg` arrives at `Tether/Vacation/2024/IMG_001.jpg`. Empty folders and hidden files (`.DS_Store`, `Thumbs.db`, dotfiles) are skipped. Symlinks are followed with cycle detection. Before starting, Tether shows a confirmation if the selection exceeds a soft threshold (number of files / total size) — guards against accidentally picking the disk root.
+- **Folder send.** Picking a folder sends its contents recursively. Structure is preserved relative to the picked folder's root: `Vacation/2024/IMG_001.jpg` arrives at `Tether/Vacation/2024/IMG_001.jpg`. Empty folders and hidden files (`.DS_Store`, `Thumbs.db`, dotfiles) are skipped. Symlinks are followed with cycle detection. Order of files within the batch is the order returned by the OS picker — Tether does not re-sort. Before starting, Tether shows a confirmation if the selection exceeds a soft threshold (number of files / total size) — guards against accidentally picking the disk root.
 - **Cancel by sender.** Sender taps Cancel mid-transfer. Both sides stop. Receiver discards any partial file silently — no leftover.
 - **Cancel by receiver.** Receiver taps Cancel on their incoming card. Both sides stop. Same partial-file rule.
-- **Per-file failure in a batch.** A single file fails (unreadable, write error, etc.). The batch continues with the remaining files. At the end the sender sees "Sent 27 of 30. 3 failed: <names>" with a per-file retry affordance.
 - **Concurrent incoming from different peers.** Two paired peers send to the receiver at the same time. Both transfers proceed in parallel; the receiver UI stacks the two incoming cards.
 - **Name collision on the receiver.** A file with the same name already exists in the destination. The incoming file is saved as `name (1).ext`, `name (2).ext`, etc. The sender's bytes are never silently overwritten and never refused.
 - **Untrusted (not paired) peer attempts to send.** Tether routes through the pairing PIN flow first — surface owned by [pairing](../pairing/spec.md). The file-transfer surface only appears after PIN confirmation on both sides.
+
+**Failure surfaces (what the user sees, what they can do)**
+
+| Trigger | User-visible message | Retry available |
+|---|---|---|
+| Wi-Fi / network lost mid-transfer | "Connection lost. Try again when you're back on Wi-Fi." | Yes |
+| Peer becomes unreachable mid-transfer (drops from mDNS, connection refused) | "<peer> is no longer reachable. Try again." | Yes — semantically the same as connection-lost |
+| Single file unreadable on sender (I/O error, permission revoked) | "Couldn't read <filename>." | Yes — user can re-pick |
+| Receiver write fails (disk full, storage error) | "Couldn't save on <peer>. Free up space and try again." | Yes — user can free space on receiver, then retry |
+| Cancelled by either side | "Cancelled" — neutral, not styled as error | — |
+| Per-file failure inside a batch | Batch continues. End-of-batch summary: "Sent N of M. K failed: <names>" with per-file retry affordance | Per-file |
 
 ## What "working" looks like
 
 - Single-file send, multi-file send, and folder send all work as one consistent surface — the user does not distinguish between them.
 - A file of any size goes through without out-of-memory errors. Streaming, not buffering.
-- The bytes on the receiver are byte-identical to the sender's source. No compression, no conversion, no resizing. Verifiable by hash on both sides.
+- The bytes on the receiver are byte-identical to the sender's source. No compression, no conversion, no resizing.
 - Cancel from either side stops the transfer cleanly and leaves no partial file pretending to be complete.
 - Per-file failure inside a batch does not abort the batch — the remaining files still go.
 - Progress is shown in bytes (current file name + total batch bytes + current speed), not in file count percentage.
@@ -77,6 +87,7 @@ Sending N files is the same surface as sending one. Sending a folder is N files 
 
 - **Send UI entry points:** Photos via `PHPickerViewController` and Files via `UIDocumentPickerViewController` — both available, user-selectable. Folder picking via `UIDocumentPickerViewController` with `.folder`. OS share sheet via Share Extension target — mandatory entry point.
 - **Foreground-active only.** iOS does not permit listening TCP sockets, custom servers, or arbitrary mDNS browsing in the background. Both sending and receiving require Tether to be in the foreground; screen lock interrupts an active transfer. This is an architectural limit of iOS, not a Tether bug. See [ios-background-networking.md](../../../knowledge/ios-background-networking.md) for the full constraint analysis and the asymmetric URLSession-background path that is conditionally available Post-MVP for sender-only.
+- **Receiver after suspension / screen lock.** Any in-flight inbound transfer dies when the OS suspends Tether — no completion notification fires (the app is not running to fire it), and any partial file is discarded per the no-partial-file rule. On next foreground, Tether surfaces a one-time "Transfer from <peer> was interrupted" entry so the receiver knows they need to ask the sender to retry. The sender simultaneously sees the standard `<peer> is no longer reachable` failure.
 - **Save location:** Tether app container `Documents/Tether/`, exposed as `On My iPhone → Tether/` via `UIFileSharingEnabled` + `LSSupportsOpeningDocumentsInPlace` in Info.plist. Browseable in the Files app.
 - **Notification → reveal:** OS notification tap opens Tether. iOS does not let third-party apps deep-link the Files app at a specific path, so the realistic equivalent is an in-app "Received" screen naming the path with a "Show in Files" button that opens a `UIDocumentPickerViewController` rooted at the save folder.
 
@@ -90,7 +101,7 @@ Sending N files is the same surface as sending one. Sending a folder is N files 
 
 - **Send UI entry points:** in-app via standard file dialogs. No OS-level "Send To" / share integration in MVP — desktop users open Tether and pick. The in-app surface includes drag-and-drop onto the window as an equally natural entry point.
 - **Save location:** `<user.home>/Downloads/Tether/`.
-- **Notification → reveal:** Windows — system tray notification tap calls `Desktop.browseFileDirectory` to open Explorer with the file selected. Linux — best-effort; tray-notification click action and "reveal in file manager" both vary by desktop environment, with GNOME particularly fragile. Fallback is opening the parent folder without selection; on some DEs the notification click may silently no-op.
+- **Notification → reveal:** Windows — system tray notification tap calls `Desktop.browseFileDirectory` to open Explorer at the file's parent folder. File selection inside the folder is not guaranteed by the JDK contract; the user lands on the right directory. Linux — best-effort; tray-notification click action and "reveal in file manager" both vary by desktop environment, with GNOME particularly fragile. Fallback is opening the parent folder without selection; on some DEs the notification click may silently no-op.
 
 ## Not in this feature
 

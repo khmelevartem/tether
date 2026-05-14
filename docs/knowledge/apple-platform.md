@@ -3,6 +3,9 @@
 Problems we've encountered on Apple targets and how to solve them.
 Check here before spending time re-researching a known issue.
 
+For background-networking architectural constraints on iOS (listening sockets,
+URLSession-background asymmetric path), see [ios-background-networking.md](ios-background-networking.md).
+
 ---
 
 ## ObjC delegate GC (silent callback loss)
