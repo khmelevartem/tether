@@ -15,7 +15,7 @@ Read [`docs/engineering/ui-style-guide.md`](../../docs/engineering/ui-style-guid
 |---|---|
 | Theme | Custom `TetherTheme` — Compose Foundation + Compose Unstyled. No Material 3. |
 | Accent color | Teal only: `#2F7D6B` (light) / `#3FA08A` (dark) via `LocalTetherColors.current.accent` |
-| Copper | Brand mark only (`•—•` right dot, app icon, splash). Never a UI interactive color. |
+| `peerIdentity` | Peer device identity: brand mark right dot, peer-device rows, transfer receiver chip, pairing confirmation. Never a UI interactive color. |
 | Typeface | Inter Variable (bundled). Weights 400 / 600. `numeric` style for sizes/ETA/percentages. |
 | Icons | Tabler Icons (`br.com.devsrsouza.compose.icons:tabler-icons:1.1.1`). No platform-native glyphs. |
 | Transfer states | The `•—•` glyph (searching = hollow right dot + pulse; progress = line fills L→R). |

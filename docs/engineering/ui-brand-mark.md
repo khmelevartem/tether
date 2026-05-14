@@ -10,7 +10,7 @@ The glyph consists of two filled circles connected by a straight horizontal line
 - The centers of the two dots are spaced 4R apart on a horizontal axis.
 - The connecting line has stroke weight 1.2R and runs horizontally between the two dot centers, butting into each dot with no gap.
 - Left dot color: `accent` (teal — `#2F7D6B` light / `#3FA08A` dark). Semantics: your device.
-- Right dot color: `copper` (`#C77E47` light / `#D89968` dark). Semantics: the peer.
+- Right dot color: `peerIdentity` (`#C77E47` light / `#D89968` dark). Semantics: the peer.
 - Line color: `textPrimary` tone. Neutral connector — not the accent color.
 
 ## States
@@ -21,9 +21,9 @@ The glyph consists of two filled circles connected by a straight horizontal line
 
 Only compose the searching animation while the component is in the searching state. The loop runs continuously while in the composition — gate its instantiation at the call site, not inside the component.
 
-**Transfer progress:** the line fills with `accent` color from left to right, proportional to bytes transferred out of total bytes. The right dot remains copper (peer identity). The left dot is solid teal. At 100%, the line is fully filled with `accent`.
+**Transfer progress:** the line fills with `accent` color from left to right, proportional to bytes transferred out of total bytes. The right dot remains `peerIdentity`. The left dot is solid teal. At 100%, the line is fully filled with `accent`.
 
-**Success:** the line is fully filled with `accent`. The right dot plays a brief scale pulse: ease-out, 200ms, scaling to 1.05× and returning to normal size.
+**Success:** the line is fully filled with `accent`. The right dot performs a synchronisation celebration: its color transitions from `peerIdentity` to `accent` over 200ms ease-out, holds at `accent` for 300ms, then transitions back to `peerIdentity` over 200ms ease-in. Concurrently with the outgoing transition, the right dot performs a brief scale pulse — ease-out, 200ms, scaling to 1.05× and returning to normal size. After the sequence (~700ms total), the right dot rests at `peerIdentity` color again. Semantics: at completion, the tether is briefly "one" — both ends share the active color — before identity is restored.
 
 **Error:** the line is truncated at the failure point — filled with `accent` up to the proportion reached, unfilled beyond. The right dot becomes hollow with a stroke in `error` color.
 
@@ -43,13 +43,13 @@ The mark is identical across Android, iOS, macOS, and Desktop. No platform-speci
 
 **Empty category cell.** File-transfer competitors occupy distinct visual niches: AirDrop uses radar arcs, Quick Share uses blue circular arrows, Snapdrop uses a parachute, LocalSend uses a cloud-with-arrow, Telegram uses a paper plane, Messenger and Gmail use arrow-on-cloud variants. No competitor uses two-dots-and-a-line. In an icon grid or app store row, the mark is unmistakable.
 
-**Triple duty.** One primitive earns three UI roles: app icon (90% of brand exposure for a rarely-opened utility app), in-app status indicator (right dot pulses while searching), and transfer progress bar (line fills with accent as bytes move). Most marks earn only one of these roles. The triple-duty property means copper appears live on-screen during use, keeping recall active rather than dormant between launches.
+**Triple duty.** One primitive earns three UI roles: app icon (90% of brand exposure for a rarely-opened utility app), in-app status indicator (right dot pulses while searching), and transfer progress bar (line fills with accent as bytes move). Most marks earn only one of these roles. The triple-duty property means `peerIdentity` appears live on-screen during use, keeping recall active rather than dormant between launches.
 
 **16px legibility.** Two filled dots plus a horizontal line stay readable at favicon size and in OS notification surfaces. A knot with crossing strands or a paper plane silhouette risks blurring to an unrecognizable blob at small sizes.
 
 **Why not a knot.** A rope knot carries richer "binding" semantics, but: it has no progress-bar affordance (a knot does not fill); anti-aliasing crossing strands on iOS Skia at small sizes is unreliable; and the shape risks reading as wedding, maritime, or wellness symbology without severe geometric discipline.
 
-**Why not two-tone split alone** (Interpretation II, preserved as fallback in the ADR). A diagonal split squircle is strong at icon scale, but the two-tone signal disappears inside the running app — only teal remains active as an interactive accent. The mark loses recall during use, at the moment it matters most (transfer in progress). Interpretation I earns the copper dot on-screen with semantic meaning intact.
+**Why not two-tone split alone** (Interpretation II, preserved as fallback in the ADR). A diagonal split squircle is strong at icon scale, but the two-tone signal disappears inside the running app — only teal remains active as an interactive accent. The mark loses recall during use, at the moment it matters most (transfer in progress). Interpretation I earns the `peerIdentity` dot on-screen with semantic meaning intact.
 
 **Why not an arrow or paper plane.** These shapes are owned by messengers and mail apps. They would read as "this app sends things" — the correct frame for a message, wrong for Tether. Tether is not the act of sending; it is the persistent connection between two devices. The mark must express the object, not the action.
 

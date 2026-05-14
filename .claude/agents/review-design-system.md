@@ -1,6 +1,6 @@
 ---
 name: review-design-system
-description: Reviews a PR's Compose UI code for conformance to the locked Tether design system — token usage, Material 3 ban, copper-only-in-brand-mark, Tabler-only icons, brand-mark geometry. Skip entirely if diff touches no `composeApp/src/**` files. Does not judge product decisions or UX brief conformance.
+description: Reviews a PR's Compose UI code for conformance to the locked Tether design system — token usage, Material 3 ban, peer-identity color usage, Tabler-only icons, brand-mark geometry. Skip entirely if diff touches no `composeApp/src/**` files. Does not judge product decisions or UX brief conformance.
 tools: Bash, Read, Grep, Glob
 model: sonnet
 ---
@@ -30,9 +30,10 @@ Run the suggested grep for each rule (paths relative to repo root); read flagged
    rg -n 'Color\(0x[0-9A-Fa-f]{6,8}\)' composeApp/src/ --glob '!**/TetherColors.kt' --glob '!**/theme/**'
    ```
 
-3. **Copper leak.** The copper hexes (`#C77E47`, `#D89968`, or `0xFFC77E47` / `0xFFD89968`) and the `TetherColors.copper` accessor appear only in the brand-mark renderer. Anywhere else → violation.
+3. **Peer-identity color usage.** Raw hex literals `#C77E47` / `#D89968` (or `0xFFC77E47` / `0xFFD89968`) outside `TetherColors.kt` are a violation — they bypass the token. The banned accessor `TetherColors.copper` must not appear anywhere. `TetherColors.peerIdentity` is the only legal accessor for these hexes; flag any usage that appears outside a peer-identity context (brand mark right dot, peer-device rows, transfer receiver chip, pairing confirmation) — prose check, not grep-able.
    ```bash
-   rg -n '(0x[Ff][Ff]C77E47|0x[Ff][Ff]D89968|#C77E47|#D89968|TetherColors\.copper)' composeApp/src/
+   rg -n '(0x[Ff][Ff]C77E47|0x[Ff][Ff]D89968|#C77E47|#D89968)' composeApp/src/ --glob '!**/TetherColors.kt' --glob '!**/theme/**'
+   rg -n 'TetherColors\.copper' composeApp/src/
    ```
 
 4. **Spacing magic numbers.** Any `N.dp` outside the `TetherSpacing` definition goes through a token (`TetherSpacing.sm/md/lg/…`). Exception: `1.dp` borders, `0.dp` resets, Compose-API-required defaults — `[NIT]` with reasoning.

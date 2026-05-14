@@ -25,18 +25,18 @@ Token values for both themes:
 | `textMuted` | `#6B6B73` | `#9A9DA3` | Secondary labels, captions, timestamps |
 | `accent` | `#2F7D6B` | `#3FA08A` | Active state, progress fills, interactive accents |
 | `error` | `#B4423A` | `#E26A60` | Error text, destructive action labels |
-| `copper` | `#C77E47` | `#D89968` | Brand mark only — never as a UI accent |
+| `peerIdentity` | `#C77E47` | `#D89968` | Peer device identity — brand mark right dot, peer-device rows, transfer receiver chip, pairing confirmation. Never as an interactive accent. |
 
 ### Color rules
 
 - **`accent` is the only interactive color.** Buttons, progress fills, focus rings, checked states — all use `accent`. No other color takes an interactive meaning.
-- **`copper` is brand-only.** Use it exclusively in: the `•—•` glyph (right dot), the app icon, and the splash screen line animation. Never as a button, label, badge, or state color in the product UI.
+- **`peerIdentity` identifies a peer device or the far end of the tether.** Legal contexts: brand mark (right dot), peer-device rows in device list, transfer receiver chip, pairing confirmation, and similar identity-display surfaces. Never as an interactive accent — that role belongs to `accent` (teal).
 - **Never hardcode color literals** outside the color token definitions. Read all colors from the current `TetherColors` instance via its composition local.
 - **Elevation is expressed by surface tiers and `border`.** Use `surfaceRaised` + a 1dp `border`-colored outline for cards/sheets instead of shadow effects. This avoids the iOS Skia blur-shadow performance cost.
 
 ### WCAG AA status
 
-All text-on-surface pairings pass AA (4.5:1 normal text / 3:1 large text). `copper` on `surface` (light) is ~3.1:1 — marginal for graphical objects (WCAG 1.4.11 requires 3:1); this is acceptable because copper appears only as a filled dot, never as the sole indicator of an interactive state. See ADR follow-ups if copper must appear in a text context.
+All text-on-surface pairings pass AA (4.5:1 normal text / 3:1 large text). `peerIdentity` on `surface` (light) is ~3.1:1 — marginal for graphical objects (WCAG 1.4.11 requires 3:1); this is acceptable because the color appears only as a filled dot or identity indicator, never as the sole indicator of an interactive state. See ADR follow-ups if `peerIdentity` must appear in a text context.
 
 ## Typography
 
@@ -110,8 +110,7 @@ Rules:
 
 Full spec: [ui-brand-mark.md](ui-brand-mark.md).
 
-The mark is the only place `copper` (`#C77E47` / `#D89968`) is allowed.
-Everywhere else, accent is teal.
+`peerIdentity` (`#C77E47` / `#D89968`) is used in the mark's right dot and in peer-identity UI contexts (see Color rules). Everywhere else, accent is teal.
 
 ## Motion
 

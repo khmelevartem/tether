@@ -55,9 +55,9 @@ Obsidian's typographic and layout discipline (sharp corners, border lines, low m
 
 ### Palette
 
-Light theme: `surface` `#FBFAF7`, `surfaceRaised` `#FFFFFF`, `border` `#E8E5DE`, `textPrimary` `#1A1A1F`, `textMuted` `#6B6B73`, `accent` `#2F7D6B`, `copper` `#C77E47`, `error` `#B4423A`. Dark theme: `surface` `#15171A`, `surfaceRaised` `#1E2125`, `border` `#2A2E33`, `textPrimary` `#ECECEE`, `textMuted` `#9A9DA3`, `accent` `#3FA08A`, `copper` `#D89968`, `error` `#E26A60`. Live token table with WCAG ratios: see [ui-style-guide.md](../ui-style-guide.md).
+Light theme: `surface` `#FBFAF7`, `surfaceRaised` `#FFFFFF`, `border` `#E8E5DE`, `textPrimary` `#1A1A1F`, `textMuted` `#6B6B73`, `accent` `#2F7D6B`, `peerIdentity` `#C77E47`, `error` `#B4423A`. Dark theme: `surface` `#15171A`, `surfaceRaised` `#1E2125`, `border` `#2A2E33`, `textPrimary` `#ECECEE`, `textMuted` `#9A9DA3`, `accent` `#3FA08A`, `peerIdentity` `#D89968`, `error` `#E26A60`. Live token table with WCAG ratios: see [ui-style-guide.md](../ui-style-guide.md).
 
-Copper is a brand-recall asset — it appears in the `•—•` mark, the app icon, and the splash. It is not a UI interactive accent. Tether has exactly one interactive accent color: teal.
+`peerIdentity` identifies the peer device — it appears in the `•—•` mark's right dot, and in peer-identity UI contexts (peer-device rows, transfer receiver chip, pairing confirmation). It is not a UI interactive accent. Tether has exactly one interactive accent color: teal.
 
 ### Typography
 
@@ -89,11 +89,11 @@ Compose Foundation + `com.composables:core` (Compose Unstyled). Custom `TetherTh
 
 ### Brand mark — Interpretation I: "Two-Tone Tether" (chosen)
 
-Signature glyph: `•—•` — left dot teal, right dot copper, neutral `textPrimary` line. Full geometry, states, and design rationale: [ui-brand-mark.md](../ui-brand-mark.md).
+Signature glyph: `•—•` — left dot teal, right dot `peerIdentity` (warm copper/amber hue), neutral `textPrimary` line. Full geometry, states, and design rationale: [ui-brand-mark.md](../ui-brand-mark.md).
 
-The mark literalizes the word *tether* — a line between two points under tension. It occupies an empty cell in the file-transfer icon space (competitors use radar arcs, arrows, planes, clouds) and earns triple duty as app icon, in-app status indicator, and transfer progress bar — meaning copper stays live on-screen during use and recall remains active between launches. Full alternatives analysis: [ui-brand-mark.md § Rationale](../ui-brand-mark.md).
+The mark literalizes the word *tether* — a line between two points under tension. It occupies an empty cell in the file-transfer icon space (competitors use radar arcs, arrows, planes, clouds) and earns triple duty as app icon, in-app status indicator, and transfer progress bar — meaning `peerIdentity` stays live on-screen during use and recall remains active between launches. Full alternatives analysis: [ui-brand-mark.md § Rationale](../ui-brand-mark.md).
 
-The copper dot appears **only** in the brand mark contexts listed above. It is never used as a UI interactive accent, hover state, focus ring, or button color. Teal is the sole interactive accent in the UI.
+`peerIdentity` is never used as a UI interactive accent, hover state, focus ring, or button color. Teal is the sole interactive accent in the UI.
 
 ## Consequences
 
@@ -111,11 +111,11 @@ The copper dot appears **only** in the brand mark contexts listed above. It is n
 - Owning the full theme stack requires implementing `TetherColors`, `TetherTypography`, `TetherSpacing`, `TetherShapes` — 200–300 lines of infrastructure before any feature code.
 - Bundling Inter Variable adds ~300 KB to all targets. Acceptable for a file-transfer app; revisit if app size becomes a distribution concern.
 - Tabler Icons are imported per-icon (tree-shaking via per-symbol import); contributors must remember to import from the `tabler-icons` namespace rather than drawing local SVGs.
-- The copper accent creates a two-color mark that must be reproduced faithfully in every icon format (Android adaptive, iOS, macOS, etc.). Minor asset management overhead.
+- The `peerIdentity` color in the mark must be reproduced faithfully in every icon format (Android adaptive, iOS, macOS, etc.). Minor asset management overhead.
 
 ## Open follow-ups
 
-- **WCAG AA — copper on light surface.** `#C77E47` on `#FBFAF7` yields approximately 3.1:1 contrast — below AA for body text. However, copper is never used as standalone text in the UI: it appears only as a filled dot in the `•—•` glyph (graphical object, not text) and in the app icon. WCAG 1.4.11 Non-Text Contrast requires 3:1 for graphical objects against adjacent color — 3.1:1 is marginal. If the brand mark is ever used in a context where the copper dot must convey meaning against `#FBFAF7` without other signals, consider lifting to `#B86E38` (~3.6:1). No change to the locked hex in this ADR; revisit if a failing context surfaces.
+- **WCAG AA — `peerIdentity` on light surface.** `#C77E47` on `#FBFAF7` yields approximately 3.1:1 contrast — below AA for body text. However, `peerIdentity` is never used as standalone text in the UI: it appears as a filled dot or identity indicator (graphical object, not text). WCAG 1.4.11 Non-Text Contrast requires 3:1 for graphical objects against adjacent color — 3.1:1 is marginal. If a `peerIdentity` element must convey meaning against `#FBFAF7` without other signals, consider lifting to `#B86E38` (~3.6:1). No change to the locked hex in this ADR; revisit if a failing context surfaces.
 - **User-override dark mode preference** (System / Light / Dark in Settings) — product feature, not part of this ADR. When implemented, it gates the `isSystemInDarkTheme()` call in `TetherTheme`.
 - **Inter licensing.** Inter is OFL-1.1. Bundling is permitted; attribute in `NOTICE` or `licenses/` when that directory is created.
 - **Tabler Icons version pinning.** `br.com.devsrsouza.compose.icons:tabler-icons:1.1.1` is the pinned version in the version catalog. Verify the coordinate before the first screen ships; icon geometry can change across releases.
@@ -154,7 +154,7 @@ App icon: a squircle split diagonally — warm off-white half on one side, near-
 
 UI stays single-accent (teal only). The two-tone is icon-level only.
 
-**Why rejected:** The split is visible only in the app icon. Inside the running app, the two-tone signal disappears — only teal is active. The mark loses its recall during use, the moment it matters most (transfer in progress). Interpretation I lets the `•—•` glyph appear live on-screen with both colors semantically intact: left dot teal (you, active device), right dot copper (peer), line filling with progress. That in-context meaning is the stronger choice. Interpretation II is a reversible decision: if user testing shows the two-tone icon is confusing without in-app presence, Interpretation I's in-app usage can be stripped back to single-accent while the icon retains the split.
+**Why rejected:** The split is visible only in the app icon. Inside the running app, the two-tone signal disappears — only teal is active. The mark loses its recall during use, the moment it matters most (transfer in progress). Interpretation I lets the `•—•` glyph appear live on-screen with both colors semantically intact: left dot teal (you, active device), right dot `peerIdentity` (the peer), line filling with progress. That in-context meaning is the stronger choice. Interpretation II is a reversible decision: if user testing shows the two-tone icon is confusing without in-app presence, Interpretation I's in-app usage can be stripped back to single-accent while the icon retains the split.
 
 ## References
 
