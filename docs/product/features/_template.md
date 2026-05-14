@@ -8,17 +8,12 @@
 
 > A feature spec describes **what the user gets and why**, not how it is built.
 >
-> **Code is not mentioned in the spec, in any form.** No class / interface /
-> function / property names; no API signatures; no module / source-set / gradle
-> task names; no file paths; no library or storage-backend choice. All of that
-> lives in the implementation GitHub Issue.
->
-> If a section starts to read like a how-to, or you find yourself naming a
-> specific identifier from the codebase, move that part to the issue. If the
-> meaning would be lost without naming code — rephrase in user-visible terms
-> or as a product-level invariant ("pairing keyed by stable identity") rather
-> than as a description of the current implementation ("pairing uses
-> publicKey SHA-256").
+> **Code is not mentioned in the spec, in any form** — no class / interface /
+> function names, API signatures, module / source-set / gradle names, file
+> paths, library or storage-backend choice. All of that lives in the
+> implementation GitHub Issue. If meaning would be lost without naming code,
+> rephrase as a product invariant ("pairing keyed by stable identity") rather
+> than an implementation description.
 >
 > **One spec covers all platforms and all implementation milestones of the feature.**
 > Don't write a separate "Android X" and "iOS X" spec — write one and put per-platform
