@@ -23,6 +23,7 @@ Always read `CLAUDE.md`. Then read the engineering doc that maps to the diff:
 | UI / Compose | `presentation-layer.md` |
 | new tests | `testing.md` |
 | commonMain or expect/actual | `architecture-principles.md` (common-first rule) |
+| `docs/product/features/**/spec.md` | `docs/product/features/_template.md` (product-spec rules) |
 
 ## What to check
 

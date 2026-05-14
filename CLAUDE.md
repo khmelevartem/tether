@@ -19,6 +19,7 @@ Read these on demand, not all upfront:
 - UI → [`presentation-layer.md`](docs/engineering/presentation-layer.md)
 - New module/component → [`modules.md`](docs/engineering/modules.md) + [`architecture-principles.md`](docs/engineering/architecture-principles.md)
 - Tests → [`testing.md`](docs/engineering/testing.md)
+- New product spec or update of existing → [`_template.md`](docs/product/features/_template.md). Готовая соседняя спека показывает структуру, но не правила про содержание — шаблон открой отдельно.
 
 ## Architecture invariants
 
@@ -42,9 +43,13 @@ All git naming in English. **Все commit messages обязаны начина�
 
 ```bash
 ./gradlew allTests -q                            # pre-commit / pre-push хуки прогонят это сами
-./gradlew :composeApp:installJar -q && tether    # Desktop CLI (см. README.md → Desktop CLI)
+./gradlew :composeApp:installCli -q && tether   # Desktop CLI install (см. README.md → Desktop CLI)
+./gradlew :composeApp:runDesktopCli -q           # Desktop CLI (dev runner)
+./gradlew :composeApp:run -q                     # Desktop Compose UI (Compose plugin default)
 ./gradlew :composeApp:assembleDebug              # Android APK
 ```
+
+Desktop исходники разделены на два source set: `desktopMain` — shared backend + Compose UI (Clikt недоступен), `desktopCli` — CLI точка входа (видит `desktopMain` через `associateWith`, Clikt только здесь). Desktop distribution (`packageReleaseDistributionForCurrentOS`) пакует UI. CLI устанавливается через `installCli`.
 
 **KtLint — никогда не запускай вручную.** Git hook делает это сам при коммите. Стилевые ошибки не правь руками — просто коммить.
 
@@ -53,7 +58,7 @@ All git naming in English. **Все commit messages обязаны начина�
 ## Slash commands и скиллы
 
 **Скиллы** (`.claude/skills/`) — основной путь, multi-agent оркестрация:
-- `/implement <N>` — end-to-end оркестратор задачи. Планирует, гоняет coder↔reviewers цикл, smoke, доводит до PR. Пользователь только в гейтах G1-G5 (см. SKILL.md).
+- `/implement <N>` — end-to-end оркестратор задачи. Планирует, гоняет coder↔reviewers цикл, smoke, доводит до PR. Пользователь только в гейтах G1-G5 (см. SKILL.md). Идемпотентен: повторный вызов по issue с открытым PR — re-entry в inner loop + simplify + full review + smoke на свежем diff'е. Этот же вход используется для отработки ручного ревью на PR.
 - `/code-review <PR>` — параллельный multi-agent review с постингом в GitHub.
 
 **Команды** (`.claude/commands/`):
@@ -67,6 +72,7 @@ All git naming in English. **Все commit messages обязаны начина�
 - **Минимум комментариев.** Перед тем как добавить — попробуй вынести блок в приватный метод: имя метода часто делает комментарий ненужным. Комментарий — только там, где код не может выразить намерение (намеренно проглоченное исключение, неочевидный инвариант внешней библиотеки).
 - **KDoc vs `//`.** KDoc — только для контрактов (nullable-семантика, неочевидные пред-/постусловия, неочевидное WHY). Не пересказывай имя метода или сигнатуру — это шум. Если KDoc не добавляет информации относительно кода — сноси его.
 - **Долгоживущий артефакт — это правило, а не его история.** Доки, код, комментарии формулируют что есть / что делать / чему равно — без «после ретро по #N», «обнаружено при работе над X», «как обсудили в #Y», без примеров и обоснований из конкретной задачи, в которой артефакт родился. Контекст принятия решения живёт в git/PR, не в файле. Если правило непонятно без отсылки к инциденту — слабая формулировка, переписывай её, а не приклеивай хвост. Применимо ко всему: CLAUDE.md, `docs/`, `.claude/skills/**`, inline-комментарии в коде, тексты ошибок.
+- **Утверждения доков о runtime — снапшот, не правило.** Опираешься на такое утверждение в долгоживущем артефакте (спека, doc, комментарий, скилл) — сверь с кодом до использования, оно могло устареть. Пишешь сам — предпочти продуктовый инвариант («pairing keyed by stable device identity») описанию текущей реализации; если runtime упомянуть неизбежно — оставь минимум, нужный для понимания.
 - **Kotlin official style** (enforced by KtLint).
 
 ## Worktree и окружение

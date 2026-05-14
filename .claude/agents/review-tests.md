@@ -49,6 +49,14 @@ Do NOT require new tests. Verify instead:
 - test coverage has not decreased,
 - no test was deleted or weakened to make the refactor pass.
 
+### 5. `@Ignore` / `assumeTrue` / `assumeFalse` ≠ coverage
+
+A test that skips itself on the platform/configuration where the bug lives is unfinished work, not "coverage with a caveat". Flag any such skip introduced or extended in this PR as `[REQUIRED]`. Permanent platform absence of the feature is the only legitimate reason; "haven't fixed the flake yet" is not.
+
+### 6. Red CI test = broken code, not broken test
+
+Default fix for a CI-red test is in the code. Flag as `[REQUIRED]` any PR change that deletes a failing test, rewrites it into a narrower fast-check, or weakens assertions/timeouts/inputs to make it pass. Exception: the test was demonstrably wrong — must be stated explicitly in the PR.
+
 ## What you do NOT check
 
 - AC coverage → review-dod

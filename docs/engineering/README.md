@@ -14,6 +14,14 @@ Product-side docs (vision, audience, features) live in [`docs/product/`](../prod
 - [UI Brand Mark](ui-brand-mark.md) — `•—•` geometry, animation states, where the mark appears, and design rationale (why a line, not a knot or arrow).
 - [Testing](testing.md) — структура тестов по source sets, стиль (`runTest`/виртуальное время), особенности Apple-таргетов.
 
+## Writing style for these guides
+
+These documents codify principles, not the current shape of the codebase — they should age slowly.
+
+- **Code examples on abstract types**, not on real project classes. Examples pinned to concrete names rot at every rename.
+- **Don't restate what the code already shows** (hierarchies, signatures, source set layout). The code is the one source of truth that drifts last; link to it instead of copying.
+- **Lead with the rule.** Rationale and examples follow.
+
 ## Architecture Decision Records
 
 ADRs in [`adr/`](adr/) capture the *why* behind one-time architectural choices. Living docs above; ADRs are append-only history. See [`adr/README.md`](adr/README.md) for conventions.

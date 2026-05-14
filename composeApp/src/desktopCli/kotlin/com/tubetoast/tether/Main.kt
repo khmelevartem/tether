@@ -15,7 +15,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import java.io.IOException
 import java.nio.file.Path
 import kotlin.io.path.exists
 import kotlin.time.Duration.Companion.milliseconds
@@ -29,7 +28,7 @@ class TetherCommand :
         help = "Tether debug runner — local peer-to-peer file transfer over WiFi",
     ) {
     private val deviceName by option("--name", help = "Device name advertised via mDNS")
-        .default("Tether-${System.getenv("USER") ?: "dev"}")
+        .default(defaultDesktopDeviceName())
 
     private val port by option("--port", help = "Ktor server port (0 = pick random free port)")
         .int()
@@ -42,27 +41,23 @@ class TetherCommand :
         val container = DesktopAppContainer(
             DefaultDesktopAppConfig(deviceName = deviceName, port = port),
         )
-        val server = container.fileServer
         val actualPort = try {
-            server.start()
-        } catch (e: IOException) {
-            echo("ERROR: Could not start FileServer on port $port — ${e.message}", err = true)
+            container.startBackendOrFail(deviceName)
+        } catch (e: BackendStartException.FileServer) {
+            echo("ERROR: Could not start FileServer on port $port — ${e.cause?.message}", err = true)
             echo("Tip: use --port 0 to auto-select a free port.", err = true)
+            throw ProgramResult(1)
+        } catch (e: BackendStartException.Mdns) {
+            echo("ERROR: Could not start mDNS — ${e.cause?.message}", err = true)
             throw ProgramResult(1)
         }
         echo("port   : $actualPort")
         echo("FileServer started  →  http://localhost:$actualPort/health")
-
-        val discovery = container.mdnsDiscovery
-        try {
-            discovery.start(deviceName, actualPort)
-        } catch (e: Exception) {
-            echo("ERROR: Could not start mDNS — ${e.message}", err = true)
-            server.stop()
-            throw ProgramResult(1)
-        }
         echo("mDNS started → advertising '$deviceName' on port $actualPort\n")
 
+        container.registerShutdownHook()
+
+        val discovery = container.mdnsDiscovery
         var peersLinePrinted = false
         launch {
             discovery.discoveredDevices.collect { peers ->
@@ -78,34 +73,6 @@ class TetherCommand :
         }
 
         val fileClient = container.fileClient
-
-        // Shutdown hook runs cleanup in a thread with a 2 s timeout so JmDNS
-        // can send goodbye packets but never blocks the JVM exit indefinitely.
-        // After all hooks finish the JVM halts and kills any remaining threads.
-        Runtime.getRuntime().addShutdownHook(
-            Thread {
-                val cleanupThread = Thread {
-                    try {
-                        discovery.stop()
-                    } catch (e: Exception) {
-                        System.err.println("WARN: mDNS stop failed — ${e.message}")
-                    }
-                    try {
-                        server.stop()
-                    } catch (e: Exception) {
-                        System.err.println("WARN: FileServer stop failed — ${e.message}")
-                    }
-                    try {
-                        fileClient.close()
-                    } catch (e: Exception) {
-                        System.err.println("WARN: FileClient close failed — ${e.message}")
-                    }
-                }
-                cleanupThread.isDaemon = true
-                cleanupThread.start()
-                cleanupThread.join(2_000)
-            },
-        )
 
         echo("Commands: send <peer-name> <path>, list, quit")
         echo("  Tip: use quotes for names/paths with spaces — send \"My Peer\" \"/my path/file.txt\"")
@@ -148,7 +115,7 @@ class TetherCommand :
     }
 }
 
-internal suspend fun handleSend(
+suspend fun handleSend(
     client: FileClient,
     peers: List<Device>,
     peerName: String,
@@ -175,13 +142,12 @@ internal suspend fun handleSend(
     }
     val peer = matching.first()
 
-    val clock = TimeSource.Monotonic
-    val started = clock.markNow()
+    val started = TimeSource.Monotonic.markNow()
     var lastPrint = started
     var lastBytes = 0L
 
     val result = client.send(peer, file) { transferred, total ->
-        val now = clock.markNow()
+        val now = TimeSource.Monotonic.markNow()
         if ((now - lastPrint) >= 500.milliseconds) {
             val intervalSec = (now - lastPrint).inWholeMilliseconds / 1000.0
             val speed = if (intervalSec > 0) (transferred - lastBytes) / intervalSec else 0.0
@@ -200,14 +166,14 @@ internal suspend fun handleSend(
     }
 }
 
-internal fun formatBytes(bytes: Long): String = when {
+fun formatBytes(bytes: Long): String = when {
     bytes < 1_024 -> "$bytes B"
     bytes < 1_024 * 1_024 -> "%.1f KB".format(bytes / 1_024.0)
     bytes < 1_024 * 1_024 * 1_024 -> "%.1f MB".format(bytes / (1_024.0 * 1_024))
     else -> "%.2f GB".format(bytes / (1_024.0 * 1_024 * 1_024))
 }
 
-internal fun parseTokens(line: String): List<String> {
+fun parseTokens(line: String): List<String> {
     val tokens = mutableListOf<String>()
     val current = StringBuilder()
     var i = 0

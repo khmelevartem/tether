@@ -1,3 +1,5 @@
+@file:OptIn(org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi::class)
+
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.io.File
@@ -72,7 +74,16 @@ kotlin {
     // jvm("desktop") creates desktopMain as the leaf source set for the Desktop JVM target.
     // Combined with the custom hierarchy above, jvmMain becomes the intermediate parent
     // for both androidMain and desktopMain.
-    jvm("desktop")
+    //
+    // Compile-time isolation: desktopMain has no Clikt, desktopCli has no Compose. Runtime
+    // size isolation needs a separate gradle module — associateWith propagates main's runtime
+    // classpath, so cliJar still ships the full Compose stack transitively.
+    jvm("desktop") {
+        val main by compilations.getting
+        compilations.create("cli") {
+            associateWith(main)
+        }
+    }
 
     sourceSets {
         // The custom hierarchy above creates:
@@ -129,6 +140,11 @@ kotlin {
                 implementation(libs.kotlinx.coroutinesSwing)
                 implementation(libs.jmdns)
                 implementation(libs.jna)
+            }
+        }
+
+        val desktopCli by getting {
+            dependencies {
                 implementation(libs.clikt)
             }
         }
@@ -193,21 +209,58 @@ android {
 
 dependencies {
     debugImplementation(libs.compose.uiTooling)
+    // KMP does not auto-create a test compilation for custom compilations.
+    "desktopTestImplementation"(
+        files(
+            kotlin.targets
+                .getByName("desktop")
+                .compilations
+                .getByName("cli")
+                .output.allOutputs,
+        ),
+    )
+}
+
+tasks.register<Jar>("cliJar") {
+    group = "application"
+    description = "Builds a fat jar for the Desktop CLI"
+    archiveBaseName.set("tether-cli")
+    val cliCompilation = kotlin.targets
+        .getByName("desktop")
+        .compilations
+        .getByName("cli")
+    val mainCompilation = kotlin.targets
+        .getByName("desktop")
+        .compilations
+        .getByName("main")
+    from(cliCompilation.output.allOutputs)
+    from(mainCompilation.output.allOutputs)
+    from({
+        requireNotNull(cliCompilation.runtimeDependencyFiles) {
+            "runtimeDependencyFiles missing for desktop cli compilation"
+        }.filter { it.exists() }
+            .map { if (it.isDirectory) it else zipTree(it) }
+    })
+    manifest {
+        attributes["Main-Class"] = "com.tubetoast.tether.MainKt"
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    dependsOn(cliCompilation.compileTaskProvider, mainCompilation.compileTaskProvider)
 }
 
 // Installs tether CLI to ~/.local/bin/tether for system-wide access
-tasks.register("installJar") {
+tasks.register("installCli") {
     group = "application"
-    description = "Installs uber JAR to ~/.local/bin/tether for CLI access"
-    dependsOn("packageUberJarForCurrentOS")
-    notCompatibleWithConfigurationCache("installJar performs file I/O and system operations")
+    description = "Installs CLI fat JAR to ~/.local/bin/tether for CLI access"
+    dependsOn("cliJar")
+    notCompatibleWithConfigurationCache("installCli performs file I/O and system operations")
     doLast {
-        val jarDir = layout.buildDirectory
-            .dir("compose/jars")
+        val jarFile = tasks
+            .named<Jar>("cliJar")
+            .get()
+            .archiveFile
             .get()
             .asFile
-        val sourceJar = jarDir.listFiles()?.firstOrNull { it.extension == "jar" }
-            ?: error("Uber JAR not found in ${jarDir.absolutePath}")
 
         val userHome = System.getProperty("user.home")
         val localBinDir = File("$userHome/.local/bin")
@@ -217,7 +270,7 @@ tasks.register("installJar") {
             localBinDir.mkdirs()
         }
 
-        val bashScript = "#!/bin/bash\nexec java -jar \"$sourceJar\" \"\$@\""
+        val bashScript = "#!/bin/bash\nexec java -jar \"$jarFile\" \"\$@\""
         wrapperScript.writeText(bashScript)
         wrapperScript.setExecutable(true)
         println("✓ Installed to ${wrapperScript.absolutePath}")
@@ -226,25 +279,37 @@ tasks.register("installJar") {
     }
 }
 
+tasks.register<JavaExec>("runDesktopCli") {
+    group = "application"
+    description = "Runs Desktop CLI"
+    val cliCompilation = kotlin.targets
+        .getByName("desktop")
+        .compilations
+        .getByName("cli")
+    classpath = cliCompilation.output.allOutputs +
+        requireNotNull(cliCompilation.runtimeDependencyFiles) {
+            "runtimeDependencyFiles missing for desktop cli compilation"
+        }
+    mainClass.set("com.tubetoast.tether.MainKt")
+    dependsOn(cliCompilation.compileTaskProvider)
+}
+
 compose.desktop {
     application {
-        mainClass = "com.tubetoast.tether.MainKt"
+        mainClass = "com.tubetoast.tether.MainUiKt"
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "com.tubetoast.tether"
+            packageName = "Tether"
             packageVersion = "1.0.0"
-
+            macOS {
+                bundleID = "com.tubetoast.tether"
+                iconFile.set(project.file("icons/icon.icns"))
+            }
             linux {
                 iconFile.set(project.file("src/commonMain/composeResources/drawable/icon.png"))
             }
-            // For macOS and Windows, you need .icns and .ico formats respectively
-            // macOS {
-            //    iconFile.set(project.file("src/commonMain/composeResources/drawable/icon.icns"))
-            // }
-            // windows {
-            //    iconFile.set(project.file("src/commonMain/composeResources/drawable/icon.ico"))
-            // }
+            // Windows needs .ico; regenerate from icons/ when adding Windows distribution.
         }
     }
 }

@@ -32,4 +32,4 @@ The user must understand that the cause of "nothing is happening" is "Wi-Fi is o
 
 - **Ethernet-only desktop.** A Mac or Windows tower on Ethernet without Wi-Fi *can* host mDNS and Tether on the LAN — so technically it works. Do we say "Wi-Fi is off" anyway (lying, but consistent), say "no network" (vague), or detect Ethernet and say nothing (correct, but adds platform-specific code)?
 - **Recovery latency.** When Wi-Fi flicks back on, how fast does the device list repopulate — instantly, or after the next mDNS scan tick? User-visible.
-- **Transient drops mid-transfer.** Wi-Fi briefly disappearing during a transfer is a different surface — covered by transfer-failure UX in [file-transfer.md](../file-transfer.md), not here.
+- **Transient drops mid-transfer.** Wi-Fi briefly disappearing during a transfer is a different surface — covered by transfer-failure UX in [file-transfer](../../file-transfer/spec.md), not here.
