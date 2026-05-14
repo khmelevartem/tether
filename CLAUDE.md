@@ -19,6 +19,7 @@ Read these on demand, not all upfront:
 - UI → [`presentation-layer.md`](docs/engineering/presentation-layer.md)
 - New module/component → [`modules.md`](docs/engineering/modules.md) + [`architecture-principles.md`](docs/engineering/architecture-principles.md)
 - Tests → [`testing.md`](docs/engineering/testing.md)
+- New product spec or update of existing → [`_template.md`](docs/product/features/_template.md). Ориентир на соседнюю готовую спеку (например `pairing/spec.md`) не заменяет шаблон — структура читается из примера, правила про содержание (что НЕ должно появляться в теле) — нет.
 
 ## Architecture invariants
 
