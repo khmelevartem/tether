@@ -10,6 +10,8 @@ How Tether looks and feels. This doc captures principles and key flows; per-scre
 - **Show what's happening.** Discovery, pairing, transfer — every async action has a visible state. No silent waits.
 - **Honest empty states.** When no peers are found, say *why* (e.g. "No devices on this Wi-Fi yet" / "Make sure both devices are on the same network").
 
+Background reading: [Refactoring UI](https://www.refactoringui.com/) (Adam Wathan & Steve Schoger) — most of these principles appear there as concrete visual craft patterns with side-by-side examples. The closest single reference for the calm-utility / geometric-flat direction Tether takes.
+
 ## Visual Language
 
 | Aspect | Choice |
