@@ -75,12 +75,9 @@ kotlin {
     // Combined with the custom hierarchy above, jvmMain becomes the intermediate parent
     // for both androidMain and desktopMain.
     //
-    // Compile-time isolation of CLI deps from the UI/main compilation.
-    // desktopMain (main compilation) = shared backend + Compose UI — no Clikt on classpath.
-    // desktopCli  (cli compilation)  = CLI entry point only, sees main via associateWith.
-    // Note: associateWith propagates main's runtime classpath to cli, so the cliJar fat jar
-    // transitively contains the full Compose/Skiko stack. Runtime artifact size isolation
-    // would require a separate :cli gradle module — out of scope here.
+    // Compile-time isolation: desktopMain has no Clikt, desktopCli has no Compose. Runtime
+    // size isolation needs a separate gradle module — associateWith propagates main's runtime
+    // classpath, so cliJar still ships the full Compose stack transitively.
     jvm("desktop") {
         val main by compilations.getting
         compilations.create("cli") {
@@ -252,11 +249,11 @@ tasks.register<Jar>("cliJar") {
 }
 
 // Installs tether CLI to ~/.local/bin/tether for system-wide access
-tasks.register("installJar") {
+tasks.register("installCli") {
     group = "application"
     description = "Installs CLI fat JAR to ~/.local/bin/tether for CLI access"
     dependsOn("cliJar")
-    notCompatibleWithConfigurationCache("installJar performs file I/O and system operations")
+    notCompatibleWithConfigurationCache("installCli performs file I/O and system operations")
     doLast {
         val jarFile = tasks
             .named<Jar>("cliJar")

@@ -27,7 +27,7 @@ P2P-передача файлов между устройствами на ра�
 
 ```bash
 # первый раз — собрать uber JAR и поставить wrapper в ~/.local/bin
-./gradlew :composeApp:installJar -q
+./gradlew :composeApp:installCli -q
 
 # убедись, что ~/.local/bin в PATH
 export PATH="$PATH:$HOME/.local/bin"
@@ -50,17 +50,11 @@ tether --name MyMac --port 8080
 
 ### Desktop UI
 
-Запускает Compose-интерфейс с реальным wiring (discovery + file server):
-
 ```bash
 ./gradlew :composeApp:run -q
 ```
 
-Для распространения (native app bundle):
-
-```bash
-./gradlew :composeApp:packageReleaseDistributionForCurrentOS
-```
+Native app bundle: `./gradlew :composeApp:packageReleaseDistributionForCurrentOS`.
 
 ### Android
 

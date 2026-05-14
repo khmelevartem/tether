@@ -1,6 +1,6 @@
 ---
 name: smoke-test
-description: Прогон базового smoke-теста (happy-path) по платформам Tether — Desktop CLI (uber jar + /health + mDNS + stdin commands), Desktop↔Desktop send через CLI, Android (если adb-устройство подключено) с send-from-Desktop, нативная компиляция macosArm64 и iosSimulatorArm64. Используй этот скилл, когда пользователь просит «прогони smoke», «прогони smoke-тест», «basic smoke», «basic regression», «проверь сборку по платформам перед merge», «дымовой тест». Не путать с unit-тестами (`./gradlew allTests`) — smoke это рантайм-проверка стартует ли всё и видят ли друг друга, не корректность логики.
+description: Прогон базового smoke-теста (happy-path) по платформам Tether — Desktop CLI (cli jar + /health + mDNS + stdin commands), Desktop↔Desktop send через CLI, Android (если adb-устройство подключено) с send-from-Desktop, нативная компиляция macosArm64 и iosSimulatorArm64. Используй этот скилл, когда пользователь просит «прогони smoke», «прогони smoke-тест», «basic smoke», «basic regression», «проверь сборку по платформам перед merge», «дымовой тест». Не путать с unit-тестами (`./gradlew allTests`) — smoke это рантайм-проверка стартует ли всё и видят ли друг друга, не корректность логики.
 ---
 
 # Smoke-test skill
@@ -17,29 +17,23 @@ description: Прогон базового smoke-теста (happy-path) по п
 - **macOS run** — у `macosArm64` нет entry point, только sanity-компиляция.
 - **iOS receive/send** — `FileServer.apple` это stub, на `start()` бросает `error()`. Только sanity-компиляция `iosSimulatorArm64`.
 - **iOS simulator runtime** — в текущей версии скилла не запускаем (требует Xcode-проекта и времени), только compile.
-- **Android-инициированный send (Android → Desktop)** — у Android нет CLI-входа: `send` живёт только в Desktop runner'е. Скилл проверяет обратное направление: **Desktop → Android** через CLI `send`. Это **deviation от issue #69** (там было «upload Android→Desktop»), но другого автоматизируемого пути нет до тех пор, пока на Android не появится способ инициировать transfer программно (UI-кнопка, intent, broadcast). Если такой механизм заведут — добавить отдельный шаг в Блок 3.
+- **Android-инициированный send (Android → Desktop)** — у Android нет CLI-входа. Скилл проверяет обратное направление: Desktop → Android через CLI `send`.
 - **Тап по Notification «Stop»** — заменяется на `am force-stop` или broadcast. Что *кнопка нарисована и работает* — проверить вручную.
 - **Sleep/wake реального девайса** — `adb shell input keyevent SLEEP/WAKEUP` это аппроксимация, не настоящий power state.
 - **Rotation effects на FGS-выживаемость** — на эмуляторе ≠ на реальном устройстве.
 
 В отчёте все эти позиции должны быть в секции **«Manual verification required»**.
 
-## Ключевое решение: cliJar, не gradle run и не packageUberJarForCurrentOS
-
-**Не используй `./gradlew :composeApp:run` для авто-запуска CLI.** После разделения source set'ов `:composeApp:run` запускает Compose UI (Compose plugin default), не CLI. Кроме того, в non-TTY среде `System.in` не пробрасывается корректно — `readLine()` сразу возвращает null.
-
-**Не используй `packageUberJarForCurrentOS` для CLI.** Это Compose-задача, она пакует UI-приложение (`MainUiKt` как Main-Class). CLI jar собирается отдельной задачей `cliJar`.
-
-Вместо этого собирай `cliJar` и запускай через `java -jar`:
+## Запуск CLI
 
 ```bash
 ./gradlew :composeApp:cliJar -q
-JAR=$(ls composeApp/build/libs/tether-cli-*.jar composeApp/build/libs/tether-cli.jar 2>/dev/null | head -1)
+JAR=$(ls composeApp/build/libs/tether-cli*.jar 2>/dev/null | head -1)
 [ -z "$JAR" ] && { echo "cli jar not found"; exit 1; }
-java -jar "$JAR" --name SmokeMacA --port 0
+java -jar "$JAR" --name SmokeMacA --port 0 < fifo
 ```
 
-При прямом запуске `java -jar` процесс наследует stdin от bash, и FIFO-подачу команд в stdin (`list`, `send`, `quit`) можно делать напрямую.
+FIFO держит stdin открытым для команд `list`, `send`, `quit`.
 
 ## План прогона
 
@@ -86,7 +80,7 @@ PORT_A=$(grep -oE 'port[[:space:]]*:[[:space:]]*[0-9]+' $LOG_A | grep -oE '[0-9]
 Сценарии:
 1. **Startup** — port распарсен, java pid жив (`ps -p $JPID_A`). PASS если оба условия.
 2. **`/health`** — `curl -sf --max-time 5 http://localhost:$PORT_A/health` → должно вернуть `Tether OK`.
-3. **`/pair` — формат публичного ключа.** Эндпоинт возвращает X.509-encoded EC P-256 SubjectPublicKeyInfo: ровно 91 байт, первый байт `0x30` (DER `SEQUENCE`), байт 26 — `0x04` (uncompressed EC point marker). Проверяем форму, не только что-то-вернулось — иначе placeholder ровно как на Apple (#116) пройдёт проверку «непустого» ответа. Это также валит регрессию JSON-кодировки `ByteArray` (если кто-то переключит kotlinx-serialization на base64-строку — формат массива сломается).
+3. **`/pair` — формат публичного ключа.** Эндпоинт возвращает X.509-encoded EC P-256 SubjectPublicKeyInfo: ровно 91 байт, первый байт `0x30` (DER `SEQUENCE`), байт 26 — `0x04` (uncompressed EC point marker). Проверяем форму, не только что-то-вернулось — placeholder вернул бы непустой ответ и прошёл бы поверхностную проверку.
    ```bash
    PAIR_RESP=$(curl -sf --max-time 5 -X POST http://localhost:$PORT_A/pair \
      -H "Content-Type: application/json" \
@@ -95,7 +89,6 @@ PORT_A=$(grep -oE 'port[[:space:]]*:[[:space:]]*[0-9]+' $LOG_A | grep -oE '[0-9]
      && echo "PASS: X.509 EC P-256 SubjectPublicKeyInfo" \
      || { echo "FAIL: bad publicKey shape: $PAIR_RESP"; }
    ```
-   На текущей версии скилла (Desktop CLI на JVM) формат гарантирован. Когда добавится macOS runtime entry-point (#41) и Apple начнёт возвращать настоящий EC (#116) — этот же шаг будет валидным smoke на нативный таргет; до тех пор проверка только на JVM-инстансе A.
 4. **Port LISTEN** — `lsof -nP -iTCP:$PORT_A | head -3` показывает java listener.
 5. **mDNS publish (primary)** — поллим CLI-лог, ищем `mDNS started → advertising 'SmokeMacA' on port`. Это уже подтверждение публикации (CLI сам пишет это после успешного `discovery.start()`).
 6. **mDNS publish (secondary, опционально)** — `( dns-sd -B _tether._tcp. local. 2>&1 & DNSSD_PID=$!; sleep 8; kill $DNSSD_PID 2>/dev/null ) | grep SmokeMacA`. Если `dns-sd` нет (Linux) — этот шаг SKIP, общий результат всё равно PASS по primary.
@@ -200,7 +193,7 @@ adb devices | awk '/device$/ && !/List/ {print $1}'
    ANDROID_NAME=$(grep -oE 'Tether-[A-Za-z0-9_]+' $LOG_A | head -1)
    echo "cross-discovery: ${DELTA_MS}ms, peer=$ANDROID_NAME"
    ```
-   В отчёт: `Android | cross-discovery | ✓ PASS | 250 ms`. Это чистое время network-propagation + JmDNS resolve, без Android-init и без slop'а 1-секундного `sleep`-loop'а.
+   В отчёт: `Android | cross-discovery | ✓ PASS | 250 ms` — network-propagation + JmDNS resolve.
 8. **Send Desktop → Android (через CLI):**
    ```bash
    if [ -z "$ANDROID_NAME" ]; then
@@ -318,7 +311,7 @@ PASS если exit=0. FAIL — приложить последние ~30 стр�
 
 Когда пользователь просит «прогони smoke»:
 
-1. Печатаешь короткий план (1-2 строки): «прогоню Desktop CLI через uber jar, Desktop↔Desktop send, Android если есть устройство, native compile. Что не проверяю — см. отчёт».
+1. Печатаешь короткий план (1-2 строки): «прогоню Desktop CLI через cli jar, Desktop↔Desktop send, Android если есть устройство, native compile. Что не проверяю — см. отчёт».
 2. Запускаешь блоки.
 3. Печатаешь отчёт.
 4. Если verdict 🔴 — даёшь recommend: какой блок упал и куда смотреть.
@@ -340,7 +333,7 @@ PASS если exit=0. FAIL — приложить последние ~30 стр�
 
 ## Что НЕ делать
 
-- **Не используй `./gradlew :composeApp:run`** — запускает Compose UI, не CLI (см. выше).
+- **Не используй `./gradlew :composeApp:run`** — это Compose UI, не CLI.
 - **Не запускай `allTests`** — это другой инструмент. Smoke ≤3 минуты.
 - **Не модифицируй код приложения** даже если видишь проблему. Сообщай в отчёте, заводи issue отдельно.
 - **Не лезь в `~/Downloads`** дальше своих файлов — там пользовательский контент.
