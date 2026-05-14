@@ -115,7 +115,7 @@ class TetherCommand :
     }
 }
 
-internal suspend fun handleSend(
+suspend fun handleSend(
     client: FileClient,
     peers: List<Device>,
     peerName: String,
@@ -167,14 +167,14 @@ internal suspend fun handleSend(
     }
 }
 
-internal fun formatBytes(bytes: Long): String = when {
+fun formatBytes(bytes: Long): String = when {
     bytes < 1_024 -> "$bytes B"
     bytes < 1_024 * 1_024 -> "%.1f KB".format(bytes / 1_024.0)
     bytes < 1_024 * 1_024 * 1_024 -> "%.1f MB".format(bytes / (1_024.0 * 1_024))
     else -> "%.2f GB".format(bytes / (1_024.0 * 1_024 * 1_024))
 }
 
-internal fun parseTokens(line: String): List<String> {
+fun parseTokens(line: String): List<String> {
     val tokens = mutableListOf<String>()
     val current = StringBuilder()
     var i = 0

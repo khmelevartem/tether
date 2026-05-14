@@ -29,8 +29,8 @@ Concrete `*AppConfig` implementations are **named classes in their own files** (
 Each platform builds its container in its entry point and passes components down:
 
 - **Desktop** — two entry points, both build `DesktopAppContainer` via the shared helpers in `DesktopBackend.kt`:
-  - [`Main.kt`](../../composeApp/src/desktopMain/kotlin/com/tubetoast/tether/Main.kt) — CLI runner (debug/automation), launched via `./gradlew :composeApp:run` or `installJar` + `tether` wrapper.
-  - [`MainUi.kt`](../../composeApp/src/desktopMain/kotlin/com/tubetoast/tether/MainUi.kt) — Compose UI runner (default for `nativeDistributions` packaging), launched via `./gradlew :composeApp:runDesktopUi`.
+  - [`Main.kt`](../../composeApp/src/desktopCli/kotlin/com/tubetoast/tether/Main.kt) — CLI runner (`desktopCli` source set), launched via `./gradlew :composeApp:runDesktopCli` or `installJar` + `tether` wrapper. Clikt is only on this compilation's classpath.
+  - [`MainUi.kt`](../../composeApp/src/desktopMain/kotlin/com/tubetoast/tether/MainUi.kt) — Compose UI runner (`desktopMain` source set, default for `nativeDistributions` packaging), launched via `./gradlew :composeApp:run`.
 - **Android** ([`TetherApp`](../../composeApp/src/androidMain/kotlin/com/tubetoast/tether/TetherApp.kt)): builds `AndroidAppContainer` lazily in the `Application` subclass and exposes it via the [`AppContainerProvider`](../../composeApp/src/androidMain/kotlin/com/tubetoast/tether/di/AppContainerProvider.kt) interface. [`TetherForegroundService`](../../composeApp/src/androidMain/kotlin/com/tubetoast/tether/network/TetherForegroundService.kt) reads it via `(application as AppContainerProvider).container`.
 - **iOS** ([`MainViewController`](../../composeApp/src/iosMain/kotlin/com/tubetoast/tether/MainViewController.kt)): builds `IosAppContainer` outside the `ComposeUIViewController { ... }` lambda so the composable does not act as a composition root (see rule 5 below).
 - **macOS**: container leaf and config exist; the entry point will follow the same shape as iOS once a macOS run target lands.
@@ -219,3 +219,4 @@ The platform entry point builds the **root Component** (Decompose), passing `App
 
 - iOS receive-side: when a non-Ktor `FileServer` implementation lands, the container branches per-platform more aggressively. May be the moment to flip to Metro.
 - Public/Internal container split (per the library DI pattern): not needed in a single-module app; revisit when the first lib module is extracted.
+- `desktopCli` testable symbols (`parseTokens`, `handleSend`, `formatBytes` in `Main.kt`) are `public` instead of `internal` — `desktopTest` is a separate compilation from `desktopCli`, and KMP does not auto-create a test compilation for custom compilations. Wiring a dedicated `desktopCliTest` compilation (with its own JUnit task) would restore `internal`. Acceptable while CLI surface is one file; revisit if CLI grows or another module starts depending on `desktopCli`.

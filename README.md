@@ -53,7 +53,7 @@ tether --name MyMac --port 8080
 Запускает Compose-интерфейс с реальным wiring (discovery + file server):
 
 ```bash
-./gradlew :composeApp:runDesktopUi -q
+./gradlew :composeApp:run -q
 ```
 
 Для распространения (native app bundle):

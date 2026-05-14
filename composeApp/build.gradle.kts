@@ -1,3 +1,5 @@
+@file:OptIn(org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi::class)
+
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.io.File
@@ -72,7 +74,16 @@ kotlin {
     // jvm("desktop") creates desktopMain as the leaf source set for the Desktop JVM target.
     // Combined with the custom hierarchy above, jvmMain becomes the intermediate parent
     // for both androidMain and desktopMain.
-    jvm("desktop")
+    //
+    // The cli compilation isolates Clikt (and any other CLI-only deps) from the main compilation.
+    // desktopMain (main compilation) = shared backend + Compose UI — no Clikt on classpath.
+    // desktopCli  (cli compilation)  = CLI entry point only, sees main via associateWith.
+    jvm("desktop") {
+        val main by compilations.getting
+        compilations.create("cli") {
+            associateWith(main)
+        }
+    }
 
     sourceSets {
         // The custom hierarchy above creates:
@@ -129,6 +140,11 @@ kotlin {
                 implementation(libs.kotlinx.coroutinesSwing)
                 implementation(libs.jmdns)
                 implementation(libs.jna)
+            }
+        }
+
+        val desktopCli by getting {
+            dependencies {
                 implementation(libs.clikt)
             }
         }
@@ -150,6 +166,7 @@ kotlin {
                 implementation(libs.kotlinx.coroutines.test)
             }
         }
+
     }
 }
 
@@ -193,21 +210,50 @@ android {
 
 dependencies {
     debugImplementation(libs.compose.uiTooling)
+    // KMP does not auto-create a test compilation for custom compilations.
+    "desktopTestImplementation"(
+        files(
+            kotlin.targets.getByName("desktop").compilations.getByName("cli").output.allOutputs,
+        ),
+    )
+}
+
+tasks.register<Jar>("cliJar") {
+    group = "application"
+    description = "Builds a fat jar for the Desktop CLI"
+    archiveBaseName.set("tether-cli")
+    val cliCompilation = kotlin.targets
+        .getByName("desktop")
+        .compilations
+        .getByName("cli")
+    val mainCompilation = kotlin.targets
+        .getByName("desktop")
+        .compilations
+        .getByName("main")
+    from(cliCompilation.output.allOutputs)
+    from(mainCompilation.output.allOutputs)
+    from({
+        requireNotNull(cliCompilation.runtimeDependencyFiles) {
+            "runtimeDependencyFiles missing for desktop cli compilation"
+        }
+            .filter { it.exists() }
+            .map { if (it.isDirectory) it else zipTree(it) }
+    })
+    manifest {
+        attributes["Main-Class"] = "com.tubetoast.tether.MainKt"
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    dependsOn(cliCompilation.compileTaskProvider, mainCompilation.compileTaskProvider)
 }
 
 // Installs tether CLI to ~/.local/bin/tether for system-wide access
 tasks.register("installJar") {
     group = "application"
-    description = "Installs uber JAR to ~/.local/bin/tether for CLI access"
-    dependsOn("packageUberJarForCurrentOS")
+    description = "Installs CLI fat JAR to ~/.local/bin/tether for CLI access"
+    dependsOn("cliJar")
     notCompatibleWithConfigurationCache("installJar performs file I/O and system operations")
     doLast {
-        val jarDir = layout.buildDirectory
-            .dir("compose/jars")
-            .get()
-            .asFile
-        val sourceJar = jarDir.listFiles()?.firstOrNull { it.extension == "jar" }
-            ?: error("Uber JAR not found in ${jarDir.absolutePath}")
+        val jarFile = tasks.named<Jar>("cliJar").get().archiveFile.get().asFile
 
         val userHome = System.getProperty("user.home")
         val localBinDir = File("$userHome/.local/bin")
@@ -217,7 +263,7 @@ tasks.register("installJar") {
             localBinDir.mkdirs()
         }
 
-        val bashScript = "#!/bin/bash\nexec java -cp \"$sourceJar\" com.tubetoast.tether.MainKt \"\$@\""
+        val bashScript = "#!/bin/bash\nexec java -jar \"$jarFile\" \"\$@\""
         wrapperScript.writeText(bashScript)
         wrapperScript.setExecutable(true)
         println("✓ Installed to ${wrapperScript.absolutePath}")
@@ -226,26 +272,19 @@ tasks.register("installJar") {
     }
 }
 
-tasks.register<JavaExec>("runDesktopUi") {
+tasks.register<JavaExec>("runDesktopCli") {
     group = "application"
-    description = "Runs Compose Desktop UI"
-    val desktopCompilation = kotlin.targets
+    description = "Runs Desktop CLI"
+    val cliCompilation = kotlin.targets
         .getByName("desktop")
         .compilations
-        .getByName("main")
-    classpath =
-        desktopCompilation.output.allOutputs +
-        requireNotNull(desktopCompilation.runtimeDependencyFiles) {
-            "runtimeDependencyFiles missing for desktop main compilation"
+        .getByName("cli")
+    classpath = cliCompilation.output.allOutputs +
+        requireNotNull(cliCompilation.runtimeDependencyFiles) {
+            "runtimeDependencyFiles missing for desktop cli compilation"
         }
-    mainClass.set("com.tubetoast.tether.MainUiKt")
-    dependsOn("desktopMainClasses")
-}
-
-afterEvaluate {
-    tasks.named<JavaExec>("run").configure {
-        mainClass.set("com.tubetoast.tether.MainKt")
-    }
+    mainClass.set("com.tubetoast.tether.MainKt")
+    dependsOn(cliCompilation.compileTaskProvider)
 }
 
 compose.desktop {

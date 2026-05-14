@@ -42,12 +42,13 @@ All git naming in English. **Все commit messages обязаны начина�
 
 ```bash
 ./gradlew allTests -q                            # pre-commit / pre-push хуки прогонят это сами
-./gradlew :composeApp:installJar -q && tether    # Desktop CLI (см. README.md → Desktop CLI)
-./gradlew :composeApp:runDesktopUi -q            # Desktop Compose UI
+./gradlew :composeApp:installJar -q && tether    # Desktop CLI install (см. README.md → Desktop CLI)
+./gradlew :composeApp:runDesktopCli -q           # Desktop CLI (dev runner)
+./gradlew :composeApp:run -q                     # Desktop Compose UI (Compose plugin default)
 ./gradlew :composeApp:assembleDebug              # Android APK
 ```
 
-Desktop distribution (`packageReleaseDistributionForCurrentOS`) пакует UI-приложение. CLI распространяется через `installJar`.
+Desktop исходники разделены на два source set: `desktopMain` — shared backend + Compose UI (Clikt недоступен), `desktopCli` — CLI точка входа (видит `desktopMain` через `associateWith`, Clikt только здесь). Desktop distribution (`packageReleaseDistributionForCurrentOS`) пакует UI. CLI устанавливается через `installJar`.
 
 **KtLint — никогда не запускай вручную.** Git hook делает это сам при коммите. Стилевые ошибки не правь руками — просто коммить.
 

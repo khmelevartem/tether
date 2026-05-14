@@ -24,22 +24,22 @@ description: Прогон базового smoke-теста (happy-path) по п
 
 В отчёте все эти позиции должны быть в секции **«Manual verification required»**.
 
-## Ключевое решение: uber jar, не gradle run
+## Ключевое решение: cliJar, не gradle run и не packageUberJarForCurrentOS
 
-**Не используй `./gradlew :composeApp:run` для авто-запуска CLI.** Compose Desktop's `run` task в non-TTY среде не пробрасывает `System.in` корректно — `readLine()` сразу возвращает null, CLI выходит до того как FileServer успеет связаться с портом.
+**Не используй `./gradlew :composeApp:run` для авто-запуска CLI.** После разделения source set'ов `:composeApp:run` запускает Compose UI (Compose plugin default), не CLI. Кроме того, в non-TTY среде `System.in` не пробрасывается корректно — `readLine()` сразу возвращает null.
 
-Вместо этого собирай uber jar и запускай через `java -jar`. Имя jar определяй динамически (версия в имени может меняться):
+**Не используй `packageUberJarForCurrentOS` для CLI.** Это Compose-задача, она пакует UI-приложение (`MainUiKt` как Main-Class). CLI jar собирается отдельной задачей `cliJar`.
+
+Вместо этого собирай `cliJar` и запускай через `java -jar`:
 
 ```bash
-./gradlew :composeApp:packageUberJarForCurrentOS -q
-JAR=$(ls composeApp/build/compose/jars/*.jar 2>/dev/null | head -1)
-[ -z "$JAR" ] && { echo "uber jar not found"; exit 1; }
+./gradlew :composeApp:cliJar -q
+JAR=$(ls composeApp/build/libs/tether-cli-*.jar composeApp/build/libs/tether-cli.jar 2>/dev/null | head -1)
+[ -z "$JAR" ] && { echo "cli jar not found"; exit 1; }
 java -jar "$JAR" --name SmokeMacA --port 0
 ```
 
 При прямом запуске `java -jar` процесс наследует stdin от bash, и FIFO-подачу команд в stdin (`list`, `send`, `quit`) можно делать напрямую.
-
-Скилл рассчитан на macOS-агента (имя jar содержит `macos-arm64`). Под другими ОС/архитектурами имя файла будет другим — динамический `ls` это снимает.
 
 ## План прогона
 
@@ -52,14 +52,14 @@ java -jar "$JAR" --name SmokeMacA --port 0
    pgrep -fl 'com.tubetoast.tether-.*\.jar|composeApp:run' || echo "clean"
    ```
    Если есть — `kill` их (память: внешние mDNS-сервисы могут глючить тесты).
-2. Собрать uber jar:
+2. Собрать CLI jar:
    ```bash
-   ./gradlew :composeApp:packageUberJarForCurrentOS -q
-   JAR=$(ls composeApp/build/compose/jars/*.jar 2>/dev/null | head -1)
+   ./gradlew :composeApp:cliJar -q
+   JAR=$(ls composeApp/build/libs/tether-cli-*.jar composeApp/build/libs/tether-cli.jar 2>/dev/null | head -1)
    ```
    Запомни путь.
 
-Если build падает или JAR не найден — все остальные блоки SKIP с причиной «uber jar build failed».
+Если build падает или JAR не найден — все остальные блоки SKIP с причиной «cli jar build failed».
 
 ### Блок 1: Desktop CLI (инстанс A)
 
@@ -72,7 +72,7 @@ sleep 600 > /tmp/smoke-cliA-in &              # keeper holds writer fd open
 KEEPER_A=$!; disown $KEEPER_A
 echo $KEEPER_A > /tmp/smoke-cliA-keeper.pid
 
-nohup java -jar "$JAR" --name SmokeMacA --port 0 < /tmp/smoke-cliA-in > $LOG_A 2>&1 &
+nohup java -jar "$JAR" --name SmokeMacA --port 0 < /tmp/smoke-cliA-in > "$LOG_A" 2>&1 &
 JPID_A=$!; disown $JPID_A
 echo $JPID_A > /tmp/smoke-cliA.pid
 ```
@@ -115,7 +115,7 @@ LOG_B=/tmp/smoke-cliB.log
 mkfifo /tmp/smoke-cliB-in
 sleep 600 > /tmp/smoke-cliB-in & KEEPER_B=$!; disown $KEEPER_B
 echo $KEEPER_B > /tmp/smoke-cliB-keeper.pid
-nohup java -jar "$JAR" --name SmokeMacB --port 0 < /tmp/smoke-cliB-in > $LOG_B 2>&1 &
+nohup java -jar "$JAR" --name SmokeMacB --port 0 < /tmp/smoke-cliB-in > "$LOG_B" 2>&1 &
 JPID_B=$!; disown $JPID_B
 echo $JPID_B > /tmp/smoke-cliB.pid
 
@@ -254,7 +254,7 @@ PASS если exit=0. FAIL — приложить последние ~30 стр�
 **Дата:** YYYY-MM-DD HH:MM
 **Branch:** <git branch>
 **Commit:** <short sha>
-**Jar:** <auto-detected name> (built in Ns)
+**CLI Jar:** <auto-detected name> (built in Ns)
 
 ## Summary
 
@@ -268,7 +268,7 @@ PASS если exit=0. FAIL — приложить последние ~30 стр�
 
 | Block | Scenario | Result | Details |
 |---|---|---|---|
-| Build | uber jar | ✓ PASS | <Ns>, jar=<name> |
+| Build | cli jar | ✓ PASS | <Ns>, jar=<name> |
 | Desktop CLI A | startup + port | ✓ PASS | port=49507, pid=83952 |
 | Desktop CLI A | /health | ✓ PASS | "Tether OK" |
 | Desktop CLI A | /pair X.509 EC P-256 | ✓ PASS | 91 bytes, DER prefix OK |
@@ -328,8 +328,8 @@ PASS если exit=0. FAIL — приложить последние ~30 стр�
 ## Edge cases при прогоне
 
 - **Gradle daemon занят** — не убивай его, переиспользуется.
-- **Uber jar старый (изменился код)** — `packageUberJarForCurrentOS` сам пересоберёт что нужно. Не делай `clean`.
-- **Имя jar содержит версию** — определяй динамически через `ls composeApp/build/compose/jars/*.jar | head -1`. Не хардкодь `1.0.0`.
+- **CLI jar устаревший (изменился код)** — `cliJar` сам пересоберёт что нужно. Не делай `clean`.
+- **Имя jar может содержать версию** — определяй динамически через glob `composeApp/build/libs/tether-cli-*.jar composeApp/build/libs/tether-cli.jar | head -1`. Не хардкодь имя файла.
 - **`dns-sd` не на macOS** — Linux нет; secondary mDNS check SKIP с причиной «dns-sd not available». Primary check (grep CLI лога на `mDNS started`) всё равно работает.
 - **`timeout` на macOS отсутствует** — pattern `( cmd & PID=$!; sleep N; kill $PID )` вместо `timeout`.
 - **FIFO writer keeper умер раньше времени** — readLine() вернёт null, CLI выйдет; проверяй `ps -p $KEEPER`.
@@ -340,7 +340,7 @@ PASS если exit=0. FAIL — приложить последние ~30 стр�
 
 ## Что НЕ делать
 
-- **Не используй `./gradlew :composeApp:run`** — баг со stdin (см. выше).
+- **Не используй `./gradlew :composeApp:run`** — запускает Compose UI, не CLI (см. выше).
 - **Не запускай `allTests`** — это другой инструмент. Smoke ≤3 минуты.
 - **Не модифицируй код приложения** даже если видишь проблему. Сообщай в отчёте, заводи issue отдельно.
 - **Не лезь в `~/Downloads`** дальше своих файлов — там пользовательский контент.
