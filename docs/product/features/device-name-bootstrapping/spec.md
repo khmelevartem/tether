@@ -10,7 +10,7 @@
 
 Every Tether device announces a human-readable name over mDNS. That name is what neighbours see in the [device list](../device-list/spec.md) and what the user picks when sending a file. The developer-only CLI runner already lets the operator set the name at startup; on Android / iOS / macOS / Desktop UI there is no defined default and no way for the user to see, or change, what their own device is calling itself.
 
-Without a way to override it, the OS-derived default leaves every Android phone showing up as a bare device model ("Pixel 7", "SM-S908B") and every desktop as a technical hostname ("artem-mbp.lan"). Two devices of the same owner become indistinguishable, which breaks Tether's primary use case — transferring between *one's own* devices. A read-only default is therefore not enough; the user has to be able to fix the name when the OS-derived value is not good enough.
+Without a way to override it, the OS-derived default leaves every Android phone showing up as a bare device model ("Pixel 7", "SM-S908B") and every desktop as a technical hostname ("hostname.local"). Two devices of the same owner become indistinguishable, which breaks Tether's primary use case — transferring between *one's own* devices. A read-only default is therefore not enough; the user has to be able to fix the name when the OS-derived value is not good enough.
 
 The vision commits to *"settable device name (implicit in pairing/discovery; full settings screen comes in Post-MVP)"*. This feature delivers that commitment: each platform announces a sensible default, the device list shows the user what their own device is currently called, and the same surface lets them rename it at any time. No separate Settings screen is needed.
 
@@ -38,7 +38,7 @@ The name is not a unique identifier. Two devices on the same network can legitim
 1. User taps the edit affordance on the "This device" surface.
 2. The name becomes editable, pre-filled with the current name.
 3. User types a new name (non-empty, up to 50 characters) and confirms.
-4. Tether persists the new name and re-announces it over mDNS.
+4. Tether persists the new name and republishes the mDNS announcement. Publishing the new name requires tearing down and re-establishing the local discovery session, so the user's own device list may briefly clear and repopulate.
 5. Within a few seconds every peer that has Tether open sees the new name in its device list.
 
 **Alternative paths**
@@ -49,9 +49,9 @@ The name is not a unique identifier. Two devices on the same network can legitim
 - **OS source unavailable / returns empty on first launch.** Tether uses the per-platform fallback (see Platform notes). The surface still shows a non-empty name.
 - **Invalid name on rename.** Empty / whitespace-only input or input longer than 50 characters is rejected inline (save disabled or clear inline error); the previous name stays in effect.
 - **Storage write fails on rename.** The surface shows an inline error ("could not save"); the previous name stays in effect; nothing is re-announced.
-- **mDNS re-announcement fails on rename.** The new name is persisted locally and visible on the user's own surface immediately. Tether keeps trying to re-announce in the background; peers will see the new name the next time the announcement succeeds. No blocking error.
+- **Republishing the mDNS announcement fails on rename.** The new name is persisted locally and visible on the user's own surface immediately. The previous announcement may still be live to peers until republishing succeeds; the surface shows an inline "could not announce — try again" affordance, and the user can re-save to retry.
 - **The "This device" surface fails to render.** Discovery and transfer still work; peers still see the device. The surface degrades to a placeholder ("naming is currently unavailable") rather than blocking the rest of the screen.
-- **Two devices announce the same user-visible name.** Both still appear in every peer's device list. Tether does not auto-suffix the user-visible name; the device list row carries an extra detail (see [device-list spec](../device-list/spec.md) → "Two devices share a display name") to tell them apart. At the discovery layer, the mDNS service instance name already carries a per-instance identifier so peers are never confused, even when their user-visible names collide.
+- **Two devices announce the same user-visible name.** Tether does not auto-suffix the user-visible name. How peers handle the collision on a single list — keeping both entries, adding a secondary detail, or otherwise — is the device list's concern (see [device-list spec](../device-list/spec.md) → "Two devices share a display name"). This feature does not own that resolution.
 - **Rename during an in-flight transfer.** The transfer continues to completion; the name change only affects the mDNS announcement and what peers see in their device list, not active connections.
 
 ## What "working" looks like
@@ -77,7 +77,7 @@ User-visible default per platform — Tether takes the most personal name the OS
 
 - **A separate Settings screen** for renaming.
 - **Local alias for a paired peer.** A user may want to display a peer under a different name in their own device list (e.g. "Mum's laptop" for a peer that calls itself "Computer"). This is a per-device-list override that does not affect the peer or its mDNS announcement, and is owned by the [device list](../device-list/spec.md) / [pairing](../pairing/spec.md) features.
-- **Auto-suffixing user-visible names** ("Pixel 7 (2)") to make them unique. The mDNS service instance already includes a per-instance identifier so the discovery layer never confuses two same-named peers; user-visible names are deliberately kept free of machine-generated suffixes.
+- **Auto-suffixing user-visible names** ("Pixel 7 (2)") to make them unique. User-visible names are deliberately kept free of machine-generated suffixes; handling same-named peers in the list is the device list's responsibility.
 - **Distinguishing two peers with identical user-visible names on the device list** — that detail is the device list's concern.
 - **Syncing the name across the user's devices** (cloud, account) — Tether has no account.
 - **Profanity filtering or character restrictions** beyond basic length validation.
