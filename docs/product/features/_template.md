@@ -65,8 +65,7 @@
      user-visible platform differences, remove this section entirely.
 
      For features with strong platform asymmetry, per-platform top-level
-     sections (Android / iOS / macOS / Desktop) may replace this single
-     `## Platform notes` block. -->
+     sections may replace this single block. -->
 
 -
 
