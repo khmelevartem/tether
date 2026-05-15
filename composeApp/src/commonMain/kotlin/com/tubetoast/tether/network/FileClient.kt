@@ -80,12 +80,12 @@ class FileClient(
             var lastBytesSent = 0L
             var stallStartedAt: TimeSource.Monotonic.ValueTimeMark? = null
             while (true) {
-                delay(WATCHDOG_TICK)
+                delay(1.seconds)
                 val currentBytesSent = bytesSent.value
                 if (currentBytesSent != lastBytesSent) {
                     lastBytesSent = currentBytesSent
                     stallStartedAt = TimeSource.Monotonic.markNow()
-                } else if (stallStartedAt?.elapsedNow()?.let { it >= noProgressTimeout } == true) {
+                } else if (stallStartedAt != null && stallStartedAt.elapsedNow() >= noProgressTimeout) {
                     error("no upload progress for $noProgressTimeout")
                 }
             }
@@ -130,7 +130,6 @@ class FileClient(
 }
 
 private val DEFAULT_NO_PROGRESS_TIMEOUT: Duration = 60.seconds
-private val WATCHDOG_TICK: Duration = 1.seconds
 
 private fun ByteReadChannel.asOctetStreamContent(totalBytes: Long?): OutgoingContent =
     object : OutgoingContent.ReadChannelContent() {
