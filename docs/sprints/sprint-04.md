@@ -3,7 +3,7 @@
 Снять два архитектурных блокера MVP, разнести Desktop entry points под будущий UI и закрыть структурный класс багов в discovery. Спринт целенаправленно tilted в сторону продуктовой проработки — после него следующий спринт сможет быть implementation-heavy. К концу спринта:
 
 - решение по channel encryption принято и зафиксировано в [security.md](../product/security.md); снят последний архитектурный блокер pairing и transport;
-- permissions strategy переведена в статус `scoped` — разблокированы все UI-задачи, требующие Local Network / `READ_MEDIA_*` / firewall prompt;
+- permissions strategy переведена в статус `scoped` — разблокированы все UI-задачи, требующие Local Network, FGS / `POST_NOTIFICATIONS`, firewall prompt;
 - Desktop-таргет имеет две точки входа (CLI и UI), дистрибутив указывает на UI — следующий спринт может писать Desktop device list / send screen;
 - discovery работает через единое common-first хранилище peer'ов — закрыт системно класс «два устройства с одинаковым именем», не точечно для одной платформы;
 - спека device name bootstrapping переведена в `scoped` — следующий спринт сможет реализовать settable device name (MVP-item из roadmap).
@@ -23,7 +23,7 @@
 | Слой                                                                 | Задачи |
 | -------------------------------------------------------------------- | ------ |
 | `docs/product/security.md` + `features/`                             | #123   |
-| `docs/product/features/system/permissions.md`                        | #122   |
+| `docs/product/features/system/permissions/spec.md`                   | #122   |
 | `composeApp/build.gradle.kts` + Desktop entry point                  | #55    |
 | `commonMain` discovery (DiscoveredDevicesStore + 4 platform adapters) | #111  |
 | `docs/product/features/identity/device-name-bootstrapping.md`        | #120   |
@@ -43,7 +43,7 @@
 | Issue | Спека                                                                                                |
 | ----- | ---------------------------------------------------------------------------------------------------- |
 | #123  | сама правит [security.md](../product/security.md) (закрывает channel encryption open question)       |
-| #122  | сама правит [system/permissions.md](../product/features/system/permissions.md) (`idea` → `scoped`)   |
+| #122  | сама правит [system/permissions/spec.md](../product/features/system/permissions/spec.md) (`idea` → `scoped`) |
 | #55   | без продуктовой спеки — рефактор entry points                                                        |
 | #111  | без продуктовой спеки — рефактор discovery layer                                                     |
 | #120  | сама правит [device-name-bootstrapping.md](../product/features/identity/device-name-bootstrapping.md) (`idea` → `scoped`) |
