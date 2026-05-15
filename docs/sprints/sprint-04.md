@@ -10,13 +10,22 @@
 
 ## Состав
 
-| #   | Issue                                                       | Название                                                            | Тип     | Размер |
-| --- | ----------------------------------------------------------- | ------------------------------------------------------------------- | ------- | ------ |
-| 1   | [#123](https://github.com/khmelevartem/tether/issues/123)   | Channel encryption decision: TLS-pinned vs plain HTTP vs Noise      | docs    | M      |
-| 2   | [#122](https://github.com/khmelevartem/tether/issues/122)   | Спека permissions strategy: довести до `scoped`                     | docs    | S      |
-| 3   | [#55](https://github.com/khmelevartem/tether/issues/55)     | Desktop таргет: развести CLI и UI точки входа                       | refactor | M     |
-| 4   | [#111](https://github.com/khmelevartem/tether/issues/111)   | Discovery: единое common-first хранилище peer'ов (DiscoveredDevicesStore) | refactor | M |
-| 5   | [#120](https://github.com/khmelevartem/tether/issues/120)   | Продуктовая спека device name bootstrapping → `scoped`              | docs    | S      |
+| #   | Issue                                                       | Название                                                            | Тип     | Размер | Итог |
+| --- | ----------------------------------------------------------- | ------------------------------------------------------------------- | ------- | ------ | ---- |
+| 1   | [#123](https://github.com/khmelevartem/tether/issues/123)   | Channel encryption decision: TLS-pinned vs plain HTTP vs Noise      | docs    | M      | ✅ closed ([791fc3f](https://github.com/khmelevartem/tether/commit/791fc3f), PR #139) |
+| 2   | [#122](https://github.com/khmelevartem/tether/issues/122)   | Спека permissions strategy: довести до `scoped`                     | docs    | S      | ✅ closed ([2104d85](https://github.com/khmelevartem/tether/commit/2104d85), PR #135) |
+| 3   | [#55](https://github.com/khmelevartem/tether/issues/55)     | Desktop таргет: развести CLI и UI точки входа                       | refactor | M     | ✅ closed ([d020bb9](https://github.com/khmelevartem/tether/commit/d020bb9), PR #134) |
+| 4   | [#111](https://github.com/khmelevartem/tether/issues/111)   | Discovery: единое common-first хранилище peer'ов (DiscoveredDevicesStore) | refactor | M | ✅ closed ([2723e27](https://github.com/khmelevartem/tether/commit/2723e27), PR #133) |
+| 5   | [#120](https://github.com/khmelevartem/tether/issues/120)   | Продуктовая спека device name bootstrapping → `scoped`              | docs    | S      | ✅ closed ([13340a4](https://github.com/khmelevartem/tether/commit/13340a4), PR #132) |
+
+**Итог:** 5/5 задач закрыты. Все цели спринта достигнуты.
+
+### Доп. результаты, пришедшие в этот же временной интервал (вне состава)
+
+- **#107** ([d9205f5](https://github.com/khmelevartem/tether/commit/d9205f5), PR #153) — file-transfer spec → `scoped`. Был помечен «не вошёл, blocked by #123» — взят сразу после мерджа #123 в этом же спринте.
+- **#81** — `FileServer.apple` (приём файлов на iOS) — закрыт. iOS поднялся из «scaffold» в полноценный таргет.
+- **#145** ([1192f6f](https://github.com/khmelevartem/tether/commit/1192f6f), PR #151) — visual identity locked: teal+copper, Tabler icons, Compose Unstyled, Material 3 запрещён. Новые `docs/engineering/ui-style-guide.md` и `ui-brand-mark.md`; ADR `adr-visual-identity.md`.
+- **#124** — closed as superseded by #107 (multi-file folded в `file-transfer.md` как N≥1). Гигиена бэклога.
 
 ## Параллелизм по слоям
 
@@ -42,11 +51,13 @@
 
 | Issue | Спека                                                                                                |
 | ----- | ---------------------------------------------------------------------------------------------------- |
-| #123  | сама правит [security.md](../product/security.md) (закрывает channel encryption open question)       |
-| #122  | сама правит [system/permissions/spec.md](../product/features/system/permissions/spec.md) (`idea` → `scoped`) |
+| #123  | правит [security.md](../product/security.md) (закрыт channel encryption open question) + новый [adr-channel-encryption.md](../engineering/adr/adr-channel-encryption.md) |
+| #122  | правит [system/permissions/spec.md](../product/features/system/permissions/spec.md) (`idea` → `scoped`) |
 | #55   | без продуктовой спеки — рефактор entry points                                                        |
 | #111  | без продуктовой спеки — рефактор discovery layer                                                     |
-| #120  | сама правит [device-name-bootstrapping.md](../product/features/identity/device-name-bootstrapping.md) (`idea` → `scoped`) |
+| #120  | правит [device-name-bootstrapping/spec.md](../product/features/device-name-bootstrapping/spec.md) (`idea` → `scoped`) |
+| #107 (доп.) | правит [file-transfer/spec.md](../product/features/file-transfer/spec.md) (`idea` → `scoped`) |
+| #145 (доп.) | правит [design.md](../product/design.md), добавляет [ui-style-guide.md](../engineering/ui-style-guide.md), [ui-brand-mark.md](../engineering/ui-brand-mark.md), [adr-visual-identity.md](../engineering/adr/adr-visual-identity.md) |
 
 ## Не вошло намеренно
 
@@ -60,12 +71,16 @@
 - **#25, #91, #113** — все child #119, каскад через #123.
 - **#36, #59** — отложены.
 
-## Полезный инкремент
+## Полезный инкремент (факт)
 
-После спринта:
+1. **Криптография MVP решена** (#123) — снят последний архитектурный блокер pairing и transport. ADR `adr-channel-encryption.md` фиксирует TLS pinned + SecureTransport на Apple Native.
+2. **Permissions strategy зафиксирована** (#122) — UI-волна (Android send UI, pairing PIN UI на всех платформах, Android service control) разблокирована единой стратегией.
+3. **Desktop UI готов писаться** (#55) — `./gradlew :composeApp:run` (Compose plugin default, UI) и `:composeApp:runDesktopCli` (изолированная CLI compilation) на месте. CLI вынесен в собственный source set `desktopCli`, Clikt живёт только там.
+4. **Discovery без race-conditions по identity** (#111) — единый `DiscoveredDevicesStore` в `commonMain`; класс багов с одинаковыми именами закрыт системно по всем 4 платформам.
+5. **Device name MVP сформулирован** (#120) — defaults per platform, момент first-launch rename, mDNS conflict resolution зафиксированы.
 
-1. **Криптография MVP решена** (#123) — снят последний архитектурный блокер pairing и transport. Реализация пойдёт со следующего спринта без архитектурных пересмотров.
-2. **Permissions strategy зафиксирована** (#122) — UI-волна (Android send UI, pairing PIN UI на всех платформах, Android service control) разблокирована единой стратегией, а не по три ad-hoc решения на платформу.
-3. **Desktop UI готов писаться** (#55) — `./gradlew :composeApp:run` (Compose plugin default, UI) и `:composeApp:runDesktopCli` (изолированная CLI compilation) на месте. Первый Desktop UI коммит не будет ломать CLI.
-4. **Discovery без race-conditions по identity** (#111) — единый `DiscoveredDevicesStore` в `commonMain`; класс багов с одинаковыми именами закрыт системно по всем 4 платформам, а не как ad-hoc патч на одну из них.
-5. **Device name MVP сформулирован** (#120) — defaults per platform, момент first-launch rename, mDNS conflict resolution зафиксированы. Имплементация settable device name (пункт MVP из roadmap) пойдёт в следующий спринт без продуктовых пробелов.
+### Дополнительно
+
+6. **File-transfer spec scoped** (#107) — `file-transfer/spec.md` закрыл 6 open questions, multi-file fold'нут в N≥1 единой surface. Разблокирует #8 и #11 продуктово.
+7. **iOS receive работает** (#81) — `FileServer.apple` больше не stub; iOS становится полноценным receiver-таргетом.
+8. **Визуальная идентичность зафиксирована** (#145) — все будущие UI-задачи получают неотменяемую дизайн-базу (без Material 3, без свободных дизайн-решений на проде).
