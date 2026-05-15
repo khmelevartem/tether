@@ -204,10 +204,8 @@ class FileClientTest {
         Files.deleteIfExists(file)
     }
 
-    // runBlocking + real-time 16 s delay is mandatory: the server delay runs inside Ktor's own
-    // coroutine scope, so a TestDispatcher cannot skip it. Only real elapsed time proves that
-    // neither the CIO engine `requestTimeout` (15 s default, suppressed by installing
-    // HttpTimeout) nor the plugin's `requestTimeoutMillis` (set to INFINITE) fires.
+    // Real-time wait is mandatory: the server delay runs in Ktor's own coroutine scope, so a
+    // TestDispatcher cannot skip it.
     @Test
     fun `send succeeds when server takes more than 15 seconds to start reading`() {
         val slowServer = embeddedServer(CIO, port = 0) {
@@ -287,9 +285,6 @@ class FileClientTest {
         val watchedClient = FileClient(noProgressTimeout = watchdogTimeout)
         try {
             runBlocking {
-                // Source emits 100 KB then never closes: copyWithProgress reads those bytes
-                // and then suspends on readAvailable, so bytesSent freezes and the watchdog
-                // trips regardless of TCP send-buffer size on the platform.
                 val source = ByteChannel(autoFlush = true)
                 launch { source.writeFully(ByteArray(100 * 1024) { 0x42 }) }
                 val started = TimeSource.Monotonic.markNow()

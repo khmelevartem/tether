@@ -77,15 +77,15 @@ class FileClient(
         val bytesSent = MutableStateFlow(0L)
         val pipe = ByteChannel(autoFlush = true)
         val watchdog = launch {
-            var last = 0L
-            var lastChangedAt = TimeSource.Monotonic.markNow()
+            var lastBytesSent = 0L
+            var stallStartedAt: TimeSource.Monotonic.ValueTimeMark? = null
             while (true) {
                 delay(WATCHDOG_TICK)
-                val cur = bytesSent.value
-                if (cur != last) {
-                    last = cur
-                    lastChangedAt = TimeSource.Monotonic.markNow()
-                } else if (lastChangedAt.elapsedNow() >= noProgressTimeout) {
+                val currentBytesSent = bytesSent.value
+                if (currentBytesSent != lastBytesSent) {
+                    lastBytesSent = currentBytesSent
+                    stallStartedAt = TimeSource.Monotonic.markNow()
+                } else if (stallStartedAt?.elapsedNow()?.let { it >= noProgressTimeout } == true) {
                     error("no upload progress for $noProgressTimeout")
                 }
             }
