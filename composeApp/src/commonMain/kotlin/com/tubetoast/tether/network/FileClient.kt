@@ -20,10 +20,18 @@ import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.core.Closeable
 import io.ktor.utils.io.readAvailable
 import io.ktor.utils.io.writeFully
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeSource
 
-class FileClient : Closeable {
+class FileClient(
+    private val noProgressTimeout: Duration = DEFAULT_NO_PROGRESS_TIMEOUT,
+) : Closeable {
     private val client = HttpClient(CIO) {
         install(ContentNegotiation) { json() }
         install(HttpTimeout) {
@@ -43,21 +51,58 @@ class FileClient : Closeable {
         fileName: String,
         totalBytes: Long? = null,
         onProgress: ((bytesTransferred: Long, totalBytes: Long?) -> Unit)? = null,
-    ): SendResult = if (onProgress == null) {
-        doSend(device, channel, fileName, totalBytes)
-    } else {
-        // Launch the copy into a pipe concurrently with the Ktor upload so that
-        // Ktor reads from the pipe while we are filling it. coroutineScope waits
-        // for the copy job after the Ktor call returns.
-        coroutineScope {
-            val pipe = ByteChannel(autoFlush = true)
-            launch { copyWithProgress(channel, pipe, totalBytes, onProgress) }
-            doSend(device, pipe, fileName, totalBytes)
+    ): SendResult = try {
+        if (onProgress == null) {
+            doSend(device, channel, fileName, totalBytes)
+        } else {
+            sendWithProgress(device, channel, fileName, totalBytes, onProgress)
         }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Throwable) {
+        SendResult.Failure(e.message ?: e::class.simpleName ?: "unknown error")
     }
 
     override fun close() {
         client.close()
+    }
+
+    private suspend fun sendWithProgress(
+        device: Device,
+        channel: ByteReadChannel,
+        fileName: String,
+        totalBytes: Long?,
+        onProgress: (Long, Long?) -> Unit,
+    ): SendResult = coroutineScope {
+        val bytesSent = MutableStateFlow(0L)
+        val pipe = ByteChannel(autoFlush = true)
+        val watchdog = launch {
+            var last = 0L
+            var lastChangedAt = TimeSource.Monotonic.markNow()
+            while (true) {
+                delay(WATCHDOG_TICK)
+                val cur = bytesSent.value
+                if (cur != last) {
+                    last = cur
+                    lastChangedAt = TimeSource.Monotonic.markNow()
+                } else if (lastChangedAt.elapsedNow() >= noProgressTimeout) {
+                    error("no upload progress for $noProgressTimeout")
+                }
+            }
+        }
+        val copyJob = launch {
+            try {
+                copyWithProgress(channel, pipe, totalBytes) { sent, total ->
+                    bytesSent.value = sent
+                    onProgress(sent, total)
+                }
+            } finally {
+                watchdog.cancel()
+            }
+        }
+        val result = doSend(device, pipe, fileName, totalBytes)
+        copyJob.cancel()
+        result
     }
 
     private suspend fun doSend(
@@ -77,10 +122,15 @@ class FileClient : Closeable {
             val body = response.body<Map<String, String>>()
             SendResult.Failure(body["error"] ?: response.status.description)
         }
+    } catch (e: CancellationException) {
+        throw e
     } catch (e: Exception) {
         SendResult.Failure(e.message ?: "unknown error")
     }
 }
+
+private val DEFAULT_NO_PROGRESS_TIMEOUT: Duration = 60.seconds
+private val WATCHDOG_TICK: Duration = 1.seconds
 
 private fun ByteReadChannel.asOctetStreamContent(totalBytes: Long?): OutgoingContent =
     object : OutgoingContent.ReadChannelContent() {
@@ -100,6 +150,7 @@ private suspend fun copyWithProgress(
 ) {
     val buffer = ByteArray(COPY_BUFFER_SIZE)
     var transferred = 0L
+    var cause: Throwable? = null
     try {
         while (!source.isClosedForRead) {
             val bytesRead = source.readAvailable(buffer)
@@ -109,7 +160,13 @@ private suspend fun copyWithProgress(
                 onProgress(transferred, totalBytes)
             }
         }
+        cause = source.closedCause
+    } catch (e: CancellationException) {
+        cause = e
+        throw e
+    } catch (e: Throwable) {
+        cause = e
     } finally {
-        destination.close()
+        if (cause != null) destination.cancel(cause) else destination.close()
     }
 }

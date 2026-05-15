@@ -38,6 +38,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
 
@@ -242,6 +243,74 @@ class FileClientTest {
             Files.deleteIfExists(file)
             slowClient.close()
             slowServer.stop(0, 0)
+        }
+    }
+
+    @Test
+    fun `send with onProgress returns Failure when source channel cancels mid-stream`() {
+        val declared = 64L * 1024
+        val delivered = 4 * 1024
+        val partialChannel = ByteChannel(autoFlush = true)
+        runBlocking {
+            CoroutineScope(Dispatchers.IO).launch {
+                partialChannel.writeFully(ByteArray(delivered) { 0x42 })
+                partialChannel.cancel(java.io.IOException("simulated mid-upload disconnect"))
+            }
+            val result = client.send(
+                device = device,
+                channel = partialChannel,
+                fileName = "trunc-progress.bin",
+                totalBytes = declared,
+                onProgress = { _, _ -> },
+            )
+            assertIs<SendResult.Failure>(result)
+        }
+    }
+
+    @Test
+    fun `send returns Failure when no upload progress for the configured timeout`() {
+        val hangingServer = embeddedServer(CIO, port = 0) {
+            routing {
+                post("/upload") {
+                    delay(1.minutes)
+                    call.respond(mapOf("savedPath" to "never"))
+                }
+            }
+        }.start(wait = false)
+        val port = runBlocking {
+            hangingServer.engine
+                .resolvedConnectors()
+                .first()
+                .port
+        }
+        val watchdogTimeout = 2.seconds
+        val watchedClient = FileClient(noProgressTimeout = watchdogTimeout)
+        try {
+            runBlocking {
+                // Source emits 100 KB then never closes: copyWithProgress reads those bytes
+                // and then suspends on readAvailable, so bytesSent freezes and the watchdog
+                // trips regardless of TCP send-buffer size on the platform.
+                val source = ByteChannel(autoFlush = true)
+                launch { source.writeFully(ByteArray(100 * 1024) { 0x42 }) }
+                val started = TimeSource.Monotonic.markNow()
+                val result = watchedClient.send(
+                    device = Device(name = "hang", host = "127.0.0.1", port = port),
+                    channel = source,
+                    fileName = "watchdog.bin",
+                    totalBytes = null,
+                    onProgress = { _, _ -> },
+                )
+                val elapsed = started.elapsedNow()
+                assertIs<SendResult.Failure>(result)
+                assertTrue(
+                    elapsed < watchdogTimeout * 4,
+                    "watchdog must trip within a small multiple of its timeout, took $elapsed",
+                )
+                source.cancel(null)
+            }
+        } finally {
+            watchedClient.close()
+            hangingServer.stop(0, 0)
         }
     }
 }
