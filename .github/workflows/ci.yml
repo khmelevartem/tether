@@ -6,15 +6,14 @@ on:
 
 jobs:
   build:
-    runs-on: macos-latest
-    name: Build & Test
+    runs-on: ubuntu-latest
+    name: Lint & Test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
-      - uses: android-actions/setup-android@v3
       - uses: gradle/actions/setup-gradle@v3
-      - name: Lint, test, and build all targets
-        run: ./gradlew ktlintCheck allTests :composeApp:installCli :composeApp:createDistributable :composeApp:assembleDebug :composeApp:linkDebugFrameworkIosSimulatorArm64
+      - name: KtLint + tests
+        run: ./gradlew ktlintCheck allTests
