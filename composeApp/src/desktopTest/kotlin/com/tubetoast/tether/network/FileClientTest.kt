@@ -202,4 +202,46 @@ class FileClientTest {
         }
         Files.deleteIfExists(file)
     }
+
+    // runBlocking + real-time 16 s delay is mandatory: the server delay runs inside Ktor's own
+    // coroutine scope, so a TestDispatcher cannot skip it. Only real elapsed time proves that
+    // neither the CIO engine `requestTimeout` (15 s default, suppressed by installing
+    // HttpTimeout) nor the plugin's `requestTimeoutMillis` (set to INFINITE) fires.
+    @Test
+    fun `send succeeds when server takes more than 15 seconds to start reading`() {
+        val slowServer = embeddedServer(CIO, port = 0) {
+            install(ContentNegotiation) { json() }
+            routing {
+                post("/upload") {
+                    delay(16_000)
+                    val channel = call.receiveChannel()
+                    val buf = ByteArray(8 * 1024)
+                    while (!channel.isClosedForRead) channel.readAvailable(buf)
+                    call.respond(mapOf("savedPath" to "ignored"))
+                }
+            }
+        }.start(wait = false)
+        val port = runBlocking {
+            slowServer.engine
+                .resolvedConnectors()
+                .first()
+                .port
+        }
+        val slowClient = FileClient()
+        val file = Files.createTempFile("slow-server-test", ".bin")
+        try {
+            file.writeBytes(ByteArray(1024) { 0x42 })
+            runBlocking {
+                val result = slowClient.send(
+                    device = Device(name = "slow", host = "127.0.0.1", port = port),
+                    file = file,
+                )
+                assertIs<SendResult.Success>(result)
+            }
+        } finally {
+            Files.deleteIfExists(file)
+            slowClient.close()
+            slowServer.stop(0, 0)
+        }
+    }
 }

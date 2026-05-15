@@ -5,6 +5,8 @@ import com.tubetoast.tether.protocol.SendResult
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.HttpTimeoutConfig
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.parameter
 import io.ktor.client.request.post
@@ -24,6 +26,10 @@ import kotlinx.coroutines.launch
 class FileClient : Closeable {
     private val client = HttpClient(CIO) {
         install(ContentNegotiation) { json() }
+        install(HttpTimeout) {
+            requestTimeoutMillis = HttpTimeoutConfig.INFINITE_TIMEOUT_MS
+            socketTimeoutMillis = 30_000
+        }
     }
 
     suspend fun ping(device: Device): Boolean {
