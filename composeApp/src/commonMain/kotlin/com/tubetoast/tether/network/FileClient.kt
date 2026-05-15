@@ -28,7 +28,7 @@ class FileClient : Closeable {
         install(ContentNegotiation) { json() }
         install(HttpTimeout) {
             requestTimeoutMillis = HttpTimeoutConfig.INFINITE_TIMEOUT_MS
-            socketTimeoutMillis = 30_000
+            socketTimeoutMillis = HttpTimeoutConfig.INFINITE_TIMEOUT_MS
         }
     }
 
