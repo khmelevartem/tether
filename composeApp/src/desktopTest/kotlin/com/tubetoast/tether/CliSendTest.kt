@@ -35,7 +35,7 @@ class CliSendTest {
         )
         val port = server.start()
         device = Device(name = "cli-test", host = "127.0.0.1", port = port)
-        client = FileClient()
+        client = FileClient.default()
     }
 
     @AfterTest

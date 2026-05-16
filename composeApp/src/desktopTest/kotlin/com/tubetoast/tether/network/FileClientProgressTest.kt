@@ -32,7 +32,7 @@ class FileClientProgressTest {
             deviceKeyPair = DeviceKeyPair(configDir),
         )
         val port = server.start()
-        client = FileClient()
+        client = FileClient.default()
         device = Device(name = "test", host = "127.0.0.1", port = port)
     }
 

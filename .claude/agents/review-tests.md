@@ -57,6 +57,16 @@ A test that skips itself on the platform/configuration where the bug lives is un
 
 Default fix for a CI-red test is in the code. Flag as `[REQUIRED]` any PR change that deletes a failing test, rewrites it into a narrower fast-check, or weakens assertions/timeouts/inputs to make it pass. Exception: the test was demonstrably wrong — must be stated explicitly in the PR.
 
+### 7. Coroutine test API — `runTest` + `TestDispatcher`, not `runBlocking`
+
+Per `testing.md§Стиль`: coroutine tests use `runTest` + `TestDispatcher`, not `runBlocking`. Flag `runBlocking` in any new or modified test as `[REQUIRED]`. The only legitimate exception per `testing.md§Реальное время vs виртуальное` is waiting on events from external native APIs running on real threads outside the test's `CoroutineScope` (JmDNS, NsdManager, real Ktor server engine) — and even then the test must explain in a comment WHY virtual time cannot substitute.
+
+"Pre-existing file-wide convention" is NOT a valid excuse. A documented rule violation is drift, not convention; flag it as `[REQUIRED]` even if the orchestrator's prompt pre-classifies it as out of scope. The PR either fixes the drift in this PR or files a tracked follow-up before merge.
+
+### 8. Reachability claims — verify against the diff
+
+Before claiming a code branch is unreachable, dead, or untested — trace it through the tests that exist in the diff (not just the ones you imagine). A `[REQUIRED]` finding of "branch X has no test" must cite which existing tests you checked and how the branch escaped them. Do not assume reachability from abstract reasoning; LLM-default plausibility is wrong often enough that this is a recurrent class of false-positive review.
+
 ## What you do NOT check
 
 - AC coverage → review-dod
