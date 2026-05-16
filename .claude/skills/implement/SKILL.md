@@ -18,7 +18,7 @@ Issue number `<N>`.
 Skill идемпотентен по issue. На каждом вызове первым делом проверь `gh pr list --search "issue:#<N>" --state open`:
 
 - **PR нет** → стартуй Step 1.
-- **PR есть и открыт** → ты в pull-request feedback итерации. На текущей feature-branch могут быть новые комменты ревьюера или коммиты после прошлого прогона. **Сначала** прочитай существующие human-комменты на PR — это `gh api repos/<owner>/<repo>/pulls/<PR>/comments` (inline review threads) и `gh pr view <PR> --comments` (PR-level). Они содержат факты, которые свежие ревьюеры из inner loop не выведут сами из diff'а (например: «уже заехало в #N», «не делай X, делай Y», cross-link на смежный fix). По каждому открытому thread'у — материализуй: правка в коде/доке, или `gh issue comment` cross-link если просят прокинуть наружу. **Только после этого** прогоняй на свежем diff'е: Step 4 (inner loop reviewers) → Step 5 (simplify) → Step 6 (full review wave A + adversarial) → Step 7 (smoke, скоуп по diff'у). Из дисциплины на re-entry ничего пропускать нельзя.
+- **PR есть и открыт** → ты в pull-request feedback итерации. На текущей feature-branch могут быть новые комменты ревьюера или коммиты после прошлого прогона. **Сначала** прочитай существующие human-комменты на PR (`gh api repos/<owner>/<repo>/pulls/<PR>/comments` + `gh pr view <PR> --comments`). Прогон **обязан** включать на свежем diff'е: Step 4 (inner loop reviewers) → Step 5 (simplify) → Step 6 (full review wave A + adversarial) → Step 7 (smoke, скоуп по diff'у). Из дисциплины на re-entry ничего пропускать нельзя — иначе review-итерации проходят с меньшим качеством, чем первичная имплементация.
 
 Шаги 8-9 (commit + present G5 + push) — в re-entry упрощаются: коммит идёт в существующую ветку, force-push не нужен, новый PR не создавать.
 
@@ -47,7 +47,7 @@ gh issue view <N> --json title,body,labels,comments
 gh pr list --search "issue:#<N>" --state open --json number,isDraft,headRefName
 ```
 
-**Comments — это не дискуссия, это потенциально canon-update body.** Issue body — стартовая точка; comments могут содержать rescope, переоценку DoD, факты времени-после-создания («баг уже исправлен в #N», «решено не делать через X, делаем через Y»). Читай весь `comments` массив, ищи: формулировки вида «rescope», «обновлённый DoD», «уже сделано», cross-references на закрытые задачи. Если comment противоречит body — приоритет comment'у (он младше), и эскалируй пользователю одной строкой: «issue body говорит X, последний comment говорит Y — иду по comment, подтверди?». Не молча выбирай.
+**Comments — это не дискуссия, это потенциально canon-update body.** При противоречии comment'а с body — приоритет comment'у, эскалируй пользователю одной строкой.
 
 Classify PR type. For FEATURE, look up `docs/product/features/README.md` for spec (specs live at `docs/product/features/<slug>/spec.md`).
 
