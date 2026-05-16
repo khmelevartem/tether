@@ -1,5 +1,7 @@
 package com.tubetoast.tether.network
 
+import com.tubetoast.tether.protocol.Device
+import com.tubetoast.tether.protocol.SendResult
 import com.tubetoast.tether.security.DeviceKeyPair
 import com.tubetoast.tether.security.TrustedDeviceStore
 import io.ktor.client.HttpClient
@@ -15,10 +17,14 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.OutgoingContent
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
+import io.ktor.utils.io.ByteChannel
 import io.ktor.utils.io.ByteWriteChannel
 import io.ktor.utils.io.writeFully
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import java.io.File
@@ -28,9 +34,12 @@ import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlin.test.fail
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeSource
 
 class FileServerTest {
     private val cleanupPaths = mutableListOf<File>()
@@ -248,6 +257,46 @@ class FileServerTest {
                 val saved = File(savedPath).readBytes()
                 assertEquals(payload.size, saved.size, "size mismatch")
                 assertContentEquals(payload, saved, "content mismatch on $sizeMb MB roundtrip")
+            }
+        } finally {
+            client.close()
+        }
+    }
+
+    @Test
+    fun `truncated upload with known totalBytes fails and leaves no partial file`() {
+        val tmpDir = Files.createTempDirectory("tether-test").toFile().also(cleanupPaths::add)
+        val server = newServer(downloadsDir = tmpDir)
+        val port = server.start()
+        val client = FileClient.default()
+        val device = Device(name = "test", host = "127.0.0.1", port = port)
+        try {
+            val declared = 64L * 1024
+            val delivered = 4 * 1024
+            val partialChannel = ByteChannel(autoFlush = true)
+            runBlocking {
+                CoroutineScope(Dispatchers.IO).launch {
+                    partialChannel.writeFully(ByteArray(delivered) { 0x42 })
+                    partialChannel.cancel(java.io.IOException("simulated mid-upload disconnect"))
+                }
+                val result = client.send(
+                    device = device,
+                    channel = partialChannel,
+                    fileName = "trunc-prod.bin",
+                    totalBytes = declared,
+                )
+                assertIs<SendResult.Failure>(result)
+                val deadline = TimeSource.Monotonic.markNow() + 3.seconds
+                while (deadline.hasNotPassedNow()) {
+                    val partial = tmpDir.listFiles()?.any { it.name.startsWith("trunc-prod") } ?: false
+                    if (!partial) break
+                    delay(20.milliseconds)
+                }
+                val partial = tmpDir.listFiles()?.filter { it.name.startsWith("trunc-prod") } ?: emptyList()
+                assertTrue(
+                    partial.isEmpty(),
+                    "no partial file should remain in $tmpDir, found: ${partial.map { it.name }}",
+                )
             }
         } finally {
             client.close()

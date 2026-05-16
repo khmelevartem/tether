@@ -27,17 +27,21 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
-import kotlin.time.TimeSource
 
 class FileClient(
+    private val client: HttpClient,
     private val noProgressTimeout: Duration = DEFAULT_NO_PROGRESS_TIMEOUT,
 ) : Closeable {
-    private val client = HttpClient(CIO) {
-        install(ContentNegotiation) { json() }
-        install(HttpTimeout) {
-            requestTimeoutMillis = HttpTimeoutConfig.INFINITE_TIMEOUT_MS
-            socketTimeoutMillis = HttpTimeoutConfig.INFINITE_TIMEOUT_MS
-        }
+    companion object {
+        fun default(): FileClient = FileClient(
+            client = HttpClient(CIO) {
+                install(ContentNegotiation) { json() }
+                install(HttpTimeout) {
+                    requestTimeoutMillis = HttpTimeoutConfig.INFINITE_TIMEOUT_MS
+                    socketTimeoutMillis = HttpTimeoutConfig.INFINITE_TIMEOUT_MS
+                }
+            },
+        )
     }
 
     suspend fun ping(device: Device): Boolean {
@@ -52,11 +56,7 @@ class FileClient(
         totalBytes: Long? = null,
         onProgress: ((bytesTransferred: Long, totalBytes: Long?) -> Unit)? = null,
     ): SendResult = try {
-        if (onProgress == null) {
-            doSend(device, channel, fileName, totalBytes)
-        } else {
-            sendWithProgress(device, channel, fileName, totalBytes, onProgress)
-        }
+        sendInternal(device, channel, fileName, totalBytes, onProgress)
     } catch (e: CancellationException) {
         throw e
     } catch (e: Throwable) {
@@ -67,26 +67,30 @@ class FileClient(
         client.close()
     }
 
-    private suspend fun sendWithProgress(
+    private suspend fun sendInternal(
         device: Device,
         channel: ByteReadChannel,
         fileName: String,
         totalBytes: Long?,
-        onProgress: (Long, Long?) -> Unit,
+        onProgress: ((Long, Long?) -> Unit)?,
     ): SendResult = coroutineScope {
         val bytesSent = MutableStateFlow(0L)
         val pipe = ByteChannel(autoFlush = true)
         val watchdog = launch {
             var lastBytesSent = 0L
-            var stallStartedAt: TimeSource.Monotonic.ValueTimeMark? = null
+            var stallTicks = 0
+            val timeoutTicks = noProgressTimeout.inWholeSeconds.coerceAtLeast(1)
             while (true) {
                 delay(1.seconds)
                 val currentBytesSent = bytesSent.value
                 if (currentBytesSent != lastBytesSent) {
                     lastBytesSent = currentBytesSent
-                    stallStartedAt = TimeSource.Monotonic.markNow()
-                } else if (stallStartedAt != null && stallStartedAt.elapsedNow() >= noProgressTimeout) {
-                    error("no upload progress for $noProgressTimeout")
+                    stallTicks = 0
+                } else if (lastBytesSent > 0L) {
+                    stallTicks++
+                    if (stallTicks >= timeoutTicks) {
+                        error("no upload progress for $noProgressTimeout")
+                    }
                 }
             }
         }
@@ -94,7 +98,7 @@ class FileClient(
             try {
                 copyWithProgress(channel, pipe, totalBytes) { sent, total ->
                     bytesSent.value = sent
-                    onProgress(sent, total)
+                    onProgress?.invoke(sent, total)
                 }
             } finally {
                 watchdog.cancel()

@@ -11,6 +11,6 @@ abstract class AppContainer(
     val deviceName: String = config.deviceName
     abstract val fileServer: FileServer
     abstract val mdnsDiscovery: MdnsDiscovery
-    open val fileClient: FileClient = FileClient()
+    open val fileClient: FileClient = FileClient.default()
     abstract val trustedDeviceStore: TrustedDeviceStore
 }
