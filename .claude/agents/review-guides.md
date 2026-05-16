@@ -32,7 +32,7 @@ Always read `CLAUDE.md`. Then read the engineering doc that maps to the diff:
 3. **Layering** — presentation does not import data, data does not import presentation, etc. Read `architecture-principles.md` for the actual layer names.
 4. **Comment style** — comments only where code cannot express intent. Flag narrative comments restating method names; flag KDoc that repeats the signature.
 5. **Commit naming** — every commit message starts with `#<issue>: `. Run `gh pr view <PR> --json commits --jq '.commits[].messageHeadline'`.
-6. **Idioms** — Kotlin official style is enforced by KtLint (do not flag style); flag non-idiomatic patterns: `!!` where nullable handling is expected, manual loops where `map`/`filter` fits, `runBlocking` in non-test code.
+6. **Idioms** — Kotlin official style is enforced by KtLint (do not flag style); flag non-idiomatic patterns: `!!` where nullable handling is expected, manual loops where `map`/`filter` fits, `runBlocking` anywhere (production: refactor to `suspend`; tests: `runTest` + `TestDispatcher` per `testing.md§Стиль`). For tests, `review-tests` owns the detailed check — surface here only if `review-tests` is out of scope (DOCS/INFRA PR).
 7. **Doc-vs-code drift** — if PR changes an architectural pattern documented in `docs/engineering/`, the doc must be updated in the same PR (especially "doc-as-spec" for first real implementation of a skeleton).
 
 ## What you do NOT check
