@@ -8,9 +8,9 @@ import android.os.PowerManager
 class AndroidTransferLockHolder(
     context: Context,
 ) {
-    // HIGH_PERF (deprecated API 29) is intentional: LOW_LATENCY only activates while the screen
-    // is on and the app is foreground, but the bug under fix is screen-off transfers — so the
-    // newer constant would silently no-op exactly when we need it.
+    // HIGH_PERF on API 24-28 is the effective protection for screen-off transfers; on API 29+
+    // the OS silently substitutes LOW_LATENCY (screen-on/foreground only), so the WifiLock
+    // is a no-op on Android 10+. WakeLock below still works on all versions. See knowledge doc.
     @Suppress("DEPRECATION")
     private val wifiLock: WifiManager.WifiLock =
         (context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager)

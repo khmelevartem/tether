@@ -132,10 +132,17 @@ transfer completes. The FGS type does not prevent either.
 `PowerManager.WakeLock` (`PARTIAL_WAKE_LOCK`) for the duration of each active transfer.
 Release both when the last concurrent transfer finishes.
 
-`WIFI_MODE_FULL_HIGH_PERF` is deprecated since API 29 in favor of
-`WIFI_MODE_FULL_LOW_LATENCY`, but `LOW_LATENCY` only activates while the screen is on and
-the app is foreground — neither holds for our screen-locked transfer case. The deprecated
-constant remains the correct choice here; suppress the warning at the call site.
+**Known platform limitation — WifiLock on API 29+.** `WIFI_MODE_FULL_HIGH_PERF` is
+deprecated since API 29 and the OS silently substitutes any acquired lock with
+`WIFI_MODE_FULL_LOW_LATENCY`, which only activates while the screen is on and the app is
+foreground. There is no public replacement that keeps the Wi-Fi radio active during
+screen-off on Android 10+. Practical consequence:
+
+- API 24-28: WifiLock + WakeLock both effective — full fix.
+- API 29+: only WakeLock is effective. Wi-Fi radio power-save mid-transfer remains a
+  possible failure mode on screen-off; the WakeLock prevents CPU throttling but cannot
+  keep the radio awake. The lock is still acquired (no harm) so the fix is forward-
+  compatible if Android ever exposes a screen-off Wi-Fi lock.
 
 **Anti-pattern:** holding the locks for the entire FGS lifetime keeps the radio and CPU
 active even when no transfer is running, draining the battery with no user benefit.
@@ -164,3 +171,4 @@ override val transferActivityTracker: TransferActivityTracker = DefaultTransferA
     onLastExit = lockHolder::release,
 )
 ```
+
