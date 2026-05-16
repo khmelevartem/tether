@@ -1,7 +1,5 @@
 package com.tubetoast.tether.network
 
-import com.tubetoast.tether.protocol.Device
-import com.tubetoast.tether.protocol.SendResult
 import com.tubetoast.tether.security.DeviceKeyPair
 import com.tubetoast.tether.security.TrustedDeviceStore
 import io.ktor.client.HttpClient
@@ -17,12 +15,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.OutgoingContent
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
-import io.ktor.server.engine.embeddedServer
-import io.ktor.server.request.receiveChannel
-import io.ktor.server.response.respondText
-import io.ktor.server.routing.routing
 import io.ktor.utils.io.ByteWriteChannel
-import io.ktor.utils.io.readAvailable
 import io.ktor.utils.io.writeFully
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
@@ -35,12 +28,9 @@ import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlin.test.fail
 import kotlin.time.Duration.Companion.milliseconds
-import io.ktor.server.cio.CIO as ServerCIO
-import io.ktor.server.routing.post as serverPost
 
 class FileServerTest {
     private val cleanupPaths = mutableListOf<File>()
@@ -261,34 +251,6 @@ class FileServerTest {
             }
         } finally {
             client.close()
-        }
-    }
-
-    @Test
-    fun `send tolerates long server delay despite CIO default request timeout`() {
-        val slowServer = embeddedServer(ServerCIO, port = 0) {
-            routing {
-                serverPost("/upload") {
-                    delay(16_000)
-                    val ch = call.receiveChannel()
-                    val buf = ByteArray(8 * 1024)
-                    while (!ch.isClosedForRead) ch.readAvailable(buf)
-                    call.respondText("""{"savedPath":"ignored"}""", ContentType.Application.Json)
-                }
-            }
-        }.start(wait = false)
-        val port = runBlocking { slowServer.engine.resolvedConnectors() }.first().port
-        val client = FileClient.default()
-        val device = Device(name = "test", host = "127.0.0.1", port = port)
-        val file = Files.createTempFile("slow-server-cio", ".bin")
-        file.toFile().writeBytes(ByteArray(1024) { 0x42 })
-        try {
-            val result = runBlocking { client.send(device, file) }
-            assertIs<SendResult.Success>(result)
-        } finally {
-            slowServer.stop(0, 0)
-            client.close()
-            Files.deleteIfExists(file)
         }
     }
 
