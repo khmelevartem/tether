@@ -27,6 +27,7 @@ These are *not* committed — they're the directions we'd explore first.
 |-----------|-------------------------|
 | **Folder sync** | A persistent, automated workflow. Power user need. Implementation cost is real (watching, conflict handling). |
 | **Multi-peer / group send** | Sending the same file to several devices at once. Useful for small offices, families with many devices. Convenience, not core. |
+| **Android↔Android offline transfer (Wi-Fi Direct / NAN)** | P2P fallback when no shared Wi-Fi exists at all — no router, no hotspot. Asymmetric by nature (Apple has no public API), so it's an extra mode on a subset of platforms rather than part of the core promise. |
 
 Anything else considered later passes the same test: *does removing it break the promise?* If yes — it stays free.
 
