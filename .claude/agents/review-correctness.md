@@ -61,10 +61,6 @@ If PR_TYPE is BUGFIX: does the fix address the **root cause** or only the sympto
 - Style / idioms → review-guides
 - Platform-specific quirks → review-platform
 
-## Reachability claims — verify against the diff
-
-Before claiming a branch is unreachable, dead, or covered/uncovered, trace it through the actual code and tests in the diff. Cite the file:line you checked. LLM-default abstract reasoning misjudges reachability often enough that unsupported claims are a recurrent false-positive class.
-
 ## Output
 
 ```
