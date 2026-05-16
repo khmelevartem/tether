@@ -1,4 +1,4 @@
-# Network stack — Ktor CIO (client + server) across all KMP targets
+# Network stack — Ktor CIO (client + server), tactically not fundamentally
 
 **Status:** Accepted — 2026-05-16
 **Issue:** [#166](https://github.com/khmelevartem/tether/issues/166)
@@ -72,9 +72,20 @@ JVM: Ktor (either engine). Apple: hand-rolled HTTP/1.1 over `Network.framework` 
 
 ## Decision
 
-**For the plain-HTTP (pre-TLS) transport: stay on Ktor CIO for both client and server across all five targets (Option 1).** The premise of the original quick-research choice holds up: every alternative either splits the stack along JVM/Native lines (Option 2 and 3), trades engine maturity for parser-maintenance work (Option 4), or loses HTTP tooling for marginal gain (Option 5). The pain points that triggered this ADR are tuning gaps and a few CIO bugs, not architectural failures of the engine choice.
+**Stay on Ktor CIO for both client and server, on all targets where it works, for now (Option 1) — accepted as the minimum-risk choice, not as the unconditionally optimal one.**
 
-**For the post-TLS transport: defer to [adr-channel-encryption.md](adr-channel-encryption.md).** That ADR has already chosen the Apple-side path: SecureTransport + `ktor-http-cio` parser + a small in-file route table, replacing the Ktor CIO server engine on `appleMain` only. JVM/Android stay on Ktor CIO with `sslConnector`. The asymmetric server implementation post-#140 is an accepted cost of channel encryption, not of this network-stack choice — channel encryption forces the engine swap on Apple regardless of which transport ADR was in place. The encryption ADR remains the canonical source for the Apple TLS server architecture; this ADR does not contradict it.
+The honest framing: once [#140](https://github.com/khmelevartem/tether/issues/140) lands, the Apple `FileServer` is off Ktor's server engine entirely (forced by [KTOR-7262](https://youtrack.jetbrains.com/issue/KTOR-7262), see Context). The strongest argument for CIO on JVM/Android — "same engine on all five targets" — is then only partially true. What remains true:
+
+- **JVM/Android server: keep Ktor CIO.** TLS via `sslConnector` works in-tree. Migrating to Netty for the sake of `SO_KEEPALIVE` access ([KTOR-5572](https://youtrack.jetbrains.com/issue/KTOR-5572) — the underlying cause of [#164](https://github.com/khmelevartem/tether/issues/164)'s reflection-attempt failure) is achievable but not necessary: an application-layer ping during active transfer addresses the same failure mode without an engine swap. Migration cost (rewrite `FileServer.jvm` ~150 lines, new TLS wiring, new bug surface) exceeds the benefit while the app-layer mitigation is available.
+- **Client: keep Ktor CIO on all targets** for the same reason — works today, refactor cost not justified by a concrete pain.
+- **Apple server post-#140: not this ADR's decision.** See [adr-channel-encryption.md](adr-channel-encryption.md). The asymmetric server implementation is an accepted cost of channel encryption, not of the network-stack choice; encryption forces the engine swap on Apple regardless of which transport ADR was in place.
+
+The "Revisit if" section below carries two explicit follow-up triggers that flow directly from the above:
+
+1. If the app-layer keepalive ping turns out to be insufficient against real-world stalls, **Netty on JVM** is the queued replacement, not "do nothing".
+2. The **client-side engine on Apple** (CIO Native vs Darwin / `NSURLSession`) is unsettled. Background-iOS sender support depends on `URLSessionConfiguration.background` ([ios-background-networking.md](../../knowledge/ios-background-networking.md)) — only the Darwin engine can plausibly reach that. If iOS-as-sender background ever becomes a roadmap item, the Apple client engine swap is on the table independently of this ADR.
+
+Neither follow-up blocks the current decision; both are flagged so future readers see them as known soft spots, not gaps in the review.
 
 What changes alongside this decision:
 
@@ -93,7 +104,8 @@ What changes alongside this decision:
 ## Revisit if
 
 - **CIO Native server destabilises on iOS** (a Ktor release breaks our iosTest, runtime hangs in production, throughput regressions vs JVM). Fallback: hand-rolled HTTP/1.1 on `ktor-network` sockets, isolated behind the existing `expect/actual` boundary on the Apple side only.
-- **A per-socket `SO_KEEPALIVE` requirement becomes load-bearing** (concrete user reports of mid-transfer stalls that the application-layer ping cannot mitigate). Trigger: file a Netty-on-JVM split for the server engine, accept the duplication.
+- **A per-socket `SO_KEEPALIVE` requirement becomes load-bearing** (concrete user reports of mid-transfer stalls that the application-layer ping cannot mitigate). Trigger: file a Netty-on-JVM split for the server engine — the post-#140 asymmetry already pays the parity cost, so adding a JVM/Native engine split on top costs less than it would have pre-#140. Netty exposes `tcpKeepAlive` + `configureBootstrap { childOption(ChannelOption.SO_KEEPALIVE, true) }` for per-accepted-socket control. Apple side unaffected (already on SecureTransport).
+- **iOS-as-sender background uploads become a roadmap item** (see [ios-background-networking.md](../../knowledge/ios-background-networking.md)). `URLSessionConfiguration.background` is the only Apple-sanctioned channel; it's reachable from Kotlin through the Darwin engine, not CIO Native client. Trigger: swap Apple-side `FileClient` engine to Darwin. JVM/Android client unaffected.
 - **`ktor-http-cio` standalone parser path proves unworkable on Apple during the [#140](https://github.com/khmelevartem/tether/issues/140) pre-flight spike.** Per [adr-channel-encryption.md](adr-channel-encryption.md), the fallback is a hand-rolled HTTP/1.1 parser on Apple (~150 lines; Tether uses no chunked TE, no header folding, no pipelining). Network-stack-wise this still keeps HTTP as the wire protocol — only the parser implementation drifts further from Ktor on Apple.
 - **Ktor ships TLS on Kotlin/Native** ([KTOR-7262](https://youtrack.jetbrains.com/issue/KTOR-7262) closes). Re-evaluate whether the Apple side can re-converge onto Ktor CIO server — the encryption ADR's `Revisit if` list calls this out as well.
 - **Ktor server gets a stable native-engine refresh** (Ktor 4 / new engine `ktor-server-cio2` / Netty-equivalent on Native). Reassess whether the parity argument now favours moving.
