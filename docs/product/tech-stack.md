@@ -16,8 +16,8 @@
 |-----------|-----------|-----|
 | Shared code | Kotlin Multiplatform | One codebase across Android, iOS, macOS, Windows, Linux. Cross-platform parity is part of the product (see [vision.md](vision.md)) |
 | UI | Compose Multiplatform | Single UI tree across all targets; matches the "single visual language" choice in [design.md](design.md). Experimental on macOS but viable for our scope |
-| HTTP server | Ktor (CIO engine, JVM-only) | Same async/coroutine model as the rest of the stack; simpler than embedded Jetty/Netty for our use; no Native publication needed since the server side is currently JVM-only |
-| HTTP client | Ktor (CIO) | Shared client across all targets; common API, no per-platform glue |
+| HTTP server | Ktor (CIO engine) | Single engine across JVM (Android + Desktop) and Native (iOS + macOS Native) since Ktor 3.0 published `ktor-server-cio` for K/N. Rationale in [adr-network-stack.md](../engineering/adr/adr-network-stack.md) |
+| HTTP client | Ktor (CIO) | Shared client across all targets; common API, no per-platform glue. See [adr-network-stack.md](../engineering/adr/adr-network-stack.md) |
 | Service discovery | mDNS, per-platform | Android NSD (`androidMain`), JmDNS (`desktopMain` for Windows + Linux), NSNetService via `appleMain` for iOS + macOS. mDNS is the only cross-platform option that's installed and reachable on all OSes by default |
 | Serialization | kotlinx.serialization (JSON) | Multiplatform, compile-time, no reflection. Used for protocol messages in `protocol/Device.kt` |
 | CLI | Clikt (JVM only) | Argument parsing for the desktop debug runner (`--name`, `--port`) |
@@ -33,7 +33,7 @@ For implementation-side guidance — module layout, layering principles, and DI 
 
 **Why:** The product is symmetric — any device can send to any device. A client/server split would require a designated host, which contradicts the discovery model and the home-network use case.
 
-**Tradeoff:** Ktor's server modules are JVM-only — `ktor-server-*` has no Kotlin/Native publication. This is a real, load-bearing constraint, not a footnote. Android and Desktop receive via Ktor CIO from `jvmMain`; **iOS / macOS still cannot receive** — that's the remaining MVP gap, tracked separately.
+**Tradeoff:** historically Ktor's server modules were JVM-only. Since Ktor 3.0 (October 2024) `ktor-server-cio` is also published for Kotlin/Native (`iosArm64`, `iosSimulatorArm64`, `macosArm64`), and the project moved the server stack into `commonMain` accordingly — see [adr-network-stack.md](../engineering/adr/adr-network-stack.md) and [adr-apple-fileserver-engine.md](../engineering/adr/adr-apple-fileserver-engine.md). The "every node is server and client" symmetry now holds on every supported target.
 
 #### Options on the table
 
@@ -113,4 +113,3 @@ Linux ships in `desktopMain` alongside Windows — same JVM target, same APIs. N
 - **macOS:** Apple Silicon only (`macosArm64`). Intel support (`macosX64()`) is cheap to add — one line in `kotlin { ... }`, plus a small permanent build/test/release tax (extra compile cycle, extra artifact in releases). Skipped now because the Intel Mac population among target users is small and shrinking; revisit when an actual user reports it.
 - **Java 21 (Temurin)** for Windows (JVM) and the build itself.
 - **Compose on macOS is experimental** — accepted; flagged in build configuration.
-- **Ktor server is JVM-only (Native).** No `ktor-server-*` Kotlin/Native publication exists. Ktor CIO *does* run on Android (ART-compatible). Apple targets (iOS, macOS) need a different server mechanism — see options above.
