@@ -8,7 +8,6 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
-import org.robolectric.shadows.ShadowPowerManager
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -24,29 +23,51 @@ class AndroidTransferLockHolderTest {
         holder = AndroidTransferLockHolder(context)
     }
 
-    private fun isWakeLockHeld(): Boolean =
-        ShadowPowerManager.getLatestWakeLock()?.isHeld ?: false
-
     @Test
-    fun `acquire then release toggles wake lock`() {
+    fun `acquire then release toggles both locks`() {
         holder.acquire()
-        assertTrue(isWakeLockHeld(), "wake lock should be held after acquire")
+        assertTrue(holder.isWakeLockHeld, "wake lock should be held after acquire")
+        assertTrue(holder.isWifiLockHeld, "wifi lock should be held after acquire")
         holder.release()
-        assertFalse(isWakeLockHeld(), "wake lock should be released after release")
+        assertFalse(holder.isWakeLockHeld, "wake lock should be released after release")
+        assertFalse(holder.isWifiLockHeld, "wifi lock should be released after release")
     }
 
     @Test
-    fun `double acquire is idempotent`() {
+    fun `double acquire is idempotent for both locks`() {
         holder.acquire()
         holder.acquire()
-        assertTrue(isWakeLockHeld())
+        assertTrue(holder.isWakeLockHeld)
+        assertTrue(holder.isWifiLockHeld)
         holder.release()
-        assertFalse(isWakeLockHeld(), "single release should drop the lock")
+        assertFalse(holder.isWakeLockHeld, "single release should drop wake lock")
+        assertFalse(holder.isWifiLockHeld, "single release should drop wifi lock")
     }
 
     @Test
     fun `release without prior acquire is a no-op`() {
         holder.release()
-        assertFalse(isWakeLockHeld())
+        assertFalse(holder.isWakeLockHeld)
+        assertFalse(holder.isWifiLockHeld)
+    }
+
+    @Test
+    fun `tracker callbacks drive both locks end-to-end`() = kotlinx.coroutines.test.runTest {
+        val tracker = DefaultTransferActivityTracker(
+            onFirstEnter = holder::acquire,
+            onLastExit = holder::release,
+        )
+        assertFalse(holder.isWakeLockHeld, "no lock before any transfer")
+        assertFalse(holder.isWifiLockHeld, "no lock before any transfer")
+        var observedInsideWake = false
+        var observedInsideWifi = false
+        tracker.withActiveTransfer {
+            observedInsideWake = holder.isWakeLockHeld
+            observedInsideWifi = holder.isWifiLockHeld
+        }
+        assertTrue(observedInsideWake, "wake lock should be held inside active transfer")
+        assertTrue(observedInsideWifi, "wifi lock should be held inside active transfer")
+        assertFalse(holder.isWakeLockHeld, "wake lock should be released after transfer")
+        assertFalse(holder.isWifiLockHeld, "wifi lock should be released after transfer")
     }
 }

@@ -3,12 +3,19 @@ package com.tubetoast.tether.network
 import android.app.Service
 import android.content.Intent
 import com.tubetoast.tether.TetherApp
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowPowerManager
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -44,7 +51,23 @@ class TetherForegroundServiceTest {
     @Test
     fun `onDestroy does not throw when server and discovery were never started`() {
         val controller = Robolectric.buildService(TetherForegroundService::class.java).create()
-        // destroy without ever calling start() — should not throw
         controller.destroy()
     }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun `onDestroy releases tracker locks while a transfer is still active`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val controller = Robolectric.buildService(TetherForegroundService::class.java).create()
+            val tracker = (controller.get().application as TetherApp).container.transferActivityTracker
+            val barrier = CompletableDeferred<Unit>()
+            val transfer = async { tracker.withActiveTransfer { barrier.await() } }
+            val heldBeforeDestroy = ShadowPowerManager.getLatestWakeLock()?.isHeld == true
+            controller.destroy()
+            val heldAfterDestroy = ShadowPowerManager.getLatestWakeLock()?.isHeld == true
+            barrier.complete(Unit)
+            transfer.await()
+            assertTrue(heldBeforeDestroy, "wake lock should be held during active transfer")
+            assertFalse(heldAfterDestroy, "onDestroy must release locks via tracker.releaseAll()")
+        }
 }
