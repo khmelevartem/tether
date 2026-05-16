@@ -116,3 +116,46 @@ for MVP; proper persistent state (SharedPreferences flag) tracked in #58.
     android:name=".MainActivity"
     android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|uiMode|keyboardHidden">
 ```
+
+---
+
+## Wi-Fi / wake locks during active transfers
+
+**Symptom:** transfers of large files abort mid-way when the screen is locked.
+No network error on the sender side; the receiver's upload handler gets a closed channel.
+
+**Root cause:** Wi-Fi power-save mode (radio parks itself when the screen turns off) and
+Android Doze (CPU throttled, process suspended) can tear the TCP connection before the
+transfer completes. The FGS type does not prevent either.
+
+**Fix:** hold a `WifiManager.WifiLock` (`WIFI_MODE_FULL_HIGH_PERF`) and a
+`PowerManager.WakeLock` (`PARTIAL_WAKE_LOCK`) for the duration of each active transfer.
+Release both when the last concurrent transfer finishes.
+
+**Anti-pattern:** holding the locks for the entire FGS lifetime keeps the radio and CPU
+active even when no transfer is running, draining the battery with no user benefit.
+
+**Implementation:**
+
+- `AndroidTransferLockHolder` (`androidMain`) owns both locks with `setReferenceCounted(false)`.
+  Reference counting is delegated to `DefaultTransferActivityTracker`; the holder's acquire/release
+  are idempotent guards (`isHeld` check).
+- `DefaultTransferActivityTracker` (`commonMain`) wraps each upload (server-side) and send
+  (client-side) with `withActiveTransfer { … }`. On `0 → 1` it calls `onFirstEnter`; on `N → 0`
+  it calls `onLastExit`. Concurrent transfers share a single lock.
+- `TetherForegroundService.onDestroy` calls `transferActivityTracker.releaseAll()` before stopping
+  the server, releasing any locks held by in-flight transfers killed by the OS.
+
+```xml
+<!-- AndroidManifest.xml -->
+<uses-permission android:name="android.permission.WAKE_LOCK" />
+```
+
+```kotlin
+// AndroidAppContainer.kt
+private val lockHolder = AndroidTransferLockHolder(application)
+override val transferActivityTracker: TransferActivityTracker = DefaultTransferActivityTracker(
+    onFirstEnter = lockHolder::acquire,
+    onLastExit = lockHolder::release,
+)
+```

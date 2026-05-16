@@ -15,6 +15,7 @@ abstract class JvmAppContainer(
             downloadsDir = downloadsDir,
             trustedDeviceStore = config.trustedDeviceStore,
             deviceKeyPair = config.deviceKeyPair,
+            tracker = transferActivityTracker,
         )
     }
 }

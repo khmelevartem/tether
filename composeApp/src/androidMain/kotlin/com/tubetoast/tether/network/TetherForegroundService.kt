@@ -96,6 +96,7 @@ class TetherForegroundService : LifecycleService() {
     }
 
     override fun onDestroy() {
+        (application as AppContainerProvider).container.transferActivityTracker.releaseAll()
         runningMdnsDiscovery?.let { mdnsDiscovery ->
             try {
                 mdnsDiscovery.stop()
