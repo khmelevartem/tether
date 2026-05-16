@@ -62,7 +62,10 @@
      can't be replicated on one target.
      Implementation differences (NSD vs JmDNS, view models, build tasks)
      do NOT belong here — those live in the issue. If there are no
-     user-visible platform differences, remove this section entirely. -->
+     user-visible platform differences, remove this section entirely.
+
+     For features with strong platform asymmetry, per-platform top-level
+     sections may replace this single block. -->
 
 -
 

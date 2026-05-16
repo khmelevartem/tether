@@ -62,18 +62,18 @@ if [ -n "$COMMON_DIR" ]; then
   fi
 fi
 
-echo "🧪 Running tests (all modules)..."
-./gradlew allTests --quiet
+echo "🧪 Running tests + building all targets (CLI, Desktop UI, Android, iOS)..."
+./gradlew allTests :composeApp:installCli :composeApp:createDistributable :composeApp:assembleDebug :composeApp:linkDebugFrameworkIosSimulatorArm64 --quiet
 
 if [ $? -ne 0 ]; then
   echo ""
-  echo "❌ Tests failed — push aborted."
-  echo "💡 Run './gradlew allTests' to see the details."
+  echo "❌ Tests or build failed — push aborted."
+  echo "💡 Re-run the failing task without --quiet to see details."
   echo ""
   exit 1
 fi
 
-echo "✅ All tests passed"
+echo "✅ Tests passed, all targets compile"
 exit 0
 EOF
 
