@@ -163,6 +163,60 @@ What we lose either way is the Ktor *routing DSL* — replaced by a small route 
 - **Measured throughput regression >15%** on 1 GB on home Wi-Fi after the implementation issue lands. Profile and tune (chunk size, cipher suite preference) before changing the choice itself.
 - **A real KMP Noise / libsodium binding emerges** with cross-target maturity. Re-evaluate Option C as a uniform path. This is the lowest-priority trigger — the bar is "as mature as `kotlinx-io`, not a community port".
 
+## Amendment — 2026-05-16 (pre-implementation)
+
+Adversarial review against this ADR (during the [#166](https://github.com/khmelevartem/tether/issues/166) network-stack ADR work) surfaced load-bearing factual errors in the original Decision and Implementation scheme. The amendment below corrects them before [#140](https://github.com/khmelevartem/tether/issues/140) begins. The original Decision text remains above as the historical record of what was Accepted; the corrections here supersede it for implementation purposes.
+
+### Correction 1 — JVM server side cannot use Ktor CIO with `sslConnector`
+
+The original Decision states: *"On JVM / Android — Ktor CIO server with `sslConnector`."* This does not work. `CIOApplicationEngine` (commonMain, applies to JVM as well) explicitly rejects any HTTPS connector at start-up:
+
+```kotlin
+// io/ktor/server/cio/CIOApplicationEngine.kt:197 (ktor-server-cio 3.1.3)
+if (connectorSpec.type == ConnectorType.HTTPS) {
+    throw UnsupportedOperationException(
+        "CIO Engine does not currently support HTTPS. Please " +
+            "consider using a different engine if you require HTTPS"
+    )
+}
+```
+
+**Corrected JVM path:** switch the JVM server engine to **Ktor Netty** (`ktor-server-netty`), which is the in-tree Ktor engine that supports `sslConnector` with full TLS configuration and exposes `Java SSLContext` + custom `X509TrustManager` for SPKI pinning. Netty is JVM-only — this introduces no Apple-side change. The Apple side stays on SecureTransport as decided in the original Decision.
+
+**Cost:** [adr-network-stack.md](adr-network-stack.md) considered Netty as Option 2 and rejected it pre-TLS. Post-TLS Netty becomes mandatory for the JVM server regardless — the rejection was conditional on staying plain-HTTP. This amendment makes that flip explicit.
+
+### Correction 2 — KTOR-7262 scope covers Kotlin/Native CIO **client** TLS too
+
+The original ADR cites [KTOR-7262](https://youtrack.jetbrains.com/issue/KTOR-7262) as the reason the Apple server cannot use Ktor CIO TLS, framed around the server engine. The same `error("TLS sessions are not supported on Native platform.")` lives in `ktor-network-tls/nonJvmMain/io/ktor/network/tls/TLSClientSession.nonJvm.kt:18` — that path is reached by the Ktor **CIO client** on every Native target. Verified against `ktor-network-tls-iosarm64-3.1.3-sources.jar`.
+
+Consequence: the current `commonMain` `HttpClient(CIO)` in [`FileClient.kt`](../../../composeApp/src/commonMain/kotlin/com/tubetoast/tether/network/FileClient.kt), when reused as-is from Apple targets, will throw on the first HTTPS request. **Apple `FileClient` needs its own actual** with a TLS-capable client path. Two viable options:
+
+- **Option C1 — SecureTransport-wrapped raw TCP client + `ktor-http-cio` parser on the response.** Symmetric with the Apple server: reuse the SSLContext / SSLRead / SSLWrite plumbing already needed for the server side, build a tiny client over it. Maximises code reuse with the server. Cost: hand-rolling streaming-body upload on top of a raw `ByteWriteChannel`.
+- **Option C2 — Ktor `Darwin` engine (`HttpClient(Darwin)`).** Apple-specific client engine built on `NSURLSession`. TLS is provided by the system stack; SPKI pinning is implemented via `engine { handleChallenge { session, task, challenge, completionHandler -> … } }` — the standard `URLAuthenticationChallenge` flow, extracting `SecTrust` and comparing leaf SPKI against `TrustedDeviceStore`. Cost: ~30–50 lines of ObjC-style delegate code, divergence from the server's SecureTransport surface (two TLS mental models on Apple). Benefit: enables future `URLSessionConfiguration.background` for iOS-as-sender background uploads (see [ios-background-networking.md](../../knowledge/ios-background-networking.md)) without further engine swaps. The current FileClient already streams from disk-backed `ByteReadChannel`s, so the "body must be a file on disk" caveat of background mode does not bite the existing flow.
+
+**Decision deferred** to the [#140](https://github.com/khmelevartem/tether/issues/140) pre-flight: a small spike that verifies SPKI pinning round-trip through Darwin's `handleChallenge` against a JVM peer is the cheapest tie-breaker. Default if the spike is green: C2 (Darwin). If red or ergonomically painful: C1 (SecureTransport-wrapped). Decision recorded back into this ADR before #140 proceeds.
+
+### Correction 3 — `FileClient` is currently a concrete commonMain class, not `expect/actual`
+
+Original implementation scheme lists `FileClient.apple.kt` as a new file. `FileClient` today is `class FileClient : Closeable` in [`commonMain`](../../../composeApp/src/commonMain/kotlin/com/tubetoast/tether/network/FileClient.kt) — there is no expect declaration. Adding an Apple actual requires first refactoring `FileClient` into an `expect class`, with a JVM actual that preserves today's `HttpClient(CIO)` behaviour and an Apple actual implementing C1 or C2. This refactor is a **prerequisite step**, not a side-effect; #140's DoD must list it explicitly.
+
+### Correction 4 — mutual-TLS handshake on SecureTransport is unverified by POC
+
+The POC [#138](https://github.com/khmelevartem/tether/pull/138) exercised only one-way pinning (`kSSLSessionOptionBreakOnServerAuth`). The production target is mutual TLS — both peers verify each other's SPKI against `TrustedDeviceStore`. The SecureTransport sequence for that uses `kSSLSessionOptionBreakOnClientAuth` plus a multi-step `SSLHandshake` resume loop, and has **not** been empirically verified against a JVM peer with `SSLContext.setNeedClientAuth(true)`.
+
+**#140 pre-flight addition:** add a "mutual TLS handshake" spike (JVM server with client-cert-required ↔ Apple Native client; Apple Native server with client-auth-break ↔ JVM client with custom `KeyManager`) before committing to the architecture. Same shape as the existing `ktor-http-cio` pre-flight. If the mutual-handshake sequencing turns out non-trivial, the workaround would be to drop mutual TLS to one-way pinning + an application-layer challenge-response (cheaper than fighting SecureTransport's auth-break semantics) — but only if forced.
+
+### Items unchanged by this amendment
+
+- Apple server side: SecureTransport + `ktor-http-cio` parser + small route table — unchanged, still the path.
+- `ktor-http-cio` standalone availability for `iosArm64` 3.1.3 — independently verified, artifact is published on Maven Central.
+- Cipher-suite restriction (`TLS_ECDHE_ECDSA_WITH_AES_{128,256}_GCM_*`), no SNI, no client cert chain — unchanged.
+- Pinning by SPKI via `TrustedDeviceStore`, OS trust store never consulted — unchanged.
+
+### Acknowledgement
+
+These errors were missed at original ADR-acceptance time. The cause was scoping the engine evaluation to the Apple side (where the POC was) and trusting Ktor's "`sslConnector` is how you do TLS in Ktor server" as universally true. Process improvement for future server-engine ADRs: verify TLS support on the *chosen engine* on the *chosen target* by running a minimal `embeddedServer(<engine>, sslConnector { ... })` smoke before recording the decision.
+
 ## References
 
 - [#123](https://github.com/khmelevartem/tether/issues/123) — DOCS issue that closes the open question.
