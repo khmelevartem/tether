@@ -44,7 +44,10 @@ class FileServerTest {
         cleanupPaths.clear()
     }
 
-    private fun newServer(downloadsDir: File? = null): FileServer {
+    private fun newServer(
+        downloadsDir: File? = null,
+        tracker: TransferActivityTracker = DefaultTransferActivityTracker(),
+    ): FileServer {
         val configDir = Files.createTempDirectory("tether-fs-test-keys").toFile().also(cleanupPaths::add)
         val resolvedDownloads = downloadsDir ?: Files
             .createTempDirectory("tether-fs-test-dl")
@@ -55,6 +58,7 @@ class FileServerTest {
             downloadsDir = resolvedDownloads,
             trustedDeviceStore = TrustedDeviceStore(configDir),
             deviceKeyPair = DeviceKeyPair(configDir),
+            tracker = tracker,
         )
         startedServer = server
         return server
@@ -249,6 +253,33 @@ class FileServerTest {
                 assertEquals(payload.size, saved.size, "size mismatch")
                 assertContentEquals(payload, saved, "content mismatch on $sizeMb MB roundtrip")
             }
+        } finally {
+            client.close()
+        }
+    }
+
+    @Test
+    fun `upload notifies transfer tracker once on entry and once on exit`() {
+        val tmpDir = Files.createTempDirectory("tether-test").toFile().also(cleanupPaths::add)
+        var enters = 0
+        var exits = 0
+        val tracker = DefaultTransferActivityTracker(
+            onFirstEnter = { enters++ },
+            onLastExit = { exits++ },
+        )
+        val server = newServer(downloadsDir = tmpDir, tracker = tracker)
+        val port = server.start()
+        val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
+        try {
+            runBlocking {
+                val response = client.post("http://localhost:$port/upload?name=track.txt") {
+                    contentType(ContentType.Application.OctetStream)
+                    setBody("payload".toByteArray())
+                }
+                assertEquals(HttpStatusCode.OK, response.status)
+            }
+            assertEquals(1, enters, "tracker.onFirstEnter must fire exactly once per upload")
+            assertEquals(1, exits, "tracker.onLastExit must fire exactly once per upload")
         } finally {
             client.close()
         }

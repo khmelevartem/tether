@@ -128,9 +128,10 @@ No network error on the sender side; the receiver's upload handler gets a closed
 Android Doze (CPU throttled, process suspended) can tear the TCP connection before the
 transfer completes. The FGS type does not prevent either.
 
-**Fix:** hold a `WifiManager.WifiLock` (`WIFI_MODE_FULL_HIGH_PERF`) and a
-`PowerManager.WakeLock` (`PARTIAL_WAKE_LOCK`) for the duration of each active transfer.
-Release both when the last concurrent transfer finishes.
+**Fix:** hold a `WifiManager.WifiLock` (`WIFI_MODE_FULL_LOW_LATENCY` on API ≥ 29,
+`WIFI_MODE_FULL_HIGH_PERF` on older releases) and a `PowerManager.WakeLock`
+(`PARTIAL_WAKE_LOCK`) for the duration of each active transfer. Release both when the
+last concurrent transfer finishes.
 
 **Anti-pattern:** holding the locks for the entire FGS lifetime keeps the radio and CPU
 active even when no transfer is running, draining the battery with no user benefit.

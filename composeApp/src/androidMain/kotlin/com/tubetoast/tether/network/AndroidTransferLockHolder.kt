@@ -18,8 +18,7 @@ class AndroidTransferLockHolder(
 
     fun acquire() {
         if (!wifiLock.isHeld) wifiLock.acquire()
-        // Transfer duration is bounded by the tracker (releaseAll on service onDestroy + per-transfer
-        // refcount). A WakelockTimeout would force a wrong upper bound on streaming transfers.
+        // Timeout would bound streaming transfers arbitrarily; release is guaranteed by the tracker.
         if (!wakeLock.isHeld) {
             @SuppressLint("WakelockTimeout")
             wakeLock.acquire()

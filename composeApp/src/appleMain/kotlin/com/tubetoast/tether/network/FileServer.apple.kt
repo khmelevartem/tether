@@ -2,8 +2,6 @@
 
 package com.tubetoast.tether.network
 
-import com.tubetoast.tether.network.DefaultTransferActivityTracker
-import com.tubetoast.tether.network.TransferActivityTracker
 import com.tubetoast.tether.security.DeviceKeyPair
 import com.tubetoast.tether.security.TrustedDeviceStore
 import io.ktor.server.cio.CIO
