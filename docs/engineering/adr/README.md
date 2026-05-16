@@ -18,4 +18,4 @@ The Decision section names the *choice*, not the *state*. Drift-prone formulatio
 
 If a Decision needs to describe operational reality — what *currently exists in code* — that belongs in the corresponding parent living doc under `docs/engineering/` (e.g. [`transport.md`](../transport.md), [`dependency-injection.md`](../dependency-injection.md)). The ADR references the living doc for "what is"; the living doc references the ADR for "why".
 
-**Before merging an ADR, check:** does a parent living doc for this subsystem exist? If not, create or extend one in the same PR. Skipping this step is the failure mode that turns ADRs into pseudo-living-docs that silently drift.
+**Before writing an ADR, check:** does a parent living doc for this subsystem exist? If not, create or extend one in the same PR. Skipping this step is the failure mode that turns ADRs into pseudo-living-docs that silently drift.
