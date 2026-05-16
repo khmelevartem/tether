@@ -106,7 +106,7 @@ Neither follow-up blocks the current decision; both are flagged so future reader
 What changes alongside this decision:
 
 1. **Upgrade Ktor 3.1.3 → 3.2.x.** The `Expect: 100-continue` malformed response from CIO server (driving [#25](https://github.com/khmelevartem/tether/issues/25)) is fixed in 3.2 per the [3.2 changelog](https://ktor.io/changelog/3.2/). Carries 3.2's other CIO fixes for free.
-2. **Set explicit timeouts on `FileClient`.** Default `requestTimeoutMillis` of 15s under `CIOEngineConfig` ([client-timeout.html](https://ktor.io/docs/client-timeout.html)) is incompatible with the streaming invariant. Install `HttpTimeout` and set `requestTimeoutMillis = INFINITE` (or unset); keep `connectTimeoutMillis` and `socketTimeoutMillis` finite.
+2. ~~**Set explicit timeouts on `FileClient`.**~~ Landed in [#113](https://github.com/khmelevartem/tether/issues/113) ([PR #160](https://github.com/khmelevartem/tether/pull/160)) before this ADR. `HttpTimeout` configured with `requestTimeoutMillis = INFINITE`, finite `connectTimeoutMillis`, dropped `socketTimeoutMillis` in favour of an application-layer watchdog on stalled uploads. Listed for historical completeness.
 3. **Accept that `SO_KEEPALIVE` is not configurable on CIO server accept'ed sockets** ([KTOR-5572](https://youtrack.jetbrains.com/issue/KTOR-5572)). The failed reflection-into-CIO-internals attempt in [#164](https://github.com/khmelevartem/tether/issues/164) is the right diagnostic — that surface doesn't exist. Mitigate at the application layer (periodic in-band ping frames during long transfers) and via Android-side `WifiLock` + `WakeLock` ([#150](https://github.com/khmelevartem/tether/issues/150)).
 
 ## Costs accepted
@@ -134,7 +134,7 @@ Status of currently open transport-layer issues, in the light of this decision:
 | Issue | Status after this ADR |
 |---|---|
 | [#119](https://github.com/khmelevartem/tether/issues/119) — Transport reliability hardening (umbrella) | Reframed: this is the implementation umbrella for the three follow-ups below. The stack stays as is. |
-| [#113](https://github.com/khmelevartem/tether/issues/113) — `FileClient` 15s default timeout | Fix as-is: install `HttpTimeout` with infinite request timeout on `FileClient`. CIO is correct here, our config is missing. |
+| [#113](https://github.com/khmelevartem/tether/issues/113) — `FileClient` 15s default timeout | **Closed** ([PR #160](https://github.com/khmelevartem/tether/pull/160), 2026-05-16). `HttpTimeout` installed with infinite request timeout + app-layer stalled-upload watchdog. CIO was correct; our config was missing. |
 | [#25](https://github.com/khmelevartem/tether/issues/25) — `Expect: 100-continue` curl incompatibility | Closeable on Ktor 3.2 bump per the [3.2 changelog](https://ktor.io/changelog/3.2/). |
 | [#91](https://github.com/khmelevartem/tether/issues/91) — Android-emulator hang | Likely emulator NAT / mDNS issue, not engine. Stays open; emulator-specific networking diagnostic, not an engine choice. |
 | [#164](https://github.com/khmelevartem/tether/issues/164) — per-socket TCP keepalive | Rescope: application-layer ping during active transfer instead of CIO-internal reflection. `SO_KEEPALIVE` on accepted sockets is upstream-blocked ([KTOR-5572](https://youtrack.jetbrains.com/issue/KTOR-5572)). |
