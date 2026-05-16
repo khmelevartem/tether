@@ -37,6 +37,19 @@ rg "<changed symbol>" docs/ README.md
 
 Flag every doc location that references the old shape and is not updated.
 
+### 2a. Doc-vs-issue-state drift
+
+If the diff adds or modifies references to GitHub issues by `#N` in any markdown under `docs/`, `.claude/`, or `*.md` at repo root, **verify the cited state matches reality**. A frequent failure mode: a new doc says "fix pending in #N" or "blocked on #N" when #N is already closed (often by a sibling PR landed days earlier).
+
+```bash
+# Pull all #N references from the diff
+git diff <base>..<head> -- '*.md' | grep -oE '#[0-9]+' | sort -u
+# For each: check actual state vs how the doc frames it
+gh issue view <N> --json state,closedAt,title
+```
+
+Flag every doc location where the framing implies one state but the issue is in another. Most common: "to be fixed in #N" + issue is closed; "open question in #N" + issue is closed with the question answered. ADRs and `docs/knowledge/*.md` are the highest-risk surface because they tend to outlive the issues they cite.
+
 ### 3. Third-party API claims
 
 For every external API call introduced or changed (Ktor, Coroutines, Compose, Android SDK, ObjC frameworks), verify claims against the actual library. If author says "X returns non-null / throws / suspends / has lifecycle Y" — check source or docs (WebFetch if needed). Examples: "ServerSocket is non-blocking", "cancellation propagates here", "AVAudioSession auto-activates" — all suspect until verified.
@@ -65,6 +78,7 @@ Every new dependency in `build.gradle.kts` must be used in the diff. Every new i
 PHASE: Reuse
   [REQUIRED] file:line — duplicates <other file:line>; consolidate at <suggested location>
   [REQUIRED] docs/<file>.md — references <symbol> with old shape; update or revert
+  [REQUIRED] docs/<file>.md:<line> — cites #<N> as <state-implied>; issue is actually <real-state>; fix framing
   [REQUIRED] <claim in comment/PR body> — actual behavior is <…>; correct the claim
   [OK] No duplication
   [OK] No drift

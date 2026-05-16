@@ -29,4 +29,7 @@ ADRs in [`adr/`](adr/) capture the *why* behind one-time architectural choices. 
 - [Presentation & Navigation](adr/adr-presentation-and-navigation.md) — chose Decompose over Voyager / custom thin layer / Compose Navigation MP / Premo.
 - [macOS target — Native over Desktop JVM](adr/adr-macos-native-vs-jvm.md) — chose `macosArm64` Kotlin/Native to share `appleMain` with iOS.
 - [Visual Identity](adr/adr-visual-identity.md) — palette, typography, iconography, brand mark `•—•`; dropped Material 3 in favour of custom `TetherTheme`.
+- [Network stack](adr/adr-network-stack.md) — chose Ktor CIO across all targets tactically; engine swaps under TLS forced upstream. Living-doc сторона — [`transport.md`](transport.md).
+- [Apple FileServer engine](adr/adr-apple-fileserver-engine.md) — chose Ktor CIO Native over hand-rolled HTTP for the Apple-side `FileServer.actual`.
+- [Channel encryption](adr/adr-channel-encryption.md) — chose TLS-with-paired-key-pinning + SecureTransport on Apple. Includes 2026-05-16 Amendment with implementation-plan corrections.
 
