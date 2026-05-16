@@ -185,31 +185,6 @@ class FileClientTest {
     }
 
     @Test
-    fun `send succeeds when server takes more than 15 seconds to start reading`() = runTest {
-        val client = mockClient { request ->
-            delay(16.seconds)
-            val body = request.body as OutgoingContent.ReadChannelContent
-            val ch = body.readFrom()
-            val buf = ByteArray(8 * 1024)
-            while (!ch.isClosedForRead) ch.readAvailable(buf)
-            respond(
-                content = okResponse("ignored"),
-                status = HttpStatusCode.OK,
-                headers = headersOf(HttpHeaders.ContentType, "application/json"),
-            )
-        }
-        val file = Files.createTempFile("slow-server-test", ".bin")
-        file.writeBytes(ByteArray(1024) { 0x42 })
-        try {
-            val result = client.send(device, file)
-            assertIs<SendResult.Success>(result)
-        } finally {
-            client.close()
-            Files.deleteIfExists(file)
-        }
-    }
-
-    @Test
     fun `send invokes onProgress callback with monotonically increasing bytesTransferred`() = runTest {
         val client = mockClient { request ->
             val body = request.body as OutgoingContent.ReadChannelContent

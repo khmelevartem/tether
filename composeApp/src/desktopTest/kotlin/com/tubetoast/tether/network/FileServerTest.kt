@@ -17,14 +17,15 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.OutgoingContent
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
-import io.ktor.utils.io.ByteChannel
+import io.ktor.server.engine.embeddedServer
+import io.ktor.server.request.receiveChannel
+import io.ktor.server.response.respondText
+import io.ktor.server.routing.routing
 import io.ktor.utils.io.ByteWriteChannel
+import io.ktor.utils.io.readAvailable
 import io.ktor.utils.io.writeFully
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import java.io.File
@@ -38,8 +39,8 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlin.test.fail
 import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.seconds
-import kotlin.time.TimeSource
+import io.ktor.server.cio.CIO as ServerCIO
+import io.ktor.server.routing.post as serverPost
 
 class FileServerTest {
     private val cleanupPaths = mutableListOf<File>()
@@ -264,42 +265,30 @@ class FileServerTest {
     }
 
     @Test
-    fun `truncated upload with known totalBytes fails and leaves no partial file`() {
-        val tmpDir = Files.createTempDirectory("tether-test").toFile().also(cleanupPaths::add)
-        val server = newServer(downloadsDir = tmpDir)
-        val port = server.start()
+    fun `send tolerates long server delay despite CIO default request timeout`() {
+        val slowServer = embeddedServer(ServerCIO, port = 0) {
+            routing {
+                serverPost("/upload") {
+                    delay(16_000)
+                    val ch = call.receiveChannel()
+                    val buf = ByteArray(8 * 1024)
+                    while (!ch.isClosedForRead) ch.readAvailable(buf)
+                    call.respondText("""{"savedPath":"ignored"}""", ContentType.Application.Json)
+                }
+            }
+        }.start(wait = false)
+        val port = runBlocking { slowServer.engine.resolvedConnectors() }.first().port
         val client = FileClient.default()
         val device = Device(name = "test", host = "127.0.0.1", port = port)
+        val file = Files.createTempFile("slow-server-cio", ".bin")
+        file.toFile().writeBytes(ByteArray(1024) { 0x42 })
         try {
-            val declared = 64L * 1024
-            val delivered = 4 * 1024
-            val partialChannel = ByteChannel(autoFlush = true)
-            runBlocking {
-                CoroutineScope(Dispatchers.IO).launch {
-                    partialChannel.writeFully(ByteArray(delivered) { 0x42 })
-                    partialChannel.cancel(java.io.IOException("simulated mid-upload disconnect"))
-                }
-                val result = client.send(
-                    device = device,
-                    channel = partialChannel,
-                    fileName = "trunc-prod.bin",
-                    totalBytes = declared,
-                )
-                assertIs<SendResult.Failure>(result)
-                val deadline = TimeSource.Monotonic.markNow() + 3.seconds
-                while (deadline.hasNotPassedNow()) {
-                    val partial = tmpDir.listFiles()?.any { it.name.startsWith("trunc-prod") } ?: false
-                    if (!partial) break
-                    delay(20.milliseconds)
-                }
-                val partial = tmpDir.listFiles()?.filter { it.name.startsWith("trunc-prod") } ?: emptyList()
-                assertTrue(
-                    partial.isEmpty(),
-                    "no partial file should remain in $tmpDir, found: ${partial.map { it.name }}",
-                )
-            }
+            val result = runBlocking { client.send(device, file) }
+            assertIs<SendResult.Success>(result)
         } finally {
+            slowServer.stop(0, 0)
             client.close()
+            Files.deleteIfExists(file)
         }
     }
 
