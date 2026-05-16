@@ -47,7 +47,7 @@ Small, separate features about how Tether reacts to the OS state around it. Each
 | Feature | Status | Doc | Issues |
 |---------|--------|-----|--------|
 | Permissions | scoped | [system/permissions/spec.md](system/permissions/spec.md) | _tbd_ |
-| Wi-Fi availability | idea | [system/wifi-availability/spec.md](system/wifi-availability/spec.md) (stub) | _tbd_ |
+| Wi-Fi availability | scoped | [system/wifi-availability/spec.md](system/wifi-availability/spec.md) | _tbd_ |
 
 ---
 
