@@ -2,204 +2,299 @@ package com.tubetoast.tether.network
 
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.protocol.SendResult
-import com.tubetoast.tether.security.DeviceKeyPair
-import com.tubetoast.tether.security.TrustedDeviceStore
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.mock.MockEngine
+import io.ktor.client.engine.mock.MockRequestHandleScope
+import io.ktor.client.engine.mock.respond
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.request.HttpRequestData
+import io.ktor.client.request.HttpResponseData
 import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.OutgoingContent
+import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
-import io.ktor.server.application.call
-import io.ktor.server.application.install
-import io.ktor.server.cio.CIO
-import io.ktor.server.engine.embeddedServer
-import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.server.request.contentLength
-import io.ktor.server.request.receiveChannel
-import io.ktor.server.response.respond
-import io.ktor.server.routing.post
-import io.ktor.server.routing.routing
 import io.ktor.utils.io.ByteChannel
 import io.ktor.utils.io.readAvailable
 import io.ktor.utils.io.writeFully
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import java.io.File
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import java.io.FileNotFoundException
+import java.io.IOException
 import java.nio.file.Files
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.io.path.writeBytes
-import kotlin.test.AfterTest
-import kotlin.test.BeforeTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
-import kotlin.time.TimeSource
 
 class FileClientTest {
-    private lateinit var tmpDir: File
-    private lateinit var configDir: File
-    private lateinit var server: FileServer
-    private lateinit var client: FileClient
-    private var serverPort: Int = 0
+    private val device = Device(name = "test", host = "127.0.0.1", port = 8080)
 
-    private val device
-        get() = Device(name = "test", host = "127.0.0.1", port = serverPort)
+    private fun TestScope.mockClient(
+        noProgressTimeout: kotlin.time.Duration = 60.seconds,
+        handler: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData,
+    ): FileClient = FileClient(
+        client = HttpClient(MockEngine) {
+            install(ContentNegotiation) { json() }
+            engine {
+                dispatcher = StandardTestDispatcher(testScheduler)
+                addHandler(handler)
+            }
+        },
+        noProgressTimeout = noProgressTimeout,
+    )
 
-    @BeforeTest
-    fun setup() {
-        tmpDir = Files.createTempDirectory("tether-client-test").toFile()
-        configDir = Files.createTempDirectory("tether-client-test-keys").toFile()
-        server = FileServer(
-            port = 0,
-            downloadsDir = tmpDir,
-            trustedDeviceStore = TrustedDeviceStore(configDir),
-            deviceKeyPair = DeviceKeyPair(configDir),
-        )
-        serverPort = server.start()
-        client = FileClient()
-    }
-
-    @AfterTest
-    fun teardown() {
-        client.close()
-        server.stop()
-        tmpDir.deleteRecursively()
-        configDir.deleteRecursively()
-    }
+    private fun okResponse(savedPath: String) = """{"savedPath":"$savedPath"}"""
 
     @Test
-    fun `send returns Success with saved path`() {
+    fun `send returns Success with saved path`() = runTest {
+        val client = mockClient { request ->
+            val body = request.body as OutgoingContent.ReadChannelContent
+            val ch = body.readFrom()
+            val buf = ByteArray(8 * 1024)
+            while (!ch.isClosedForRead) ch.readAvailable(buf)
+            respond(
+                content = okResponse("/saved/path.txt"),
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
         val file = Files.createTempFile("send-test", ".txt")
         file.writeBytes("hello from client".toByteArray())
-        runBlocking {
+        try {
             val result = client.send(device, file)
             assertIs<SendResult.Success>(result)
             assertTrue(result.savedPath.endsWith(".txt"))
-            assertEquals("hello from client", File(result.savedPath).readText())
+        } finally {
+            client.close()
+            Files.deleteIfExists(file)
         }
-        Files.deleteIfExists(file)
     }
 
     @Test
-    fun `send throws FileNotFoundException for missing file`() {
+    fun `send throws FileNotFoundException for missing file`() = runTest {
+        val client = mockClient { error("should not be called") }
         val missing = Files.createTempDirectory("gone").resolve("no-such-file.bin")
-        runBlocking {
+        try {
             assertFailsWith<FileNotFoundException> {
                 client.send(device, missing)
             }
+        } finally {
+            client.close()
         }
     }
 
     @Test
-    fun `send preserves file content exactly`() {
-        val content = ByteArray(256) { it.toByte() }
+    fun `send preserves file content exactly`() = runTest {
+        val captured = AtomicReference<ByteArray>()
+        val client = mockClient { request ->
+            val body = request.body as OutgoingContent.ReadChannelContent
+            val ch = body.readFrom()
+            val out = mutableListOf<Byte>()
+            val buf = ByteArray(8 * 1024)
+            while (!ch.isClosedForRead) {
+                val n = ch.readAvailable(buf)
+                if (n > 0) out.addAll(buf.take(n))
+            }
+            captured.set(out.toByteArray())
+            respond(
+                content = okResponse("/saved/file.bin"),
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+        val payload = ByteArray(256) { it.toByte() }
         val file = Files.createTempFile("binary-test", ".bin")
-        file.writeBytes(content)
-        runBlocking {
-            val result = client.send(device, file) as SendResult.Success
-            val saved = File(result.savedPath).readBytes()
-            assertTrue(content.contentEquals(saved), "Saved content does not match sent content")
+        file.writeBytes(payload)
+        try {
+            client.send(device, file)
+            assertTrue(
+                payload.contentEquals(captured.get()),
+                "Captured content does not match sent content",
+            )
+        } finally {
+            client.close()
+            Files.deleteIfExists(file)
         }
-        Files.deleteIfExists(file)
     }
 
     @Test
-    fun `send sets Content-Length and omits chunked transfer encoding when totalBytes known`() {
+    fun `send sets Content-Length and omits chunked transfer encoding when totalBytes known`() = runTest {
         data class Captured(
             val contentLength: Long?,
             val transferEncoding: String?,
         )
+
         val captured = AtomicReference<Captured>()
-        val captureServer = embeddedServer(CIO, port = 0) {
-            install(ContentNegotiation) { json() }
-            routing {
-                post("/upload") {
-                    val channel = call.receiveChannel()
-                    val buf = ByteArray(8 * 1024)
-                    while (!channel.isClosedForRead) channel.readAvailable(buf)
-                    captured.set(
-                        Captured(
-                            contentLength = call.request.contentLength(),
-                            transferEncoding = call.request.headers[HttpHeaders.TransferEncoding],
-                        ),
-                    )
-                    call.respond(mapOf("savedPath" to "ignored"))
-                }
-            }
-        }.start(wait = false)
-        val port = runBlocking {
-            captureServer.engine
-                .resolvedConnectors()
-                .first()
-                .port
+        val client = mockClient { request ->
+            val body = request.body as OutgoingContent.ReadChannelContent
+            val ch = body.readFrom()
+            val buf = ByteArray(8 * 1024)
+            while (!ch.isClosedForRead) ch.readAvailable(buf)
+            captured.set(
+                Captured(
+                    contentLength = request.body.contentLength,
+                    transferEncoding = request.headers[HttpHeaders.TransferEncoding],
+                ),
+            )
+            respond(
+                content = okResponse("ignored"),
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
         }
-        val captureClient = FileClient()
+        val payload = ByteArray(2048) { (it % 251).toByte() }
+        val file = Files.createTempFile("content-length-test", ".bin")
+        file.writeBytes(payload)
         try {
-            val payload = ByteArray(2048) { (it % 251).toByte() }
-            val file = Files.createTempFile("content-length-test", ".bin")
-            file.writeBytes(payload)
-            runBlocking {
-                captureClient.send(
-                    device = Device(name = "x", host = "127.0.0.1", port = port),
-                    file = file,
-                )
-            }
-            Files.deleteIfExists(file)
-            val c = captured.get() ?: error("server did not capture request")
-            assertEquals(payload.size.toLong(), c.contentLength, "Content-Length must equal file size")
+            client.send(device, file)
+            val c = captured.get() ?: error("handler did not capture request")
+            assertTrue(
+                c.contentLength == payload.size.toLong(),
+                "Content-Length must equal file size",
+            )
             assertNull(c.transferEncoding, "Transfer-Encoding must be absent (no chunked)")
         } finally {
-            captureClient.close()
-            captureServer.stop(0, 0)
+            client.close()
+            Files.deleteIfExists(file)
         }
     }
 
     @Test
-    fun `truncated upload with known totalBytes fails and leaves no partial file`() {
-        val declared = 64L * 1024
-        val delivered = 4 * 1024
-        val partialChannel = ByteChannel(autoFlush = true)
-        runBlocking {
-            CoroutineScope(Dispatchers.IO).launch {
-                partialChannel.writeFully(ByteArray(delivered) { 0x42 })
-                partialChannel.cancel(java.io.IOException("simulated mid-upload disconnect"))
+    fun `send returns Failure when server is not running`() = runTest {
+        val client = mockClient { throw IOException("connection refused") }
+        val file = Files.createTempFile("no-server", ".txt")
+        file.writeBytes("data".toByteArray())
+        try {
+            val result = client.send(device, file)
+            assertIs<SendResult.Failure>(result)
+        } finally {
+            client.close()
+            Files.deleteIfExists(file)
+        }
+    }
+
+    @Test
+    fun `send invokes onProgress callback with monotonically increasing bytesTransferred`() = runTest {
+        val client = mockClient { request ->
+            val body = request.body as OutgoingContent.ReadChannelContent
+            val ch = body.readFrom()
+            val buf = ByteArray(8 * 1024)
+            while (!ch.isClosedForRead) ch.readAvailable(buf)
+            respond(
+                content = okResponse("/saved/file.bin"),
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+        val observed = mutableListOf<Long>()
+        val payload = ByteArray(64 * 1024) { it.toByte() }
+        val file = Files.createTempFile("progress-test", ".bin")
+        file.writeBytes(payload)
+        try {
+            val result = client.send(device, file) { sent, _ -> observed.add(sent) }
+            assertIs<SendResult.Success>(result)
+            assertTrue(observed.isNotEmpty(), "onProgress must fire at least once")
+            assertTrue(
+                observed.last() == payload.size.toLong(),
+                "final progress should equal payload size, got ${observed.last()}",
+            )
+            assertTrue(
+                observed == observed.sorted(),
+                "progress values must be monotonically increasing, got $observed",
+            )
+        } finally {
+            client.close()
+            Files.deleteIfExists(file)
+        }
+    }
+
+    @Test
+    fun `send does not trip watchdog during cold-start before first byte is sent`() = runTest {
+        val client = mockClient(noProgressTimeout = 500.milliseconds) {
+            delay(Long.MAX_VALUE)
+            error("never")
+        }
+        val source = ByteChannel(autoFlush = true)
+        val sendJob = launch {
+            withTimeout(10.seconds) {
+                client.send(
+                    device = device,
+                    channel = source,
+                    fileName = "cold-start.bin",
+                    totalBytes = null,
+                )
             }
+        }
+        advanceTimeBy(5.seconds)
+        assertTrue(sendJob.isActive, "watchdog must not fire before first byte is sent")
+        source.cancel(null)
+        client.close()
+        sendJob.cancel()
+    }
+
+    @Test
+    fun `send returns Failure when source channel cancels mid-stream`() = runTest {
+        val client = mockClient { request ->
+            val body = request.body as OutgoingContent.ReadChannelContent
+            val ch = body.readFrom()
+            val buf = ByteArray(8 * 1024)
+            while (!ch.isClosedForRead) ch.readAvailable(buf)
+            ch.closedCause?.let { throw it }
+            respond(
+                content = okResponse("ignored"),
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+        val partialChannel = ByteChannel(autoFlush = true)
+        launch {
+            partialChannel.writeFully(ByteArray(4 * 1024) { 0x42 })
+            partialChannel.cancel(IOException("simulated mid-upload disconnect"))
+        }
+        try {
             val result = client.send(
                 device = device,
                 channel = partialChannel,
-                fileName = "trunc-prod.bin",
-                totalBytes = declared,
+                fileName = "trunc.bin",
+                totalBytes = 64L * 1024,
+                onProgress = null,
             )
             assertIs<SendResult.Failure>(result)
-            val deadline = TimeSource.Monotonic.markNow() + 3.seconds
-            while (deadline.hasNotPassedNow()) {
-                val partial = tmpDir.listFiles()?.any { it.name.startsWith("trunc-prod") } ?: false
-                if (!partial) break
-                delay(20.milliseconds)
-            }
-            val partial = tmpDir.listFiles()?.filter { it.name.startsWith("trunc-prod") } ?: emptyList()
-            assertTrue(
-                partial.isEmpty(),
-                "no partial file should remain in $tmpDir, found: ${partial.map { it.name }}",
-            )
+        } finally {
+            client.close()
         }
     }
 
     @Test
-    fun `send returns Failure when server is not running`() {
-        val file = Files.createTempFile("no-server", ".txt")
-        file.writeBytes("data".toByteArray())
-        val unreachable = Device(name = "x", host = "127.0.0.1", port = 1)
-        runBlocking {
-            val result = client.send(unreachable, file)
-            assertIs<SendResult.Failure>(result)
+    fun `send returns Failure when no upload progress for the configured timeout`() = runTest {
+        val client = mockClient(noProgressTimeout = 2.seconds) {
+            delay(Long.MAX_VALUE)
+            error("never")
         }
-        Files.deleteIfExists(file)
+        val source = ByteChannel(autoFlush = true)
+        launch { source.writeFully(ByteArray(100) { 0x42 }) }
+        try {
+            val result = client.send(
+                device = device,
+                channel = source,
+                fileName = "watchdog.bin",
+                totalBytes = null,
+            )
+            assertIs<SendResult.Failure>(result)
+        } finally {
+            source.cancel(null)
+            client.close()
+        }
     }
 }

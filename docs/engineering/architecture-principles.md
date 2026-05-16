@@ -77,7 +77,7 @@ When refactoring existing code, the same questions apply in reverse: a layer tha
 
 ## Anti-patterns we have seen here
 
-- Components that create their own collaborators (`HttpClient()` inside `FileClient`). Breaks testability and lifecycle. Fixed by constructor injection — see [dependency-injection.md](dependency-injection.md).
+- Components that create their own collaborators. Breaks testability and lifecycle. The remedy is constructor injection — see [dependency-injection.md](dependency-injection.md).
 - Platform context (`TetherApp.context`) reached for from inside discovery/network code. Pushes platform details across layers. Fixed by passing what's needed explicitly into the platform-specific `actual`.
 - UI directly orchestrating discovery + networking. Drag-bottom layer concerns into the most volatile one. Fixed by an `AppContainer` composition root that wires lifecycle, and a thin Component surface for UI (see [presentation-layer.md](presentation-layer.md)).
 

@@ -30,6 +30,26 @@ NSRunLoop нужно качать вручную — подробнее в [`doc
 
 Не делай это превентивно — только когда контракт «при ошибке actual должен бросить» нужно проверить end-to-end (HTTP-уровень в нашем случае), а триггер ошибки на платформе недостижим. Пример — `TrustedDeviceStore` в #9: HTTP `/pair → 500` тестируется на каждом actual через throwing-subclass.
 
+## HTTP-клиент в unit-тестах
+
+Класс, держащий `HttpClient`, принимает его через конструктор; production-конфиг строится в `companion object { fun default() }`. Тест передаёт `HttpClient(MockEngine)` с handler'ом, отвечающим на запросы.
+
+Чтобы `delay()` в handler'е и внутренние таймеры клиента подчинялись `TestCoroutineScheduler` под `runTest`, пинь dispatcher на engine:
+
+```kotlin
+private fun TestScope.httpFor(handler: ...): HttpClient =
+    HttpClient(MockEngine) {
+        engine {
+            dispatcher = StandardTestDispatcher(testScheduler)
+            addHandler(handler)
+        }
+    }
+```
+
+Без `dispatcher = ...` handler'ы поднимают свой engine dispatcher (real-time) — virtual time `runTest`'а игнорируется, тест становится либо медленным, либо flaky.
+
+Real-CIO server (`embeddedServer(CIO)`) под virtual time **не приводится**: `CIOApplicationEngine` хардкодит `userDispatcher = Dispatchers.IOBridge` и оборачивает route handler'ы в `withContext(userDispatcher)`. Если тест требует именно реального CIO — это integration-уровень, держи его в `FileServerTest` с `runBlocking` и реальным временем.
+
 ## Удаление тестов
 
 Удалять тесты нежелательно — они защищают инварианты, часть из которых не очевидна по имени теста. До удаления:
