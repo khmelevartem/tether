@@ -23,6 +23,8 @@ These documents codify principles, not the current shape of the codebase — the
 - **Don't restate what the code already shows** (hierarchies, signatures, source set layout). The code is the one source of truth that drifts last; link to it instead of copying.
 - **Lead with the rule.** Rationale and examples follow.
 
+A starter skeleton with common sections lives in [`_template.md`](_template.md). Copy it as a base for new subsystem docs.
+
 ## Architecture Decision Records
 
 ADRs in [`adr/`](adr/) capture the *why* behind one-time architectural choices. Living docs above; ADRs are append-only history. See [`adr/README.md`](adr/README.md) for conventions.
