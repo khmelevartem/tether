@@ -146,6 +146,38 @@ PASS если:
 
 Cleanup инстанса B и квит A — в Блоке 5.
 
+### Блок 2.5: Same-name discovery
+
+Поднимаешь третий CLI-инстанс с тем же именем, что A (`SmokeMacA`), параллельно с A и B. Класс багов: peers с одинаковым service-name теряются из-за неверного dedup в store или гонок в conflict-rename probing. Закрывается на runtime поверх обоих платформенных путей — Bonjour на macOS-host, JmDNS на Linux/Windows-host.
+
+```bash
+LOG_C=/tmp/smoke-cliC.log
+mkfifo /tmp/smoke-cliC-in
+sleep 600 > /tmp/smoke-cliC-in & KEEPER_C=$!; disown $KEEPER_C
+echo $KEEPER_C > /tmp/smoke-cliC-keeper.pid
+nohup java -jar "$JAR" --name SmokeMacA --port 0 < /tmp/smoke-cliC-in > "$LOG_C" 2>&1 &
+JPID_C=$!; disown $JPID_C
+echo $JPID_C > /tmp/smoke-cliC.pid
+
+# Каждый из трёх должен видеть ≥ 2 уникальных peer'ов. Поллим через stdin `list`.
+for i in $(seq 1 20); do
+  echo "list" > /tmp/smoke-cliA-in &
+  echo "list" > /tmp/smoke-cliB-in &
+  echo "list" > /tmp/smoke-cliC-in &
+  sleep 1
+  # Строка `[peers]` начинается с ANSI-escape (`\x1b[1A\r\x1b[K`) — без `^`-якоря.
+  # Имя peer'а ловим до `@` (включает пробелы и скобки renamed-формы `SmokeMacA (2)`).
+  A_OK=$(grep -aE "\[peers\]" $LOG_A | tail -1 | grep -oE 'SmokeMac[A-Z][^@]*' | sort -u | wc -l | tr -d ' ')
+  B_OK=$(grep -aE "\[peers\]" $LOG_B | tail -1 | grep -oE 'SmokeMac[A-Z][^@]*' | sort -u | wc -l | tr -d ' ')
+  C_OK=$(grep -aE "\[peers\]" $LOG_C | tail -1 | grep -oE 'SmokeMac[A-Z][^@]*' | sort -u | wc -l | tr -d ' ')
+  [ "$A_OK" -ge 2 ] && [ "$B_OK" -ge 2 ] && [ "$C_OK" -ge 2 ] && break
+done
+```
+
+PASS если каждый из A/B/C видит ≥ 2 уникальных SmokeMac-peer'ов в течение 20 сек. FAIL — приложить последние `[peers]` строки из всех трёх логов в Details.
+
+Cleanup инстанса C — в Блоке 5.
+
 ### Блок 3: Android (условно)
 
 Сначала проверка устройства:
@@ -230,7 +262,7 @@ PASS если exit=0. FAIL — приложить последние ~30 стр�
 ### Блок 5: Cleanup
 
 Выполняется **всегда**:
-- `kill $(cat /tmp/smoke-cliA.pid /tmp/smoke-cliB.pid /tmp/smoke-cliA-keeper.pid /tmp/smoke-cliB-keeper.pid 2>/dev/null) 2>/dev/null`
+- `kill $(cat /tmp/smoke-cliA.pid /tmp/smoke-cliB.pid /tmp/smoke-cliC.pid /tmp/smoke-cliA-keeper.pid /tmp/smoke-cliB-keeper.pid /tmp/smoke-cliC-keeper.pid 2>/dev/null) 2>/dev/null`
 - `pkill -f 'com.tubetoast.tether.*\.jar'` (страховка)
 - `rm -f /tmp/smoke-cli*-in /tmp/smoke-cli*.log /tmp/smoke-cli*.pid /tmp/smoke-cli*-keeper.pid /tmp/smoke-send.txt /tmp/smoke-android.txt`
 - Файлы в `~/Downloads/Tether/`, которые сами создали — убираем по `savedPath` из лога A (не по угаданному пути).
