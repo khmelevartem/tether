@@ -5,11 +5,14 @@ import com.arkivanov.decompose.value.MutableValue
 import com.arkivanov.decompose.value.Value
 import com.arkivanov.essenty.backhandler.BackCallback
 import com.arkivanov.essenty.lifecycle.coroutines.coroutineScope
+import com.tubetoast.tether.ioDispatcher
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.FileSource
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class TransferComponent(
     componentContext: ComponentContext,
@@ -18,6 +21,7 @@ class TransferComponent(
     private val batchSender: BatchSender,
     private val onExit: () -> Unit,
     private val scope: CoroutineScope = componentContext.coroutineScope(),
+    private val blockingDispatcher: CoroutineDispatcher = ioDispatcher,
 ) : ComponentContext by componentContext {
     private val _state = MutableValue<TransferState>(TransferState.Preparing)
     val state: Value<TransferState> = _state
@@ -28,9 +32,9 @@ class TransferComponent(
     init {
         backHandler.register(BackCallback { onBackPressed() })
         scope.launch {
-            val needsConfirmation = exceedsThreshold(sources)
+            val needsConfirmation = withContext(blockingDispatcher) { exceedsThreshold(sources) }
             if (needsConfirmation) {
-                val totalBytes = sources.mapNotNull { it.size }.sum()
+                val totalBytes = withContext(blockingDispatcher) { sources.mapNotNull { it.size }.sum() }
                 _state.value = TransferState.FolderConfirm(sources.size, totalBytes)
             } else {
                 startBatch(sources)

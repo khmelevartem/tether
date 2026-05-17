@@ -9,7 +9,7 @@ abstract class JvmAppContainer(
 ) : AppContainer(config) {
     val downloadsDir: File = config.downloadsDir
     override val trustedDeviceStore: TrustedDeviceStore get() = config.trustedDeviceStore
-    override val fileServer: FileServer by lazy {
+    open override val fileServer: FileServer by lazy {
         FileServer(
             port = config.port,
             downloadsDir = downloadsDir,

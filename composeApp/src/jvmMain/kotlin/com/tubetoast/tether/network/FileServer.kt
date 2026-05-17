@@ -11,18 +11,25 @@ import io.ktor.utils.io.jvm.javaio.toInputStream
 import kotlinx.coroutines.runBlocking
 import java.io.File
 
-actual class FileServer(
+actual class FileServer internal constructor(
     private val port: Int,
-    private val downloadsDir: File = File(System.getProperty("user.home"), "Downloads/Tether"),
     private val trustedDeviceStore: TrustedDeviceStore,
     private val deviceKeyPair: DeviceKeyPair,
+    private val storage: UploadStorage,
     private val tracker: TransferActivityTracker = DefaultTransferActivityTracker(),
 ) {
+    constructor(
+        port: Int,
+        downloadsDir: File = File(System.getProperty("user.home"), "Downloads/Tether"),
+        trustedDeviceStore: TrustedDeviceStore,
+        deviceKeyPair: DeviceKeyPair,
+        tracker: TransferActivityTracker = DefaultTransferActivityTracker(),
+    ) : this(port, trustedDeviceStore, deviceKeyPair, JvmUploadStorage(downloadsDir), tracker)
+
     private var server: EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration>? = null
 
     actual fun start(): Int {
         check(server == null) { "FileServer is already running" }
-        val storage = JvmUploadStorage(downloadsDir)
         storage.ensureRoot()
         val srv = embeddedServer(CIO, port = port) {
             installFileServerRoutes(storage, trustedDeviceStore, deviceKeyPair.publicKey, tracker)

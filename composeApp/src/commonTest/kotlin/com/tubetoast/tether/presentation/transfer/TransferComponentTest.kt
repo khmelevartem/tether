@@ -8,6 +8,7 @@ import com.tubetoast.tether.protocol.SendResult
 import com.tubetoast.tether.transfer.FakeFileSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -35,6 +36,7 @@ class TransferComponentTest {
             batchSender = sender,
             onExit = { exitCalled = true },
             scope = scope,
+            blockingDispatcher = UnconfinedTestDispatcher(),
         )
     }
 

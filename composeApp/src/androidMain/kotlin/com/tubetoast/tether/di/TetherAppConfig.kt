@@ -11,8 +11,10 @@ class TetherAppConfig(
 ) : AndroidAppConfig {
     override val deviceName: String = "Tether-${Build.MODEL}"
     override val port: Int = 0
-    override val downloadsDir: File =
-        (application.getExternalFilesDir(null) ?: application.filesDir).resolve("Tether")
+
+    // downloadsDir satisfies the JvmAppConfig contract but is unused on Android:
+    // AndroidAppContainer overrides fileServer with AndroidMediaStoreUploadStorage.
+    override val downloadsDir: File = application.cacheDir
     override val trustedDeviceStore: TrustedDeviceStore = TrustedDeviceStore(application)
     override val deviceKeyPair: DeviceKeyPair = DeviceKeyPair(application.filesDir)
 }
