@@ -6,22 +6,51 @@ import com.arkivanov.decompose.value.Value
 import com.arkivanov.decompose.value.update
 import com.arkivanov.essenty.lifecycle.coroutines.coroutineScope
 import com.tubetoast.tether.discovery.DeviceDiscovery
+import com.tubetoast.tether.protocol.Device
+import com.tubetoast.tether.transfer.FilePicker
+import com.tubetoast.tether.transfer.FileSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 class DeviceListComponent(
     componentContext: ComponentContext,
     private val discovery: DeviceDiscovery,
+    val pendingFiles: Value<List<FileSource>> = MutableValue(emptyList()),
+    private val filePicker: FilePicker? = null,
+    private val onSendRequested: (Device, List<FileSource>) -> Unit = { _, _ -> },
     coroutineScope: CoroutineScope = componentContext.coroutineScope(),
 ) : ComponentContext by componentContext {
     private val _state = MutableValue(DeviceListState.empty())
     val state: Value<DeviceListState> = _state
 
+    private val scope = coroutineScope
+
     init {
-        coroutineScope.launch {
+        scope.launch {
             discovery.discoveredDevices.collect { devices ->
-                _state.update { DeviceListState(devices) }
+                _state.update { it.copy(devices = devices) }
             }
         }
+        pendingFiles.subscribe { files ->
+            _state.update { it.copy(pendingFiles = files) }
+        }
+    }
+
+    fun onDeviceClicked(device: Device) {
+        val pending = state.value.pendingFiles
+        if (pending.isNotEmpty()) {
+            onSendRequested(device, pending)
+        } else {
+            scope.launch {
+                val sources = filePicker?.pickFiles(multi = true) ?: return@launch
+                if (sources.isNotEmpty()) {
+                    onSendRequested(device, sources)
+                }
+            }
+        }
+    }
+
+    fun onDragHoverChanged(hovering: Boolean) {
+        _state.update { it.copy(isDragHover = hovering) }
     }
 }

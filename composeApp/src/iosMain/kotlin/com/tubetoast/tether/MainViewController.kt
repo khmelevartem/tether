@@ -9,7 +9,7 @@ import com.arkivanov.essenty.lifecycle.resume
 import com.arkivanov.essenty.lifecycle.stop
 import com.tubetoast.tether.di.DefaultIosAppConfig
 import com.tubetoast.tether.di.IosAppContainer
-import com.tubetoast.tether.presentation.DeviceListComponent
+import com.tubetoast.tether.presentation.RootComponent
 import platform.UIKit.UIDevice
 
 @Suppress("ktlint:standard:function-naming")
@@ -19,9 +19,11 @@ fun MainViewController() = run {
     )
     val lifecycle = LifecycleRegistry()
     val context = DefaultComponentContext(lifecycle)
-    val component = DeviceListComponent(
+    val root = RootComponent(
         componentContext = context,
         discovery = container.mdnsDiscovery,
+        fileClient = container.fileClient,
+        filePicker = null,
     )
     ComposeUIViewController {
         DisposableEffect(Unit) {
@@ -35,6 +37,6 @@ fun MainViewController() = run {
                 lifecycle.destroy()
             }
         }
-        App(component)
+        App(root)
     }
 }

@@ -116,6 +116,7 @@ kotlin {
             implementation(libs.decompose.core)
             implementation(libs.decompose.extensions.compose)
             implementation(libs.essenty.lifecycle.coroutines)
+            implementation(libs.tabler.icons)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -127,6 +128,7 @@ kotlin {
             implementation(libs.androidx.activity.compose)
             implementation(libs.androidx.lifecycle.service)
             implementation("androidx.datastore:datastore-preferences:1.1.1")
+            implementation("androidx.documentfile:documentfile:1.0.1")
         }
 
         androidUnitTest.dependencies {

@@ -14,7 +14,8 @@ import androidx.core.content.ContextCompat
 import com.arkivanov.decompose.retainedComponent
 import com.tubetoast.tether.di.AppContainerProvider
 import com.tubetoast.tether.network.TetherForegroundService
-import com.tubetoast.tether.presentation.DeviceListComponent
+import com.tubetoast.tether.presentation.RootComponent
+import com.tubetoast.tether.transfer.AndroidFilePicker
 
 private const val TAG = "MainActivity"
 
@@ -26,6 +27,8 @@ class MainActivity : ComponentActivity() {
             Log.w(TAG, "POST_NOTIFICATIONS denied — foreground service notification will not appear")
         }
     }
+
+    private lateinit var root: RootComponent
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -44,14 +47,31 @@ class MainActivity : ComponentActivity() {
         startService()
 
         val container = (application as AppContainerProvider).container
-        val component = retainedComponent { componentContext ->
-            DeviceListComponent(
+        val filePicker = AndroidFilePicker(this, contentResolver)
+
+        root = retainedComponent { componentContext ->
+            RootComponent(
                 componentContext = componentContext,
                 discovery = container.mdnsDiscovery,
+                fileClient = container.fileClient,
+                filePicker = filePicker,
             )
         }
+
+        intent?.toFileSources(contentResolver)?.takeIf { it.isNotEmpty() }?.let { sources ->
+            root.onPendingIntent(sources)
+        }
+
         setContent {
-            App(component)
+            App(root)
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        intent.toFileSources(contentResolver).takeIf { it.isNotEmpty() }?.let { sources ->
+            root.onPendingIntent(sources)
         }
     }
 

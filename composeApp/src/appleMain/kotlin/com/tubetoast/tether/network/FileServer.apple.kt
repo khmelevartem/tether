@@ -67,13 +67,24 @@ private class AppleUploadStorage(
 
     override fun resolveDestination(fileName: String): String {
         val fm = NSFileManager.defaultManager
-        val firstTry = "$root/$fileName"
+        val leafName = fileName.substringAfterLast('/')
+        val parentPath = fileName.substringBeforeLast('/', "")
+        val parentDir = if (parentPath.isEmpty()) root else "$root/$parentPath"
+        if (!fm.fileExistsAtPath(parentDir)) {
+            fm.createDirectoryAtPath(
+                path = parentDir,
+                withIntermediateDirectories = true,
+                attributes = null,
+                error = null,
+            )
+        }
+        val firstTry = "$parentDir/$leafName"
         if (!fm.fileExistsAtPath(firstTry)) return firstTry
-        val ext = fileName.substringAfterLast('.', "")
-        val base = if (ext.isEmpty()) fileName else fileName.removeSuffix(".$ext")
+        val ext = leafName.substringAfterLast('.', "")
+        val base = if (ext.isEmpty()) leafName else leafName.removeSuffix(".$ext")
         var i = 1
         while (true) {
-            val candidate = if (ext.isEmpty()) "$root/${base}_$i" else "$root/${base}_$i.$ext"
+            val candidate = if (ext.isEmpty()) "$parentDir/${base}_$i" else "$parentDir/${base}_$i.$ext"
             if (!fm.fileExistsAtPath(candidate)) return candidate
             i++
         }

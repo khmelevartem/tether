@@ -8,10 +8,22 @@ import com.arkivanov.essenty.lifecycle.destroy
 import com.arkivanov.essenty.lifecycle.resume
 import com.tubetoast.tether.di.DefaultDesktopAppConfig
 import com.tubetoast.tether.di.DesktopAppContainer
-import com.tubetoast.tether.presentation.DeviceListComponent
+import com.tubetoast.tether.presentation.RootComponent
+import com.tubetoast.tether.transfer.DesktopFilePicker
+import com.tubetoast.tether.transfer.JvmFileSource
+import com.tubetoast.tether.transfer.walk
 import org.jetbrains.compose.resources.painterResource
 import tether.composeapp.generated.resources.Res
 import tether.composeapp.generated.resources.icon
+import java.awt.datatransfer.DataFlavor
+import java.awt.dnd.DnDConstants
+import java.awt.dnd.DropTarget
+import java.awt.dnd.DropTargetDragEvent
+import java.awt.dnd.DropTargetDropEvent
+import java.awt.dnd.DropTargetEvent
+import java.awt.dnd.DropTargetListener
+import java.io.File
+import kotlin.io.path.toPath
 
 fun main() {
     val deviceName = defaultDesktopDeviceName()
@@ -25,22 +37,76 @@ fun main() {
     container.registerShutdownHook()
 
     val lifecycle = LifecycleRegistry()
-    val component = DeviceListComponent(
+    val root = RootComponent(
         componentContext = DefaultComponentContext(lifecycle),
         discovery = container.mdnsDiscovery,
+        fileClient = container.fileClient,
+        filePicker = DesktopFilePicker(),
     )
     lifecycle.resume()
 
     application {
         Window(
             onCloseRequest = {
-                lifecycle.destroy()
-                exitApplication()
+                if (root.canExitNow()) {
+                    lifecycle.destroy()
+                    exitApplication()
+                } else {
+                    root.onBackPressed()
+                }
             },
             title = "Tether",
             icon = painterResource(Res.drawable.icon),
         ) {
-            App(component)
+            App(root)
+
+            window.dropTarget = DropTarget(
+                window,
+                DnDConstants.ACTION_COPY,
+                object : DropTargetListener {
+                    override fun dragEnter(dtde: DropTargetDragEvent) {
+                        dtde.acceptDrag(DnDConstants.ACTION_COPY)
+                        val activeChild = root.stack.value.active.instance
+                        if (activeChild is RootComponent.Child.DeviceListChild) {
+                            activeChild.component.onDragHoverChanged(true)
+                        }
+                    }
+
+                    override fun dragOver(dtde: DropTargetDragEvent) {
+                        dtde.acceptDrag(DnDConstants.ACTION_COPY)
+                    }
+
+                    override fun dropActionChanged(dtde: DropTargetDragEvent) {}
+
+                    override fun dragExit(dte: DropTargetEvent) {
+                        val activeChild = root.stack.value.active.instance
+                        if (activeChild is RootComponent.Child.DeviceListChild) {
+                            activeChild.component.onDragHoverChanged(false)
+                        }
+                    }
+
+                    override fun drop(dtde: DropTargetDropEvent) {
+                        dtde.acceptDrop(DnDConstants.ACTION_COPY)
+                        val activeChild = root.stack.value.active.instance
+                        if (activeChild is RootComponent.Child.DeviceListChild) {
+                            activeChild.component.onDragHoverChanged(false)
+                        }
+                        val transferable = dtde.transferable
+                        if (transferable.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
+                            @Suppress("UNCHECKED_CAST")
+                            val files = transferable.getTransferData(DataFlavor.javaFileListFlavor) as List<File>
+                            val sources = files.flatMap { file ->
+                                val path = file.toPath()
+                                if (file.isDirectory) walk(path) else listOf(JvmFileSource(path))
+                            }
+                            root.onDroppedFiles(sources)
+                            dtde.dropComplete(true)
+                        } else {
+                            dtde.dropComplete(false)
+                        }
+                    }
+                },
+            )
         }
     }
 }

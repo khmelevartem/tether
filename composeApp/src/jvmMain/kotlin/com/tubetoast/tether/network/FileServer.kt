@@ -46,8 +46,16 @@ private class JvmUploadStorage(
         root.mkdirs()
     }
 
-    override fun resolveDestination(fileName: String): String =
-        resolveDestinationFile(root, fileName).absolutePath
+    override fun resolveDestination(fileName: String): String {
+        val dest = resolveDestinationFile(root, fileName)
+        val canonical = dest.canonicalPath
+        val rootCanonical = root.canonicalPath
+        check(canonical.startsWith(rootCanonical + File.separator) || canonical == rootCanonical) {
+            "FileServer: path escape attempt detected: $canonical"
+        }
+        dest.parentFile?.mkdirs()
+        return canonical
+    }
 
     override suspend fun writeBody(body: ByteReadChannel, destination: String): Long =
         body.toInputStream().use { input ->
@@ -72,14 +80,17 @@ private class JvmUploadStorage(
     }
 }
 
-private fun resolveDestinationFile(dir: File, fileName: String): File {
-    var dest = File(dir, fileName)
+private fun resolveDestinationFile(root: File, relativePath: String): File {
+    val leafName = relativePath.substringAfterLast('/')
+    val parentPath = relativePath.substringBeforeLast('/', "")
+    val parentDir = if (parentPath.isEmpty()) root else File(root, parentPath)
+    var dest = File(parentDir, leafName)
     if (!dest.exists()) return dest
-    val ext = fileName.substringAfterLast('.', "")
-    val base = if (ext.isEmpty()) fileName else fileName.removeSuffix(".$ext")
+    val ext = leafName.substringAfterLast('.', "")
+    val base = if (ext.isEmpty()) leafName else leafName.removeSuffix(".$ext")
     var i = 1
     do {
-        dest = File(dir, if (ext.isEmpty()) "${base}_$i" else "${base}_$i.$ext")
+        dest = File(parentDir, if (ext.isEmpty()) "${base}_$i" else "${base}_$i.$ext")
         i++
     } while (dest.exists())
     return dest
