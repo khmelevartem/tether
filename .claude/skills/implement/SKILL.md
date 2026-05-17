@@ -141,7 +141,7 @@ After all tracks converge. Iterative fix cycles accumulate scaffolding (temp hel
 
 Dispatch the implementing agent once more:
 
-> All findings are resolved. Make one simplification pass over the diff: remove dead branches, inline single-use helpers, drop comments restating code, collapse trivial wrappers. Do not change behavior; do not touch anything outside the diff. Run `./gradlew allTests -q` after.
+> All findings are resolved. Make one simplification pass over the diff: remove dead branches, inline single-use helpers, collapse trivial wrappers. **For every comment / KDoc / prose paragraph in the diff — including `.claude/skills/**`, `docs/`, and Markdown — apply CLAUDE.md §Code style rules (lines 72-75) literally, not by personal taste.** Do not change behavior; do not touch anything outside the diff. Run `./gradlew allTests -q` after.
 
 If anything was simplified — re-run **the same set of agents that ran in Step 5 for this PR type** (i.e. dod + guides + correctness + tests + platform-if-touched + ux-if-touched + ui-if-touched) **plus `review-reuse`** on the simplified diff. `review-reuse` is critical here because duplication is what most likely accumulated across iterations and tracks. `review-platform`, `review-ux`, and `review-ui` follow the same skip rules as Step 5 (platform set touched / `composeApp/src/**` touched). If clean, proceed.
 
