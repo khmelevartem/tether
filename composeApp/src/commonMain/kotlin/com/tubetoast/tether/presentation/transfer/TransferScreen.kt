@@ -44,7 +44,6 @@ fun TransferScreen(
                 peerName = component.peer.name,
                 onCancel = component::onCancelClicked,
                 onBack = component::onDone,
-                onFolderConfirm = component::onFolderConfirm,
                 onRetryAll = component::onRetryAll,
                 modifier = modifier,
             )
@@ -59,7 +58,6 @@ fun TransferScreen(
             peerName = component.peer.name,
             onCancel = component::onCancelClicked,
             onBack = component::onDone,
-            onFolderConfirm = component::onFolderConfirm,
             onRetryAll = component::onRetryAll,
             modifier = modifier,
         )

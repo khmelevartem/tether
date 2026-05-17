@@ -49,14 +49,11 @@ class RootComponent(
         navigation.push(Config.Transfer(device, key))
     }
 
-    fun onPendingIntent(sources: List<FileSource>) {
-        _pendingFiles.value = sources
-        if (stack.value.active.configuration !is Config.DeviceList) {
-            navigation.pop()
-        }
-    }
+    fun onPendingIntent(sources: List<FileSource>) = setPendingFiles(sources)
 
-    fun onDroppedFiles(sources: List<FileSource>) {
+    fun onDroppedFiles(sources: List<FileSource>) = setPendingFiles(sources)
+
+    private fun setPendingFiles(sources: List<FileSource>) {
         _pendingFiles.value = sources
         if (stack.value.active.configuration !is Config.DeviceList) {
             navigation.pop()

@@ -3,7 +3,6 @@ package com.tubetoast.tether.transfer
 import android.content.ContentResolver
 import android.net.Uri
 import android.provider.OpenableColumns
-import com.tubetoast.tether.transfer.FileSource
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.jvm.javaio.toByteReadChannel
 import java.io.IOException

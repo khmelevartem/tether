@@ -22,7 +22,6 @@ private fun PreviewPreparingLight() = TetherTheme(darkTheme = false) {
         peerName = fakePeer.name,
         onCancel = {},
         onBack = {},
-        onFolderConfirm = {},
         onRetryAll = {},
     )
 }
@@ -35,7 +34,6 @@ private fun PreviewPreparingDark() = TetherTheme(darkTheme = true) {
         peerName = fakePeer.name,
         onCancel = {},
         onBack = {},
-        onFolderConfirm = {},
         onRetryAll = {},
     )
 }
@@ -53,7 +51,6 @@ private fun PreviewInProgressLight() = TetherTheme(darkTheme = false) {
         peerName = fakePeer.name,
         onCancel = {},
         onBack = {},
-        onFolderConfirm = {},
         onRetryAll = {},
     )
 }
@@ -71,7 +68,6 @@ private fun PreviewInProgressDark() = TetherTheme(darkTheme = true) {
         peerName = fakePeer.name,
         onCancel = {},
         onBack = {},
-        onFolderConfirm = {},
         onRetryAll = {},
     )
 }
@@ -90,7 +86,6 @@ private fun PreviewInProgressWithNoticeLight() = TetherTheme(darkTheme = false) 
         peerName = fakePeer.name,
         onCancel = {},
         onBack = {},
-        onFolderConfirm = {},
         onRetryAll = {},
     )
 }
@@ -109,7 +104,6 @@ private fun PreviewInProgressWithNoticeDark() = TetherTheme(darkTheme = true) {
         peerName = fakePeer.name,
         onCancel = {},
         onBack = {},
-        onFolderConfirm = {},
         onRetryAll = {},
     )
 }
@@ -126,7 +120,6 @@ private fun PreviewPeerDroppedLight() = TetherTheme(darkTheme = false) {
         peerName = fakePeer.name,
         onCancel = {},
         onBack = {},
-        onFolderConfirm = {},
         onRetryAll = {},
     )
 }
@@ -143,7 +136,6 @@ private fun PreviewPeerDroppedDark() = TetherTheme(darkTheme = true) {
         peerName = fakePeer.name,
         onCancel = {},
         onBack = {},
-        onFolderConfirm = {},
         onRetryAll = {},
     )
 }
@@ -161,7 +153,6 @@ private fun PreviewConnectionLostLight() = TetherTheme(darkTheme = false) {
         peerName = fakePeer.name,
         onCancel = {},
         onBack = {},
-        onFolderConfirm = {},
         onRetryAll = {},
     )
 }
@@ -179,7 +170,6 @@ private fun PreviewConnectionLostDark() = TetherTheme(darkTheme = true) {
         peerName = fakePeer.name,
         onCancel = {},
         onBack = {},
-        onFolderConfirm = {},
         onRetryAll = {},
     )
 }
@@ -192,7 +182,6 @@ private fun PreviewCancelledLight() = TetherTheme(darkTheme = false) {
         peerName = fakePeer.name,
         onCancel = {},
         onBack = {},
-        onFolderConfirm = {},
         onRetryAll = {},
     )
 }
@@ -205,7 +194,6 @@ private fun PreviewCancelledDark() = TetherTheme(darkTheme = true) {
         peerName = fakePeer.name,
         onCancel = {},
         onBack = {},
-        onFolderConfirm = {},
         onRetryAll = {},
     )
 }
@@ -381,7 +369,6 @@ private fun PreviewCancelConfirmLight() = TetherTheme(darkTheme = false) {
         peerName = fakePeer.name,
         onCancel = {},
         onBack = {},
-        onFolderConfirm = {},
         onRetryAll = {},
     )
     CancelConfirmDialog(onStopTransfer = {}, onKeepSending = {})
@@ -400,7 +387,6 @@ private fun PreviewCancelConfirmDark() = TetherTheme(darkTheme = true) {
         peerName = fakePeer.name,
         onCancel = {},
         onBack = {},
-        onFolderConfirm = {},
         onRetryAll = {},
     )
     CancelConfirmDialog(onStopTransfer = {}, onKeepSending = {})

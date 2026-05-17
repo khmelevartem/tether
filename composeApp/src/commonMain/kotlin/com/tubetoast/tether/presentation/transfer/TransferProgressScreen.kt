@@ -34,7 +34,6 @@ fun TransferProgressScreen(
     peerName: String,
     onCancel: () -> Unit,
     onBack: () -> Unit,
-    onFolderConfirm: (Boolean) -> Unit,
     onRetryAll: () -> Unit,
     modifier: Modifier = Modifier,
 ) {

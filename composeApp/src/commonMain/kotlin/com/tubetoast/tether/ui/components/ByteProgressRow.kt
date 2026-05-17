@@ -16,7 +16,7 @@ fun ByteProgressRow(
     modifier: Modifier = Modifier,
 ) {
     val text = formatProgress(bytesDone, bytesTotal, speedBytesPerSec)
-    val a11yLabel = buildA11yLabel(bytesDone, bytesTotal, speedBytesPerSec, text)
+    val a11yLabel = buildA11yLabel(bytesDone, bytesTotal, speedBytesPerSec)
     BasicText(
         text = text,
         style = TetherTheme.typography.numeric.copy(color = TetherTheme.colors.textMuted),
@@ -28,7 +28,6 @@ private fun buildA11yLabel(
     bytesDone: Long,
     bytesTotal: Long?,
     speedBytesPerSec: Long,
-    display: String,
 ): String = if (bytesTotal != null) {
     "$bytesDone bytes of $bytesTotal bytes transferred, current speed $speedBytesPerSec bytes per second"
 } else {

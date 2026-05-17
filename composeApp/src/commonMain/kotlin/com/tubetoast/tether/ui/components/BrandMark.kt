@@ -16,7 +16,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -98,8 +97,6 @@ fun BrandMark(
         }
 
         is BrandMarkState.Success -> {
-            // Right dot: peerIdentity → accent (200ms ease-out) → hold 300ms → peerIdentity (200ms ease-in)
-            // Concurrent scale pulse: 1.0 → 1.05 (200ms ease-out) → 1.0
             val colorFraction = remember { Animatable(0f) }
             val scaleFraction = remember { Animatable(1f) }
             LaunchedEffect(Unit) {
@@ -157,7 +154,7 @@ private fun BrandMarkCanvas(
         val lineStroke = 1.2f * r
 
         drawLine(state, leftCenter, rightCenter, textPrimary, accent, progressRatio, lineStroke)
-        drawLeftDot(leftCenter, r, accent)
+        drawCircle(color = accent, radius = r, center = leftCenter)
         drawRightDot(state, rightCenter, r, peerIdentity, errorColor, rightDotAlpha, rightDotScale)
     }
 }
@@ -185,27 +182,7 @@ private fun DrawScope.drawLine(
             )
         }
 
-        is BrandMarkState.Progress, is BrandMarkState.Success -> {
-            val filledEnd = Offset(lineStart.x + lineLength * progressRatio, lineStart.y)
-            if (progressRatio < 1f) {
-                drawLine(
-                    color = textPrimary,
-                    start = filledEnd,
-                    end = lineEnd,
-                    strokeWidth = strokeWidth,
-                )
-            }
-            if (progressRatio > 0f) {
-                drawLine(
-                    color = accent,
-                    start = lineStart,
-                    end = filledEnd,
-                    strokeWidth = strokeWidth,
-                )
-            }
-        }
-
-        is BrandMarkState.Error -> {
+        is BrandMarkState.Progress, is BrandMarkState.Success, is BrandMarkState.Error -> {
             val filledEnd = Offset(lineStart.x + lineLength * progressRatio, lineStart.y)
             if (progressRatio < 1f) {
                 drawLine(
@@ -225,10 +202,6 @@ private fun DrawScope.drawLine(
             }
         }
     }
-}
-
-private fun DrawScope.drawLeftDot(center: Offset, r: Float, accent: Color) {
-    drawCircle(color = accent, radius = r, center = center)
 }
 
 private fun DrawScope.drawRightDot(

@@ -6,7 +6,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.documentfile.provider.DocumentFile
-import com.tubetoast.tether.transfer.FileSource
 import kotlinx.coroutines.CompletableDeferred
 
 class AndroidFilePicker(
@@ -40,13 +39,12 @@ class AndroidFilePicker(
         folderLauncher.launch(null)
         val rootUri = deferred.await() ?: return emptyList()
         val rootDoc = DocumentFile.fromTreeUri(activity, rootUri)
-        return walkDocumentTree(rootDoc, null, contentResolver)
+        return walkDocumentTree(rootDoc, null)
     }
 
     private fun walkDocumentTree(
         dir: DocumentFile?,
         parentPath: String?,
-        resolver: ContentResolver,
     ): List<FileSource> {
         if (dir == null || !dir.isDirectory) return emptyList()
         val result = mutableListOf<FileSource>()
@@ -55,11 +53,9 @@ class AndroidFilePicker(
             if (isHidden(childName)) continue
             val childPath = if (parentPath != null) "$parentPath/$childName" else childName
             if (child.isDirectory) {
-                result += walkDocumentTree(child, childPath, resolver)
+                result += walkDocumentTree(child, childPath)
             } else if (child.isFile) {
-                child.uri.let { uri ->
-                    result += SafFileSource(uri, resolver, relativePath = childPath)
-                }
+                result += SafFileSource(child.uri, contentResolver, relativePath = childPath)
             }
         }
         return result

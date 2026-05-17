@@ -18,12 +18,10 @@ class DeviceListComponent(
     val pendingFiles: Value<List<FileSource>> = MutableValue(emptyList()),
     private val filePicker: FilePicker? = null,
     private val onSendRequested: (Device, List<FileSource>) -> Unit = { _, _ -> },
-    coroutineScope: CoroutineScope = componentContext.coroutineScope(),
+    private val scope: CoroutineScope = componentContext.coroutineScope(),
 ) : ComponentContext by componentContext {
     private val _state = MutableValue(DeviceListState.empty())
     val state: Value<DeviceListState> = _state
-
-    private val scope = coroutineScope
 
     init {
         scope.launch {
