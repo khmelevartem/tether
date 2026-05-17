@@ -16,7 +16,7 @@ description: Прогон базового smoke-теста (happy-path) по п
 - **Физический iPhone** — нет, требует ручной подписи и доверия сертификата.
 - **macOS run** — у `macosArm64` нет entry point, только sanity-компиляция.
 - **iOS receive/send** — `FileServer.apple` это stub, на `start()` бросает `error()`. Только sanity-компиляция `iosSimulatorArm64`.
-- **iOS simulator runtime** — в текущей версии скилла не запускаем (требует Xcode-проекта и времени), только compile.
+- **iOS simulator runtime** — только compile-sanity, запуск не автоматизируется (требует Xcode-проекта).
 - **Android-инициированный send (Android → Desktop)** — на Android нет программного триггера отправки (intent / UI-кнопка / broadcast). Скилл проверяет обратное направление: Desktop → Android через CLI `send`.
 - **Тап по Notification «Stop»** — заменяется на `am force-stop` или broadcast. Что *кнопка нарисована и работает* — проверить вручную.
 - **Sleep/wake реального девайса** — `adb shell input keyevent SLEEP/WAKEUP` это аппроксимация, не настоящий power state.
@@ -45,7 +45,7 @@ FIFO держит stdin открытым для команд `list`, `send`, `qu
    ```bash
    pgrep -fl 'com.tubetoast.tether-.*\.jar|composeApp:run' || echo "clean"
    ```
-   Если есть — `kill` их (память: внешние mDNS-сервисы могут глючить тесты).
+   Если есть — `kill` их: внешние mDNS-сервисы интерферируют с прогоном.
 2. Собрать CLI jar:
    ```bash
    ./gradlew :composeApp:cliJar -q
@@ -90,12 +90,11 @@ PORT_A=$(grep -oE 'port[[:space:]]*:[[:space:]]*[0-9]+' $LOG_A | grep -oE '[0-9]
      || { echo "FAIL: bad publicKey shape: $PAIR_RESP"; }
    ```
 4. **Port LISTEN** — `lsof -nP -iTCP:$PORT_A | head -3` показывает java listener.
-5. **mDNS publish (primary)** — поллим CLI-лог, ищем `mDNS started → advertising 'SmokeMacA' on port`. Это уже подтверждение публикации (CLI сам пишет это после успешного `discovery.start()`).
+5. **mDNS publish (primary)** — поллим CLI-лог, ищем `mDNS started → advertising 'SmokeMacA' on port`.
 6. **mDNS publish (secondary, опционально)** — `( dns-sd -B _tether._tcp. local. 2>&1 & DNSSD_PID=$!; sleep 8; kill $DNSSD_PID 2>/dev/null ) | grep SmokeMacA`. Если `dns-sd` нет (Linux) — этот шаг SKIP, общий результат всё равно PASS по primary.
 7. **stdin `list`** — `echo "list" > /tmp/smoke-cliA-in &; sleep 1; tail $LOG_A` — должен напечатать `[list]` или `[peers]` строку.
-8. **stdin `quit` graceful** — `echo "quit" > /tmp/smoke-cliA-in &`, ждать до 8 сек, проверить `ps -p $JPID_A` — процесс должен умереть. Если не умер — FAIL «не graceful», `kill -9` и идти дальше.
 
-**Замечание для Блока 2:** инстанс A держим живым до конца Блока 2, `quit` шлём только после успешного send. Иначе придётся перезапускать.
+Инстанс A держим живым до конца Блока 2.5. Проверка graceful `quit` — в Блоке 2.6.
 
 ### Блок 2: Desktop ↔ Desktop send (через CLI)
 
@@ -146,7 +145,7 @@ Cleanup инстанса B и квит A — в Блоке 5.
 
 ### Блок 2.5: Same-name discovery
 
-Поднимаешь третий CLI-инстанс с тем же именем, что A (`SmokeMacA`), параллельно с A и B. Класс багов: peers с одинаковым service-name теряются из-за неверного dedup в store или гонок в conflict-rename probing. Закрывается на runtime поверх обоих платформенных путей — Bonjour на macOS-host, JmDNS на Linux/Windows-host.
+Проверяет, что три peer'а с одинаковым requested service-name видят друг друга после mDNS conflict-rename: третий инстанс запускается с тем же `--name SmokeMacA`, что и A, параллельно с A и B.
 
 ```bash
 LOG_C=/tmp/smoke-cliC.log
@@ -174,6 +173,10 @@ done
 PASS если каждый из A/B/C видит ≥ 2 уникальных SmokeMac-peer'ов в течение 20 сек. FAIL — приложить последние `[peers]` строки из всех трёх логов в Details.
 
 Cleanup инстанса C — в Блоке 5.
+
+### Блок 2.6: graceful quit инстанса A
+
+`echo "quit" > /tmp/smoke-cliA-in &`, ждать до 8 сек, проверить `ps -p $JPID_A`. PASS если процесс умер. Если не умер — FAIL «не graceful», `kill -9` и идти дальше.
 
 ### Блок 3: Android (условно)
 
@@ -297,6 +300,7 @@ PASS если exit=0. FAIL — приложить последние ~30 стр�
 | Desktop CLI A | mDNS publish (dns-sd) | ✓ PASS | SmokeMacA в browse |
 | Desktop CLI A | stdin `list` | ✓ PASS | peer printed |
 | Desktop↔Desktop | send via CLI | ✓ PASS | savedPath parsed, diff empty |
+| Same-name discovery | A/B/C convergence | ✓ PASS | each sees 2 SmokeMac peers in 3s |
 | Desktop CLI A | graceful `quit` | ✓ PASS | exit in 3s |
 | Android | adb device | ✓ PASS | <serial>, model, API |
 | Android | installDebug | ✓ PASS | 4s |
