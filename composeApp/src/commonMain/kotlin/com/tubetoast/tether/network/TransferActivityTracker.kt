@@ -9,6 +9,15 @@ interface TransferActivityTracker {
     fun releaseAll()
 }
 
+/**
+ * State transitions (`enter`/`exit`/`releaseAll`) run as CAS retry loops: read the current
+ * state, compute the next one, and try to swap atomically. If another thread won the swap
+ * between read and write, the loop retries with the fresh state. This is a standard
+ * lock-free pattern — `synchronized` is unavailable in commonMain, and a coroutine `Mutex`
+ * can't guard `releaseAll` (non-suspend, called from `onDestroy`). The `held` flag inside
+ * `State` makes both `onFirstEnter` and `onLastExit` fire exactly once per holding period
+ * regardless of how transitions interleave.
+ */
 @OptIn(ExperimentalAtomicApi::class)
 class DefaultTransferActivityTracker(
     private val onFirstEnter: () -> Unit = {},
