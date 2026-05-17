@@ -3,6 +3,7 @@ package com.tubetoast.tether.presentation.transfer
 import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.decompose.value.MutableValue
 import com.arkivanov.decompose.value.Value
+import com.arkivanov.essenty.backhandler.BackCallback
 import com.arkivanov.essenty.lifecycle.coroutines.coroutineScope
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.FileSource
@@ -32,6 +33,7 @@ class TransferComponent(
         } else {
             startBatch(sources)
         }
+        backHandler.register(BackCallback { onBackPressed() })
     }
 
     fun onFolderConfirm(continue_: Boolean) {
@@ -44,8 +46,18 @@ class TransferComponent(
 
     fun onCancelClicked() {
         val current = _state.value
-        if (current is TransferState.InProgress) {
-            _state.value = TransferState.CancelConfirm(current)
+        when (current) {
+            is TransferState.InProgress -> _state.value = TransferState.CancelConfirm(current)
+            is TransferState.Preparing -> {
+                val placeholder = TransferState.InProgress(
+                    currentFile = "",
+                    bytesDone = 0L,
+                    bytesTotal = null,
+                    speedBytesPerSec = 0L,
+                )
+                _state.value = TransferState.CancelConfirm(placeholder)
+            }
+            else -> {}
         }
     }
 
@@ -76,7 +88,7 @@ class TransferComponent(
 
     fun onBackPressed() {
         when (_state.value) {
-            is TransferState.InProgress -> onCancelClicked()
+            is TransferState.InProgress, is TransferState.Preparing -> onCancelClicked()
             is TransferState.Terminal -> onExit()
             else -> onExit()
         }

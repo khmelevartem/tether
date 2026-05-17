@@ -41,11 +41,6 @@ fun FolderSendConfirmDialog(
                 .padding(spacing.xl),
         ) {
             BasicText(
-                text = "Large folder",
-                style = typography.titleMedium.copy(color = colors.textPrimary),
-            )
-            Spacer(modifier = Modifier.height(spacing.sm))
-            BasicText(
                 text = "About to send $fileCount files ($gb GB). Continue?",
                 style = typography.bodyMedium.copy(color = colors.textMuted),
             )

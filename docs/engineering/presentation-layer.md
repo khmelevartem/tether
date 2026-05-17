@@ -2,7 +2,7 @@
 
 The presentation layer in Tether is built on [Decompose](https://github.com/arkivanov/Decompose). This document describes how it's structured and how to add to it. For the *why* — variants considered and trade-offs — see [adr/adr-presentation-and-navigation.md](adr/adr-presentation-and-navigation.md).
 
-> **Status.** Skeleton landed in #7 (`DeviceListComponent` + `DeviceListScreen`, Android wiring). Conventions below are what the skeleton installs and what every screen written after it should follow.
+> **Status.** The layer covers `DeviceListScreen` (discovery + pending-files banner + drag-and-drop), `TransferProgressScreen`, `TransferSummaryScreen`, and their dialogs. Conventions below apply to every screen.
 
 ## How it works
 
@@ -88,7 +88,7 @@ In particular: **we do not use `InstanceKeeper` to retain domain state across co
 Decompose provides two navigation primitives we use, introduced one at a time as flows require them:
 
 - **`ChildSlot`** — modal overlays (dialogs, confirmations, anything that sits on top of a screen). Added when the first dialog lands — e.g. the pairing dialog (#11).
-- **`ChildStack`** — back stack with push / pop / replace; configurations are `@Serializable`. Added when the first explicit back-press flow lands — likely send + progress on top of device list (#8).
+- **`ChildStack`** — back stack with push / pop / replace; configurations are `@Serializable`. Used for the main navigation stack: `DeviceListScreen → TransferProgressScreen → TransferSummaryScreen`.
 
 Both are wired in a parent Component and observed in Compose via `Children { ... }` / `subscribeAsState`. The skeleton itself starts with a single root Component; primitives are added incrementally.
 

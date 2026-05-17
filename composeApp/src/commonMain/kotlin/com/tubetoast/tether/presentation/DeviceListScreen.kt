@@ -1,5 +1,6 @@
 package com.tubetoast.tether.presentation
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,17 +9,26 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
+import com.tubetoast.tether.ui.theme.TetherTheme
 
 @Composable
 fun DeviceListScreen(component: DeviceListComponent, modifier: Modifier = Modifier) {
@@ -69,44 +79,78 @@ fun DeviceListScreen(component: DeviceListComponent, modifier: Modifier = Modifi
         }
 
         if (state.isDragHover) {
-            DragOverlay(modifier = Modifier.fillMaxSize())
+            DragOverlay(
+                rejected = state.dragRejected,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+
+        state.sendChooserTarget?.let { target ->
+            SendModeChooserDialog(
+                target = target,
+                onSendFiles = { component.onSendFiles(target) },
+                onSendFolder = { component.onSendFolder(target) },
+                onDismiss = { component.onDismissChooser() },
+            )
         }
     }
 }
 
 @Composable
 private fun PendingFilesBanner(count: Int) {
-    Surface(
+    val colors = TetherTheme.colors
+    val typography = TetherTheme.typography
+    val spacing = TetherTheme.spacing
+    val shapes = TetherTheme.shapes
+    val text = if (count == 1) {
+        "1 file ready to send — pick a device."
+    } else {
+        "$count files ready to send — pick a device."
+    }
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        shape = MaterialTheme.shapes.medium,
+            .padding(horizontal = spacing.lg, vertical = spacing.sm)
+            .clip(shapes.md)
+            .background(colors.accent.copy(alpha = 0.12f))
+            .semantics { liveRegion = LiveRegionMode.Polite },
     ) {
-        val text = if (count == 1) {
-            "1 file ready to send — pick a device."
-        } else {
-            "$count files ready to send — pick a device."
-        }
-        Text(
+        BasicText(
             text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(16.dp),
+            style = typography.bodyMedium.copy(color = colors.textPrimary),
+            modifier = Modifier.padding(spacing.lg),
         )
     }
 }
 
 @Composable
-private fun DragOverlay(modifier: Modifier = Modifier) {
-    Surface(
-        modifier = modifier,
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+private fun DragOverlay(rejected: Boolean, modifier: Modifier = Modifier) {
+    val colors = TetherTheme.colors
+    val typography = TetherTheme.typography
+    val spacing = TetherTheme.spacing
+    val borderColor = colors.accent
+    val overlayLabel = if (rejected) "Transfer in progress — wait to drop." else "Drop to send"
+    Box(
+        modifier = modifier
+            .background(colors.surface.copy(alpha = 0.85f))
+            .padding(spacing.xl)
+            .drawBehind {
+                drawRect(
+                    color = borderColor,
+                    style = Stroke(
+                        width = 2.dp.toPx(),
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(20f, 10f)),
+                    ),
+                )
+            }.semantics {
+                liveRegion = LiveRegionMode.Polite
+                contentDescription = "Drop zone active"
+            },
+        contentAlignment = Alignment.Center,
     ) {
-        Box(contentAlignment = Alignment.Center) {
-            Text(
-                text = "Drop to send",
-                style = MaterialTheme.typography.titleLarge,
-            )
-        }
+        BasicText(
+            text = overlayLabel,
+            style = typography.titleLarge.copy(color = colors.textPrimary),
+        )
     }
 }

@@ -6,6 +6,7 @@ import android.provider.OpenableColumns
 import com.tubetoast.tether.transfer.FileSource
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.jvm.javaio.toByteReadChannel
+import java.io.IOException
 
 class SafFileSource(
     private val uri: Uri,
@@ -16,7 +17,8 @@ class SafFileSource(
     override val size: Long? by lazy { resolveSize() }
 
     override suspend fun openReadChannel(): ByteReadChannel =
-        contentResolver.openInputStream(uri)!!.toByteReadChannel()
+        (contentResolver.openInputStream(uri) ?: throw IOException("Cannot open stream for $uri"))
+            .toByteReadChannel()
 
     private fun resolveName(): String {
         contentResolver.query(uri, null, null, null, null)?.use { cursor ->

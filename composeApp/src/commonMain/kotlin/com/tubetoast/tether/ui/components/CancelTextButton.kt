@@ -1,6 +1,7 @@
 package com.tubetoast.tether.ui.components
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
@@ -17,15 +18,21 @@ fun CancelTextButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     label: String = "Cancel",
+    enabled: Boolean = true,
 ) {
+    val colors = TetherTheme.colors
+    val spacing = TetherTheme.spacing
+    val color = if (enabled) colors.accent else colors.textMuted
+    val a11yLabel = "$label transfer"
     BasicText(
         text = label,
-        style = TetherTheme.typography.bodyLarge.copy(color = TetherTheme.colors.accent),
+        style = TetherTheme.typography.bodyLarge.copy(color = color),
         modifier = modifier
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .heightIn(min = 48.dp)
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = spacing.lg, vertical = spacing.md)
             .semantics {
-                contentDescription = "Cancel transfer"
+                contentDescription = a11yLabel
                 role = Role.Button
             },
     )

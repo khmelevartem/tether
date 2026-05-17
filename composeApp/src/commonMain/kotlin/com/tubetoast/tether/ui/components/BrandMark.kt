@@ -1,5 +1,7 @@
 package com.tubetoast.tether.ui.components
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -11,12 +13,16 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.unit.dp
 import com.tubetoast.tether.ui.theme.TetherTheme
 
@@ -67,6 +73,7 @@ fun BrandMark(
                 errorColor = errorColor,
                 state = state,
                 rightDotAlpha = rightAlpha,
+                rightDotScale = 1f,
                 progressRatio = 0f,
             )
         }
@@ -85,7 +92,35 @@ fun BrandMark(
                 errorColor = errorColor,
                 state = state,
                 rightDotAlpha = 1f,
+                rightDotScale = 1f,
                 progressRatio = animatedRatio,
+            )
+        }
+
+        is BrandMarkState.Success -> {
+            // Right dot: peerIdentity → accent (200ms ease-out) → hold 300ms → peerIdentity (200ms ease-in)
+            // Concurrent scale pulse: 1.0 → 1.05 (200ms ease-out) → 1.0
+            val colorFraction = remember { Animatable(0f) }
+            val scaleFraction = remember { Animatable(1f) }
+            LaunchedEffect(Unit) {
+                colorFraction.animateTo(1f, tween(200, easing = FastOutSlowInEasing))
+                scaleFraction.animateTo(1.05f, tween(200, easing = FastOutSlowInEasing))
+                kotlinx.coroutines.delay(300)
+                colorFraction.animateTo(0f, tween(200, easing = FastOutSlowInEasing))
+                scaleFraction.animateTo(1f, tween(200, easing = FastOutSlowInEasing))
+            }
+            val animatedDotColor = androidx.compose.ui.graphics
+                .lerp(peerIdentity, accent, colorFraction.value)
+            BrandMarkCanvas(
+                modifier = modifier,
+                accent = accent,
+                peerIdentity = animatedDotColor,
+                textPrimary = textPrimary,
+                errorColor = errorColor,
+                state = state,
+                rightDotAlpha = 1f,
+                rightDotScale = scaleFraction.value,
+                progressRatio = 1f,
             )
         }
 
@@ -97,6 +132,7 @@ fun BrandMark(
             errorColor = errorColor,
             state = state,
             rightDotAlpha = 1f,
+            rightDotScale = 1f,
             progressRatio = if (state is BrandMarkState.Error) state.ratio else 1f,
         )
     }
@@ -110,6 +146,7 @@ private fun BrandMarkCanvas(
     errorColor: Color,
     state: BrandMarkState,
     rightDotAlpha: Float,
+    rightDotScale: Float,
     progressRatio: Float,
     modifier: Modifier = Modifier,
 ) {
@@ -121,7 +158,7 @@ private fun BrandMarkCanvas(
 
         drawLine(state, leftCenter, rightCenter, textPrimary, accent, progressRatio, lineStroke)
         drawLeftDot(leftCenter, r, accent)
-        drawRightDot(state, rightCenter, r, peerIdentity, errorColor, rightDotAlpha)
+        drawRightDot(state, rightCenter, r, peerIdentity, errorColor, rightDotAlpha, rightDotScale)
     }
 }
 
@@ -201,6 +238,7 @@ private fun DrawScope.drawRightDot(
     peerIdentity: Color,
     errorColor: Color,
     alpha: Float,
+    scale: Float,
 ) {
     when (state) {
         is BrandMarkState.Searching -> {
@@ -221,6 +259,8 @@ private fun DrawScope.drawRightDot(
             )
         }
 
-        else -> drawCircle(color = peerIdentity.copy(alpha = alpha), radius = r, center = center)
+        else -> scale(scale = scale, pivot = center) {
+            drawCircle(color = peerIdentity.copy(alpha = alpha), radius = r, center = center)
+        }
     }
 }

@@ -6,11 +6,13 @@ import com.tubetoast.tether.transfer.FakeFileSource
 import io.ktor.utils.io.ByteReadChannel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -87,6 +89,7 @@ class BatchSenderTest {
         val slowSender: suspend (Device, ByteReadChannel, String, Long?, (Long, Long?) -> Unit) -> SendResult =
             { _, _, _, _, _ ->
                 callCount++
+                delay(1_000)
                 SendResult.Success("path")
             }
         val sender = BatchSender(sendOne = slowSender, clock = clock)
@@ -98,9 +101,54 @@ class BatchSenderTest {
         }
         job.cancelAndJoin()
 
-        // After cancellation, job is cancelled — outcome may or may not be set
-        // but importantly the job completes without hanging
         assertTrue(job.isCancelled)
+        assertTrue(callCount < 5, "Only $callCount file(s) should have been attempted before cancellation")
+        assertNull(outcome, "Outcome must be null when cancelled before completion")
+    }
+
+    @Test
+    fun connectionLostMidwayStopsAndMarksRemainingFiles() = runTest {
+        var callCount = 0
+        val connectErrSender: suspend (Device, ByteReadChannel, String, Long?, (Long, Long?) -> Unit) -> SendResult =
+            { _, _, _, _, onProgress ->
+                callCount++
+                if (callCount == 2) {
+                    SendResult.Failure("connect error reset by peer")
+                } else {
+                    onProgress(100L, 100L)
+                    SendResult.Success("path")
+                }
+            }
+        val sender = BatchSender(sendOne = connectErrSender, clock = clock)
+        val sources = List(4) { FakeFileSource("f$it.txt", ByteArray(100), size = 100L) }
+
+        val outcome = sender.run(peer, sources) {}
+
+        assertEquals(1, outcome.sent)
+        assertTrue(outcome.connectionLostMidway)
+        assertEquals(3, outcome.failed.size, "Files 2, 3, 4 should all be in failed list")
+        assertTrue(outcome.failed.all { it.reason == FailureReason.ConnectionLost })
+        assertEquals(2, callCount, "Should stop attempting after connection-error on file 2")
+    }
+
+    @Test
+    fun unreadableFileIsSkippedAndMarkedInOutcome() = runTest {
+        val throwingSource = object : com.tubetoast.tether.transfer.FileSource {
+            override val name = "bad.bin"
+            override val size: Long? = 100L
+            override val relativePath: String? = null
+
+            override suspend fun openReadChannel(): ByteReadChannel = throw RuntimeException("permission denied")
+        }
+        val goodSource = FakeFileSource("good.txt", ByteArray(50), size = 50L)
+        val sender = BatchSender(sendOne = successSender(), clock = clock)
+
+        val outcome = sender.run(peer, listOf(throwingSource, goodSource)) {}
+
+        assertEquals(1, outcome.sent)
+        assertEquals(1, outcome.failed.size)
+        assertEquals("bad.bin", outcome.failed[0].name)
+        assertEquals(FailureReason.Unreadable, outcome.failed[0].reason)
     }
 
     @Test

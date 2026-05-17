@@ -40,17 +40,42 @@ class DeviceListComponent(
         val pending = state.value.pendingFiles
         if (pending.isNotEmpty()) {
             onSendRequested(device, pending)
-        } else {
-            scope.launch {
-                val sources = filePicker?.pickFiles(multi = true) ?: return@launch
-                if (sources.isNotEmpty()) {
-                    onSendRequested(device, sources)
-                }
+            return
+        }
+        if (filePicker != null) {
+            _state.update { it.copy(sendChooserTarget = device) }
+        }
+    }
+
+    fun onSendFiles(device: Device) {
+        _state.update { it.copy(sendChooserTarget = null) }
+        scope.launch {
+            val sources = filePicker?.pickFiles(multi = true) ?: return@launch
+            if (sources.isNotEmpty()) {
+                onSendRequested(device, sources)
             }
         }
     }
 
+    fun onSendFolder(device: Device) {
+        _state.update { it.copy(sendChooserTarget = null) }
+        scope.launch {
+            val sources = filePicker?.pickFolder() ?: return@launch
+            if (sources.isNotEmpty()) {
+                onSendRequested(device, sources)
+            }
+        }
+    }
+
+    fun onDismissChooser() {
+        _state.update { it.copy(sendChooserTarget = null) }
+    }
+
     fun onDragHoverChanged(hovering: Boolean) {
-        _state.update { it.copy(isDragHover = hovering) }
+        _state.update { it.copy(isDragHover = hovering, dragRejected = false) }
+    }
+
+    fun onDragRejected() {
+        _state.update { it.copy(isDragHover = true, dragRejected = true) }
     }
 }

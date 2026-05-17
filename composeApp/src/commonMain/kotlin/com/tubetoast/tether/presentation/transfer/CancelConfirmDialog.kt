@@ -2,6 +2,7 @@ package com.tubetoast.tether.presentation.transfer
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,8 +12,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
@@ -24,6 +29,7 @@ fun CancelConfirmDialog(
     onStopTransfer: () -> Unit,
     onKeepSending: () -> Unit,
 ) {
+    val keepSendingFocus = remember { FocusRequester() }
     Dialog(onDismissRequest = onKeepSending) {
         val colors = TetherTheme.colors
         val typography = TetherTheme.typography
@@ -61,11 +67,16 @@ fun CancelConfirmDialog(
                     text = "Keep sending",
                     style = typography.bodyLarge.copy(color = colors.accent),
                     modifier = Modifier
+                        .focusRequester(keepSendingFocus)
+                        .focusable()
                         .clickable(onClick = onKeepSending)
                         .padding(spacing.sm)
                         .semantics { role = Role.Button },
                 )
             }
         }
+    }
+    LaunchedEffect(Unit) {
+        keepSendingFocus.requestFocus()
     }
 }

@@ -2,8 +2,10 @@ package com.tubetoast.tether.presentation.transfer.previews
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
+import com.tubetoast.tether.presentation.transfer.CancelConfirmDialog
 import com.tubetoast.tether.presentation.transfer.FailedFile
 import com.tubetoast.tether.presentation.transfer.FailureReason
+import com.tubetoast.tether.presentation.transfer.FolderSendConfirmDialog
 import com.tubetoast.tether.presentation.transfer.TransferProgressScreen
 import com.tubetoast.tether.presentation.transfer.TransferState
 import com.tubetoast.tether.presentation.transfer.TransferSummaryScreen
@@ -95,7 +97,43 @@ private fun PreviewInProgressWithNoticeLight() = TetherTheme(darkTheme = false) 
 
 @Preview
 @Composable
+private fun PreviewInProgressWithNoticeDark() = TetherTheme(darkTheme = true) {
+    TransferProgressScreen(
+        state = TransferState.InProgress(
+            currentFile = "photo.jpg",
+            bytesDone = 5_000_000L,
+            bytesTotal = 20_000_000L,
+            speedBytesPerSec = 1_500_000L,
+            inlineNotice = "Couldn't read bad_file.mov — skipping.",
+        ),
+        peerName = fakePeer.name,
+        onCancel = {},
+        onBack = {},
+        onFolderConfirm = {},
+        onRetryAll = {},
+    )
+}
+
+@Preview
+@Composable
 private fun PreviewPeerDroppedLight() = TetherTheme(darkTheme = false) {
+    TransferProgressScreen(
+        state = TransferState.PeerDropped(
+            peer = fakePeer,
+            fileName = "video.mp4",
+            ratio = 0.45f,
+        ),
+        peerName = fakePeer.name,
+        onCancel = {},
+        onBack = {},
+        onFolderConfirm = {},
+        onRetryAll = {},
+    )
+}
+
+@Preview
+@Composable
+private fun PreviewPeerDroppedDark() = TetherTheme(darkTheme = true) {
     TransferProgressScreen(
         state = TransferState.PeerDropped(
             peer = fakePeer,
@@ -130,7 +168,38 @@ private fun PreviewConnectionLostLight() = TetherTheme(darkTheme = false) {
 
 @Preview
 @Composable
+private fun PreviewConnectionLostDark() = TetherTheme(darkTheme = true) {
+    TransferProgressScreen(
+        state = TransferState.ConnectionLost(
+            peer = fakePeer,
+            fileName = "document.pdf",
+            ratio = 0.6f,
+            waitingForNetwork = true,
+        ),
+        peerName = fakePeer.name,
+        onCancel = {},
+        onBack = {},
+        onFolderConfirm = {},
+        onRetryAll = {},
+    )
+}
+
+@Preview
+@Composable
 private fun PreviewCancelledLight() = TetherTheme(darkTheme = false) {
+    TransferProgressScreen(
+        state = TransferState.Terminal.Cancelled,
+        peerName = fakePeer.name,
+        onCancel = {},
+        onBack = {},
+        onFolderConfirm = {},
+        onRetryAll = {},
+    )
+}
+
+@Preview
+@Composable
+private fun PreviewCancelledDark() = TetherTheme(darkTheme = true) {
     TransferProgressScreen(
         state = TransferState.Terminal.Cancelled,
         peerName = fakePeer.name,
@@ -184,7 +253,43 @@ private fun PreviewPartialFailureLight() = TetherTheme(darkTheme = false) {
 
 @Preview
 @Composable
+private fun PreviewPartialFailureDark() = TetherTheme(darkTheme = true) {
+    TransferSummaryScreen(
+        state = TransferState.Terminal.PartialFailure(
+            peer = fakePeer,
+            sent = 3,
+            total = 5,
+            failed = listOf(
+                FailedFile("corrupt.jpg", FailureReason.Unreadable),
+                FailedFile("video.mp4", FailureReason.ReceiverWriteFailed),
+            ),
+        ),
+        onDone = {},
+        onRetryFile = {},
+        onRetryAll = {},
+    )
+}
+
+@Preview
+@Composable
 private fun PreviewAllFailedLight() = TetherTheme(darkTheme = false) {
+    TransferSummaryScreen(
+        state = TransferState.Terminal.AllFailed(
+            peer = fakePeer,
+            failed = listOf(
+                FailedFile("file1.jpg", FailureReason.ConnectionLost),
+                FailedFile("file2.pdf", FailureReason.ConnectionLost),
+            ),
+        ),
+        onDone = {},
+        onRetryFile = {},
+        onRetryAll = {},
+    )
+}
+
+@Preview
+@Composable
+private fun PreviewAllFailedDark() = TetherTheme(darkTheme = true) {
     TransferSummaryScreen(
         state = TransferState.Terminal.AllFailed(
             peer = fakePeer,
@@ -214,6 +319,98 @@ private fun PreviewConnectionErrorSummaryLight() = TetherTheme(darkTheme = false
                 FailedFile("file6.txt", FailureReason.ConnectionLost),
             ),
         ),
+        onDone = {},
+        onRetryFile = {},
+        onRetryAll = {},
+    )
+}
+
+@Preview
+@Composable
+private fun PreviewConnectionErrorSummaryDark() = TetherTheme(darkTheme = true) {
+    TransferSummaryScreen(
+        state = TransferState.Terminal.ConnectionErrorSummary(
+            peer = fakePeer,
+            sent = 2,
+            total = 6,
+            failed = listOf(
+                FailedFile("file3.jpg", FailureReason.ConnectionLost),
+                FailedFile("file4.png", FailureReason.ConnectionLost),
+                FailedFile("file5.mov", FailureReason.ConnectionLost),
+                FailedFile("file6.txt", FailureReason.ConnectionLost),
+            ),
+        ),
+        onDone = {},
+        onRetryFile = {},
+        onRetryAll = {},
+    )
+}
+
+@Preview
+@Composable
+private fun PreviewFolderConfirmLight() = TetherTheme(darkTheme = false) {
+    FolderSendConfirmDialog(
+        fileCount = 1234,
+        totalBytes = 2_500_000_000L,
+        onContinue = {},
+        onCancel = {},
+    )
+}
+
+@Preview
+@Composable
+private fun PreviewFolderConfirmDark() = TetherTheme(darkTheme = true) {
+    FolderSendConfirmDialog(
+        fileCount = 1234,
+        totalBytes = 2_500_000_000L,
+        onContinue = {},
+        onCancel = {},
+    )
+}
+
+@Preview
+@Composable
+private fun PreviewCancelConfirmLight() = TetherTheme(darkTheme = false) {
+    TransferProgressScreen(
+        state = TransferState.InProgress(
+            currentFile = "photo.jpg",
+            bytesDone = 10_000_000L,
+            bytesTotal = 40_000_000L,
+            speedBytesPerSec = 2_000_000L,
+        ),
+        peerName = fakePeer.name,
+        onCancel = {},
+        onBack = {},
+        onFolderConfirm = {},
+        onRetryAll = {},
+    )
+    CancelConfirmDialog(onStopTransfer = {}, onKeepSending = {})
+}
+
+@Preview
+@Composable
+private fun PreviewCancelConfirmDark() = TetherTheme(darkTheme = true) {
+    TransferProgressScreen(
+        state = TransferState.InProgress(
+            currentFile = "photo.jpg",
+            bytesDone = 10_000_000L,
+            bytesTotal = 40_000_000L,
+            speedBytesPerSec = 2_000_000L,
+        ),
+        peerName = fakePeer.name,
+        onCancel = {},
+        onBack = {},
+        onFolderConfirm = {},
+        onRetryAll = {},
+    )
+    CancelConfirmDialog(onStopTransfer = {}, onKeepSending = {})
+}
+
+@Preview
+@Composable
+private fun PreviewSuccessAnimationPeakLight() = TetherTheme(darkTheme = false) {
+    TransferSummaryScreen(
+        state = TransferState.Terminal.AllSuccess(peer = fakePeer, count = 3),
         onDone = {},
         onRetryFile = {},
         onRetryAll = {},

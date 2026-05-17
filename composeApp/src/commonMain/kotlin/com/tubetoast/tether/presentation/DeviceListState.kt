@@ -8,6 +8,7 @@ data class DeviceListState(
     val pendingFiles: List<FileSource> = emptyList(),
     val isDragHover: Boolean = false,
     val dragRejected: Boolean = false,
+    val sendChooserTarget: Device? = null,
 ) {
     companion object {
         fun empty() = DeviceListState(emptyList())

@@ -11,6 +11,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
@@ -45,6 +46,20 @@ class TransferComponentTest {
         clock = { 1000L },
     )
 
+    private fun allFailSender() = BatchSender(
+        sendOne = { _, _, _, _, _ ->
+            SendResult.Failure("write error")
+        },
+        clock = { 0L },
+    )
+
+    private fun connectionLostSender() = BatchSender(
+        sendOne = { _, _, _, _, _ ->
+            SendResult.Failure("connect error reset by peer")
+        },
+        clock = { 0L },
+    )
+
     @Test
     fun preparingToInProgressToAllSuccess() = runTest {
         val source = FakeFileSource("file.txt", ByteArray(100), size = 100L)
@@ -74,12 +89,31 @@ class TransferComponentTest {
     }
 
     @Test
+    fun folderConfirmDeniedExitsWithoutSending() = runTest {
+        val sources = List(FILE_COUNT_THRESHOLD) {
+            FakeFileSource("f$it.txt", ByteArray(1), size = 1L)
+        }
+        var startBatchCalled = false
+        val trackingSender = BatchSender(
+            sendOne = { _, _, _, _, _ ->
+                startBatchCalled = true
+                SendResult.Success("path")
+            },
+            clock = { 0L },
+        )
+        val component = buildComponent(sources, trackingSender, backgroundScope)
+
+        assertIs<TransferState.FolderConfirm>(component.state.value)
+        component.onFolderConfirm(false)
+
+        assertTrue(exitCalled, "onExit must be called when folder confirm is denied")
+        assertFalse(startBatchCalled, "startBatch must not be called when folder confirm is denied")
+    }
+
+    @Test
     fun cancelConfirmThenConfirmedLeadsToCancelled() = runTest {
-        var sendStarted = false
         val blockingSender = BatchSender(
             sendOne = { _, _, _, _, _ ->
-                sendStarted = true
-                // Block indefinitely — cancel will interrupt
                 kotlinx.coroutines.delay(Long.MAX_VALUE)
                 SendResult.Success("path")
             },
@@ -89,9 +123,10 @@ class TransferComponentTest {
         val component = buildComponent(listOf(source), blockingSender, backgroundScope)
 
         runCurrent()
-        // Force an InProgress state for cancel dialog test
-        component.onCancelConfirmed()
+        component.onCancelClicked()
+        assertIs<TransferState.CancelConfirm>(component.state.value)
 
+        component.onCancelConfirmed()
         assertIs<TransferState.Terminal.Cancelled>(component.state.value)
     }
 
@@ -119,5 +154,25 @@ class TransferComponentTest {
         assertIs<TransferState.Terminal.PartialFailure>(terminal)
         assertTrue(terminal.sent > 0)
         assertTrue(terminal.failed.isNotEmpty())
+    }
+
+    @Test
+    fun allFailedTerminalWhenNothingSent() = runTest {
+        val sources = List(3) { FakeFileSource("f$it.txt", ByteArray(100), size = 100L) }
+        val component = buildComponent(sources, allFailSender(), backgroundScope)
+
+        runCurrent()
+
+        assertIs<TransferState.Terminal.AllFailed>(component.state.value)
+    }
+
+    @Test
+    fun connectionErrorSummaryTerminalOnConnectionLoss() = runTest {
+        val sources = List(4) { FakeFileSource("f$it.txt", ByteArray(100), size = 100L) }
+        val component = buildComponent(sources, connectionLostSender(), backgroundScope)
+
+        runCurrent()
+
+        assertIs<TransferState.Terminal.ConnectionErrorSummary>(component.state.value)
     }
 }

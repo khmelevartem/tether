@@ -23,6 +23,7 @@ fun TransferScreen(
             onDone = component::onDone,
             onRetryFile = component::onRetryFile,
             onRetryAll = component::onRetryAll,
+            onBack = component::onDone,
             modifier = modifier,
         )
 

@@ -130,6 +130,35 @@ class FileServerPathTest {
     }
 
     @Test
+    fun `windows drive letter is sandboxed inside downloads dir`() {
+        val dir = newDownloadsDir()
+        val server = newServer(dir)
+        val port = server.start()
+        val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
+        try {
+            runBlocking {
+                val response = client.post("http://localhost:$port/upload?name=C%3A%2Fsecret%2Ffile.txt") {
+                    contentType(ContentType.Application.OctetStream)
+                    setBody("payload".toByteArray())
+                }
+                assertEquals(HttpStatusCode.OK, response.status)
+                val savedPath = response.body<Map<String, String>>()["savedPath"]!!
+                val saved = File(savedPath)
+                assertTrue(
+                    saved.canonicalPath.startsWith(dir.canonicalPath),
+                    "Drive-letter path must be sandboxed inside downloads dir, got: ${saved.canonicalPath}",
+                )
+                assertFalse(
+                    File(dir.parentFile, "secret/file.txt").exists(),
+                    "Must not escape downloads dir via Windows drive letter",
+                )
+            }
+        } finally {
+            client.close()
+        }
+    }
+
+    @Test
     fun `collision applies leaf-only suffix keeping subdirectory`() {
         val dir = newDownloadsDir()
         val server = newServer(dir)

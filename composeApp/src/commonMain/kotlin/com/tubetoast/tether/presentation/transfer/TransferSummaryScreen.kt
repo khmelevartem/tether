@@ -35,6 +35,7 @@ fun TransferSummaryScreen(
     onRetryFile: (String) -> Unit,
     onRetryAll: () -> Unit,
     modifier: Modifier = Modifier,
+    onBack: () -> Unit = onDone,
 ) {
     val colors = TetherTheme.colors
     val typography = TetherTheme.typography
@@ -50,6 +51,18 @@ fun TransferSummaryScreen(
                 .fillMaxWidth()
                 .padding(horizontal = spacing.lg, vertical = spacing.md),
         ) {
+            BasicText(
+                text = "←",
+                style = typography.titleMedium.copy(color = colors.accent),
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .clickable(onClick = onBack)
+                    .padding(spacing.sm)
+                    .semantics {
+                        contentDescription = "Back"
+                        role = Role.Button
+                    },
+            )
             BasicText(
                 text = "Transfer complete",
                 style = typography.titleMedium.copy(color = colors.textPrimary),
