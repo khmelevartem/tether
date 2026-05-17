@@ -92,7 +92,7 @@ Runtime prompts only. Compile-time declarations are listed per platform below.
 
 **Not required.**
 
-- Local Network discovery — no runtime grant on currently supported API levels; the system mDNS API works under the multicast manifest declaration.
+- Local Network discovery — no runtime grant on currently supported API levels; the system mDNS API works under the multicast manifest declaration. The same `CHANGE_WIFI_MULTICAST_STATE` covers the host-side multi-interface mDNS path used when this Android device is sharing Wi-Fi as a hotspot (see [hotspot-transfer.md](../../hotspot-transfer/spec.md)); no additional grant is needed there.
 - File send — the system photo picker, the system file/folder picker, and the OS share sheet all return scoped per-file references without `READ_MEDIA_*` or `MANAGE_EXTERNAL_STORAGE`.
 - File save — Tether writes to public `Downloads/Tether/` via the OS-managed Downloads collection without `WRITE_EXTERNAL_STORAGE` (legacy, replaced by scoped storage on API 29+; Tether targets API 34+).
 
@@ -109,7 +109,7 @@ Runtime prompts only. Compile-time declarations are listed per platform below.
 
 - File send — the system Photos picker is privacy-preserving since iOS 14, no `NSPhotoLibraryUsageDescription`. The system Files picker and the OS share sheet add no runtime prompt.
 - File save — Tether writes only to its own app container (`On My iPhone → Tether/`); no Photos write (`NSPhotoLibraryAddUsageDescription`), no Files access outside the container.
-- Inbound and outbound TCP within the local network are gated by the Local Network grant alone.
+- Inbound and outbound TCP within the local network are gated by the Local Network grant alone. The same grant covers the UDP-broadcast and HTTP-subnet-scan fallbacks used in [hotspot-transfer.md](../../hotspot-transfer/spec.md); no separate prompt or entitlement is involved.
 
 ## macOS (native Compose target)
 
