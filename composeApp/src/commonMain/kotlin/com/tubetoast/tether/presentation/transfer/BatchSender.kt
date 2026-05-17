@@ -10,8 +10,7 @@ import kotlin.time.TimeSource
 
 private const val EMA_ALPHA = 0.3
 
-private val monotonicSource = TimeSource.Monotonic
-private val referenceTime = monotonicSource.markNow()
+private val referenceTime = TimeSource.Monotonic.markNow()
 
 private fun epochMillis(): Long = referenceTime.elapsedNow().inWholeMilliseconds
 

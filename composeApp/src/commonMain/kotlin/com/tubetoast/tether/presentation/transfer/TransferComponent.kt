@@ -50,15 +50,9 @@ class TransferComponent(
         val current = _state.value
         when (current) {
             is TransferState.InProgress -> _state.value = TransferState.CancelConfirm(current)
-            is TransferState.Preparing -> {
-                val placeholder = TransferState.InProgress(
-                    currentFile = "",
-                    bytesDone = 0L,
-                    bytesTotal = null,
-                    speedBytesPerSec = 0L,
-                )
-                _state.value = TransferState.CancelConfirm(placeholder)
-            }
+            is TransferState.Preparing -> _state.value = TransferState.CancelConfirm(
+                TransferState.InProgress(currentFile = "", bytesDone = 0L, bytesTotal = null, speedBytesPerSec = 0L),
+            )
             else -> {}
         }
     }

@@ -128,7 +128,6 @@ private fun DragOverlay(rejected: Boolean, modifier: Modifier = Modifier) {
     val colors = TetherTheme.colors
     val typography = TetherTheme.typography
     val spacing = TetherTheme.spacing
-    val borderColor = colors.accent
     val overlayLabel = if (rejected) "Transfer in progress — wait to drop." else "Drop to send"
     Box(
         modifier = modifier
@@ -136,7 +135,7 @@ private fun DragOverlay(rejected: Boolean, modifier: Modifier = Modifier) {
             .padding(spacing.xl)
             .drawBehind {
                 drawRect(
-                    color = borderColor,
+                    color = colors.accent,
                     style = Stroke(
                         width = 2.dp.toPx(),
                         pathEffect = PathEffect.dashPathEffect(floatArrayOf(20f, 10f)),

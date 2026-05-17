@@ -11,35 +11,19 @@ fun TransferScreen(
     modifier: Modifier = Modifier,
 ) {
     val state by component.state.subscribeAsState()
+    val current = state
 
-    when (state) {
-        is TransferState.Terminal.AllSuccess,
-        is TransferState.Terminal.PartialFailure,
-        is TransferState.Terminal.AllFailed,
-        is TransferState.Terminal.ConnectionErrorSummary,
-        -> TransferSummaryScreen(
-            state = state as TransferState.Terminal,
-            onDone = component::onDone,
-            onRetryFile = component::onRetryFile,
-            onRetryAll = component::onRetryAll,
-            onBack = component::onDone,
-            modifier = modifier,
+    when (current) {
+        is TransferState.FolderConfirm -> FolderSendConfirmDialog(
+            fileCount = current.fileCount,
+            totalBytes = current.totalBytes,
+            onContinue = { component.onFolderConfirm(true) },
+            onCancel = { component.onFolderConfirm(false) },
         )
 
-        is TransferState.FolderConfirm -> {
-            val folderState = state as TransferState.FolderConfirm
-            FolderSendConfirmDialog(
-                fileCount = folderState.fileCount,
-                totalBytes = folderState.totalBytes,
-                onContinue = { component.onFolderConfirm(true) },
-                onCancel = { component.onFolderConfirm(false) },
-            )
-        }
-
         is TransferState.CancelConfirm -> {
-            val snapshot = (state as TransferState.CancelConfirm).snapshot
             TransferProgressScreen(
-                state = snapshot,
+                state = current.snapshot,
                 peerName = component.peer.name,
                 onCancel = component::onCancelClicked,
                 onBack = component::onDone,
@@ -52,8 +36,26 @@ fun TransferScreen(
             )
         }
 
+        is TransferState.Terminal.Cancelled -> TransferProgressScreen(
+            state = current,
+            peerName = component.peer.name,
+            onCancel = component::onCancelClicked,
+            onBack = component::onDone,
+            onRetryAll = component::onRetryAll,
+            modifier = modifier,
+        )
+
+        is TransferState.Terminal -> TransferSummaryScreen(
+            state = current,
+            onDone = component::onDone,
+            onRetryFile = component::onRetryFile,
+            onRetryAll = component::onRetryAll,
+            onBack = component::onDone,
+            modifier = modifier,
+        )
+
         else -> TransferProgressScreen(
-            state = state,
+            state = current,
             peerName = component.peer.name,
             onCancel = component::onCancelClicked,
             onBack = component::onDone,
