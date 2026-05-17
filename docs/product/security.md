@@ -16,6 +16,14 @@ Out of scope:
 - Malicious code on the user's own device.
 - Attacks on the underlying OS / Wi-Fi router.
 
+## Discovery and Trust
+
+Discovery is unauthenticated by design. Any device on a reachable subnet can announce itself — that is true today through mDNS and remains true through the additional discovery channels described in [tech-stack.md](tech-stack.md) and [`docs/engineering/discovery.md`](../engineering/discovery.md): the `/hello` rendezvous endpoint, HTTP-subnet-scan, and UDP-broadcast fallbacks. None of these widens the trust surface beyond what mDNS already exposes — they only diversify how a peer's existence reaches the device list. The list itself is not a trust claim.
+
+The trust gate is **pairing**. No file moves between two devices until they have completed the first-encounter PIN comparison and exchanged keys. Discovery's job is to make sure both devices see each other; pairing decides which of them they will accept files from.
+
+Manual IP entry has the same trust properties: it adds a peer to the device list, not to the trusted-devices store. The user still goes through pairing the first time they exchange a file with a manually-entered peer.
+
 ## Pairing Flow
 
 First-time connection between two devices:
