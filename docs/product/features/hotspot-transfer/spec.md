@@ -34,27 +34,29 @@ The roles are interchangeable. Boris can equally send to Anna over the same hots
 
 **Alternative paths**
 
-- **Discovery is slow at first.** If the device list is still empty after a few seconds, Tether quietly tries harder in the background — the user sees no visible change other than the peer appearing slightly later. No "searching…" spinner past the normal initial moment, no failure dialog unless we are confident discovery has truly failed.
-- **Discovery fails.** After a longer window with the list still empty, an unobtrusive affordance appears: *"Don't see the other device? Enter address manually."* Tapping it opens a small screen where the user types the other phone's IP address (and, optionally, a port — pre-filled with the right default). On the other side, the device shows its IP somewhere obvious. The IP is the same information already visible in the phone's own hotspot or Wi-Fi settings.
-- **Reconnecting later.** Manually-entered peers are remembered as a short list of recent addresses. Next time Anna joins Boris's hotspot, Boris is one tap away in the manual-entry screen — she does not retype.
+- **Discovery is slow at first.** If the device list is still empty after a few seconds, Tether tries harder in the background, silently — no "searching…" spinner, no progress text. The peer just appears slightly later. The user sees no visible change unless and until we are confident automatic discovery has truly failed.
+- **Discovery fails.** After a longer window with the list still empty, an unobtrusive affordance appears: *"Don't see the other device? Scan a QR code."* Tapping it opens the in-app scanner; the other phone shows its QR from the same affordance. Scanning either side completes the introduction — the peer appears on both. The QR encodes the same information `/hello` carries, so once scanned the device is indistinguishable from any other peer in the list.
+- **Two desktops without a convenient camera.** The same affordance offers manual IP entry as a secondary option. The user types the other computer's IP (and, optionally, a port — pre-filled with the right default). Each device shows its own IP in the same surface so the value is easy to dictate. This is the only common case where typing is preferable to scanning.
+- **Reconnecting later.** Every device the user has ever paired with stays in a **recent peers** list, regardless of how it was originally discovered. Next time Anna joins Boris's hotspot, Boris is one tap away — she does not retype, does not rescan. The recent peers list is shown as a secondary section below the QR scanner and the manual-entry field — the primary action is "introduce a new device", the history is one tap away.
 - **Hotspot is provided by a laptop or desktop instead of a phone.** Same flow. Tether does not care which device is acting as the AP.
-- **Two devices, both on a guest Wi-Fi that blocks peer-to-peer.** Same fallback: manual entry. Tether does not pretend to solve networks that genuinely block all peer-to-peer traffic.
+- **Two devices, both on a guest Wi-Fi that blocks peer-to-peer.** Same fallbacks: QR scan or manual entry. Tether does not pretend to solve networks that genuinely block all peer-to-peer traffic.
 
 ## What "working" looks like
 
 - Both Anna and Boris turn their phones on, Boris enables hotspot, Anna joins it, both open Tether. Within a few seconds, the other device is visible in the list on both phones. No troubleshooting, no permissions surprise mid-flow.
 - Files transfer in either direction at the speed the underlying Wi-Fi link allows. Receiving works whether the device is the hotspot host or a client.
-- If the user has to fall back to manual entry, the IP they type works, and they are not asked to type it again the next time they meet the same device.
+- If the user has to fall back to QR scan or manual entry, the introduction succeeds, and they are not asked to repeat the scan or type the IP again the next time they meet the same device — it is already in recent peers.
 - The whole experience uses the same device-list screen, the same pairing dialog, the same transfer progress — there is no separate "hotspot UI". A user who has never been told about hotspot mode does not realise anything special happened.
 - Reinstalling Tether on one side, or rebooting either phone, does not change behaviour beyond what pairing already specifies (a reinstall is a fresh first-encounter).
 
 ## Platform notes
 
-- **Android (host or client).** On first hotspot-host use, the user may see the standard system permission prompt for nearby Wi-Fi devices. The wording is the OS's; Tether does not add a custom explainer beyond what the permission rationale requires.
-- **iOS (host or client).** The Local Network permission prompt appears on first run as it already does for normal Wi-Fi discovery. iOS Personal Hotspot has a "Maximize Compatibility" toggle — Tether works in both modes; the user is not asked to flip it.
-- **macOS as host (Internet Sharing).** Supported. The user enables Internet Sharing from System Settings; Tether does not need to mention this — discovery picks up the shared interface like any other.
-- **Windows / Linux as host.** Supported through the standard OS hotspot facilities (Windows Mobile Hotspot, `nmcli` / `hostapd` on Linux). Same flow.
-- **iPhone as host with a single client.** Works without any special handling. iOS Bonjour publishes on the hotspot interface; nothing user-visible differs.
+Hotspot transfer does not introduce platform permissions of its own — the OS prompts the user sees are the same ones described in [permissions/spec.md](../system/permissions/spec.md) for normal discovery. The cases where hotspot adds nothing user-visible beyond what already exists:
+
+- **iOS Personal Hotspot.** Works in both default and "Maximize Compatibility" modes; the user is not asked to flip the toggle.
+- **macOS as host.** Internet Sharing from System Settings; discovery picks up the shared interface like any other.
+- **Windows / Linux as host.** Windows Mobile Hotspot, `nmcli` / `hostapd` on Linux; same flow.
+- **iPhone as host.** No special handling; Bonjour publishes on the hotspot interface.
 
 ## Not in this feature
 
@@ -67,7 +69,5 @@ The roles are interchangeable. Boris can equally send to Anna over the same hots
 ## Open product questions
 
 - **Should the app surface that the device is currently sharing Wi-Fi?** A subtle indicator ("You're sharing Wi-Fi — other devices can find you here") could help the host understand why their phone is suddenly visible to a stranger's Tether install. Could equally be a noisy mode-indicator that nobody reads. Decide after first user observations.
-- **How loud should the fallback be?** When automatic discovery has clearly failed, do we surface "trying harder…" before offering manual entry, or do we stay silent until the manual-entry affordance appears? Quieter is friendlier but slower to discover by users who do not know to wait.
-- **Idle time before the manual-entry affordance appears.** Too short and the user sees it when discovery is still working; too long and they conclude the app is broken. A small number of seconds — exact value tuned after first usage.
-- **Prominence of the recent-peers list.** Should it be the first thing the user sees in manual entry (one tap, common case) or a secondary section below the input field (input first, history second)? The answer depends on how often manual entry is reused vs first-time.
-- **Reciprocal IP visibility.** When the user is about to type an IP, do we show their own IP on the same screen so they can dictate it to the other side? Probably yes; tracked here so the UI design accounts for it.
+- **Idle time before the out-of-band affordance appears.** Too short and the user sees it when discovery is still working; too long and they conclude the app is broken. A small number of seconds — exact value tuned after first usage.
+- **QR-only vs camera-less symmetry.** Tether shows the QR on each device's out-of-band screen so the other can scan it. For desktop users without a camera, do we always offer both QR (to be scanned by a phone) and manual entry (typed on the desktop), or pick one path per device class? Lean toward always-both for consistency, but worth observing.

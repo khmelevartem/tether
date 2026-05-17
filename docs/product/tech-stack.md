@@ -93,8 +93,7 @@ The engineering layout, contracts, and runtime behaviour live in [`docs/engineer
 
 - **Same L3 subnet required.** Discovery cannot cross routed boundaries without explicit configuration. A hotspot link counts as one subnet — host and clients can find each other; two devices on opposite sides of a router or a corporate VLAN cannot.
 - **Adverse networks degrade gracefully, not silently.** Guest Wi-Fi, captive portals, and client-isolated enterprise APs may drop multicast and/or broadcast. The layered discovery model (see above) routes around most of these; the user-visible failure mode and the manual-entry escape hatch are specified in [`features/hotspot-transfer/spec.md`](features/hotspot-transfer/spec.md).
-- **iOS Local Network permission.** Required for discovery (mDNS and UDP-broadcast both fall under it); user will see the system prompt on first run.
-- **Android `INTERNET` permission** and **`NEARBY_WIFI_DEVICES`** (Android 13+) for host-side multi-interface discovery, plus `WifiManager.MulticastLock` while host-side mDNS is active on the AP interface.
+- **Per-platform permissions** for discovery, notifications, file save, and inbound network — runtime prompts and manifest declarations live in [`features/system/permissions/spec.md`](features/system/permissions/spec.md), not duplicated here.
 - **macOS:** Apple Silicon only (`macosArm64`). Intel support (`macosX64()`) is cheap to add — one line in `kotlin { ... }`, plus a small permanent build/test/release tax (extra compile cycle, extra artifact in releases). Skipped now because the Intel Mac population among target users is small and shrinking; revisit when an actual user reports it.
 - **Java 21 (Temurin)** for Windows (JVM) and the build itself.
 - **Compose on macOS is experimental** — accepted; flagged in build configuration.

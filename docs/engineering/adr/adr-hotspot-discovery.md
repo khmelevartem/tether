@@ -5,12 +5,12 @@
 
 ## Context
 
-The motivating scenario is **transfer over one device's Wi-Fi hotspot**: a user wants to send a file to someone who has no shared Wi-Fi available, so one of them turns on their phone's hotspot and the other connects to it. This is the dominant mobile-first case — a phone in the AP role is more common in practice than two devices joined to the same home Wi-Fi. The corresponding product feature is [`features/hotspot-transfer/spec.md`](../../product/features/hotspot-transfer/spec.md).
+The motivating scenario is **transfer over one device's Wi-Fi hotspot**: a user wants to send a file to someone who has no shared Wi-Fi available, so one of them turns on their phone's hotspot and the other connects to it. This is an important mobile-first case — not necessarily more frequent than two devices joined to the same home Wi-Fi, but covering the situations where a shared network simply does not exist (travel, no router, captive guest networks, anywhere two people meet without prior infrastructure). The corresponding product feature is [`features/hotspot-transfer/spec.md`](../../product/features/hotspot-transfer/spec.md).
 
 [docs/product/tech-stack.md](../../product/tech-stack.md) commits Tether to mDNS for peer discovery. mDNS works on the hotspot's L3 segment (host and clients share a subnet — the AP's own `192.168.x.0/24`). It does **not** work reliably out of the box because the AP interface is not the device's default route, and naive mDNS bindings miss it:
 
-- **Android-as-host (worst sub-case).** `NsdManager` binds to the system-default network and does not reliably announce or browse on the tether interface (`ap0`/`wlan1`). This is the case LocalSend has not solved either — see [their #270](https://github.com/localsend/localsend/issues/270).
-- **Desktop-as-host.** JmDNS by default binds to the OS-default interface, not the AP interface created by Windows Mobile Hotspot / macOS Internet Sharing / `hostapd`.
+- **Android-as-host (worst sub-case).** The platform's mDNS API binds to the system-default network and does not reliably announce or browse on the tether interface. This is the case LocalSend has not solved either — see [their #270](https://github.com/localsend/localsend/issues/270).
+- **Desktop-as-host.** The Java mDNS library binds to the OS-default interface by default, not the AP interface created by Windows Mobile Hotspot / macOS Internet Sharing / `hostapd`.
 - **iPhone-as-host (Personal Hotspot).** Bonjour publishes across interfaces and is usually fine, but needs verification on `bridge100`.
 
 Two adjacent scenarios fall out of the same root design naturally, and we want them covered while we are in the area:
@@ -30,7 +30,7 @@ Current mDNS-only discovery handles none of these.
 | Multicast-blocked LAN | ❌ | ❌ | ❌ alone | ✅ | ⚠️ broadcast often also blocked | ❌ different transport |
 | Asymmetric visibility | ❌ | ❌ alone | ✅ symmetrizes for free | ✅ | ✅ | n/a |
 | Cross-platform parity | ✅ | ✅ | ✅ | ✅ | ⚠️ iOS needs multicast entitlement | ❌ **no Apple public API** |
-| New permissions required | minimal | multicast | none beyond mDNS | none | multicast/broadcast entitlement on iOS | major (Android 13+ `NEARBY_WIFI_DEVICES`, Android-only) |
+| New permissions required | minimal | multicast | none beyond mDNS | none | multicast entitlement on iOS (already needed by mDNS) | major (Android-only Wi-Fi P2P/Aware grants) |
 | Trust surface increase | baseline | same | same — pairing remains gate | same — pairing remains gate | same | new transport surface |
 | Implementation complexity | already shipped | replace mDNS code paths entirely | one HTTP endpoint + one client trigger | one HTTP scan worker | one UDP listener + sender | platform-specific (Android only) |
 
@@ -44,7 +44,7 @@ Current mDNS-only discovery handles none of these.
 | 2 | `POST /hello` rendezvous endpoint — when one side learns of another (through any layer), it POSTs its own `InfoDto` to that peer | Asymmetric visibility; gives both sides the same peer list from a single one-way contact |
 | 3a | HTTP-subnet-scan fallback — when no peers learned for *N* seconds, POST `/hello` to every reachable host on each connected subnet | Multicast-blocked networks where unicast TCP is permitted |
 | 3b | UDP-broadcast fallback — limited broadcast `255.255.255.255:<port>` carrying the same `InfoDto` payload | Networks where broadcast survives but multicast does not |
-| 4 | Manual IP entry + recent peers list | Universal escape hatch — any failure mode, including ones we have not anticipated |
+| 4 | Out-of-band pairing — QR scan as primary, manual IP entry as fallback (for cases without a usable camera, typically two desktops) — plus a recent peers list of all paired devices | Universal escape hatch — any failure mode, including ones we have not anticipated |
 
 Layer 3a and 3b run independently and complementarily; they are not redundant — they cover different filtering behaviours seen in real APs. Order and concurrency of activation is an engineering detail captured in [docs/engineering/discovery.md](../discovery.md).
 
@@ -83,8 +83,7 @@ Wired into LocalSend's API split (upload mode vs download mode). Rejected: the s
 **Negative**
 - Three additional code paths to maintain on the discovery surface (rendezvous endpoint, subnet-scan worker, UDP listener/sender). Each is small and shares the existing discovered-peers upsert path.
 - Identity in `/hello` cannot be a stable fingerprint until [#11 — Pairing UI](https://github.com/khmelevartem/tether/issues/11) lands the keypair flow. Interim identity is per-install random.
-- UDP-broadcast on iOS reuses the multicast network entitlement already required by mDNS — no new entitlement filing.
-- Android 13+ requires `NEARBY_WIFI_DEVICES` permission for host-side multi-interface mDNS work.
+- Permissions surface on all platforms is unchanged from what mDNS already requires; final permission inventory and rationale flow live in [permissions/spec.md](../../product/features/system/permissions/spec.md).
 
 **Neutral**
 - Trust model is unchanged. Any device on a reachable subnet could already announce itself over mDNS; subnet-scan and broadcast do not widen this surface. Pairing remains the trust gate before any file moves. See [security.md](../../product/security.md).

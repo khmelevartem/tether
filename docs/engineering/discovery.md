@@ -35,9 +35,9 @@ Discovery runs four layers stacked top to bottom by speed and reach. Each layer 
 └─────────────────────────────────┬────────────────────────────────────┘
                                   │ feeds
 ┌─────────────────────────────────▼────────────────────────────────────┐
-│ Layer 4 — Manual IP entry                                            │
-│   User-initiated. Stores entered host:port as a recent peer.         │
-│   Same code path as Layer 2 — POST /hello → store upsert.            │
+│ Layer 4 — Out-of-band pairing (QR scan + manual IP entry)            │
+│   User-initiated. QR primary; manual entry for camera-less cases.    │
+│   Same code path as Layer 2 — InfoDto → store upsert.                │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -53,11 +53,14 @@ When a device acts as the network's access point — Android Wi-Fi hotspot, macO
 
 Network changes (interface up/down, new IP on existing interface) re-trigger enumeration; stale instances are torn down and rebuilt.
 
-### Permissions
+### Permissions and runtime locks
 
-- **Android 13+:** `NEARBY_WIFI_DEVICES` — required for discovery on AP interfaces without the location permission. Without it, JmDNS on `ap0`/`wlan1` silently fails to bind.
-- **Android:** `WifiManager.MulticastLock` held while the host-side AP-interface mDNS instance is active; released when discovery stops.
-- **iOS / macOS:** Local Network usage description; `_tether._tcp.` declared in `NSBonjourServices` in `Info.plist`.
+OS-mediated grants (manifest entries, Info.plist usage strings, runtime prompts) are owned by [`features/system/permissions/spec.md`](../product/features/system/permissions/spec.md). No new permission is introduced by host-side multi-interface mDNS — the existing mDNS grants cover it on every platform.
+
+Two runtime locks are worth calling out here because they are easy to forget in code review:
+
+- **Android `WifiManager.MulticastLock`** held while the host-side AP-interface mDNS instance is active; released when discovery stops. Without the lock, the OS filters out multicast packets to save battery.
+- **iOS multicast network entitlement** (already filed for mDNS) covers both inbound and outbound UDP-broadcast on the fallback path — see Layer 3b below; no separate entitlement is needed.
 
 ### Self-suppression
 
@@ -124,15 +127,31 @@ Some networks do the opposite filtering — broadcast passes (it is part of norm
 
 ### Apple platforms
 
-UDP listening on a fixed port requires the `multicastNetworkServiceType` entitlement on iOS and macOS — the same one already needed for mDNS. No additional entitlement work beyond what discovery already requires.
+UDP-broadcast reuses the multicast entitlement already covered for mDNS — see Layer 1's "Permissions and runtime locks" note above.
 
-## Layer 4 — Manual IP entry
+## Layer 4 — Out-of-band pairing (QR scan + manual IP entry)
 
-The user types a host (and optionally a port — defaulting to the well-known port) in a dedicated UI surface; the app issues `POST /hello` to that address and on success the resulting peer appears in the device list like any other.
+When automatic discovery fails, the user is offered a way to introduce the two devices without typing.
 
-Successful manual entries are persisted as a **recent peers** list shown in the manual-entry UI for one-tap reconnect. The recent-peers list is local to one device and never synced anywhere.
+### QR scan (primary)
 
-This is the universal escape hatch: any combination of failure modes Layers 1–3 cannot overcome, the user works around with a typed address.
+One device displays a QR code that encodes its own `InfoDto` (`alias`, `fingerprint`, `port`, `deviceType`, `version`) and host IP. The other scans it with the in-app scanner. The decoded payload is fed into the same upsert path as an inbound `POST /hello` — the resulting peer appears in the device list like any other, and the two sides exchange `/hello` immediately so both ends symmetrise.
+
+QR is the primary out-of-band path because it is unambiguous (no transcription errors), works across language and keyboard layouts, and is the same gesture a user already knows from Wi-Fi password sharing.
+
+### Manual IP entry (fallback for cases without a camera)
+
+The user types a host (and optionally a port — defaulting to the well-known port) in a dedicated surface; the app issues `POST /hello` to that address. The typical case is two desktops where neither has a convenient camera to scan the other's QR; less common but real, so manual entry stays first-class.
+
+### Recent peers
+
+A **recent peers** list surfaces previously paired devices for one-tap reconnect, regardless of how they were originally discovered (mDNS, rendezvous, fallback, QR, manual). All paired devices stay in this list; entries age out only on explicit user removal or when pairing is forgotten on either side. The list is local to one device and never synced anywhere.
+
+In the out-of-band entry UI, recent peers appear as a **secondary** section below the QR scanner and manual-entry field — the input is primary, the history is one tap away.
+
+### Why this is Layer 4
+
+Any combination of failure modes Layers 1–3 cannot overcome, the user works around with a scan or a typed address. This layer is the universal escape hatch.
 
 ## Identity and self-suppression
 
