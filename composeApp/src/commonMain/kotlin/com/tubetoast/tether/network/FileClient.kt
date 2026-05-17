@@ -30,10 +30,13 @@ import kotlin.time.Duration.Companion.seconds
 
 class FileClient(
     private val client: HttpClient,
+    private val tracker: TransferActivityTracker = DefaultTransferActivityTracker(),
     private val noProgressTimeout: Duration = DEFAULT_NO_PROGRESS_TIMEOUT,
 ) : Closeable {
     companion object {
-        fun default(): FileClient = FileClient(
+        fun default(
+            tracker: TransferActivityTracker = DefaultTransferActivityTracker(),
+        ): FileClient = FileClient(
             client = HttpClient(CIO) {
                 install(ContentNegotiation) { json() }
                 install(HttpTimeout) {
@@ -41,6 +44,7 @@ class FileClient(
                     socketTimeoutMillis = HttpTimeoutConfig.INFINITE_TIMEOUT_MS
                 }
             },
+            tracker = tracker,
         )
     }
 
@@ -55,12 +59,14 @@ class FileClient(
         fileName: String,
         totalBytes: Long? = null,
         onProgress: ((bytesTransferred: Long, totalBytes: Long?) -> Unit)? = null,
-    ): SendResult = try {
-        sendInternal(device, channel, fileName, totalBytes, onProgress)
-    } catch (e: CancellationException) {
-        throw e
-    } catch (e: Throwable) {
-        SendResult.Failure(e.message ?: e::class.simpleName ?: "unknown error")
+    ): SendResult = tracker.withActiveTransfer {
+        try {
+            sendInternal(device, channel, fileName, totalBytes, onProgress)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            SendResult.Failure(e.message ?: e::class.simpleName ?: "unknown error")
+        }
     }
 
     override fun close() {

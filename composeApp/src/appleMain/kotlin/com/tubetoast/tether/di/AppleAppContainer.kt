@@ -14,6 +14,7 @@ open class AppleAppContainer(
             port = 0,
             trustedDeviceStore = config.trustedDeviceStore,
             deviceKeyPair = config.deviceKeyPair,
+            tracker = transferActivityTracker,
         )
     }
     override val mdnsDiscovery: MdnsDiscovery = MdnsDiscovery(DiscoveredDevicesStore())

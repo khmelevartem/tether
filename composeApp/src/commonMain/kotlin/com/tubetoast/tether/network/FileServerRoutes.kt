@@ -39,6 +39,7 @@ internal fun Application.installFileServerRoutes(
     storage: UploadStorage,
     trustedDeviceStore: TrustedDeviceStore,
     serverPublicKey: ByteArray,
+    tracker: TransferActivityTracker = DefaultTransferActivityTracker(),
 ) {
     install(ContentNegotiation) { json() }
     routing {
@@ -72,19 +73,21 @@ internal fun Application.installFileServerRoutes(
             val destination = storage.resolveDestination(fileName)
             var uploadComplete = false
             try {
-                val body = call.receiveChannel()
-                val bytesWritten = storage.writeBody(body, destination)
-                // Ktor closes the body channel silently when the client disconnects
-                // mid-stream. closedCause covers exceptional close; the Content-Length
-                // comparison covers clean close on incomplete bodies.
-                body.closedCause?.let { throw it }
-                val expected = call.request.contentLength()
-                if (expected != null && bytesWritten < expected) {
-                    error("FileServer: incomplete upload — got $bytesWritten of $expected bytes")
+                tracker.withActiveTransfer {
+                    val body = call.receiveChannel()
+                    val bytesWritten = storage.writeBody(body, destination)
+                    // Ktor closes the body channel silently when the client disconnects
+                    // mid-stream. closedCause covers exceptional close; the Content-Length
+                    // comparison covers clean close on incomplete bodies.
+                    body.closedCause?.let { throw it }
+                    val expected = call.request.contentLength()
+                    if (expected != null && bytesWritten < expected) {
+                        error("FileServer: incomplete upload — got $bytesWritten of $expected bytes")
+                    }
+                    uploadComplete = true
+                    storage.logInfo("received '$fileName' — $bytesWritten bytes → $destination")
+                    call.respond(HttpStatusCode.OK, mapOf("savedPath" to destination))
                 }
-                uploadComplete = true
-                storage.logInfo("received '$fileName' — $bytesWritten bytes → $destination")
-                call.respond(HttpStatusCode.OK, mapOf("savedPath" to destination))
             } catch (e: Exception) {
                 storage.logError("upload failed for '$fileName' — ${e.message ?: "unknown error"}")
                 try {

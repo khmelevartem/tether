@@ -16,6 +16,7 @@ actual class FileServer(
     private val downloadsDir: File = File(System.getProperty("user.home"), "Downloads/Tether"),
     private val trustedDeviceStore: TrustedDeviceStore,
     private val deviceKeyPair: DeviceKeyPair,
+    private val tracker: TransferActivityTracker = DefaultTransferActivityTracker(),
 ) {
     private var server: EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration>? = null
 
@@ -24,7 +25,7 @@ actual class FileServer(
         val storage = JvmUploadStorage(downloadsDir)
         storage.ensureRoot()
         val srv = embeddedServer(CIO, port = port) {
-            installFileServerRoutes(storage, trustedDeviceStore, deviceKeyPair.publicKey)
+            installFileServerRoutes(storage, trustedDeviceStore, deviceKeyPair.publicKey, tracker)
         }.start(wait = false)
         server = srv
         // resolvedConnectors() returns the actual OS-assigned port when port=0 was specified,

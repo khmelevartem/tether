@@ -28,6 +28,7 @@ actual class FileServer(
     downloadsDir: String? = null,
     private val trustedDeviceStore: TrustedDeviceStore,
     private val deviceKeyPair: DeviceKeyPair,
+    private val tracker: TransferActivityTracker = DefaultTransferActivityTracker(),
 ) {
     private val downloadsDir: String = downloadsDir ?: defaultDownloadsDir()
     private var server: EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration>? = null
@@ -37,7 +38,7 @@ actual class FileServer(
         val storage = AppleUploadStorage(downloadsDir)
         storage.ensureRoot()
         val srv = embeddedServer(CIO, port = port) {
-            installFileServerRoutes(storage, trustedDeviceStore, deviceKeyPair.publicKey)
+            installFileServerRoutes(storage, trustedDeviceStore, deviceKeyPair.publicKey, tracker)
         }.start(wait = false)
         server = srv
         return runBlocking { srv.engine.resolvedConnectors() }.first().port
