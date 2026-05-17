@@ -19,11 +19,12 @@ fun CancelTextButton(
     modifier: Modifier = Modifier,
     label: String = "Cancel",
     enabled: Boolean = true,
+    a11yLabel: String? = null,
 ) {
     val colors = TetherTheme.colors
     val spacing = TetherTheme.spacing
     val color = if (enabled) colors.accent else colors.textMuted
-    val a11yLabel = "$label transfer"
+    val resolvedA11yLabel = a11yLabel ?: "$label transfer"
     BasicText(
         text = label,
         style = TetherTheme.typography.bodyLarge.copy(color = color),
@@ -32,7 +33,7 @@ fun CancelTextButton(
             .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = spacing.lg, vertical = spacing.md)
             .semantics {
-                contentDescription = a11yLabel
+                contentDescription = resolvedA11yLabel
                 role = Role.Button
             },
     )

@@ -17,7 +17,6 @@ fun TransferScreen(
         is TransferState.Terminal.PartialFailure,
         is TransferState.Terminal.AllFailed,
         is TransferState.Terminal.ConnectionErrorSummary,
-        TransferState.Terminal.Cancelled,
         -> TransferSummaryScreen(
             state = state as TransferState.Terminal,
             onDone = component::onDone,

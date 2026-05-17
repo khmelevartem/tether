@@ -85,12 +85,12 @@ In particular: **we do not use `InstanceKeeper` to retain domain state across co
 
 ## Navigation
 
-Decompose provides two navigation primitives we use, introduced one at a time as flows require them:
+Decompose provides two navigation primitives we use:
 
-- **`ChildSlot`** — modal overlays (dialogs, confirmations, anything that sits on top of a screen). Added when the first dialog lands — e.g. the pairing dialog (#11).
-- **`ChildStack`** — back stack with push / pop / replace; configurations are `@Serializable`. Used for the main navigation stack: `DeviceListScreen → TransferProgressScreen → TransferSummaryScreen`.
+- **`ChildStack`** — back stack with push / pop / replace; configurations are `@Serializable`. Used for the main navigation stack: `DeviceListScreen → TransferScreen`.
+- **`ChildSlot`** — reserved for dialog-like surfaces that need an independent component lifecycle (deep-linkable dialogs, dialogs whose state must survive parent recomposition independently, etc.). Lightweight in-screen dialogs — confirmations, choosers — render via `androidx.compose.ui.window.Dialog` driven by component state variants instead.
 
-Both are wired in a parent Component and observed in Compose via `Children { ... }` / `subscribeAsState`. The skeleton itself starts with a single root Component; primitives are added incrementally.
+`ChildStack` is wired in `RootComponent` and observed in Compose via `Children { ... }`. `ChildSlot` is introduced when a dialog-like surface genuinely requires its own component lifecycle.
 
 See [Decompose: Navigation overview](https://arkivanov.github.io/Decompose/navigation/overview/).
 

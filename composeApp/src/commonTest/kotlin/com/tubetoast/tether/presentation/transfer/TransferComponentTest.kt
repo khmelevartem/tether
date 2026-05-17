@@ -79,6 +79,7 @@ class TransferComponentTest {
         }
         val component = buildComponent(sources, successBatchSender(), backgroundScope)
 
+        runCurrent() // advance init's scope.launch to resolve threshold check
         val state = component.state.value
         assertIs<TransferState.FolderConfirm>(state)
 
@@ -103,6 +104,7 @@ class TransferComponentTest {
         )
         val component = buildComponent(sources, trackingSender, backgroundScope)
 
+        runCurrent() // advance init's scope.launch to resolve threshold check
         assertIs<TransferState.FolderConfirm>(component.state.value)
         component.onFolderConfirm(false)
 
@@ -128,6 +130,30 @@ class TransferComponentTest {
 
         component.onCancelConfirmed()
         assertIs<TransferState.Terminal.Cancelled>(component.state.value)
+    }
+
+    @Test
+    fun cancelConfirmSurvivesKeepSending() = runTest {
+        // Verifies CancelConfirm is stable: onKeepSending restores the snapshot,
+        // which is only possible if CancelConfirm was not overwritten between
+        // onCancelClicked and onKeepSending.
+        val blockingSender = BatchSender(
+            sendOne = { _, _, _, _, _ ->
+                kotlinx.coroutines.delay(Long.MAX_VALUE)
+                SendResult.Success("path")
+            },
+            clock = { 0L },
+        )
+        val source = FakeFileSource("file.txt", ByteArray(100), size = 100L)
+        val component = buildComponent(listOf(source), blockingSender, backgroundScope)
+
+        runCurrent()
+        component.onCancelClicked()
+        assertIs<TransferState.CancelConfirm>(component.state.value)
+
+        component.onKeepSending()
+        // Snapshot was the InProgress placeholder set by onCancelClicked when in Preparing state
+        assertIs<TransferState.InProgress>(component.state.value)
     }
 
     @Test

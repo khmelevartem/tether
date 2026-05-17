@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -67,6 +68,7 @@ private fun ProgressTopBar(peerName: String, onBack: () -> Unit) {
             style = typography.titleMedium.copy(color = colors.accent),
             modifier = Modifier
                 .align(Alignment.CenterStart)
+                .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                 .clickable(onClick = onBack)
                 .padding(spacing.sm)
                 .semantics {
@@ -203,6 +205,11 @@ private fun ProgressBottomActions(
                         label = if (state.waitingForNetwork) "Waiting for Wi-Fi…" else "Retry",
                         enabled = !state.waitingForNetwork,
                         onClick = onRetryAll,
+                        a11yLabel = if (state.waitingForNetwork) {
+                            "Retry transfer — waiting for network"
+                        } else {
+                            "Retry transfer"
+                        },
                     )
                     CancelTextButton(label = "Done", onClick = onBack)
                 }

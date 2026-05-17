@@ -1,8 +1,9 @@
 package com.tubetoast.tether.ui.components
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
@@ -24,6 +25,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.unit.dp
 import com.tubetoast.tether.ui.theme.TetherTheme
+import kotlinx.coroutines.launch
 
 sealed class BrandMarkState {
     data object Idle : BrandMarkState()
@@ -100,11 +102,11 @@ fun BrandMark(
             val colorFraction = remember { Animatable(0f) }
             val scaleFraction = remember { Animatable(1f) }
             LaunchedEffect(Unit) {
-                colorFraction.animateTo(1f, tween(200, easing = FastOutSlowInEasing))
-                scaleFraction.animateTo(1.05f, tween(200, easing = FastOutSlowInEasing))
+                launch { colorFraction.animateTo(1f, tween(200, easing = LinearOutSlowInEasing)) }
+                scaleFraction.animateTo(1.05f, tween(200, easing = LinearOutSlowInEasing))
                 kotlinx.coroutines.delay(300)
-                colorFraction.animateTo(0f, tween(200, easing = FastOutSlowInEasing))
-                scaleFraction.animateTo(1f, tween(200, easing = FastOutSlowInEasing))
+                launch { colorFraction.animateTo(0f, tween(200, easing = FastOutLinearInEasing)) }
+                scaleFraction.animateTo(1f, tween(200, easing = FastOutLinearInEasing))
             }
             val animatedDotColor = androidx.compose.ui.graphics
                 .lerp(peerIdentity, accent, colorFraction.value)

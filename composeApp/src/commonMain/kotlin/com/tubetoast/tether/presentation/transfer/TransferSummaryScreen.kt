@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.BasicText
@@ -56,6 +57,7 @@ fun TransferSummaryScreen(
                 style = typography.titleMedium.copy(color = colors.accent),
                 modifier = Modifier
                     .align(Alignment.CenterStart)
+                    .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
                     .clickable(onClick = onBack)
                     .padding(spacing.sm)
                     .semantics {
@@ -115,13 +117,7 @@ fun TransferSummaryScreen(
                 showRetryAll = true
             }
 
-            TransferState.Terminal.Cancelled -> {
-                markState = BrandMarkState.Idle
-                markA11y = "Transfer cancelled"
-                summaryText = "Cancelled."
-                failed = emptyList()
-                showRetryAll = false
-            }
+            TransferState.Terminal.Cancelled -> error("Cancelled routes to TransferProgressScreen")
         }
 
         LazyColumn(

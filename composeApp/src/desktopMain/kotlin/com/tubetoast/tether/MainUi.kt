@@ -59,7 +59,10 @@ fun main() {
                     lifecycle.destroy()
                     exitApplication()
                 } else {
-                    root.onBackPressed()
+                    val activeChild = root.stack.value.active.instance
+                    if (activeChild is RootComponent.Child.TransferChild) {
+                        activeChild.component.onBackPressed()
+                    }
                 }
             },
             title = "Tether",
@@ -76,6 +79,8 @@ fun main() {
                         val activeChild = root.stack.value.active.instance
                         if (activeChild is RootComponent.Child.DeviceListChild) {
                             activeChild.component.onDragHoverChanged(true)
+                        } else {
+                            root.onDragHoverChanged(true)
                         }
                     }
 
@@ -89,10 +94,13 @@ fun main() {
                         val activeChild = root.stack.value.active.instance
                         if (activeChild is RootComponent.Child.DeviceListChild) {
                             activeChild.component.onDragHoverChanged(false)
+                        } else {
+                            root.onDragHoverChanged(false)
                         }
                     }
 
                     override fun drop(dtde: DropTargetDropEvent) {
+                        root.onDragHoverChanged(false)
                         val activeChild = root.stack.value.active.instance
                         if (activeChild is RootComponent.Child.TransferChild) {
                             dtde.acceptDrop(DnDConstants.ACTION_COPY)

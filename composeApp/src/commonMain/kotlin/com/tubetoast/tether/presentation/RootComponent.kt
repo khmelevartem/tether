@@ -29,6 +29,8 @@ class RootComponent(
     private val navigation = StackNavigation<Config>()
     private val _pendingFiles = MutableValue<List<FileSource>>(emptyList())
     val pendingFiles: Value<List<FileSource>> = _pendingFiles
+    private val _dragRejectedOverlay = MutableValue(false)
+    val dragRejectedOverlay: Value<Boolean> = _dragRejectedOverlay
 
     // Sources are live objects (open file handles) — can't survive process death.
     // Config.Transfer stores a stable key; live sources are kept here in memory.
@@ -60,6 +62,13 @@ class RootComponent(
         }
     }
 
+    fun onDragHoverChanged(hovering: Boolean) {
+        val activeChild = stack.value.active.instance
+        if (activeChild is Child.TransferChild) {
+            _dragRejectedOverlay.value = hovering
+        }
+    }
+
     fun canExitNow(): Boolean {
         val activeChild = stack.value.active.instance
         if (activeChild is Child.TransferChild) {
@@ -67,15 +76,6 @@ class RootComponent(
             return state is TransferState.Terminal
         }
         return true
-    }
-
-    fun onBackPressed() {
-        val activeChild = stack.value.active.instance
-        if (activeChild is Child.TransferChild) {
-            activeChild.component.onBackPressed()
-        } else {
-            navigation.pop()
-        }
     }
 
     private fun createChild(config: Config, ctx: ComponentContext): Child = when (config) {

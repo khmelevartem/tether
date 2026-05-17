@@ -18,6 +18,7 @@ import com.tubetoast.tether.presentation.RootComponent
 import com.tubetoast.tether.transfer.AndroidFilePicker
 
 private const val TAG = "MainActivity"
+private const val EXTRA_INTENT_CONSUMED = "tether_intent_consumed"
 
 class MainActivity : ComponentActivity() {
     private val notificationPermissionRequest = registerForActivityResult(
@@ -58,8 +59,11 @@ class MainActivity : ComponentActivity() {
             )
         }
 
-        intent?.toFileSources(contentResolver)?.takeIf { it.isNotEmpty() }?.let { sources ->
-            root.onPendingIntent(sources)
+        if (intent?.getBooleanExtra(EXTRA_INTENT_CONSUMED, false) != true) {
+            intent?.toFileSources(contentResolver)?.takeIf { it.isNotEmpty() }?.let { sources ->
+                intent.putExtra(EXTRA_INTENT_CONSUMED, true)
+                root.onPendingIntent(sources)
+            }
         }
 
         setContent {
@@ -76,13 +80,8 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * Start [TetherForegroundService].
-     *
-     * Called only from [onCreate] (cold start). Stop from the notification is sticky:
-     * once the user taps Stop, the service stays stopped until the user cold-starts the
-     * app again (or, in the future, taps a Start button in the app UI — tracked separately).
-     * Returning from background does not restart the service — that would defeat the
-     * Stop button's purpose for the foreground-shade case.
+     * Stop from the notification is sticky: once the user taps Stop, the service stays stopped
+     * until the next cold start. Returning from background does not restart it.
      *
      * Calling [ContextCompat.startForegroundService] on an already-running service is safe —
      * the system routes it to [TetherForegroundService.onStartCommand] which returns

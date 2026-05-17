@@ -5,6 +5,8 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.jvm.javaio.toByteReadChannel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.IOException
 
 class SafFileSource(
@@ -15,9 +17,10 @@ class SafFileSource(
     override val name: String by lazy { resolveName() }
     override val size: Long? by lazy { resolveSize() }
 
-    override suspend fun openReadChannel(): ByteReadChannel =
+    override suspend fun openReadChannel(): ByteReadChannel = withContext(Dispatchers.IO) {
         (contentResolver.openInputStream(uri) ?: throw IOException("Cannot open stream for $uri"))
             .toByteReadChannel()
+    }
 
     private fun resolveName(): String {
         contentResolver.query(uri, null, null, null, null)?.use { cursor ->

@@ -7,6 +7,8 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.documentfile.provider.DocumentFile
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class AndroidFilePicker(
     private val activity: ComponentActivity,
@@ -27,6 +29,7 @@ class AndroidFilePicker(
 
     override suspend fun pickFiles(multi: Boolean): List<FileSource> {
         val deferred = CompletableDeferred<List<Uri>>()
+        pendingFiles?.complete(emptyList())
         pendingFiles = deferred
         filesLauncher.launch(arrayOf("*/*"))
         val uris = deferred.await()
@@ -35,11 +38,12 @@ class AndroidFilePicker(
 
     override suspend fun pickFolder(): List<FileSource> {
         val deferred = CompletableDeferred<Uri?>()
+        pendingFolder?.complete(null)
         pendingFolder = deferred
         folderLauncher.launch(null)
         val rootUri = deferred.await() ?: return emptyList()
         val rootDoc = DocumentFile.fromTreeUri(activity, rootUri)
-        return walkDocumentTree(rootDoc, null)
+        return withContext(Dispatchers.IO) { walkDocumentTree(rootDoc, null) }
     }
 
     private fun walkDocumentTree(

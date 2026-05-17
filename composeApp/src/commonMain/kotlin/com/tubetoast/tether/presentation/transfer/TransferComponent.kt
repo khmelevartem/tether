@@ -26,14 +26,16 @@ class TransferComponent(
     private var remainingSources: List<FileSource> = sources
 
     init {
-        val needsConfirmation = exceedsThreshold(sources)
-        if (needsConfirmation) {
-            val totalBytes = sources.mapNotNull { it.size }.sum()
-            _state.value = TransferState.FolderConfirm(sources.size, totalBytes)
-        } else {
-            startBatch(sources)
-        }
         backHandler.register(BackCallback { onBackPressed() })
+        scope.launch {
+            val needsConfirmation = exceedsThreshold(sources)
+            if (needsConfirmation) {
+                val totalBytes = sources.mapNotNull { it.size }.sum()
+                _state.value = TransferState.FolderConfirm(sources.size, totalBytes)
+            } else {
+                startBatch(sources)
+            }
+        }
     }
 
     fun onFolderConfirm(continue_: Boolean) {
@@ -100,9 +102,14 @@ class TransferComponent(
         sendJob?.cancel()
         sendJob = scope.launch {
             val outcome = batchSender.run(peer, batch) { newState ->
-                _state.value = newState
+                val current = _state.value
+                if (current !is TransferState.CancelConfirm && current !is TransferState.Terminal) {
+                    _state.value = newState
+                }
             }
-            _state.value = buildTerminal(outcome)
+            if (_state.value !is TransferState.Terminal) {
+                _state.value = buildTerminal(outcome)
+            }
         }
     }
 
