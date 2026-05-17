@@ -94,7 +94,7 @@ PORT_A=$(grep -oE 'port[[:space:]]*:[[:space:]]*[0-9]+' $LOG_A | grep -oE '[0-9]
 6. **mDNS publish (secondary, опционально)** — `( dns-sd -B _tether._tcp. local. 2>&1 & DNSSD_PID=$!; sleep 8; kill $DNSSD_PID 2>/dev/null ) | grep SmokeMacA`. Если `dns-sd` нет (Linux) — этот шаг SKIP, общий результат всё равно PASS по primary.
 7. **stdin `list`** — `echo "list" > /tmp/smoke-cliA-in &; sleep 1; tail $LOG_A` — должен напечатать `[list]` или `[peers]` строку.
 
-Инстанс A держим живым до конца Блока 2.5. Проверка graceful `quit` — в Блоке 2.6.
+Инстанс A держим живым до конца Блока 3. Проверка graceful `quit` — в Блоке 4.
 
 ### Блок 2: Desktop ↔ Desktop send (через CLI)
 
@@ -141,9 +141,9 @@ PASS если:
 1. в логе A есть `[send] OK — <ms> ms → <savedPath>`
 2. файл по `savedPath` идентичен оригиналу
 
-Cleanup инстанса B и квит A — в Блоке 5.
+Cleanup инстанса B — в Блоке 7.
 
-### Блок 2.5: Same-name discovery
+### Блок 3: Same-name discovery
 
 Проверяет, что три peer'а с одинаковым requested service-name видят друг друга после mDNS conflict-rename: третий инстанс запускается с тем же `--name SmokeMacA`, что и A, параллельно с A и B.
 
@@ -172,13 +172,13 @@ done
 
 PASS если каждый из A/B/C видит ≥ 2 уникальных SmokeMac-peer'ов в течение 20 сек. FAIL — приложить последние `[peers]` строки из всех трёх логов в Details.
 
-Cleanup инстанса C — в Блоке 5.
+Cleanup инстанса C — в Блоке 7.
 
-### Блок 2.6: graceful quit инстанса A
+### Блок 4: graceful quit инстанса A
 
 `echo "quit" > /tmp/smoke-cliA-in &`, ждать до 8 сек, проверить `ps -p $JPID_A`. PASS если процесс умер. Если не умер — FAIL «не graceful», `kill -9` и идти дальше.
 
-### Блок 3: Android (условно)
+### Блок 5: Android (условно)
 
 Сначала проверка устройства:
 ```bash
@@ -248,7 +248,7 @@ adb devices | awk '/device$/ && !/List/ {print $1}'
 
 Помечай каждый под-сценарий отдельно: install, FGS+mDNS up (с NSD probing latency), /health sanity, cross-discovery (с ms), send-desktop-to-android, stop.
 
-### Блок 4: Native compile sanity
+### Блок 6: Native compile sanity
 
 ```bash
 ./gradlew -q :composeApp:compileKotlinMacosArm64
@@ -257,7 +257,7 @@ adb devices | awk '/device$/ && !/List/ {print $1}'
 
 PASS если exit=0. FAIL — приложить последние ~30 строк stderr.
 
-### Блок 5: Cleanup
+### Блок 7: Cleanup
 
 Выполняется **всегда**:
 - `kill $(cat /tmp/smoke-cliA.pid /tmp/smoke-cliB.pid /tmp/smoke-cliC.pid /tmp/smoke-cliA-keeper.pid /tmp/smoke-cliB-keeper.pid /tmp/smoke-cliC-keeper.pid 2>/dev/null) 2>/dev/null`
