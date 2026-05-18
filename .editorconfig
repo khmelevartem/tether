@@ -19,3 +19,7 @@ ktlint_standard_multiline-expression-wrapping = disabled
 ktlint_standard_string-template-indent = disabled
 
 compose_preview_public_check = false
+
+# TetherTheme design-system tokens. Compose Multiplatform has no MaterialTheme equivalent
+# we use, so tokens propagate via CompositionLocals (the same shape Material uses internally).
+compose_allowed_composition_locals = LocalTetherColors,LocalTetherTypography,LocalTetherSpacing,LocalTetherShapes
