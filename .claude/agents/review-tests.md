@@ -67,6 +67,13 @@ Per `testing.md§Стиль`: coroutine tests use `runTest` + `TestDispatcher`, 
 
 Before claiming a code branch is unreachable, dead, or untested — trace it through the tests that exist in the diff (not just the ones you imagine). A `[REQUIRED]` finding of "branch X has no test" must cite which existing tests you checked and how the branch escaped them. Do not assume reachability from abstract reasoning; LLM-default plausibility is wrong often enough that this is a recurrent class of false-positive review.
 
+### 9. Features that can silently no-op need active proof
+
+If a feature's failure mode is to do nothing and let the caller proceed, its test MUST
+observe a positive side-effect (counter, flag, state change) — not just the absence of
+an exception or a 2xx response. Otherwise the test passes regardless of whether the
+feature ran. Flag as `[REQUIRED]`.
+
 ## What you do NOT check
 
 - AC coverage → review-dod
