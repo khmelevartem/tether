@@ -13,16 +13,10 @@ internal class AndroidMediaStoreUploadStorage(
         // MediaStore collections are managed by the OS; no mkdir needed.
     }
 
-    override fun resolveDestination(fileName: String): String {
-        // For MediaStore the destination is the sanitized relative path;
-        // actual file identity is managed via the content URI inside writeBody.
-        return fileName
-    }
+    override fun resolveDestination(fileName: String): String = fileName
 
     override suspend fun writeBody(body: ByteReadChannel, destination: String): Long {
-        val leafName = destination.substringAfterLast('/')
-        val parentPath = destination.substringBeforeLast('/', "")
-        val relativePath = if (parentPath.isEmpty()) "Download/Tether" else "Download/Tether/$parentPath"
+        val (leafName, relativePath) = mediaStorePath(destination)
 
         val values = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, leafName)
@@ -51,9 +45,7 @@ internal class AndroidMediaStoreUploadStorage(
     }
 
     override fun deleteIfExists(destination: String) {
-        val leafName = destination.substringAfterLast('/')
-        val parentPath = destination.substringBeforeLast('/', "")
-        val relativePath = if (parentPath.isEmpty()) "Download/Tether" else "Download/Tether/$parentPath"
+        val (leafName, relativePath) = mediaStorePath(destination)
         val uri = MediaStore.Downloads.EXTERNAL_CONTENT_URI
         context.contentResolver.delete(
             uri,
@@ -68,5 +60,12 @@ internal class AndroidMediaStoreUploadStorage(
 
     override fun logError(message: String) {
         Log.e("FileServer", message)
+    }
+
+    private fun mediaStorePath(destination: String): Pair<String, String> {
+        val leafName = destination.substringAfterLast('/')
+        val parentPath = destination.substringBeforeLast('/', "")
+        val relativePath = if (parentPath.isEmpty()) "Download/Tether" else "Download/Tether/$parentPath"
+        return leafName to relativePath
     }
 }

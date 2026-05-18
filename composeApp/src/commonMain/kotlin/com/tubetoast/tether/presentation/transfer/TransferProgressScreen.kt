@@ -48,7 +48,7 @@ fun TransferProgressScreen(
         Column(modifier = Modifier.fillMaxSize()) {
             ProgressTopBar(peerName = peerName, onBack = onBack)
             ProgressCenterContent(state = state, peerName = peerName, modifier = Modifier.weight(1f))
-            ProgressBottomActions(state = state, onCancel = onCancel, onRetryAll = onRetryAll, onBack = onBack)
+            ProgressBottomActions(state = state, onCancel = onCancel, onBack = onBack)
         }
     }
 }
@@ -166,7 +166,6 @@ private fun ProgressCenterContent(state: TransferState, peerName: String, modifi
 private fun ProgressBottomActions(
     state: TransferState,
     onCancel: () -> Unit,
-    onRetryAll: () -> Unit,
     onBack: () -> Unit,
 ) {
     val spacing = TetherTheme.spacing

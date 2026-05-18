@@ -28,7 +28,6 @@ class HiddenFileFilterTest {
 
     @Test
     fun emptySringIsHidden() {
-        // empty name starts with nothing but does not start with '.' — not hidden
         assertFalse(isHidden(""))
     }
 

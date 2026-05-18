@@ -21,12 +21,16 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
+// runBlocking rather than runTest: CIO embeddedServer hardcodes Dispatchers.IOBridge
+// and cannot be pinned to a TestCoroutineScheduler.
 class FileServerPathTest {
     private val cleanupPaths = mutableListOf<File>()
     private var startedServer: FileServer? = null
+    private val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
 
     @AfterTest
     fun teardown() {
+        client.close()
         startedServer?.stop()
         startedServer = null
         cleanupPaths.forEach { it.deleteRecursively() }
@@ -51,146 +55,110 @@ class FileServerPathTest {
     @Test
     fun `relative path preserved as subdirectory`() {
         val dir = newDownloadsDir()
-        val server = newServer(dir)
-        val port = server.start()
-        val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
-        try {
-            // runBlocking rather than runTest: CIO embeddedServer hardcodes Dispatchers.IOBridge
-            // and cannot be pinned to a TestCoroutineScheduler.
-            runBlocking {
-                val response = client.post("http://localhost:$port/upload?name=Vacation%2F2024%2FIMG.jpg") {
-                    contentType(ContentType.Application.OctetStream)
-                    setBody("photo".toByteArray())
-                }
-                assertEquals(HttpStatusCode.OK, response.status)
-                val savedPath = response.body<Map<String, String>>()["savedPath"]!!
-                val saved = File(savedPath)
-                assertTrue(saved.exists(), "File should exist at: $savedPath")
-                assertTrue(
-                    saved.canonicalPath.startsWith(dir.canonicalPath),
-                    "File should be inside downloads dir",
-                )
-                assertTrue(
-                    savedPath.contains("Vacation") && savedPath.contains("2024"),
-                    "Subdirectory structure should be preserved in: $savedPath",
-                )
+        val port = newServer(dir).start()
+        runBlocking {
+            val response = client.post("http://localhost:$port/upload?name=Vacation%2F2024%2FIMG.jpg") {
+                contentType(ContentType.Application.OctetStream)
+                setBody("photo".toByteArray())
             }
-        } finally {
-            client.close()
+            assertEquals(HttpStatusCode.OK, response.status)
+            val savedPath = response.body<Map<String, String>>()["savedPath"]!!
+            val saved = File(savedPath)
+            assertTrue(saved.exists(), "File should exist at: $savedPath")
+            assertTrue(
+                saved.canonicalPath.startsWith(dir.canonicalPath),
+                "File should be inside downloads dir",
+            )
+            assertTrue(
+                savedPath.contains("Vacation") && savedPath.contains("2024"),
+                "Subdirectory structure should be preserved in: $savedPath",
+            )
         }
     }
 
     @Test
     fun `traversal attempt is sanitised`() {
         val dir = newDownloadsDir()
-        val server = newServer(dir)
-        val port = server.start()
-        val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
-        try {
-            // runBlocking rather than runTest: CIO embeddedServer hardcodes Dispatchers.IOBridge.
-            runBlocking {
-                val response = client.post("http://localhost:$port/upload?name=..%2Fetc%2Fpasswd") {
-                    contentType(ContentType.Application.OctetStream)
-                    setBody("malicious".toByteArray())
-                }
-                assertEquals(HttpStatusCode.OK, response.status)
-                val savedPath = response.body<Map<String, String>>()["savedPath"]!!
-                val saved = File(savedPath)
-                assertTrue(
-                    saved.canonicalPath.startsWith(dir.canonicalPath),
-                    "File must be inside downloads dir, got: ${saved.canonicalPath}",
-                )
-                assertFalse(File(dir.parentFile, "etc/passwd").exists(), "Must not escape to /etc/passwd")
+        val port = newServer(dir).start()
+        runBlocking {
+            val response = client.post("http://localhost:$port/upload?name=..%2Fetc%2Fpasswd") {
+                contentType(ContentType.Application.OctetStream)
+                setBody("malicious".toByteArray())
             }
-        } finally {
-            client.close()
+            assertEquals(HttpStatusCode.OK, response.status)
+            val savedPath = response.body<Map<String, String>>()["savedPath"]!!
+            val saved = File(savedPath)
+            assertTrue(
+                saved.canonicalPath.startsWith(dir.canonicalPath),
+                "File must be inside downloads dir, got: ${saved.canonicalPath}",
+            )
+            assertFalse(File(dir.parentFile, "etc/passwd").exists(), "Must not escape to /etc/passwd")
         }
     }
 
     @Test
     fun `absolute path is rejected into safe location`() {
         val dir = newDownloadsDir()
-        val server = newServer(dir)
-        val port = server.start()
-        val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
-        try {
-            // runBlocking rather than runTest: CIO embeddedServer hardcodes Dispatchers.IOBridge.
-            runBlocking {
-                val response = client.post("http://localhost:$port/upload?name=%2Fetc%2Fpasswd") {
-                    contentType(ContentType.Application.OctetStream)
-                    setBody("payload".toByteArray())
-                }
-                assertEquals(HttpStatusCode.OK, response.status)
-                val savedPath = response.body<Map<String, String>>()["savedPath"]!!
-                val saved = File(savedPath)
-                assertTrue(
-                    saved.canonicalPath.startsWith(dir.canonicalPath),
-                    "Absolute path must be redirected inside downloads dir, got: ${saved.canonicalPath}",
-                )
+        val port = newServer(dir).start()
+        runBlocking {
+            val response = client.post("http://localhost:$port/upload?name=%2Fetc%2Fpasswd") {
+                contentType(ContentType.Application.OctetStream)
+                setBody("payload".toByteArray())
             }
-        } finally {
-            client.close()
+            assertEquals(HttpStatusCode.OK, response.status)
+            val savedPath = response.body<Map<String, String>>()["savedPath"]!!
+            val saved = File(savedPath)
+            assertTrue(
+                saved.canonicalPath.startsWith(dir.canonicalPath),
+                "Absolute path must be redirected inside downloads dir, got: ${saved.canonicalPath}",
+            )
         }
     }
 
     @Test
     fun `windows drive letter is sandboxed inside downloads dir`() {
         val dir = newDownloadsDir()
-        val server = newServer(dir)
-        val port = server.start()
-        val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
-        try {
-            // runBlocking rather than runTest: CIO embeddedServer hardcodes Dispatchers.IOBridge.
-            runBlocking {
-                val response = client.post("http://localhost:$port/upload?name=C%3A%2Fsecret%2Ffile.txt") {
-                    contentType(ContentType.Application.OctetStream)
-                    setBody("payload".toByteArray())
-                }
-                assertEquals(HttpStatusCode.OK, response.status)
-                val savedPath = response.body<Map<String, String>>()["savedPath"]!!
-                val saved = File(savedPath)
-                assertTrue(
-                    saved.canonicalPath.startsWith(dir.canonicalPath),
-                    "Drive-letter path must be sandboxed inside downloads dir, got: ${saved.canonicalPath}",
-                )
-                assertFalse(
-                    File(dir.parentFile, "secret/file.txt").exists(),
-                    "Must not escape downloads dir via Windows drive letter",
-                )
+        val port = newServer(dir).start()
+        runBlocking {
+            val response = client.post("http://localhost:$port/upload?name=C%3A%2Fsecret%2Ffile.txt") {
+                contentType(ContentType.Application.OctetStream)
+                setBody("payload".toByteArray())
             }
-        } finally {
-            client.close()
+            assertEquals(HttpStatusCode.OK, response.status)
+            val savedPath = response.body<Map<String, String>>()["savedPath"]!!
+            val saved = File(savedPath)
+            assertTrue(
+                saved.canonicalPath.startsWith(dir.canonicalPath),
+                "Drive-letter path must be sandboxed inside downloads dir, got: ${saved.canonicalPath}",
+            )
+            assertFalse(
+                File(dir.parentFile, "secret/file.txt").exists(),
+                "Must not escape downloads dir via Windows drive letter",
+            )
         }
     }
 
     @Test
     fun `collision applies leaf-only suffix keeping subdirectory`() {
         val dir = newDownloadsDir()
-        val server = newServer(dir)
-        val port = server.start()
-        val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
-        try {
-            // runBlocking rather than runTest: CIO embeddedServer hardcodes Dispatchers.IOBridge.
-            runBlocking {
-                val r1 = client.post("http://localhost:$port/upload?name=photos%2Fimg.jpg") {
-                    contentType(ContentType.Application.OctetStream)
-                    setBody("first".toByteArray())
-                }
-                val path1 = r1.body<Map<String, String>>()["savedPath"]!!
-
-                val r2 = client.post("http://localhost:$port/upload?name=photos%2Fimg.jpg") {
-                    contentType(ContentType.Application.OctetStream)
-                    setBody("second".toByteArray())
-                }
-                val path2 = r2.body<Map<String, String>>()["savedPath"]!!
-
-                assertTrue(path1.contains("photos"), "First file should be in photos/ subdir")
-                assertTrue(path2.contains("photos"), "Second file should still be in photos/ subdir")
-                assertTrue(path1.endsWith("img.jpg"), "First file should be img.jpg")
-                assertTrue(path2.endsWith("img_1.jpg"), "Collision file should be img_1.jpg")
+        val port = newServer(dir).start()
+        runBlocking {
+            val r1 = client.post("http://localhost:$port/upload?name=photos%2Fimg.jpg") {
+                contentType(ContentType.Application.OctetStream)
+                setBody("first".toByteArray())
             }
-        } finally {
-            client.close()
+            val path1 = r1.body<Map<String, String>>()["savedPath"]!!
+
+            val r2 = client.post("http://localhost:$port/upload?name=photos%2Fimg.jpg") {
+                contentType(ContentType.Application.OctetStream)
+                setBody("second".toByteArray())
+            }
+            val path2 = r2.body<Map<String, String>>()["savedPath"]!!
+
+            assertTrue(path1.contains("photos"), "First file should be in photos/ subdir")
+            assertTrue(path2.contains("photos"), "Second file should still be in photos/ subdir")
+            assertTrue(path1.endsWith("img.jpg"), "First file should be img.jpg")
+            assertTrue(path2.endsWith("img_1.jpg"), "Collision file should be img_1.jpg")
         }
     }
 }

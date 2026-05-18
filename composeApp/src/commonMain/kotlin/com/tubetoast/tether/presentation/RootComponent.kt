@@ -96,15 +96,7 @@ class RootComponent(
     }
 
     private fun createChild(config: Config, ctx: ComponentContext): Child = when (config) {
-        is Config.DeviceList -> Child.DeviceListChild(
-            DeviceListComponent(
-                componentContext = ctx,
-                discovery = discovery,
-                pendingFiles = _pendingFiles,
-                filePicker = filePicker,
-                onSendRequested = ::onDeviceClicked,
-            ),
-        )
+        is Config.DeviceList -> buildDeviceListChild(ctx)
 
         is Config.Transfer -> {
             val sources = sourcesRegistry[config.sourcesKey]
@@ -112,15 +104,7 @@ class RootComponent(
                 // Stack was restored after process death; sources are not in memory.
                 // Pop immediately rather than starting a phantom transfer with zero files.
                 navigation.pop()
-                return Child.DeviceListChild(
-                    DeviceListComponent(
-                        componentContext = ctx,
-                        discovery = discovery,
-                        pendingFiles = _pendingFiles,
-                        filePicker = filePicker,
-                        onSendRequested = ::onDeviceClicked,
-                    ),
-                )
+                return buildDeviceListChild(ctx)
             }
             Child.TransferChild(
                 TransferComponent(
@@ -138,6 +122,16 @@ class RootComponent(
             )
         }
     }
+
+    private fun buildDeviceListChild(ctx: ComponentContext) = Child.DeviceListChild(
+        DeviceListComponent(
+            componentContext = ctx,
+            discovery = discovery,
+            pendingFiles = _pendingFiles,
+            filePicker = filePicker,
+            onSendRequested = ::onDeviceClicked,
+        ),
+    )
 
     @Serializable
     sealed class Config {

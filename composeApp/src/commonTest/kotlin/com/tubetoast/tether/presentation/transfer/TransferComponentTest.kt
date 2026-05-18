@@ -136,9 +136,6 @@ class TransferComponentTest {
 
     @Test
     fun cancelConfirmSurvivesKeepSending() = runTest {
-        // Verifies CancelConfirm is stable: onKeepSending restores the snapshot,
-        // which is only possible if CancelConfirm was not overwritten between
-        // onCancelClicked and onKeepSending.
         val blockingSender = BatchSender(
             sendOne = { _, _, _, _, _ ->
                 kotlinx.coroutines.delay(Long.MAX_VALUE)
