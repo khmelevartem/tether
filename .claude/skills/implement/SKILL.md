@@ -117,6 +117,7 @@ Per track (or sequentially if single track):
    - `review-dod` (always)
    - `review-correctness` (always unless DOCS/REFACTOR)
    - `review-guides` (always)
+   - `review-architecture` (always unless DOCS or trivial one-call-site BUGFIX / cosmetic refactor — early to avoid iterating on the wrong shape)
    - `review-tests` (always unless DOCS/INFRA)
    - `review-platform` (if diff touches platform source sets)
    - `review-ux` (if diff touches `composeApp/src/**` — the agent itself decides skip vs. block on missing brief)
@@ -151,7 +152,7 @@ If anything was simplified — re-run **the same set of agents that ran in Step 
 
 `/code-review` skill requires an existing PR (it posts via `gh pr review`). At this step the PR does not exist yet — Step 10 creates it. So instead of calling the skill, **orchestrate the same agent fan-out inline, without GitHub publication**:
 
-1. Wave A in parallel: `review-dod`, `review-guides`, `review-reuse`, plus (if applicable to PR type / diff) `review-correctness`, `review-tests`, `review-platform`, `review-ux`, `review-ui`. Each agent receives the issue number and is told to review the local working tree (`git diff main...HEAD`) instead of a PR. `review-ux` and `review-ui` both run whenever the diff touches `composeApp/src/**`; each agent decides skip vs. block.
+1. Wave A in parallel: `review-dod`, `review-guides`, `review-reuse`, `review-architecture` (skip per its own rules — DOCS / trivial bugfix), plus (if applicable to PR type / diff) `review-correctness`, `review-tests`, `review-platform`, `review-ux`, `review-ui`. Each agent receives the issue number and is told to review the local working tree (`git diff main...HEAD`) instead of a PR. `review-ux` and `review-ui` both run whenever the diff touches `composeApp/src/**`; each agent decides skip vs. block.
 2. Wave B: `review-adversarial` with the combined Wave A findings as input.
 3. Aggregate. Apply any `[REQUIRED]` via the implementing agent (with the symmetry-pass instruction). Re-run until approved or 2 iterations.
 
