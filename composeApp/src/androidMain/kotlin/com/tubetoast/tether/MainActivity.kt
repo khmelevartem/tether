@@ -50,14 +50,14 @@ class MainActivity : ComponentActivity() {
         startService()
 
         val container = (application as AppContainerProvider).container as AndroidAppContainer
-        container.androidFilePicker = AndroidFilePicker(this, contentResolver)
+        container.androidFilePickerResource.current = AndroidFilePicker(this, contentResolver)
 
         root = retainedComponent { componentContext ->
             RootComponent(
                 componentContext = componentContext,
                 discovery = container.mdnsDiscovery,
                 fileClient = container.fileClient,
-                filePickerProvider = FilePickerProvider { container.androidFilePicker },
+                filePickerProvider = FilePickerProvider { container.androidFilePickerResource.current },
             )
         }
 

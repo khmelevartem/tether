@@ -12,7 +12,7 @@ import com.tubetoast.tether.transfer.FilePicker
 class AndroidAppContainer(
     private val config: AndroidAppConfig,
 ) : JvmAppContainer(config) {
-    var androidFilePicker: FilePicker? = null
+    internal val androidFilePickerResource: ActivityResource<FilePicker> = ActivityResource()
     val application = config.application
     private val lockHolder = AndroidTransferLockHolder(application)
     override val transferActivityTracker: TransferActivityTracker = DefaultTransferActivityTracker(
