@@ -117,7 +117,7 @@ Per track (or sequentially if single track):
    - `review-dod` (always)
    - `review-correctness` (always unless DOCS/REFACTOR)
    - `review-guides` (always)
-   - `review-architecture` (always unless DOCS or trivial one-call-site BUGFIX / cosmetic refactor — early to avoid iterating on the wrong shape)
+   - `review-architecture` (always unless DOCS or trivial one-call-site BUGFIX / cosmetic refactor)
    - `review-tests` (always unless DOCS/INFRA)
    - `review-platform` (if diff touches platform source sets)
    - `review-ux` (if diff touches `composeApp/src/**` — the agent itself decides skip vs. block on missing brief)
