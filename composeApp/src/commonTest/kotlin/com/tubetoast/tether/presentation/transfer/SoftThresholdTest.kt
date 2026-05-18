@@ -19,13 +19,13 @@ class SoftThresholdTest {
     }
 
     @Test
-    fun below1GbDoesNotTrigger() {
+    fun below2GbDoesNotTrigger() {
         val sources = listOf(FakeFileSource("big.bin", size = TOTAL_BYTES_THRESHOLD - 1))
         assertFalse(exceedsThreshold(sources))
     }
 
     @Test
-    fun exactly1GbTriggersThreshold() {
+    fun exactly2GbTriggersThreshold() {
         val sources = listOf(FakeFileSource("big.bin", size = TOTAL_BYTES_THRESHOLD))
         assertTrue(exceedsThreshold(sources))
     }

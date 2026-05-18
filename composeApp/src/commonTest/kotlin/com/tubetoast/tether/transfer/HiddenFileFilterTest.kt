@@ -31,4 +31,17 @@ class HiddenFileFilterTest {
         // empty name starts with nothing but does not start with '.' — not hidden
         assertFalse(isHidden(""))
     }
+
+    @Test
+    fun similarWindowsFilenamesAreNotHidden() {
+        assertFalse(isHidden("Thumbs.png"))
+        assertFalse(isHidden("README.ini"))
+    }
+
+    @Test
+    fun whitespaceAndSymbolNamesAreNotHidden() {
+        assertFalse(isHidden(" "))
+        assertFalse(isHidden("_"))
+        assertFalse(isHidden("😭"))
+    }
 }

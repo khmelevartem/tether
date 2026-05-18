@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.BasicText
@@ -23,11 +22,12 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 import com.tubetoast.tether.ui.components.BrandMark
+import com.tubetoast.tether.ui.components.BrandMarkDefaults
 import com.tubetoast.tether.ui.components.BrandMarkState
 import com.tubetoast.tether.ui.components.CancelTextButton
 import com.tubetoast.tether.ui.theme.TetherTheme
+import com.tubetoast.tether.ui.theme.tetherMinTouchTarget
 
 @Composable
 fun TransferSummaryScreen(
@@ -57,7 +57,7 @@ fun TransferSummaryScreen(
                 style = typography.titleMedium.copy(color = colors.accent),
                 modifier = Modifier
                     .align(Alignment.CenterStart)
-                    .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                    .tetherMinTouchTarget()
                     .clickable(onClick = onBack)
                     .padding(spacing.sm)
                     .semantics {
@@ -131,7 +131,8 @@ fun TransferSummaryScreen(
                 BrandMark(
                     state = markState,
                     modifier = Modifier
-                        .size(160.dp, 40.dp)
+                        // 2× default size for use as primary surface element.
+                        .size(BrandMarkDefaults.DefaultWidth * 2, BrandMarkDefaults.DefaultHeight * 2)
                         .semantics { contentDescription = markA11y },
                 )
                 Spacer(modifier = Modifier.height(spacing.xl))

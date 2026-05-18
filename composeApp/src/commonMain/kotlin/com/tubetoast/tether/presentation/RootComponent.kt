@@ -1,8 +1,7 @@
-@file:OptIn(com.arkivanov.decompose.DelicateDecomposeApi::class)
-
 package com.tubetoast.tether.presentation
 
 import com.arkivanov.decompose.ComponentContext
+import com.arkivanov.decompose.DelicateDecomposeApi
 import com.arkivanov.decompose.router.stack.ChildStack
 import com.arkivanov.decompose.router.stack.StackNavigation
 import com.arkivanov.decompose.router.stack.childStack
@@ -24,8 +23,18 @@ class RootComponent(
     componentContext: ComponentContext,
     private val discovery: DeviceDiscovery,
     private val fileClient: FileClient,
-    private val filePicker: FilePicker?,
+    filePicker: FilePicker?,
 ) : ComponentContext by componentContext {
+    private var filePicker: FilePicker? = filePicker
+
+    fun setFilePicker(picker: FilePicker?) {
+        filePicker = picker
+        val active = stack.value.active.instance
+        if (active is Child.DeviceListChild) {
+            active.component.filePicker = picker
+        }
+    }
+
     private val navigation = StackNavigation<Config>()
     private val _pendingFiles = MutableValue<List<FileSource>>(emptyList())
     val pendingFiles: Value<List<FileSource>> = _pendingFiles
@@ -48,6 +57,8 @@ class RootComponent(
         _pendingFiles.value = emptyList()
         val key = device.id
         sourcesRegistry[key] = sources
+        // push may be called from a coroutine (file-picker callback) rather than directly from UI.
+        @OptIn(DelicateDecomposeApi::class)
         navigation.push(Config.Transfer(device, key))
     }
 
@@ -67,6 +78,12 @@ class RootComponent(
         if (activeChild is Child.TransferChild) {
             _dragRejectedOverlay.value = hovering
         }
+    }
+
+    fun onDropRejectedDuringTransfer() {
+        val backStack = stack.value.backStack
+        val deviceListChild = backStack.lastOrNull()?.instance as? Child.DeviceListChild
+        deviceListChild?.component?.onDragRejected()
     }
 
     fun canExitNow(): Boolean {
@@ -90,7 +107,21 @@ class RootComponent(
         )
 
         is Config.Transfer -> {
-            val sources = sourcesRegistry[config.sourcesKey] ?: emptyList()
+            val sources = sourcesRegistry[config.sourcesKey]
+            if (sources == null) {
+                // Stack was restored after process death; sources are not in memory.
+                // Pop immediately rather than starting a phantom transfer with zero files.
+                navigation.pop()
+                return Child.DeviceListChild(
+                    DeviceListComponent(
+                        componentContext = ctx,
+                        discovery = discovery,
+                        pendingFiles = _pendingFiles,
+                        filePicker = filePicker,
+                        onSendRequested = ::onDeviceClicked,
+                    ),
+                )
+            }
             Child.TransferChild(
                 TransferComponent(
                     componentContext = ctx,

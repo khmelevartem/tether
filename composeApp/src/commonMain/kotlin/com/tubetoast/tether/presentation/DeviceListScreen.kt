@@ -35,44 +35,44 @@ fun DeviceListScreen(component: DeviceListComponent, modifier: Modifier = Modifi
     val state by component.state.subscribeAsState()
 
     Box(modifier = modifier.fillMaxSize()) {
-        if (state.devices.isEmpty()) {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
-                CircularProgressIndicator()
-                // TODO: move to resources after an approach is picked — #100
-                Text(
-                    text = "Ищем устройства в сети…",
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(top = 16.dp),
-                )
+        Column(modifier = Modifier.fillMaxSize()) {
+            if (state.pendingFiles.isNotEmpty()) {
+                PendingFilesBanner(count = state.pendingFiles.size)
             }
-        } else {
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                if (state.pendingFiles.isNotEmpty()) {
-                    item {
-                        PendingFilesBanner(count = state.pendingFiles.size)
-                    }
+            if (state.devices.isEmpty()) {
+                Column(
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    CircularProgressIndicator()
+                    Text(
+                        // TODO: move to resources after an approach is picked — #100
+                        text = "Ищем устройства в сети…",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(top = 16.dp),
+                    )
                 }
-                items(state.devices, key = { it.id }) { device ->
-                    Card(
-                        onClick = { component.onDeviceClicked(device) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                    ) {
-                        Text(
-                            text = device.name,
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp),
-                        )
-                        Text(
-                            text = "${device.host}:${device.port}",
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
-                        )
+            } else {
+                LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    items(state.devices, key = { it.id }) { device ->
+                        Card(
+                            onClick = { component.onDeviceClicked(device) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                        ) {
+                            Text(
+                                text = device.name,
+                                style = MaterialTheme.typography.titleMedium,
+                                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp),
+                            )
+                            Text(
+                                text = "${device.host}:${device.port}",
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                            )
+                        }
                     }
                 }
             }
@@ -137,7 +137,7 @@ private fun DragOverlay(rejected: Boolean, modifier: Modifier = Modifier) {
                 drawRect(
                     color = colors.accent,
                     style = Stroke(
-                        width = 2.dp.toPx(),
+                        width = 1.dp.toPx(),
                         pathEffect = PathEffect.dashPathEffect(floatArrayOf(20f, 10f)),
                     ),
                 )

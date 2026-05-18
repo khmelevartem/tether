@@ -68,7 +68,7 @@ private fun TransferDragRejectedOverlay(modifier: Modifier = Modifier) {
                 drawRect(
                     color = colors.error,
                     style = Stroke(
-                        width = 2.dp.toPx(),
+                        width = 1.dp.toPx(),
                         pathEffect = PathEffect.dashPathEffect(floatArrayOf(20f, 10f)),
                     ),
                 )

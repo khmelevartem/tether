@@ -203,4 +203,52 @@ class TransferComponentTest {
 
         assertIs<TransferState.Terminal.ConnectionErrorSummary>(component.state.value)
     }
+
+    @Test
+    fun onRetryFileRebuildsBatchWithSingleSource() = runTest {
+        val failNames = mutableSetOf("bad.txt")
+        val mixedSender = BatchSender(
+            sendOne = { _, _, name, _, onProgress ->
+                if (name in failNames) {
+                    failNames -= name
+                    SendResult.Failure("write error")
+                } else {
+                    onProgress(100L, 100L)
+                    SendResult.Success("path")
+                }
+            },
+            clock = { 0L },
+        )
+        val sources = listOf(
+            FakeFileSource("ok.txt", ByteArray(100), size = 100L),
+            FakeFileSource("bad.txt", ByteArray(100), size = 100L),
+        )
+        val component = buildComponent(sources, mixedSender, backgroundScope)
+        runCurrent()
+
+        val terminal = component.state.value
+        assertIs<TransferState.Terminal.PartialFailure>(terminal)
+        assertTrue(terminal.failed.any { it.name == "bad.txt" })
+
+        component.onRetryFile("bad.txt")
+        runCurrent()
+
+        assertIs<TransferState.Terminal.AllSuccess>(component.state.value)
+    }
+
+    @Test
+    fun onRetryAllRebuildsBatchWithFailedFiles() = runTest {
+        val sources = List(3) { FakeFileSource("f$it.txt", ByteArray(100), size = 100L) }
+        val component = buildComponent(sources, connectionLostSender(), backgroundScope)
+        runCurrent()
+
+        val terminal = component.state.value
+        assertIs<TransferState.Terminal.ConnectionErrorSummary>(terminal)
+        assertTrue(terminal.failed.isNotEmpty())
+
+        component.onRetryAll()
+        runCurrent()
+
+        assertIs<TransferState.Terminal.ConnectionErrorSummary>(component.state.value)
+    }
 }

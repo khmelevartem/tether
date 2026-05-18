@@ -27,6 +27,11 @@ import androidx.compose.ui.unit.dp
 import com.tubetoast.tether.ui.theme.TetherTheme
 import kotlinx.coroutines.launch
 
+object BrandMarkDefaults {
+    val DefaultWidth = 80.dp
+    val DefaultHeight = 20.dp
+}
+
 sealed class BrandMarkState {
     data object Idle : BrandMarkState()
 
@@ -149,7 +154,7 @@ private fun BrandMarkCanvas(
     progressRatio: Float,
     modifier: Modifier = Modifier,
 ) {
-    Canvas(modifier = modifier.size(80.dp, 20.dp)) {
+    Canvas(modifier = modifier.size(BrandMarkDefaults.DefaultWidth, BrandMarkDefaults.DefaultHeight)) {
         val r = size.height / 2f
         val leftCenter = Offset(r, r)
         val rightCenter = Offset(r + 4 * r, r)

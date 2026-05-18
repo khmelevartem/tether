@@ -22,19 +22,6 @@ sealed class TransferState {
         val snapshot: InProgress,
     ) : TransferState()
 
-    data class PeerDropped(
-        val peer: Device,
-        val fileName: String,
-        val ratio: Float,
-    ) : TransferState()
-
-    data class ConnectionLost(
-        val peer: Device,
-        val fileName: String,
-        val ratio: Float,
-        val waitingForNetwork: Boolean,
-    ) : TransferState()
-
     sealed class Terminal : TransferState() {
         data class AllSuccess(
             val peer: Device,

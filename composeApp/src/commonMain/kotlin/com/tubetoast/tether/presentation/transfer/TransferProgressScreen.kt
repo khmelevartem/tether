@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -20,14 +19,15 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 import com.tubetoast.tether.ui.components.BrandMark
+import com.tubetoast.tether.ui.components.BrandMarkDefaults
 import com.tubetoast.tether.ui.components.BrandMarkState
 import com.tubetoast.tether.ui.components.ByteProgressRow
 import com.tubetoast.tether.ui.components.CancelTextButton
 import com.tubetoast.tether.ui.components.CurrentFileLabel
 import com.tubetoast.tether.ui.components.PeerIdentityChip
 import com.tubetoast.tether.ui.theme.TetherTheme
+import com.tubetoast.tether.ui.theme.tetherMinTouchTarget
 
 @Composable
 fun TransferProgressScreen(
@@ -68,7 +68,7 @@ private fun ProgressTopBar(peerName: String, onBack: () -> Unit) {
             style = typography.titleMedium.copy(color = colors.accent),
             modifier = Modifier
                 .align(Alignment.CenterStart)
-                .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                .tetherMinTouchTarget()
                 .clickable(onClick = onBack)
                 .padding(spacing.sm)
                 .semantics {
@@ -100,8 +100,6 @@ private fun ProgressCenterContent(state: TransferState, peerName: String, modifi
             }
             BrandMarkState.Progress(ratio)
         }
-        is TransferState.PeerDropped -> BrandMarkState.Error(state.ratio)
-        is TransferState.ConnectionLost -> BrandMarkState.Error(state.ratio)
         else -> BrandMarkState.Idle
     }
     val markA11y = when (state) {
@@ -125,7 +123,8 @@ private fun ProgressCenterContent(state: TransferState, peerName: String, modifi
         BrandMark(
             state = markState,
             modifier = Modifier
-                .size(160.dp, 40.dp)
+                // 2× default size for use as primary surface element.
+                .size(BrandMarkDefaults.DefaultWidth * 2, BrandMarkDefaults.DefaultHeight * 2)
                 .semantics { contentDescription = markA11y },
         )
         Spacer(modifier = Modifier.height(spacing.xl))
@@ -151,18 +150,6 @@ private fun ProgressCenterContent(state: TransferState, peerName: String, modifi
                         style = typography.bodyMedium.copy(color = colors.error),
                     )
                 }
-            }
-            is TransferState.PeerDropped -> {
-                BasicText(
-                    text = "${state.peer.name} is no longer reachable.",
-                    style = typography.bodyMedium.copy(color = colors.textMuted),
-                )
-            }
-            is TransferState.ConnectionLost -> {
-                BasicText(
-                    text = "Connection lost. Try again when you're back on Wi-Fi.",
-                    style = typography.bodyMedium.copy(color = colors.textMuted),
-                )
             }
             is TransferState.Terminal.Cancelled -> {
                 BasicText(
@@ -192,27 +179,6 @@ private fun ProgressBottomActions(
         when (state) {
             is TransferState.InProgress, is TransferState.Preparing -> {
                 CancelTextButton(onClick = onCancel)
-            }
-            is TransferState.PeerDropped -> {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CancelTextButton(label = "Retry", onClick = onRetryAll)
-                    CancelTextButton(label = "Done", onClick = onBack)
-                }
-            }
-            is TransferState.ConnectionLost -> {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CancelTextButton(
-                        label = if (state.waitingForNetwork) "Waiting for Wi-Fi…" else "Retry",
-                        enabled = !state.waitingForNetwork,
-                        onClick = onRetryAll,
-                        a11yLabel = if (state.waitingForNetwork) {
-                            "Retry transfer — waiting for network"
-                        } else {
-                            "Retry transfer"
-                        },
-                    )
-                    CancelTextButton(label = "Done", onClick = onBack)
-                }
             }
             is TransferState.Terminal.Cancelled -> {
                 CancelTextButton(label = "Done", onClick = onBack)

@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
@@ -17,9 +16,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.tubetoast.tether.ui.theme.TetherTheme
+import com.tubetoast.tether.ui.theme.tetherMinTouchTarget
 
 @Composable
 fun FolderSendConfirmDialog(
@@ -52,7 +51,7 @@ fun FolderSendConfirmDialog(
                     text = "Cancel",
                     style = typography.bodyLarge.copy(color = colors.textMuted),
                     modifier = Modifier
-                        .heightIn(min = 48.dp)
+                        .tetherMinTouchTarget()
                         .clickable(onClick = onCancel)
                         .padding(spacing.sm)
                         .semantics { role = Role.Button },
@@ -61,7 +60,7 @@ fun FolderSendConfirmDialog(
                     text = "Continue",
                     style = typography.bodyLarge.copy(color = colors.accent),
                     modifier = Modifier
-                        .heightIn(min = 48.dp)
+                        .tetherMinTouchTarget()
                         .clickable(onClick = onContinue)
                         .padding(spacing.sm)
                         .semantics { role = Role.Button },

@@ -11,7 +11,7 @@
 The following questions were left open in the spec. This brief closes them; each is marked `(decided here)`.
 
 **Soft threshold for folder-send confirmation** `(decided here)`
-Show the "About to send N files, X GB. Continue?" confirmation when the selection exceeds **500 files OR 1 GB** total. Rationale: 500 files covers the realistic worst-case of a photo album or project directory without catching routine multi-file work; 1 GB catches large individual files and combined media batches before the user commits an unexpectedly long transfer. Either condition alone triggers the dialog — both thresholds apply independently.
+Show the "About to send N files, X GB. Continue?" confirmation when the selection exceeds **500 files OR 2 GB** total. Rationale: 500 files covers the realistic worst-case of a photo album or project directory without catching routine multi-file work; 2 GB catches large individual files and combined media batches before the user commits an unexpectedly long transfer. Either condition alone triggers the dialog — both thresholds apply independently.
 
 **Aggregate progress visual shape** `(decided here)`
 One `•—•` mark centered in the upper region of the progress screen, with the connecting line filling left-to-right in `accent` proportional to total bytes transferred across the whole batch. Directly below the mark: the current file name in `bodyMedium`, then the byte progress row in `numeric` style ("12.3 MB of 48.7 MB · 2.1 MB/s"). A single progress representation is cleaner than two stacked bars, and the current-file label gives granularity without a second bar. Per-file failures inside a batch are not shown during the run; they surface only in the end-of-batch summary.
@@ -370,7 +370,7 @@ Used when the transfer was terminated by `peer-dropped` or `connection-lost` bef
 
 1. User taps a peer on `DeviceListScreen`.
 2. OS folder picker opens. User selects a folder.
-3. Tether counts files and total size. If exceeds 500 files OR 1 GB: `FolderSendConfirmDialog` appears. Copy: `"About to send {N} files ({X} GB). Continue?"` with "Continue" and "Cancel".
+3. Tether counts files and total size. If exceeds 500 files OR 2 GB: `FolderSendConfirmDialog` appears. Copy: `"About to send {N} files ({X} GB). Continue?"` with "Continue" and "Cancel".
 4a. "Continue" → `TransferProgressScreen` in `preparing`.
 4b. "Cancel" → dismisses dialog; OS picker can be reopened or user returns to device list.
 
@@ -415,7 +415,7 @@ The following distinct UI patterns are used across this brief. Naming is concept
 
 None. All questions from the spec have been resolved in this brief. The following were the open items; each is now closed above:
 
-- Soft threshold: **500 files OR 1 GB** (decided here, see top of brief).
+- Soft threshold: **500 files OR 2 GB** (decided here, see top of brief).
 - Aggregate progress visual shape: **one `•—•` mark + byte-progress row + current-file label** (decided here).
 - Save-folder substructure: **flat `Downloads/Tether/<filename>`** (decided here).
 

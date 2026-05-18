@@ -14,6 +14,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
+import io.ktor.utils.io.ByteReadChannel
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Test
@@ -25,20 +26,17 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Exercises the Android FileServer wiring where AndroidMediaStoreUploadStorage and
- * DefaultTransferActivityTracker are composed together — mirroring AndroidAppContainer.
+ * Exercises the Android FileServer wiring where an [UploadStorage] and
+ * [DefaultTransferActivityTracker] are composed together — mirroring [AndroidAppContainer].
  *
- * SDK 28 forces the legacy file path in AndroidMediaStoreUploadStorage (pre-API-29 branch),
- * which Robolectric's ShadowEnvironment can honour without a real MediaStore.
+ * An in-memory [UploadStorage] stub is used instead of [AndroidMediaStoreUploadStorage] because
+ * Robolectric's ShadowContentResolver does not honour MediaStore.Downloads inserts, making
+ * end-to-end verification of that branch impossible in a unit test context.
  *
- * Coverage gap: the API 29+ `writeViaMediaStore` branch of AndroidMediaStoreUploadStorage —
- * the default production path on modern Android — is not exercised here. Robolectric's
- * ShadowContentResolver does not honour MediaStore.Downloads inserts reliably, making
- * end-to-end verification of that branch impossible in a unit test context. It is tracked
- * as a follow-up.
+ * Coverage gap: [AndroidMediaStoreUploadStorage] itself is not exercised here.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [28], application = TetherApp::class)
+@Config(sdk = [29], application = TetherApp::class)
 class AndroidFileServerWiringTest {
     private val context: Context = RuntimeEnvironment.getApplication()
     private val keyDir = context.cacheDir.resolve("wiring-test-keys").apply { mkdirs() }
@@ -60,7 +58,7 @@ class AndroidFileServerWiringTest {
             onFirstEnter = { enters++ },
             onLastExit = { exits++ },
         )
-        val storage = CountingUploadStorage(AndroidMediaStoreUploadStorage(context))
+        val storage = CountingUploadStorage(InMemoryUploadStorage())
         val srv = FileServer(
             port = 0,
             trustedDeviceStore = TrustedDeviceStore(context),
@@ -80,9 +78,6 @@ class AndroidFileServerWiringTest {
             }
             assertEquals(HttpStatusCode.OK, response.status)
             val savedPath = response.body<Map<String, String>>()["savedPath"]!!
-            // On the legacy path (API < 29) the storage resolves a canonical file path.
-            // Robolectric may not mount external storage, so we assert path plausibility
-            // rather than reading back file content.
             assertTrue(savedPath.isNotBlank(), "savedPath must be non-blank")
         }
 
@@ -98,8 +93,26 @@ private class CountingUploadStorage(
     var writeBodyCalls = 0
         private set
 
-    override suspend fun writeBody(body: io.ktor.utils.io.ByteReadChannel, destination: String): Long {
+    override suspend fun writeBody(body: ByteReadChannel, destination: String): Long {
         writeBodyCalls++
         return delegate.writeBody(body, destination)
     }
+}
+
+private class InMemoryUploadStorage : UploadStorage {
+    override fun ensureRoot() {}
+
+    override fun resolveDestination(fileName: String): String = fileName
+
+    override suspend fun writeBody(body: ByteReadChannel, destination: String): Long {
+        var total = 0L
+        streamUploadBody(body) { _, n -> total += n.toLong() }
+        return total
+    }
+
+    override fun deleteIfExists(destination: String) {}
+
+    override fun logInfo(message: String) {}
+
+    override fun logError(message: String) {}
 }

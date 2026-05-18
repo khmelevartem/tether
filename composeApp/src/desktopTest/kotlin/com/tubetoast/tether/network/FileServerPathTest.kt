@@ -55,6 +55,8 @@ class FileServerPathTest {
         val port = server.start()
         val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
         try {
+            // runBlocking rather than runTest: CIO embeddedServer hardcodes Dispatchers.IOBridge
+            // and cannot be pinned to a TestCoroutineScheduler.
             runBlocking {
                 val response = client.post("http://localhost:$port/upload?name=Vacation%2F2024%2FIMG.jpg") {
                     contentType(ContentType.Application.OctetStream)
@@ -85,6 +87,7 @@ class FileServerPathTest {
         val port = server.start()
         val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
         try {
+            // runBlocking rather than runTest: CIO embeddedServer hardcodes Dispatchers.IOBridge.
             runBlocking {
                 val response = client.post("http://localhost:$port/upload?name=..%2Fetc%2Fpasswd") {
                     contentType(ContentType.Application.OctetStream)
@@ -111,6 +114,7 @@ class FileServerPathTest {
         val port = server.start()
         val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
         try {
+            // runBlocking rather than runTest: CIO embeddedServer hardcodes Dispatchers.IOBridge.
             runBlocking {
                 val response = client.post("http://localhost:$port/upload?name=%2Fetc%2Fpasswd") {
                     contentType(ContentType.Application.OctetStream)
@@ -136,6 +140,7 @@ class FileServerPathTest {
         val port = server.start()
         val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
         try {
+            // runBlocking rather than runTest: CIO embeddedServer hardcodes Dispatchers.IOBridge.
             runBlocking {
                 val response = client.post("http://localhost:$port/upload?name=C%3A%2Fsecret%2Ffile.txt") {
                     contentType(ContentType.Application.OctetStream)
@@ -165,6 +170,7 @@ class FileServerPathTest {
         val port = server.start()
         val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
         try {
+            // runBlocking rather than runTest: CIO embeddedServer hardcodes Dispatchers.IOBridge.
             runBlocking {
                 val r1 = client.post("http://localhost:$port/upload?name=photos%2Fimg.jpg") {
                     contentType(ContentType.Application.OctetStream)

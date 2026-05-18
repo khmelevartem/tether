@@ -48,16 +48,16 @@ class MainActivity : ComponentActivity() {
         startService()
 
         val container = (application as AppContainerProvider).container
-        val filePicker = AndroidFilePicker(this, contentResolver)
 
         root = retainedComponent { componentContext ->
             RootComponent(
                 componentContext = componentContext,
                 discovery = container.mdnsDiscovery,
                 fileClient = container.fileClient,
-                filePicker = filePicker,
+                filePicker = null,
             )
         }
+        root.setFilePicker(AndroidFilePicker(this, contentResolver))
 
         if (intent?.getBooleanExtra(EXTRA_INTENT_CONSUMED, false) != true) {
             intent?.toFileSources(contentResolver)?.takeIf { it.isNotEmpty() }?.let { sources ->

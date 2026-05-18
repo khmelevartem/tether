@@ -104,10 +104,7 @@ fun main() {
                         val activeChild = root.stack.value.active.instance
                         if (activeChild is RootComponent.Child.TransferChild) {
                             dtde.acceptDrop(DnDConstants.ACTION_COPY)
-                            val deviceListChild = root.stack.value.backStack
-                                .lastOrNull()
-                                ?.instance as? RootComponent.Child.DeviceListChild
-                            deviceListChild?.component?.onDragRejected()
+                            root.onDropRejectedDuringTransfer()
                             dtde.dropComplete(false)
                             return
                         }

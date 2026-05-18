@@ -5,7 +5,9 @@ import com.tubetoast.tether.security.DeviceKeyPair
 import com.tubetoast.tether.security.TrustedDeviceStore
 import java.io.File
 
-interface DesktopAppConfig : JvmAppConfig
+interface DesktopAppConfig : JvmAppConfig {
+    val downloadsDir: File
+}
 
 class DefaultDesktopAppConfig(
     override val deviceName: String,
