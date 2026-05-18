@@ -67,21 +67,12 @@ Per `testing.md§Стиль`: coroutine tests use `runTest` + `TestDispatcher`, 
 
 Before claiming a code branch is unreachable, dead, or untested — trace it through the tests that exist in the diff (not just the ones you imagine). A `[REQUIRED]` finding of "branch X has no test" must cite which existing tests you checked and how the branch escaped them. Do not assume reachability from abstract reasoning; LLM-default plausibility is wrong often enough that this is a recurrent class of false-positive review.
 
-### 9. Silent-no-op-capable features need active proof
+### 9. Features that can silently no-op need active proof
 
-If the feature can silently no-op when its mechanism fails — reflection into 3rd-party
-internals, static hooks, instrumentation that depends on framework class layout, plugins
-that swallow exceptions, lazy initialization that can fall through — its test MUST observe
-a positive side-effect (a counter incremented, a flag set, an observable state change),
-not just the absence of an exception or a 2xx response code.
-
-A passing test that only asserts «request completed» or «no exception thrown» is
-tautological for this class of features: it stays green even when the feature did
-nothing. Flag as `[REQUIRED]` and demand an active-proof assertion.
-
-Signal: anything that resolves something via `getDeclaredField` / `isAccessible` / classpath
-lookup; anything wrapped in a broad `try { … } catch (_: Exception) {}`; anything where
-the failure mode is «fall through and let the caller proceed».
+If a feature's failure mode is to do nothing and let the caller proceed, its test MUST
+observe a positive side-effect (counter, flag, state change) — not just the absence of
+an exception or a 2xx response. Otherwise the test passes regardless of whether the
+feature ran. Flag as `[REQUIRED]`.
 
 ## What you do NOT check
 
