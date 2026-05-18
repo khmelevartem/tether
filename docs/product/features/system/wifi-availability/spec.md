@@ -8,7 +8,7 @@
 
 ## Why
 
-Tether is local-first: discovery, pairing and transfer all assume the device is on a local network — one that carries mDNS and lets peers reach each other directly by IP. When that network is missing, nothing in Tether can work.
+Tether is local-first: discovery, pairing and transfer all assume the device is on a local network where peers can reach each other directly. When that network is entirely missing, none of the discovery paths Tether uses ([hotspot-transfer/spec.md](../../hotspot-transfer/spec.md) describes the layered story) can work.
 
 Today the app would silently show the empty "Searching for devices…" state in that situation, which is misleading: nothing is being searched, the network is simply absent. The user is left wondering whether Tether is broken, the room is empty, or the network is just slow.
 
@@ -76,10 +76,10 @@ If the local device itself has no usable network, the "no local network" state t
 - Cellular / mobile-data fallback — out by design, see [vision.md](../../../vision.md): "If the LAN can't carry it, we say so honestly."
 - Internet reachability — Tether is local; whether the LAN reaches the internet is irrelevant. A captive-portal Wi-Fi is treated as a normal network.
 - VPN as a discovery surface — when a VPN is active over Wi-Fi, Tether treats the underlying Wi-Fi as the network and does not try to discover peers across the VPN tunnel. The user does not see anything VPN-specific.
-- Tethering / phone hotspot as a Tether transport — known limitation, not supported in this feature. Tether does not promise to work when one device hosts a personal hotspot and runs Tether on it.
+- Tethering / phone hotspot as a Tether transport — supported, but owned by [hotspot-transfer/spec.md](../../hotspot-transfer/spec.md). Wi-Fi availability still treats the host's own hotspot interface as "the local network is present"; whether discovery succeeds across that interface is the other spec's concern.
 - Wi-Fi drop during an in-progress transfer — that is a transfer-failure case and lives in [file-transfer](../../file-transfer/spec.md), not here.
 - Surfacing the "no local network" state on screens other than the device list (e.g. as a banner on pairing or pre-flight transfer screens) — the device list is the single surface for this state. The user cannot reach the pairing or transfer screens without first picking a peer in the device list, so a missing network always shows up there first.
-- "Same Wi-Fi but different SSIDs / VLANs / AP isolation" — when two peers are on physically separate networks, neither side has a local-network problem, they simply do not see each other. That is the empty-but-searching state in [device-list](../../device-list/spec.md), not a Wi-Fi-availability problem.
+- "Same Wi-Fi but different SSIDs / VLANs / AP isolation / multicast-blocked guest networks" — when two peers cannot reach each other despite both having a network, neither side has a local-network problem in the sense of this spec. The user's escape hatch (QR scan, manual IP entry, recent peers) is owned by [hotspot-transfer/spec.md](../../hotspot-transfer/spec.md); the empty-but-searching state itself lives in [device-list](../../device-list/spec.md).
 - Permission prompts (iOS / macOS Local Network, Android Local Network) — separate feature, see [permissions/spec.md](../permissions/spec.md). Wi-Fi availability assumes any required permission is already granted; if permission is missing, that is a permissions empty-state, not a "no network" empty-state.
 - The "Forget device" / paired-devices management surface — out of scope; only the *display* of currently-offline paired devices in the list is in scope here.
 - Implementation of how the trusted-device list is delivered to the device-list screen — that is an implementation question for the feature issue, not a product decision.
@@ -90,4 +90,4 @@ If the local device itself has no usable network, the "no local network" state t
 - Whether the offline row shows any extra detail beyond name + "not on this network" — e.g. "last seen yesterday". For MVP probably no; revisit once we see how often paired devices are offline in real use.
 - How obvious the visual distinction between "reachable but unpaired" and "paired but offline" needs to be. Both must be distinguishable from "paired and reachable", but the exact treatment (icon, opacity, badge) is a UI choice for the implementation issue.
 - Whether tapping an offline paired row should offer a "ping" / "wake up" action in the future. Out for MVP — Tether has no wake mechanism — but the row is the natural place for it later.
-- Behaviour on a phone hotspot when both the hosting device and a guest device run Tether. Treated as unsupported here; if user reports show this is a real expectation, reopen as a separate feature.
+- Relationship between the **offline paired rows** on the device list (this spec) and the **recent peers** section in the out-of-band introduction surface ([hotspot-transfer/spec.md](../../hotspot-transfer/spec.md)). Both surfaces show paired devices; whether they merge visually, share the same list, or stay separate is a UI decision to settle when the hotspot-transfer UI is designed.
