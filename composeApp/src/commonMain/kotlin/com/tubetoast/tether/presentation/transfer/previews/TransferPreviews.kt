@@ -384,30 +384,33 @@ private fun PreviewReceiverWriteFailedDark() = TetherTheme(darkTheme = true) {
     )
 }
 
+private class PreviewDeviceDiscovery : DeviceDiscovery {
+    override val discoveredDevices: StateFlow<List<Device>> = MutableStateFlow(
+        listOf(Device("MacBook Pro", "192.168.1.100", 8080)),
+    )
+
+    override fun start(deviceName: String, port: Int) {}
+
+    override fun stop() {}
+}
+
+private class PreviewFileSource(
+    index: Int,
+) : FileSource {
+    override val name = "file$index.jpg"
+    override val size: Long = 1024L
+    override val relativePath: String? = null
+
+    override suspend fun openReadChannel() = ByteReadChannel(ByteArray(0))
+}
+
 private fun previewDeviceListComponent(pendingCount: Int): DeviceListComponent {
     val lifecycle = LifecycleRegistry().also { it.resume() }
     val ctx = DefaultComponentContext(lifecycle)
-    val discovery = object : DeviceDiscovery {
-        override val discoveredDevices: StateFlow<List<Device>> = MutableStateFlow(
-            listOf(Device("MacBook Pro", "192.168.1.100", 8080)),
-        )
-
-        override fun start(deviceName: String, port: Int) {}
-
-        override fun stop() {}
-    }
-    val fakeSources = List(pendingCount) { i ->
-        object : FileSource {
-            override val name = "file$i.jpg"
-            override val size: Long = 1024L
-            override val relativePath: String? = null
-
-            override suspend fun openReadChannel() = ByteReadChannel(ByteArray(0))
-        }
-    }
+    val fakeSources = List(pendingCount) { i -> PreviewFileSource(i) }
     return DeviceListComponent(
         componentContext = ctx,
-        discovery = discovery,
+        discovery = PreviewDeviceDiscovery(),
         pendingFiles = MutableValue(fakeSources),
     )
 }

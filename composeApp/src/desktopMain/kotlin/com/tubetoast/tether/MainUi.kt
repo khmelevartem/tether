@@ -10,6 +10,7 @@ import com.tubetoast.tether.di.DefaultDesktopAppConfig
 import com.tubetoast.tether.di.DesktopAppContainer
 import com.tubetoast.tether.presentation.RootComponent
 import com.tubetoast.tether.transfer.DesktopFilePicker
+import com.tubetoast.tether.transfer.FilePickerProvider
 import com.tubetoast.tether.transfer.JvmFileSource
 import com.tubetoast.tether.transfer.walk
 import kotlinx.coroutines.CoroutineScope
@@ -42,11 +43,12 @@ fun main() {
     container.registerShutdownHook()
 
     val lifecycle = LifecycleRegistry()
+    val picker = DesktopFilePicker()
     val root = RootComponent(
         componentContext = DefaultComponentContext(lifecycle),
         discovery = container.mdnsDiscovery,
         fileClient = container.fileClient,
-        filePicker = DesktopFilePicker(),
+        filePickerProvider = FilePickerProvider { picker },
     )
     lifecycle.resume()
 

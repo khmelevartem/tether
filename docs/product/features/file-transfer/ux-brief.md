@@ -149,17 +149,6 @@ The OS picker has closed and Tether is establishing the connection but has not s
 `in-progress`
 Transfer is running. Mark is in transfer-progress state. Current file name and byte row are visible and updating. Cancel button is active.
 
-`peer-dropped`
-The peer disappeared from the network mid-transfer (mDNS loss or connection refused). Mark freezes at the failure point — line filled to the proportion reached, right dot hollow in `error` color (brand-mark error state).
-Copy below mark: `"<peer name> is no longer reachable."`
-Two buttons: "Retry" (primary, `accent`) and "Done" (secondary, `textMuted`).
-Retry returns to `preparing` state with the same file set, attempting reconnection. Done navigates to `TransferSummaryScreen` with the failure recorded.
-
-`connection-lost`
-Wi-Fi / network lost mid-transfer. Same visual shape as `peer-dropped`.
-Copy: `"Connection lost. Try again when you're back on Wi-Fi."`
-Buttons: "Retry" and "Done". Retry is enabled only when network connectivity returns; if not yet restored, "Retry" is shown as disabled with copy `"Waiting for Wi-Fi…"`.
-
 `file-unreadable`
 A single file in the batch could not be read (I/O error, permission revoked after pick). The transfer of that file is skipped; the batch continues to the next file. A brief non-blocking inline notice appears below the byte row: `"Couldn't read <filename> — skipping."` The `•—•` mark continues progressing on `accent`. At batch end the summary records this as a failed file.
 
@@ -174,9 +163,7 @@ This is a modal confirmation step, not a separate screen. See `FolderSendConfirm
 
 **Interactions.**
 - "Cancel" button → opens `CancelConfirmDialog`.
-- "Retry" → restarts transfer from the beginning for all not-yet-completed files.
-- "Done" → navigates to `TransferSummaryScreen`.
-- System back gesture / window close: treated the same as tapping "Cancel" — opens `CancelConfirmDialog` if transfer is in progress; navigates away if in a terminal state.
+- System back gesture / window close: treated the same as tapping "Cancel" — opens `CancelConfirmDialog` if transfer is in progress; navigates away if in a terminal state (`cancelled`).
 - Desktop: drag-and-drop onto the window while this screen is shown is rejected (see drop zone delta above).
 
 **Copy.**
@@ -184,11 +171,6 @@ This is a modal confirmation step, not a separate screen. See `FolderSendConfirm
 - `"<filename>"` (current file, truncated in the middle if long)
 - `"12.3 MB of 48.7 MB · 2.1 MB/s"` (numeric format, see note below)
 - `"Cancel"`
-- `"Retry"`
-- `"Done"`
-- `"<peer name> is no longer reachable."`
-- `"Connection lost. Try again when you're back on Wi-Fi."`
-- `"Waiting for Wi-Fi…"`
 - `"Couldn't read <filename> — skipping."`
 - `"Couldn't save <filename> on <peer name>."`
 - `"Cancelled."`
@@ -205,8 +187,7 @@ This is a modal confirmation step, not a separate screen. See `FolderSendConfirm
 - Current file name: semantic label reads the full untruncated name even when the display is truncated.
 - Byte-progress row: semantic label `"{transferred} of {total} transferred, current speed {speed}"`.
 - "Cancel" button: semantic label `"Cancel transfer"`.
-- "Retry" button: semantic label `"Retry transfer"`.
-- Focus order (Desktop): top bar close → Cancel → Retry (when visible) → Done (when visible).
+- Focus order (Desktop): top bar close → Cancel.
 
 ---
 
@@ -254,7 +235,7 @@ This is a modal confirmation step, not a separate screen. See `FolderSendConfirm
 
 **Entry points.**
 - From `TransferProgressScreen` on natural completion (all files processed — succeeded or failed individually).
-- From `TransferProgressScreen` via "Done" button in a terminal error state (`peer-dropped`, `connection-lost`).
+- Directly from `TransferProgressScreen` when a connection failure (peer dropped or network lost) occurs mid-transfer. There is no intermediate progress-screen error state for connection failures — the transfer terminates immediately and `TransferSummaryScreen` opens in `connection-error-summary` state.
 
 **Layout.**
 - Top bar: close/back affordance (leading), title `"Transfer complete"` (center). No overflow menu.
@@ -275,7 +256,7 @@ This is a modal confirmation step, not a separate screen. See `FolderSendConfirm
 `•—•` in error state. Copy: `"Couldn't send any files to <peer name>."`. Below: list of all files with their failure reason. Per-file "Retry". "Done" button at bottom.
 
 `connection-error-summary`
-Used when the transfer was terminated by `peer-dropped` or `connection-lost` before all files were processed. Same layout as `partial-failure` but the failure reason for all unprocessed files is `"Connection lost"`. "Retry all" button (sends all unprocessed files again to the same peer) appears above the per-file list alongside "Done".
+Used when the transfer was terminated by a connection failure (peer dropped or network lost) before all files were processed. Same layout as `partial-failure` but the failure reason for all unprocessed files is `"Connection lost"`. "Retry all" button (re-sends all unprocessed files as a new batch to the same peer) appears above the per-file list alongside "Done".
 
 **Interactions.**
 - "Done" → navigates back to `DeviceListScreen`.
@@ -351,12 +332,12 @@ Used when the transfer was terminated by `peer-dropped` or `connection-lost` bef
 ### Flow 5 — Connection lost mid-transfer
 
 1–6. Same as Flow 1.
-7. Network is lost. `TransferProgressScreen` transitions to `connection-lost` state. Mark freezes at failure point (error state). Copy: `"Connection lost. Try again when you're back on Wi-Fi."`
-8. "Retry" button is disabled with label `"Waiting for Wi-Fi…"` until connectivity returns.
-9. Network restored. "Retry" becomes active.
-10. User taps "Retry" → back to `preparing` state. Attempts to reconnect and restart the batch.
+7. Connection failure occurs (peer dropped from network, or network lost). `TransferProgressScreen` exits immediately. `TransferSummaryScreen` opens in `connection-error-summary` state. Files processed before the failure are recorded as sent; remaining files are listed as failed with reason `"Connection lost"`.
+8. User taps "Retry all" → re-sends all unprocessed files as a new batch to the same peer (re-enters `TransferProgressScreen`).
    — OR —
-10. User taps "Done" → `TransferSummaryScreen` in `connection-error-summary` state.
+8. User taps per-file "Retry" → re-sends that single file (re-enters `TransferProgressScreen`).
+   — OR —
+8. User taps "Done" → returns to `DeviceListScreen`.
 
 ### Flow 6 — Cancel mid-transfer
 
@@ -387,7 +368,7 @@ DeviceListScreen → TransferProgressScreen → TransferSummaryScreen
 - `DeviceListScreen` stays alive under the stack; returning to it does not re-trigger discovery.
 - `CancelConfirmDialog` and `FolderSendConfirmDialog` are modal overlays on `TransferProgressScreen`, not separate back-stack entries.
 - On completion or "Done" from `TransferSummaryScreen`, the stack pops all the way back to `DeviceListScreen` — not to `TransferProgressScreen`.
-- On Android, pressing the system back button from `TransferProgressScreen` during a transfer triggers `CancelConfirmDialog`. In terminal states (`cancelled`, `peer-dropped` resolved with "Done"), back pops to `DeviceListScreen`.
+- On Android, pressing the system back button from `TransferProgressScreen` during a transfer triggers `CancelConfirmDialog`. In the `cancelled` terminal state, back pops to `DeviceListScreen`.
 
 ---
 

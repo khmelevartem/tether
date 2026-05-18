@@ -9,32 +9,25 @@ import com.arkivanov.decompose.router.stack.pop
 import com.arkivanov.decompose.router.stack.push
 import com.arkivanov.decompose.value.MutableValue
 import com.arkivanov.decompose.value.Value
+import com.arkivanov.essenty.lifecycle.coroutines.coroutineScope
 import com.tubetoast.tether.discovery.DeviceDiscovery
 import com.tubetoast.tether.network.FileClient
 import com.tubetoast.tether.presentation.transfer.BatchSender
 import com.tubetoast.tether.presentation.transfer.TransferComponent
 import com.tubetoast.tether.presentation.transfer.TransferState
 import com.tubetoast.tether.protocol.Device
-import com.tubetoast.tether.transfer.FilePicker
+import com.tubetoast.tether.transfer.FilePickerProvider
 import com.tubetoast.tether.transfer.FileSource
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.serialization.Serializable
 
 class RootComponent(
     componentContext: ComponentContext,
     private val discovery: DeviceDiscovery,
     private val fileClient: FileClient,
-    filePicker: FilePicker?,
+    private val filePickerProvider: FilePickerProvider,
+    private val childScopeOverride: CoroutineScope? = null,
 ) : ComponentContext by componentContext {
-    private var filePicker: FilePicker? = filePicker
-
-    fun setFilePicker(picker: FilePicker?) {
-        filePicker = picker
-        val active = stack.value.active.instance
-        if (active is Child.DeviceListChild) {
-            active.component.filePicker = picker
-        }
-    }
-
     private val navigation = StackNavigation<Config>()
     private val _pendingFiles = MutableValue<List<FileSource>>(emptyList())
     val pendingFiles: Value<List<FileSource>> = _pendingFiles
@@ -86,6 +79,11 @@ class RootComponent(
         deviceListChild?.component?.onDragRejected()
     }
 
+    @OptIn(DelicateDecomposeApi::class)
+    internal fun pushTransferConfigForTest(config: Config.Transfer) {
+        navigation.push(config)
+    }
+
     fun canExitNow(): Boolean {
         val activeChild = stack.value.active.instance
         if (activeChild is Child.TransferChild) {
@@ -128,8 +126,9 @@ class RootComponent(
             componentContext = ctx,
             discovery = discovery,
             pendingFiles = _pendingFiles,
-            filePicker = filePicker,
+            filePickerProvider = filePickerProvider,
             onSendRequested = ::onDeviceClicked,
+            scope = childScopeOverride ?: ctx.coroutineScope(),
         ),
     )
 

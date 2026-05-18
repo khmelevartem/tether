@@ -24,16 +24,16 @@ class DesktopFilePicker : FilePicker {
     }
 
     override suspend fun pickFolder(): List<FileSource> {
-        val chooser = JFileChooser().apply {
-            fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
-            isAcceptAllFileFilterUsed = false
-        }
-        val result = withContext(Dispatchers.Swing) {
-            chooser.showOpenDialog(null)
+        val (result, selectedFile) = withContext(Dispatchers.Swing) {
+            val chooser = JFileChooser().apply {
+                fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
+                isAcceptAllFileFilterUsed = false
+            }
+            chooser.showOpenDialog(null) to chooser.selectedFile
         }
         if (result != JFileChooser.APPROVE_OPTION) return emptyList()
         return withContext(Dispatchers.IO) {
-            walk(chooser.selectedFile.toPath())
+            walk(selectedFile.toPath())
         }
     }
 }

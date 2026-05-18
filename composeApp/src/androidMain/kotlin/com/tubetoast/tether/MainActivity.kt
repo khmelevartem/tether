@@ -12,10 +12,12 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import com.arkivanov.decompose.retainedComponent
+import com.tubetoast.tether.di.AndroidAppContainer
 import com.tubetoast.tether.di.AppContainerProvider
 import com.tubetoast.tether.network.TetherForegroundService
 import com.tubetoast.tether.presentation.RootComponent
 import com.tubetoast.tether.transfer.AndroidFilePicker
+import com.tubetoast.tether.transfer.FilePickerProvider
 
 private const val TAG = "MainActivity"
 private const val EXTRA_INTENT_CONSUMED = "tether_intent_consumed"
@@ -47,17 +49,17 @@ class MainActivity : ComponentActivity() {
 
         startService()
 
-        val container = (application as AppContainerProvider).container
+        val container = (application as AppContainerProvider).container as AndroidAppContainer
+        container.androidFilePicker = AndroidFilePicker(this, contentResolver)
 
         root = retainedComponent { componentContext ->
             RootComponent(
                 componentContext = componentContext,
                 discovery = container.mdnsDiscovery,
                 fileClient = container.fileClient,
-                filePicker = null,
+                filePickerProvider = FilePickerProvider { container.androidFilePicker },
             )
         }
-        root.setFilePicker(AndroidFilePicker(this, contentResolver))
 
         if (intent?.getBooleanExtra(EXTRA_INTENT_CONSUMED, false) != true) {
             intent?.toFileSources(contentResolver)?.takeIf { it.isNotEmpty() }?.let { sources ->

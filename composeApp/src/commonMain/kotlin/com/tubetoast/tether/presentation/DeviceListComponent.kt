@@ -7,7 +7,7 @@ import com.arkivanov.decompose.value.update
 import com.arkivanov.essenty.lifecycle.coroutines.coroutineScope
 import com.tubetoast.tether.discovery.DeviceDiscovery
 import com.tubetoast.tether.protocol.Device
-import com.tubetoast.tether.transfer.FilePicker
+import com.tubetoast.tether.transfer.FilePickerProvider
 import com.tubetoast.tether.transfer.FileSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -16,11 +16,10 @@ class DeviceListComponent(
     componentContext: ComponentContext,
     private val discovery: DeviceDiscovery,
     val pendingFiles: Value<List<FileSource>> = MutableValue(emptyList()),
-    filePicker: FilePicker? = null,
+    private val filePickerProvider: FilePickerProvider = FilePickerProvider { null },
     private val onSendRequested: (Device, List<FileSource>) -> Unit = { _, _ -> },
     private val scope: CoroutineScope = componentContext.coroutineScope(),
 ) : ComponentContext by componentContext {
-    var filePicker: FilePicker? = filePicker
     private val _state = MutableValue(DeviceListState.empty())
     val state: Value<DeviceListState> = _state
 
@@ -41,7 +40,7 @@ class DeviceListComponent(
             onSendRequested(device, pending)
             return
         }
-        if (filePicker != null) {
+        if (filePickerProvider.current() != null) {
             _state.update { it.copy(sendChooserTarget = device) }
         }
     }
@@ -49,7 +48,7 @@ class DeviceListComponent(
     fun onSendFiles(device: Device) {
         _state.update { it.copy(sendChooserTarget = null) }
         scope.launch {
-            val sources = filePicker?.pickFiles(multi = true) ?: return@launch
+            val sources = filePickerProvider.current()?.pickFiles(multi = true) ?: return@launch
             if (sources.isNotEmpty()) {
                 onSendRequested(device, sources)
             }
@@ -59,7 +58,7 @@ class DeviceListComponent(
     fun onSendFolder(device: Device) {
         _state.update { it.copy(sendChooserTarget = null) }
         scope.launch {
-            val sources = filePicker?.pickFolder() ?: return@launch
+            val sources = filePickerProvider.current()?.pickFolder() ?: return@launch
             if (sources.isNotEmpty()) {
                 onSendRequested(device, sources)
             }

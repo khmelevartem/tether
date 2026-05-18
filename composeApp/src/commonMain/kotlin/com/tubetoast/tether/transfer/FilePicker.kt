@@ -5,3 +5,7 @@ interface FilePicker {
 
     suspend fun pickFolder(): List<FileSource>
 }
+
+fun interface FilePickerProvider {
+    fun current(): FilePicker?
+}

@@ -10,6 +10,7 @@ import com.arkivanov.essenty.lifecycle.stop
 import com.tubetoast.tether.di.DefaultIosAppConfig
 import com.tubetoast.tether.di.IosAppContainer
 import com.tubetoast.tether.presentation.RootComponent
+import com.tubetoast.tether.transfer.FilePickerProvider
 import platform.UIKit.UIDevice
 
 @Suppress("ktlint:standard:function-naming")
@@ -23,7 +24,7 @@ fun MainViewController() = run {
         componentContext = context,
         discovery = container.mdnsDiscovery,
         fileClient = container.fileClient,
-        filePicker = null,
+        filePickerProvider = FilePickerProvider { null },
     )
     ComposeUIViewController {
         DisposableEffect(Unit) {

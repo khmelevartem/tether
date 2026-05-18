@@ -12,6 +12,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
@@ -204,8 +205,10 @@ class TransferComponentTest {
     @Test
     fun onRetryFileRebuildsBatchWithSingleSource() = runTest {
         val failNames = mutableSetOf("bad.txt")
+        var sendCallCount = 0
         val mixedSender = BatchSender(
             sendOne = { _, _, name, _, onProgress ->
+                sendCallCount++
                 if (name in failNames) {
                     failNames -= name
                     SendResult.Failure("write error")
@@ -227,25 +230,59 @@ class TransferComponentTest {
         assertIs<TransferState.Terminal.PartialFailure>(terminal)
         assertTrue(terminal.failed.any { it.name == "bad.txt" })
 
+        val callsBeforeRetry = sendCallCount
         component.onRetryFile("bad.txt")
         runCurrent()
 
         assertIs<TransferState.Terminal.AllSuccess>(component.state.value)
+        assertEquals(1, sendCallCount - callsBeforeRetry, "retry must send exactly 1 file")
     }
 
     @Test
     fun onRetryAllRebuildsBatchWithFailedFiles() = runTest {
-        val sources = List(3) { FakeFileSource("f$it.txt", ByteArray(100), size = 100L) }
-        val component = buildComponent(sources, connectionLostSender(), backgroundScope)
+        val sources = listOf(
+            FakeFileSource("f0.txt", ByteArray(100), size = 100L),
+            FakeFileSource("f1.txt", ByteArray(100), size = 100L),
+            FakeFileSource("f2.txt", ByteArray(100), size = 100L),
+        )
+        // Phase 0: f0 succeeds, connection lost on f1 — terminal has [f1, f2] as failed.
+        // Phase 1 (retry): track which files are actually sent.
+        var retryPhase = false
+        val retryCaptured = mutableListOf<String>()
+        val phasedSender = BatchSender(
+            sendOne = { _, _, name, _, onProgress ->
+                if (!retryPhase) {
+                    if (name == "f0.txt") {
+                        onProgress(100L, 100L)
+                        SendResult.Success("path")
+                    } else {
+                        SendResult.Failure("connect error reset by peer")
+                    }
+                } else {
+                    retryCaptured += name
+                    onProgress(100L, 100L)
+                    SendResult.Success("path")
+                }
+            },
+            clock = { 0L },
+        )
+        val component = buildComponent(sources, phasedSender, backgroundScope)
         runCurrent()
 
         val terminal = component.state.value
         assertIs<TransferState.Terminal.ConnectionErrorSummary>(terminal)
-        assertTrue(terminal.failed.isNotEmpty())
+        assertEquals(setOf("f1.txt", "f2.txt"), terminal.failed.map { it.name }.toSet())
 
+        retryPhase = true
         component.onRetryAll()
         runCurrent()
 
-        assertIs<TransferState.Terminal.ConnectionErrorSummary>(component.state.value)
+        assertIs<TransferState.Terminal.AllSuccess>(component.state.value)
+        assertEquals(
+            setOf("f1.txt", "f2.txt"),
+            retryCaptured.toSet(),
+            "onRetryAll must re-send only the failed files, not the full batch",
+        )
+        assertEquals(2, retryCaptured.size, "onRetryAll must send exactly the 2 failed files")
     }
 }

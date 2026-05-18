@@ -27,7 +27,6 @@ class TransferComponent(
     val state: Value<TransferState> = _state
 
     private var sendJob: Job? = null
-    private var remainingSources: List<FileSource> = sources
 
     init {
         backHandler.register(BackCallback { onBackPressed() })
@@ -74,7 +73,9 @@ class TransferComponent(
     }
 
     fun onRetryAll() {
-        startBatch(remainingSources)
+        val terminal = _state.value as? TransferState.Terminal.ConnectionErrorSummary ?: return
+        val failedNames = terminal.failed.map { it.name }.toSet()
+        startBatch(sources.filter { it.name in failedNames })
     }
 
     fun onRetryFile(name: String) {
@@ -95,7 +96,6 @@ class TransferComponent(
     }
 
     private fun startBatch(batch: List<FileSource>) {
-        remainingSources = batch
         _state.value = TransferState.Preparing
         sendJob?.cancel()
         sendJob = scope.launch {
