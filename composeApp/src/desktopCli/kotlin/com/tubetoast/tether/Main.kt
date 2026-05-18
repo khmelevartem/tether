@@ -2,16 +2,19 @@ package com.tubetoast.tether
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.ProgramResult
-import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
+import com.tubetoast.tether.config.DeviceNameStore
 import com.tubetoast.tether.di.DefaultDesktopAppConfig
 import com.tubetoast.tether.di.DesktopAppContainer
 import com.tubetoast.tether.network.FileClient
 import com.tubetoast.tether.network.send
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.protocol.SendResult
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -20,31 +23,39 @@ import kotlin.io.path.exists
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.TimeSource
 
-private const val ESC = ""
+private const val ESC = ""
 
 class TetherCommand :
     CliktCommand(
         name = "tether",
         help = "Tether debug runner — local peer-to-peer file transfer over WiFi",
     ) {
-    private val deviceName by option("--name", help = "Device name advertised via mDNS")
-        .default(defaultDesktopDeviceName())
+    private val nameOverride by option("--name", help = "Device name advertised via mDNS (persisted)")
 
     private val port by option("--port", help = "Ktor server port (0 = pick random free port)")
         .int()
-        .default(0)
 
     override fun run() = runBlocking {
+        val container = DesktopAppContainer(
+            DefaultDesktopAppConfig(port = port ?: 0),
+        )
+
+        container.nameStore.init()
+        nameOverride?.let { name ->
+            container.nameStore.setName(name).getOrElse { e ->
+                echo("ERROR: invalid --name: ${e.message}", err = true)
+                throw ProgramResult(1)
+            }
+        }
+        val deviceName = container.nameStore.name.first()
+
         echo("=== Tether debug runner ===")
         echo("device : $deviceName")
 
-        val container = DesktopAppContainer(
-            DefaultDesktopAppConfig(deviceName = deviceName, port = port),
-        )
         val actualPort = try {
-            container.startBackendOrFail(deviceName)
+            container.startBackendOrFail()
         } catch (e: BackendStartException.FileServer) {
-            echo("ERROR: Could not start FileServer on port $port — ${e.cause?.message}", err = true)
+            echo("ERROR: Could not start FileServer on port ${port ?: 0} — ${e.cause?.message}", err = true)
             echo("Tip: use --port 0 to auto-select a free port.", err = true)
             throw ProgramResult(1)
         } catch (e: BackendStartException.Mdns) {
@@ -73,8 +84,9 @@ class TetherCommand :
         }
 
         val fileClient = container.fileClient
+        val cliScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-        echo("Commands: send <peer-name> <path>, list, quit")
+        echo("Commands: send <peer-name> <path>, list, name <new-name>, quit")
         echo("  Tip: use quotes for names/paths with spaces — send \"My Peer\" \"/my path/file.txt\"")
 
         var running = true
@@ -95,6 +107,10 @@ class TetherCommand :
                         peers.forEach { echo("[list] ${it.name}  (${it.host}:${it.port})") }
                     }
                 }
+                "name" -> {
+                    val arg = tokens.drop(1).joinToString(" ")
+                    cliScope.launch { handleName(container.nameStore, arg) }
+                }
                 "send" -> {
                     if (tokens.size < 3) {
                         echo("usage: send <peer-name> <path>")
@@ -108,11 +124,22 @@ class TetherCommand :
                     )
                 }
                 "quit" -> running = false
-                else -> echo("unknown command: '${tokens[0]}'. Available: send, list, quit.")
+                else -> echo("unknown command: '${tokens[0]}'. Available: send, list, name, quit.")
             }
         }
         System.exit(0)
     }
+}
+
+suspend fun handleName(
+    nameStore: DeviceNameStore,
+    arg: String,
+    output: (String) -> Unit = ::println,
+) {
+    nameStore.setName(arg).fold(
+        onSuccess = { name -> output("OK name=$name") },
+        onFailure = { output("ERR ${it.message}") },
+    )
 }
 
 suspend fun handleSend(

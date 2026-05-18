@@ -9,4 +9,6 @@ expect class MdnsDiscovery : DeviceDiscovery {
     override fun start(deviceName: String, port: Int)
 
     override fun stop()
+
+    override fun republish(name: String)
 }

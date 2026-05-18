@@ -4,6 +4,7 @@ import com.tubetoast.tether.protocol.Device
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
@@ -43,7 +44,7 @@ internal class MdnsDiscoveryJmdns(
 
     @Volatile private var ownPort: Int = -1
 
-    private var requeryJob: Job? = null
+    @Volatile private var requeryJob: Job? = null
 
     @Synchronized
     override fun start(deviceName: String, port: Int) {
@@ -116,6 +117,21 @@ internal class MdnsDiscoveryJmdns(
             } catch (ignored: Exception) {
             }
             throw e
+        }
+    }
+
+    @Synchronized
+    override fun republish(name: String) {
+        val instance = jmdns ?: return
+        try {
+            instance.unregisterAllServices()
+        } catch (e: Exception) {
+            System.err.println("WARN: unregisterAllServices (republish) failed — ${e.message}")
+        }
+        try {
+            instance.registerService(ServiceInfo.create(SERVICE_TYPE, name, ownPort, ""))
+        } catch (e: Exception) {
+            System.err.println("WARN: registerService (republish) failed — ${e.message}")
         }
     }
 

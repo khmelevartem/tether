@@ -10,13 +10,15 @@ import com.arkivanov.essenty.lifecycle.stop
 import com.tubetoast.tether.di.DefaultIosAppConfig
 import com.tubetoast.tether.di.IosAppContainer
 import com.tubetoast.tether.presentation.DeviceListComponent
-import platform.UIKit.UIDevice
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 @Suppress("ktlint:standard:function-naming")
 fun MainViewController() = run {
-    val container = IosAppContainer(
-        DefaultIosAppConfig(deviceName = UIDevice.currentDevice.name),
-    )
+    val container = IosAppContainer(DefaultIosAppConfig())
     val lifecycle = LifecycleRegistry()
     val context = DefaultComponentContext(lifecycle)
     val component = DeviceListComponent(
@@ -26,9 +28,16 @@ fun MainViewController() = run {
     ComposeUIViewController {
         DisposableEffect(Unit) {
             lifecycle.resume()
-            val port = container.fileServer.start()
-            container.mdnsDiscovery.start(container.deviceName, port = port)
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+            scope.launch {
+                container.nameStore.init()
+                val name = container.nameStore.name.first()
+                val port = container.fileServer.start()
+                container.mdnsDiscovery.start(name, port = port)
+                container.nameRepublisher.start(scope)
+            }
             onDispose {
+                container.nameRepublisher.stop()
                 container.mdnsDiscovery.stop()
                 container.fileServer.stop()
                 lifecycle.stop()

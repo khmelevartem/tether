@@ -42,9 +42,12 @@ internal class MdnsDiscoveryBonjour(
 
     @Volatile private var session: Session? = null
 
+    @Volatile private var currentPort: Int = 0
+
     override fun start(deviceName: String, port: Int) {
         synchronized(lifecycleLock) {
             if (session != null) throw IllegalStateException("MdnsDiscovery already started; call stop() first")
+            currentPort = port
             session = Session.start(deviceName, port, store)
         }
     }
@@ -53,10 +56,25 @@ internal class MdnsDiscoveryBonjour(
         val toClose = synchronized(lifecycleLock) {
             val current = session
             session = null
+            currentPort = 0
             current
         }
         toClose?.close()
         store.clear()
+    }
+
+    override fun republish(name: String) {
+        val captured: Pair<Session, Int>? = synchronized(lifecycleLock) {
+            val current = session ?: return
+            val port = currentPort
+            session = null
+            current to port
+        }
+        val (toClose, port) = captured ?: return
+        toClose.close()
+        synchronized(lifecycleLock) {
+            if (session == null) session = Session.start(name, port, store)
+        }
     }
 
     private class Session(

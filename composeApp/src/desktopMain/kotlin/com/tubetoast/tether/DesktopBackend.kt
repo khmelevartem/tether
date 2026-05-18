@@ -1,6 +1,11 @@
 package com.tubetoast.tether
 
 import com.tubetoast.tether.di.DesktopAppContainer
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 
 internal sealed class BackendStartException(
     message: String,
@@ -15,10 +20,9 @@ internal sealed class BackendStartException(
     ) : BackendStartException("mDNS start failed: ${cause.message}", cause)
 }
 
-internal fun defaultDesktopDeviceName(): String =
-    "Tether-${System.getenv("USER") ?: "dev"}"
-
-internal fun DesktopAppContainer.startBackendOrFail(deviceName: String): Int {
+internal fun DesktopAppContainer.startBackendOrFail(): Int {
+    val backendScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    val deviceName = runBlocking { nameStore.name.first() }
     val server = fileServer
     val port = try {
         server.start()
@@ -31,6 +35,7 @@ internal fun DesktopAppContainer.startBackendOrFail(deviceName: String): Int {
         runCatching { server.stop() }
         throw BackendStartException.Mdns(e)
     }
+    nameRepublisher.start(backendScope)
     return port
 }
 
@@ -38,6 +43,9 @@ internal fun DesktopAppContainer.registerShutdownHook() {
     Runtime.getRuntime().addShutdownHook(
         Thread {
             val cleanup = Thread {
+                runCatching { nameRepublisher.stop() }.onFailure {
+                    System.err.println("WARN: DeviceNameRepublisher stop failed — ${it.message}")
+                }
                 runCatching { mdnsDiscovery.stop() }.onFailure {
                     System.err.println("WARN: mDNS stop failed — ${it.message}")
                 }

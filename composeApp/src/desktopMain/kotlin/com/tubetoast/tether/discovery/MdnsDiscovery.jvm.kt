@@ -22,6 +22,8 @@ actual class MdnsDiscovery(
     actual override fun start(deviceName: String, port: Int) = delegate.start(deviceName, port)
 
     actual override fun stop() = delegate.stop()
+
+    actual override fun republish(name: String) = delegate.republish(name)
 }
 
 private fun isMacOsHost(): Boolean =
