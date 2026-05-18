@@ -26,9 +26,10 @@ Note the PR number `<PR>` and issue number `<N>` — pass both to every agent.
 Read PR body and diff. Classify once: `FEATURE | BUGFIX | REFACTOR | INFRA | DOCS | DEPENDENCY`. Some agents skip based on type (see their frontmatter). Note which agents to skip; do not launch skipped ones.
 
 Skip matrix:
-- `DOCS` → skip `review-correctness`, `review-platform`, `review-tests`, `review-ux`
+- `DOCS` → skip `review-correctness`, `review-platform`, `review-tests`, `review-ux`, `review-architecture`
 - `INFRA` → skip `review-tests`
 - pure `REFACTOR` → skip `review-correctness` (only behavior-preserving)
+- trivial one-call-site `BUGFIX` or cosmetic refactor (rename / extract method) with no new types / modules / seams → skip `review-architecture`
 - diff doesn't touch any platform source set → skip `review-platform`
 - diff doesn't touch `composeApp/src/**` → skip `review-ux` (when Compose is touched always dispatch; the agent itself decides skip vs. block on missing brief)
 
@@ -41,6 +42,7 @@ Send a SINGLE message with multiple Agent tool calls (one per agent). Each promp
 Agents to launch (subject to skip matrix):
 - `review-dod`
 - `review-guides`
+- `review-architecture`
 - `review-platform`
 - `review-reuse`
 - `review-correctness`
