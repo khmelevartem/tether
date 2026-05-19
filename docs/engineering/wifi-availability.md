@@ -156,7 +156,8 @@ When the platform's native API (Android `NetworkCallback` on `TRANSPORT_WIFI`, i
 
 ## Out of scope
 
-- **Trusted-device storage / paired-device persistence** — see [spec § Not in this feature](../product/features/system/wifi-availability/spec.md#not-in-this-feature).
-- **UI rendering of the no-local-network state** — owned by the device-list UX brief.
+- **Trusted-device storage / paired-device persistence.** Owned by the pairing surface, not by this component. `LocalNetworkAvailability` does not read or write trust.
+- **Row contract on the populated device list** — owned by [`device-list/spec.md`](../product/features/device-list/spec.md) and [`device-list/ux-brief.md`](../product/features/device-list/ux-brief.md).
+- **UI rendering of the no-local-network state** — owned by [`wifi-availability/ux-brief.md`](../product/features/system/wifi-availability/ux-brief.md).
 - **Permissions** (manifest entries, Info.plist usage strings, runtime prompts) — owned by [`features/system/permissions/spec.md`](../product/features/system/permissions/spec.md). This component assumes everything it needs is already granted.
 - **VPN handling.** VPN-over-Wi-Fi is treated as Wi-Fi.
