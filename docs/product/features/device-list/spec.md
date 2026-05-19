@@ -12,7 +12,9 @@ mDNS discovery already works on every platform. What is missing everywhere is a 
 
 ## What it does
 
-When the user opens Tether, they see a list of devices currently on their Wi-Fi that also run Tether. The list is live: devices appear as Tether finds them, and disappear when they leave the network. While nothing has been found yet, the screen explains that it is searching, so the user does not assume the app is broken or stuck.
+When the user opens Tether, they see a list of devices currently on their Wi-Fi that also run Tether, plus devices the user has already paired with — even when those paired devices are not currently reachable. The list is live: reachable devices appear as Tether finds them and disappear when they leave the network; paired-but-offline devices stay visible so the list is meaningful between sessions. While nothing has been found yet *and* the user has no paired devices, the screen explains that it is searching, so the user does not assume the app is broken or stuck.
+
+The four row cases (online & unpaired / online & paired / offline & paired / offline & unpaired — not shown) and the network-absent empty-state are defined in [wifi-availability/spec.md](../system/wifi-availability/spec.md).
 
 Each row identifies one device clearly enough to pick the right one. Tapping a row is the entry point to sending a file — the picker and the transfer flow live in another feature; here it leads to the next step.
 
@@ -27,8 +29,10 @@ Each row identifies one device clearly enough to pick the right one. Tapping a r
 
 **Alternative paths**
 
-- **No peers found.** The "Searching…" state stays visible. Nothing is shown as an error — a quiet network is not a failure.
-- **Peer leaves the network.** Its card disappears from the list without disturbing the rest of the list.
+- **No reachable peers, no paired devices either.** The "Searching…" state stays visible. Nothing is shown as an error — a quiet network is not a failure.
+- **No reachable peers, but paired devices exist.** The list shows the paired devices as offline rows — see [wifi-availability/spec.md](../system/wifi-availability/spec.md) for the row contract and hint copy. No "Searching…" overlay.
+- **Reachable peer leaves the network.** If unpaired — its card disappears. If paired — the row transitions to the offline state and stays in the list.
+- **Local device loses the network.** The list is replaced by the "no local network" state — see [wifi-availability/spec.md](../system/wifi-availability/spec.md).
 - **User changes screen orientation / window size.** The list and the search state survive; nothing flickers and discovery does not start over.
 - **Two devices share a display name.** Both are shown; the row carries enough additional information to tell them apart.
 
