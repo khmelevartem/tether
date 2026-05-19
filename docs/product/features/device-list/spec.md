@@ -14,7 +14,7 @@ mDNS discovery already works on every platform. What is missing everywhere is a 
 
 When the user opens Tether, they see a list of devices currently on their Wi-Fi that also run Tether, plus devices the user has already paired with — even when those paired devices are not currently reachable. The list is live: reachable devices appear as Tether finds them and disappear when they leave the network; paired-but-offline devices stay visible so the list is meaningful between sessions. While nothing has been found yet *and* the user has no paired devices, the screen explains that it is searching, so the user does not assume the app is broken or stuck.
 
-The four row cases (online & unpaired / online & paired / offline & paired / offline & unpaired — not shown) and the network-absent empty-state are defined in [wifi-availability/spec.md](../system/wifi-availability/spec.md). The base live-discovery list shipped under #7 on Android and iOS; the offline-paired rows, the four-case row contract, and the no-local-network state are pending the wifi-availability implementation issue and not yet shipped on any platform.
+The four row cases (online & unpaired / online & paired / offline & paired / offline & unpaired — not shown) and the network-absent empty-state are defined in [wifi-availability/spec.md](../system/wifi-availability/spec.md).
 
 Each row identifies one device clearly enough to pick the right one. Tapping a row is the entry point to sending a file — the picker and the transfer flow live in another feature; here it leads to the next step.
 

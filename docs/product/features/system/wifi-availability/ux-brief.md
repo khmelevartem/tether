@@ -5,11 +5,9 @@
 
 ## Information architecture
 
-This brief touches one screen: the device list. It does not introduce a new root screen; it specifies additional states of the device list and the contract for every row variant within it.
+One screen — the device list. This brief specifies two things on it:
 
-Two things are specified here:
-
-1. **NoLocalNetworkState** — a full-screen replacement for the device list when the local device has no usable network. This is a named state of the device list screen, not a separate destination.
+1. **NoLocalNetworkState** — a full-screen replacement for the device list when the local device has no usable network. Named state of the device list screen, not a separate destination.
 2. **Device-list row contract** — the four row variants (online & unpaired, online & paired, offline & paired, offline & unpaired / not shown) with their visual treatment, copy, and interaction behaviour.
 
 ## Screens
@@ -100,12 +98,6 @@ Two things are specified here:
 - Desktop (JVM): desktop wording; no action button.
 
 **Accessibility.** Same as mobile variant; substitute the macOS/Desktop label "No local network" for the illustration region.
-
----
-
-#### State: Searching (existing, referenced for contrast)
-
-This brief does not respecify the searching state. It is noted here only to anchor the visual distinction requirement: the NoLocalNetworkState illustration must differ from the searching state (`•—•` with hollow pulsing right dot). The searching state copy is "Searching for devices…" per the existing device-list spec; this brief does not change it.
 
 ---
 
@@ -213,7 +205,7 @@ All rows share the same height, internal padding, and typographic hierarchy. The
 3. User restores the network.
 4. Within a few seconds, the screen transitions to the searching state, then PopulatedList repopulates.
 
-**Failure:** If the transition to NoLocalNetworkState is delayed beyond ~10 seconds (network state detection lag), the list may show offline rows briefly. This is acceptable — the brief does not specify a hard timeout for the UI; the product spec says "within roughly five seconds". No additional error state is required for this race.
+**Failure:** If the transition to NoLocalNetworkState is delayed beyond ~10 seconds (network state detection lag), the list may show offline rows briefly. Acceptable per the spec's "within roughly five seconds" budget; no additional error state required for this race.
 
 ### Flow 3 — Desktop with no usable network
 
@@ -222,11 +214,10 @@ All rows share the same height, internal padding, and typographic hierarchy. The
 3. User connects to a network via OS controls (outside Tether).
 4. Tether detects the change and transitions to searching state automatically.
 
-### Flow 4 — Desktop on Ethernet only (normal case, no state change)
+### Flow 4 — Desktop on Ethernet only
 
 1. User opens Tether on a desktop connected via Ethernet to a LAN that can carry Tether traffic.
-2. DeviceListScreen renders in searching state (existing) — no mention of Wi-Fi. Peers appear normally.
-3. Nothing in this brief applies — this is the normal populated-list flow.
+2. DeviceListScreen renders in searching state — no mention of Wi-Fi. Peers appear normally.
 
 ### Flow 5 — Offline paired device row
 
@@ -236,7 +227,7 @@ All rows share the same height, internal padding, and typographic hierarchy. The
 4. User taps elsewhere. Hint dismisses.
 5. The paired device comes online (joins the same LAN, starts Tether). The row transitions in place from Case 3 to Case 2 within a few seconds. No user action required.
 
-**Failure:** If the device comes online but the row does not transition within ~10 seconds, the user has no recovery affordance in this brief — pull-to-refresh is not provided. The transition is automatic; the brief does not prescribe a manual refresh action. (Open UX question: should a manual refresh affordance exist? See Open UX questions.)
+**Failure:** If the device comes online but the row does not transition within ~10 seconds, the user has no recovery affordance — pull-to-refresh is not provided; the transition is automatic.
 
 ### Flow 6 — Local device loses network; offline paired rows disappear
 
@@ -263,10 +254,10 @@ The "Open Wi-Fi settings" action launches the OS Settings app as an external int
 8. **Device row (standard)** — the base reachable-peer row (online & unpaired and online & paired share this base). Device name + secondary detail, tappable, leads to file-send flow.
 9. **Row state transition** — the animated in-place dimming/brightening when a row moves between online-paired and offline-paired states (200–300 ms ease-out).
 
-## Open UX questions
+## Implementer layout calls
 
-None blocking — all product / visual decisions in this brief are settled. The following are layout calls the implementer makes during composition without coming back for product input:
+Not blocking — pick one and apply consistently:
 
-- **Peer-identity accent placement — strip vs. dot/badge.** Left-edge strip is the primary proposal. If row geometry (leading icon, platform list insets) makes a strip awkward, a small dot or badge adjacent to the device name is the named fallback. Pick one and apply it consistently across Cases 2 and 3.
-- **Inline hint — expand vs. tooltip.** Inline expansion below the row is the primary proposal. If a platform's row layout makes inline expansion impractical, a non-auto-dismissing bottom sheet (mobile) or tooltip (desktop) is an acceptable fallback. Avoid transient toasts — the hint must not auto-dismiss.
-- **Manual refresh affordance.** Not provided. Recovery is automatic per the spec. Flag this during smoke testing if the offline → online transition turns out to be unreliable; it would become a follow-up issue, not a deviation from this brief.
+- **Peer-identity accent placement.** Left-edge strip; if row geometry (leading icon, platform list insets) makes it awkward, fall back to a small dot or badge adjacent to the device name. Same choice for Cases 2 and 3.
+- **Inline hint shape.** Inline expansion below the row; where impractical, fall back to a non-auto-dismissing bottom sheet (mobile) or tooltip (desktop). Transient toasts are not acceptable — the hint must not auto-dismiss.
+- **Manual refresh affordance.** Not provided. Recovery is automatic.

@@ -10,9 +10,9 @@
 
 Tether is local-first: discovery, pairing and transfer all assume the device is on a local network where peers can reach each other directly. When that network is entirely missing, none of the discovery paths Tether uses ([hotspot-transfer/spec.md](../../hotspot-transfer/spec.md) describes the layered story) can work.
 
-Today the app would silently show the empty "Searching for devices…" state in that situation, which is misleading: nothing is being searched, the network is simply absent. The user is left wondering whether Tether is broken, the room is empty, or the network is just slow.
+Without a dedicated state for that case, the device list shows "Searching for devices…" with nothing actually being searched — the user is left guessing whether Tether is broken, the room is empty, or the network is just slow. Tether's job is to name the cause: "your network is off — turn it on." One quick toggle in the OS shade and Tether comes back to life.
 
-Tether's job is to make the cause obvious: "your network is off — turn it on." One quick toggle in the OS shade and Tether comes back to life. The same surface also has to honestly say something for paired devices that the user already knows about but that are not currently reachable, so the device list keeps useful context even when discovery returns nothing.
+The same screen also surfaces paired devices the user already knows about but that are not currently reachable, so the device list keeps useful context even when discovery returns nothing.
 
 ## What it does
 
@@ -23,6 +23,17 @@ The user does not have to restart the app, refresh, or do anything except turn t
 A network the device is *sharing* — its own personal hotspot acting as the access point for others — counts as the same active state as a network the device is *joining* from outside. The "no local network" state is shown only when the device is on no usable network at all (neither joined nor shared). The hotspot case is the user expectation Tether has to meet, not a degraded mode (see [hotspot-transfer/spec.md](../../hotspot-transfer/spec.md) for the discovery story).
 
 Devices the user has already interacted with stay visible in the list even when they are not reachable right now — the same list, with the same row identity, the user would see if those devices were online. This is one concept: previously-paired devices the user is likely to send to again, surfaced wherever the user picks a peer. Once the local device is on a usable network, the list always carries either live peers, or known peers shown as offline, or both — there is no "blank and unexplained" list to stare at. When the local device itself has no usable network, the screen instead shows the "no local network" state and the device list (including any offline paired rows) is replaced by it: nothing actionable can be shown until the local network is back.
+
+## Row contract
+
+Every row on the device list is one of four cases, by reachability × pairing:
+
+- **Online & unpaired** — standard row.
+- **Online & paired** — standard row with the peer-identity accent (the warm copper/amber hue Tether uses for peer identity elsewhere, see [design.md](../../../design.md)).
+- **Offline & paired** — dimmed standard row with the same peer-identity accent.
+- **Offline & unpaired** — not shown.
+
+The exact dimming, accent placement, and row geometry are owned by the [UX brief](ux-brief.md); this spec fixes only which cases appear and what signal each carries.
 
 ## User flows
 
@@ -70,9 +81,8 @@ If the local device itself has no usable network, the "no local network" state t
 
 - **Visual language.** The searching and "no network" states use Tether's shared visual language — see [design.md](../../../design.md). Searching reuses the existing animated brand-mark indicator the rest of the app uses for "waiting for a peer". The "no network" state must be visually distinct from searching so that the user can tell at a glance that the situation is different — exact visual treatment is deferred to implementation.
 - **Wording per platform shape.** On a phone, where Wi-Fi is the only realistic local-network surface, the title is "Wi-Fi is off" with a one-line rationale. On a desktop where Ethernet is a normal substitute, the title is the more neutral "You're not on a local network". Exact copy and per-platform deltas live in the [UX brief](ux-brief.md).
-- **Action availability.** The "Open Wi-Fi settings" button is shown only on platforms where the OS exposes a one-tap path that lands the user directly on the Wi-Fi toggle. A button that lands the user a tap or two away from where they expected is worse than no button: where the OS does not allow that direct path (iOS, macOS, Desktop), the state shows a one-line written instruction instead. Android is currently the only platform with the button. Final per-platform table is in the [UX brief](ux-brief.md).
+- **Action availability.** The "Open Wi-Fi settings" button is shown only on platforms where the OS exposes a one-tap path that lands the user directly on the Wi-Fi toggle. On platforms without such a direct path, the state shows a one-line written instruction instead. Per-platform table in the [UX brief](ux-brief.md).
 - **Same behaviour on every platform.** Detection of network state is a single product contract — every platform reports the same thing: "the user has, or does not have, a local network capable of carrying Tether traffic". The UI never branches on which platform reported it.
-- **Row appearance per device state.** Four cases, one row contract: online & unpaired — standard row; online & paired — standard row with the peer-identity accent (the warm copper/amber hue Tether uses for peer identity elsewhere, see [design.md](../../../design.md)); offline & paired — dimmed standard row with the same peer-identity accent; offline & unpaired — not shown. The exact dimming, accent placement, and row geometry are a UX-brief decision for the device-list implementation issue; this spec fixes only which cases appear and which signal each carries.
 
 ## Not in this feature
 
@@ -90,6 +100,6 @@ If the local device itself has no usable network, the "no local network" state t
 
 ## Open product questions
 
-- Exact wording of the rationale line and the offline-row hint. Working drafts are above; the UX brief for the device-list implementation issue locks the final copy.
-- Exact visual realisation of the four-case row contract (dimming amount, accent placement, row geometry) — handed to the UX brief alongside the wording above; the contract itself is fixed in Platform notes.
-- Whether tapping an offline paired row should offer a "ping" / "wake up" action in the future. Out for MVP — Tether has no wake mechanism — but the row is the natural place for it later.
+- Final copy of the rationale line and the offline-row hint — locked in the [UX brief](ux-brief.md).
+- Visual realisation of the four-case row contract (dimming amount, accent placement, row geometry) — also locked in the [UX brief](ux-brief.md); the contract itself is fixed in [Row contract](#row-contract) above.
+- Whether tapping an offline paired row should offer a "ping" / "wake up" action. Out for MVP (Tether has no wake mechanism); the row is the natural place for it later.
