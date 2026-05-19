@@ -11,6 +11,7 @@ Product-side docs (vision, audience, features) live in [`docs/product/`](../prod
 - [Dependency Injection](dependency-injection.md) — DI strategy now (manual composition root) and later (Metro). Concrete rules for new code.
 - [Presentation Layer](presentation-layer.md) — Decompose-based components; how to write them, subscribe from Compose, and test.
 - [Peer Discovery](discovery.md) — layered model (mDNS + rendezvous + HTTP-scan + UDP-broadcast + manual entry), contracts, identity, liveness.
+- [Local-network availability](wifi-availability.md) — single common stream gating discovery and the no-local-network UI; per-platform sources (Android `NetworkCallback`, Apple `NWPathMonitor`, Desktop `NetworkInterface` polling).
 - [UI Style Guide](ui-style-guide.md) — token tables, `TetherTheme` rule, Tabler Icons usage, motion specs, accessibility checklist.
 - [UI Brand Mark](ui-brand-mark.md) — `•—•` geometry, animation states, where the mark appears, and design rationale (why a line, not a knot or arrow).
 - [Testing](testing.md) — структура тестов по source sets, стиль (`runTest`/виртуальное время), особенности Apple-таргетов.

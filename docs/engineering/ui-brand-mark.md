@@ -27,6 +27,8 @@ Only compose the searching animation while the component is in the searching sta
 
 **Error:** the line is truncated at the failure point — filled with `accent` up to the proportion reached, unfilled beyond. The right dot becomes hollow with a stroke in `error` color.
 
+**Disconnected:** both dots filled (left in `accent`, right in `peerIdentity`), full opacity. The connecting line is broken — rendered as two equal dashed segments of stroke weight 1.2R, each of length R, separated by a central gap of length 2R (total: R + 2R + R = 4R, butting into each dot with no gap). Stroke color stays in the `textPrimary` tone. No animation. Communicates: both ends exist, no tether between them — the local device is not on a usable network. This is the brand-mark state for the no-local-network screen of the device list ([`features/system/wifi-availability/spec.md`](../product/features/system/wifi-availability/spec.md)).
+
 ## Where the mark appears
 
 - App icon — static glyph on the brand surface.
@@ -34,6 +36,7 @@ Only compose the searching animation while the component is in the searching sta
 - In-app empty/searching state — searching state (hollow right dot + pulse).
 - Transfer progress indicator — progress state (line fills L→R).
 - Success/error confirmation — success and error states respectively.
+- No-local-network screen — disconnected state (dashed line between filled dots).
 
 The mark is identical across Android, iOS, macOS, and Desktop. No platform-specific variant.
 

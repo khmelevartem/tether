@@ -29,8 +29,8 @@ Devices the user has already interacted with stay visible in the list even when 
 **Primary flow — Wi-Fi off when opening the app**
 
 1. User opens Tether on a phone with Wi-Fi turned off.
-2. The device list shows the "Wi-Fi is off" state immediately: short title, one-line rationale, and a "Open Wi-Fi settings" action.
-3. User taps the action → OS Wi-Fi settings open. User turns Wi-Fi on, returns to Tether.
+2. The device list shows the "Wi-Fi is off" state immediately: short title, one-line rationale, and — on platforms where the OS exposes a one-tap path to the Wi-Fi toggle — an "Open Wi-Fi settings" action. See [Platform notes](#platform-notes) for which platforms qualify.
+3. User reaches the OS Wi-Fi controls (via the in-app action where present, or via the system menu / shade where not). User turns Wi-Fi on, returns to Tether.
 4. Within a few seconds, the device list switches to the searching state and peers begin to appear.
 
 **Recovery mid-session**
@@ -69,8 +69,8 @@ If the local device itself has no usable network, the "no local network" state t
 ## Platform notes
 
 - **Visual language.** The searching and "no network" states use Tether's shared visual language — see [design.md](../../../design.md). Searching reuses the existing animated brand-mark indicator the rest of the app uses for "waiting for a peer". The "no network" state must be visually distinct from searching so that the user can tell at a glance that the situation is different — exact visual treatment is deferred to implementation.
-- **Wording per platform shape.** On a phone, where Wi-Fi is the only realistic local-network surface, the title is "Wi-Fi is off" with a one-line rationale and an "Open Wi-Fi settings" action. On a desktop where Ethernet is a normal substitute, the title is the more neutral "You're not on a local network", with the same kind of action where the OS exposes a deep-link to network settings; otherwise a plain instruction.
-- **Action availability.** The "Open settings" action is only shown where the OS provides a stable way to reach the relevant settings page directly. Where it does not, the state shows the rationale and a one-line written instruction ("Turn Wi-Fi on in the system menu") instead of an inert button.
+- **Wording per platform shape.** On a phone, where Wi-Fi is the only realistic local-network surface, the title is "Wi-Fi is off" with a one-line rationale. On a desktop where Ethernet is a normal substitute, the title is the more neutral "You're not on a local network". Exact copy and per-platform deltas live in the [UX brief](ux-brief.md).
+- **Action availability.** The "Open Wi-Fi settings" button is shown only on platforms where the OS exposes a one-tap path that lands the user directly on the Wi-Fi toggle. A button that lands the user a tap or two away from where they expected is worse than no button: where the OS does not allow that direct path (iOS, macOS, Desktop), the state shows a one-line written instruction instead. Android is currently the only platform with the button. Final per-platform table is in the [UX brief](ux-brief.md).
 - **Same behaviour on every platform.** Detection of network state is a single product contract — every platform reports the same thing: "the user has, or does not have, a local network capable of carrying Tether traffic". The UI never branches on which platform reported it.
 - **Row appearance per device state.** Four cases, one row contract: online & unpaired — standard row; online & paired — standard row with the peer-identity accent (the warm copper/amber hue Tether uses for peer identity elsewhere, see [design.md](../../../design.md)); offline & paired — dimmed standard row with the same peer-identity accent; offline & unpaired — not shown. The exact dimming, accent placement, and row geometry are a UX-brief decision for the device-list implementation issue; this spec fixes only which cases appear and which signal each carries.
 
