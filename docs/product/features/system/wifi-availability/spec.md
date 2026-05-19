@@ -20,7 +20,9 @@ When Tether opens the device list, it knows whether the user is on a local netwo
 
 The user does not have to restart the app, refresh, or do anything except turn the network back on. As soon as the device is back on a usable network, the device list starts populating again on its own.
 
-Devices the user has already paired with stay visible in the list even when they are not reachable right now — shown as offline rows with a short hint about what to check on the other device. Once the local device is on a usable network, the list always carries either live peers, or known peers shown as offline, or both — there is no "blank and unexplained" list to stare at. When the local device itself has no usable network, the screen instead shows the "no local network" state and the device list (including any offline paired rows) is replaced by it: nothing actionable can be shown until the local network is back.
+A network the device is *sharing* — its own personal hotspot acting as the access point for others — counts as the same active state as a network the device is *joining* from outside. The "no local network" state is shown only when the device is on no usable network at all (neither joined nor shared). The hotspot case is the user expectation Tether has to meet, not a degraded mode (see [hotspot-transfer/spec.md](../../hotspot-transfer/spec.md) for the discovery story).
+
+Devices the user has already interacted with stay visible in the list even when they are not reachable right now — the same list, with the same row identity, the user would see if those devices were online. This is one concept: previously-paired devices the user is likely to send to again, surfaced wherever the user picks a peer. Once the local device is on a usable network, the list always carries either live peers, or known peers shown as offline, or both — there is no "blank and unexplained" list to stare at. When the local device itself has no usable network, the screen instead shows the "no local network" state and the device list (including any offline paired rows) is replaced by it: nothing actionable can be shown until the local network is back.
 
 ## User flows
 
@@ -61,6 +63,7 @@ If the local device itself has no usable network, the "no local network" state t
 - A desktop on Ethernet that can reach other Tether devices behaves exactly like a desktop on Wi-Fi — no wording about Wi-Fi appears.
 - A paired device the user knows about appears in the list even when it is not currently reachable, marked clearly as offline, with a hint about what the user can check on the other side — provided the local device itself is on a usable network.
 - A device that has just come back online stops being shown as offline within roughly five seconds and behaves like any other reachable peer.
+- A device sharing its own hotspot sees the same device list, the same searching state, and the same peers as a device that joined a hotspot from outside — there is no separate "I'm the host" mode.
 - The visual presentation of every state — searching, peers, paired-offline, no-local-network — is the same across Android, iOS, macOS and Desktop.
 
 ## Platform notes
@@ -69,6 +72,7 @@ If the local device itself has no usable network, the "no local network" state t
 - **Wording per platform shape.** On a phone, where Wi-Fi is the only realistic local-network surface, the title is "Wi-Fi is off" with a one-line rationale and an "Open Wi-Fi settings" action. On a desktop where Ethernet is a normal substitute, the title is the more neutral "You're not on a local network", with the same kind of action where the OS exposes a deep-link to network settings; otherwise a plain instruction.
 - **Action availability.** The "Open settings" action is only shown where the OS provides a stable way to reach the relevant settings page directly. Where it does not, the state shows the rationale and a one-line written instruction ("Turn Wi-Fi on in the system menu") instead of an inert button.
 - **Same behaviour on every platform.** Detection of network state is a single product contract — every platform reports the same thing: "the user has, or does not have, a local network capable of carrying Tether traffic". The UI never branches on which platform reported it.
+- **Row appearance per device state.** Four cases, one row contract: online & unpaired — standard row; online & paired — standard row with the peer-identity accent (the warm copper/amber hue Tether uses for peer identity elsewhere, see [design.md](../../../design.md)); offline & paired — dimmed standard row with the same peer-identity accent; offline & unpaired — not shown. The exact dimming, accent placement, and row geometry are a UX-brief decision for the device-list implementation issue; this spec fixes only which cases appear and which signal each carries.
 
 ## Not in this feature
 
@@ -86,8 +90,6 @@ If the local device itself has no usable network, the "no local network" state t
 
 ## Open product questions
 
-- Exact wording of the rationale line and the offline-row hint. Working drafts are above; final copy will be settled during implementation.
-- Whether the offline row shows any extra detail beyond name + "not on this network" — e.g. "last seen yesterday". For MVP probably no; revisit once we see how often paired devices are offline in real use.
-- How obvious the visual distinction between "reachable but unpaired" and "paired but offline" needs to be. Both must be distinguishable from "paired and reachable", but the exact treatment (icon, opacity, badge) is a UI choice for the implementation issue.
+- Exact wording of the rationale line and the offline-row hint. Working drafts are above; the UX brief for the device-list implementation issue locks the final copy.
+- Exact visual realisation of the four-case row contract (dimming amount, accent placement, row geometry) — handed to the UX brief alongside the wording above; the contract itself is fixed in Platform notes.
 - Whether tapping an offline paired row should offer a "ping" / "wake up" action in the future. Out for MVP — Tether has no wake mechanism — but the row is the natural place for it later.
-- Relationship between the **offline paired rows** on the device list (this spec) and the **recent peers** section in the out-of-band introduction surface ([hotspot-transfer/spec.md](../../hotspot-transfer/spec.md)). Both surfaces show paired devices; whether they merge visually, share the same list, or stay separate is a UI decision to settle when the hotspot-transfer UI is designed.
