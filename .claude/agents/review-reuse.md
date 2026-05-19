@@ -71,6 +71,7 @@ Every new dependency in `build.gradle.kts` must be used in the diff. Every new i
 ## What you do NOT check
 
 - AC coverage, correctness, tests, platform → other agents
+- **Whether a new abstraction was earned, or whether copy-pasted code should *become* a shared abstraction at all** → `review-architecture`. You hunt text-level / near-duplicate code that should reuse an *existing* helper. The shape question — "should there be a helper here in the first place" — is architecture's.
 
 ## Output
 
