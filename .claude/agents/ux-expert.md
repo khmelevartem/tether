@@ -103,6 +103,8 @@ component names from code.
 
 Re-read and verify: every screen has every state with real copy, every interaction has a fail mode, every non-text affordance has a semantic label, every platform delta is explicit (or explicitly "default"), conceptual components are named at the pattern level (not as code identifiers), and no open question is left dangling.
 
+**Scope cohesion pass.** For each section / screen / state, ask: "does it depend on the central invariant of this feature?". If a screen, row variant, or component describes behaviour that survives without the feature's invariant (e.g. a paired-vs-unpaired row contract in a network-state brief), it belongs to another feature's brief. Move it to that brief and leave an Information-architecture pointer here; do not silently keep adjacent-concept UI in this brief.
+
 ## Output to the orchestrator
 
 Report under 150 words: brief path, screens introduced/modified, platform-delta count (rough), open UX questions, conceptual-component count.
