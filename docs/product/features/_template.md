@@ -23,9 +23,7 @@
 > **Scope cohesion.** Every section must depend on the feature's central invariant.
 > Before declaring the spec ready, for each section ask: "if I remove the central
 > invariant, does this section lose its meaning?". If no — the section belongs to
-> another feature; move it to that spec and leave a cross-reference here. Adjacent
-> concepts that come up while scoping (e.g. pairing UI in a network-state spec) are
-> the most common offenders.
+> another feature; move it to that spec and leave a cross-reference here.
 >
 > **Cross-ref on move.** Whenever a concept is moved into another spec — either
 > because of scope cohesion, or to honour a single owner — add a bullet to
