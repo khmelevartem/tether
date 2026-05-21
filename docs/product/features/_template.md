@@ -19,6 +19,17 @@
 > Don't write a separate "Android X" and "iOS X" spec — write one and put per-platform
 > user-visible quirks in `Platform notes`. Don't write a separate "X infrastructure" and
 > "X UI" spec — write one. See [README.md](README.md) → «What counts as one feature».
+>
+> **Scope cohesion.** Every section must depend on the feature's central invariant.
+> Before declaring the spec ready, for each section ask: "if I remove the central
+> invariant, does this section lose its meaning?". If no — the section belongs to
+> another feature; move it to that spec and leave a cross-reference here.
+>
+> **Cross-ref on move.** Whenever a concept is moved into another spec — either
+> because of scope cohesion, or to honour a single owner — add a bullet to
+> `Not in this feature` naming the new owner and linking the destination. This keeps
+> navigation intact and prevents the next scoping pass from re-importing the same
+> content.
 
 ## Why
 
