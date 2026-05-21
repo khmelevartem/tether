@@ -20,6 +20,7 @@ Read these on demand, not all upfront:
 - New module/component → [`modules.md`](docs/engineering/modules.md) + [`architecture-principles.md`](docs/engineering/architecture-principles.md)
 - Tests → [`testing.md`](docs/engineering/testing.md)
 - New product spec or update of existing → [`_template.md`](docs/product/features/_template.md). Готовая соседняя спека показывает структуру, но не правила про содержание — шаблон открой отдельно.
+- New UX brief or update of existing → [`_ux-brief-template.md`](docs/product/features/_ux-brief-template.md). Соседний готовый бриф показывает форму, но дисциплина (scope cohesion, cross-ref on move, без имён кода) — в шаблоне.
 
 ## Architecture invariants
 
@@ -75,14 +76,4 @@ Desktop исходники разделены на два source set: `desktopMa
 - **Inline-пример = форма истории, если он incident-rooted.** Соблазн «приложу пример, чтобы было понятнее» почти всегда означает приложить строку из задачи, родившей правило. Следующий агент матчит пример литерально и пропускает структурно идентичные соседние случаи. Правило: либо обобщай *форму* ошибки (контраст «принцип ловит вот это, но не похожее на него») так, чтобы пример был синтетическим и закрывал класс, — либо не приводи пример вовсе. Если без примера правило не читается — переписывай формулировку, а не подпирай её цитатой из инцидента.
 - **Утверждения доков о runtime — снапшот, не правило.** Опираешься на такое утверждение в долгоживущем артефакте (спека, doc, комментарий, скилл) — сверь с кодом до использования, оно могло устареть. Пишешь сам — предпочти продуктовый инвариант («pairing keyed by stable device identity») описанию текущей реализации; если runtime упомянуть неизбежно — оставь минимум, нужный для понимания.
 - **Kotlin official style** (enforced by KtLint).
-- **Reflection в 3rd-party internals запрещена по умолчанию.** Доступ к private/internal полям сторонних библиотек (kotlinx, Ktor, system services, etc.) через `getDeclaredField` / `isAccessible` / classpath lookup — architectural escape hatch, не routine technique. Любая фича, требующая такой рефлексии, обязана быть **эскалирована пользователю до написания кода** с альтернативами (engine swap, manual primitive, custom protocol, drop feature). Failure mode рефлексии — silent no-op при любом изменении внутренней структуры зависимости; такие фичи не ловятся обычным test green/red.
-
-## Worktree и окружение
-
-**Редактируй файлы только в worktree, не в корне репозитория.** Перед первым Edit убедись, что путь ведёт в `.claude/worktrees/<branch>/`, а не в корень. Ошибка в пути = правка main в обход ревью.
-
-**Обновление инструкций** (CLAUDE.md и других файлов в `.claude/`): правь только в текущем worktree. Корневой CLAUDE.md живёт на main — туда изменения попадают через PR-флоу.
-
-**Авто-очистка worktree.** При остановке сессии Claude Code `Stop` hook автоматически удаляет worktree'ы, для которых remote-ветка удалена и PR смержен (`gh pr list --state merged`). Работает для squash, regular и fast-forward merge.
-
-**Проверяй `pwd` перед Bash-командами.** Bash-сессии не сохраняют `cd` между вызовами. Перед diagnostic-сессией (smoke, ручная проверка, сборка для тестирования) первой командой делай `pwd && git rev-parse --short HEAD`, чтобы убедиться что ты в worktree, а не в `/Users/artem/StudioProjects/tether` на main.
+**Rebase / merge main — смотри, что заехало, не только разрешай конфликты.** После `git rebase` / `git merge` main в рабочую ветку прочитай заехавшие коммиты (`git log <prev>..origin/main`) и оцени смысловое пересечение с текущей работой. Поправь работу под новый контекст или явно сообщи пользователю и предложи план, если пересечение значительное.
