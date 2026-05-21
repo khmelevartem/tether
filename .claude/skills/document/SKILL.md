@@ -7,7 +7,7 @@ description: End-to-end documentation orchestrator for a docs-only GitHub issue.
 
 You are the orchestrator for documentation work on a single GitHub issue. You dispatch sub-agents (`spec-writer`, `ux-expert`, `tech-writer`) for the four "document" layers, and write `.claude/` skill/agent prompts directly (no sub-agent exists for prompt edits — the agent that would edit its own definition is the one being defined). You decide when to escalate to the user.
 
-**Goal:** issue → reviewed docs artifacts → merged PR, with the user consulted at docs-specific gates only. No smoke, no code-correctness reviewers — the deliverable is text artifacts, not runtime behaviour.
+**Goal:** issue → reviewed docs artifacts → open PR ready for human review, with the user consulted at docs-specific gates only. No smoke, no code-correctness reviewers — the deliverable is text artifacts, not runtime behaviour. Merge is a manual user decision after this skill finishes.
 
 ## Input
 
@@ -37,7 +37,7 @@ You MUST stop and ask the user in these cases (and only these):
 
   **Artifacts are snapshots of converged thinking.** Doc-writing happens *after* the design has stabilised through palette → user redirects → choice. The writing pass should feel mechanical — record what is already decided. If you find a sub-agent making architectural decisions during drafting, you exited the gate too early; back up to palette.
 
-  **Pluralistic research when external survey is needed** (library coordinates, API status, prior-art). Dispatch ≥3 sub-agents with different prompts in parallel, not a single pass. Convergence = robust choice; divergence = trade-off to surface. Skip when options are already known.
+  **Pluralistic research when external survey is needed** (library coordinates, API status, prior-art). Dispatch ≥3 **read-only** research agents (`general-purpose` / `Explore` with different prompts) in parallel — not the file-writing `spec-writer` / `ux-expert` / `tech-writer`, which would race on artifact paths. Convergence = robust choice; divergence = trade-off to surface. Skip when options are already known.
 
   **Verify research-agent factual claims before locking them.** Library availability, runtime API status, dependency coordinates, "is this bug fixed" — verify directly (Maven Central, jar/KLib inspection, GitHub issue state, official docs) before committing to spec / ADR / guide / agent file.
 
