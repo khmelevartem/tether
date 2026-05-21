@@ -20,6 +20,7 @@ Read these on demand, not all upfront:
 - New module/component → [`modules.md`](docs/engineering/modules.md) + [`architecture-principles.md`](docs/engineering/architecture-principles.md)
 - Tests → [`testing.md`](docs/engineering/testing.md)
 - New product spec or update of existing → [`_template.md`](docs/product/features/_template.md). Готовая соседняя спека показывает структуру, но не правила про содержание — шаблон открой отдельно.
+- New UX brief or update of existing → [`_ux-brief-template.md`](docs/product/features/_ux-brief-template.md). Соседний готовый бриф показывает форму, но дисциплина (scope cohesion, cross-ref on move, без имён кода) — в шаблоне.
 
 ## Architecture invariants
 
@@ -86,3 +87,5 @@ Desktop исходники разделены на два source set: `desktopMa
 **Авто-очистка worktree.** При остановке сессии Claude Code `Stop` hook автоматически удаляет worktree'ы, для которых remote-ветка удалена и PR смержен (`gh pr list --state merged`). Работает для squash, regular и fast-forward merge.
 
 **Проверяй `pwd` перед Bash-командами.** Bash-сессии не сохраняют `cd` между вызовами. Перед diagnostic-сессией (smoke, ручная проверка, сборка для тестирования) первой командой делай `pwd && git rev-parse --short HEAD`, чтобы убедиться что ты в worktree, а не в `/Users/artem/StudioProjects/tether` на main.
+
+**Rebase / merge main — смотри, что заехало, не только разрешай конфликты.** После `git rebase` / `git merge` main в рабочую ветку прочитай заехавшие коммиты (`git log <prev>..origin/main`) и оцени смысловое пересечение с текущей работой: новые правила в скиллах и `docs/engineering/`, переезд owner-а между фичами, переименования, новые разделы в спеке, по которой работаешь. Конфликт-резолвер ловит только текстовые столкновения; смысловые — нет. Если пересечение значительное — поправь работу под новый контекст или явно сообщи пользователю и предложи план.
