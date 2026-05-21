@@ -208,9 +208,11 @@ Symmetric to Received. Persistent — does not self-dismiss.
 - Copy: "Sent \<N\> files to \<peer\>".
 - [Dismiss ×] affordance in the trailing corner (semantic label: "Dismiss sent notification to \<peer\>").
 
-**Partial-completion variant (cancelled mid-batch by receiver or connection-lost):**
+**Partial-completion variant (cancelled mid-batch by receiver, connection-lost, or per-file read errors):**
 
-- Copy: "Sent \<X\> of \<Y\> files to \<peer\> (transfer was cancelled)" or "… (connection lost)".
+- Copy when receiver cancelled: "Sent \<X\> of \<Y\> files to \<peer\> (transfer was cancelled)".
+- Copy when connection lost: "Sent \<X\> of \<Y\> files to \<peer\> (connection lost)".
+- Copy when files unreadable: "Sent \<X\> of \<Y\> files to \<peer\> (\<Z\> files couldn't be read)".
 - A [Show received files →] button navigates to TransferDetailsScreen showing which files were confirmed received and which were not sent.
 - [Dismiss ×] affordance.
 
@@ -579,7 +581,7 @@ Auto-send is configured per-peer via the expanded PeerCard (see PeerCard § Idle
 ### Flow 5 — Partial batch failure and retry
 
 1. Transfer completes with some file failures (per-file errors during send).
-2. Sender's PeerCard transitions to Sent state (partial-completion variant): "Sent \<X\> of \<Y\> files to \<peer\> (transfer was cancelled)". [Show received files →] button and [Retry button] present. [Dismiss ×] present.
+2. Sender's PeerCard transitions to Sent state (partial-completion variant): "Sent \<X\> of \<Y\> files to \<peer\> (\<Z\> files couldn't be read)". [Show received files →] button and [Retry button] present. [Dismiss ×] present.
 3. User taps [Show received files →] → TransferDetailsScreen opens; shows "Received \<X\> files" and "Not sent \<Y\> files" sections.
 4. User returns to DeviceListScreen (back). Taps [Retry button] on PeerCard (peer still online) → card returns to Active outbound for only the un-received files.
 5. If retry succeeds: PeerCard transitions to Sent state again for the retried batch.
@@ -664,7 +666,8 @@ Auto-send is configured per-peer via the expanded PeerCard (see PeerCard § Idle
 
 ### iOS
 
-- The OS auto-lock idle timer is suppressed during an active foreground transfer — the screen does not dim or lock while transferring. Manual lock (side button) and backgrounding still end the session; this is a foreground-only constraint, not a sleep concern. The foreground-only constraint is separately surfaced via the persistent banner (see DeviceListScreen layout).
+- **Sleep prevention.** The OS auto-lock idle timer is suppressed during an active foreground transfer — the screen does not dim or lock while transferring.
+- **Foreground-only transport (separate constraint).** Manual lock (side button) and backgrounding end the session; iOS does not permit the transfer to continue. This is surfaced to the user via the persistent banner (see DeviceListScreen layout).
 
 ### macOS
 
@@ -716,4 +719,4 @@ These are non-blocking unless noted. None gate the current implementation unless
 
 5. **Edit pending files.** When a pending outbound exists, a future enhancement is to allow adding/removing files from the pending selection before tapping a peer. Deferred — not in MVP scope.
 
-6. **Sender-side wake-lock parity (engineering).** Resolved per research: Android FGS covers receive-side; iOS auto-lock idle timer suppression covers foreground send; macOS OS sleep-prevention assertion covers both directions; Windows execution-state assertion covers send; Linux inhibit interface covers send (best-effort on non-systemd). Engineering verification and implementation tracking deferred to #195.
+6. **Sender-side wake-lock parity (engineering).** Each platform holds the strongest sleep-prevention mechanism available for the duration of a transfer: Android — FGS covers receive-side, send-side adds screen-keep-on + partial wake-lock; iOS — auto-lock idle-timer suppression (foreground only); macOS — OS sleep-prevention assertion (both directions); Windows — execution-state assertion (send); Linux — inhibit interface (send; best-effort on non-systemd). Engineering verification and implementation tracking is owned by #195.
