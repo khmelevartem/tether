@@ -39,9 +39,10 @@ DeviceListScreen  (existing — touched)
                                                                   │
                                                   (PeerCard → Active outbound)
       │
-      └── PeerCard Cancelled / Error / Received (partial) / Sent (partial)
+      └── PeerCard in any non-Idle state (Active outbound / Active inbound /
+              Sent / Received / Cancelled / Error)
                                                                   │
-                                                       [Show received files →]
+                                                       [Show details →]
                                                                   │
                                                     TransferDetailsScreen
 
@@ -147,6 +148,7 @@ Card swells. Transfer in progress from this device to the peer.
 - Transfer speed: "3.2 MB/s" (shows "Calculating…" for first ~3 s).
 - Both progress copy and speed are always shown — not one or the other.
 - Skip-count badge (appears only when ≥1 file skipped): muted-tone secondary badge: "\<N\> files skipped".
+- A [Show details →] button opens TransferDetailsScreen in its in-progress mode (live view of files-received-so-far). Optional drill-down for large batches; the card remains the primary surface.
 - [Cancel button] in the trailing position (explicitly a button, visually distinct, labeled "Cancel").
 
 #### 4. Active inbound (receiving)
@@ -157,6 +159,7 @@ Symmetric to Active outbound. Card swells.
 - `•—•` brand mark in transfer-progress state.
 - Sender's current filename (center-truncated).
 - Progress copy: "X.X MB of Y.Y MB".
+- A [Show details →] button opens TransferDetailsScreen in its in-progress mode.
 - Transfer speed: "3.2 MB/s".
 - [Cancel button] in the trailing position.
 
@@ -180,6 +183,7 @@ Replaces any inline inbound card after a successful inbound transfer completes. 
 - Peer name.
 - `•—•` in success state for ~700 ms (per brand-mark spec), then settles with line fully filled.
 - Copy: "Received \<N\> files from \<peer\> — tap to open".
+- A [Show details →] button navigates to TransferDetailsScreen for the per-file breakdown (all files listed under "Received").
 - Tapping the card body attempts an OS deep-link to the saved folder.
   - If deep-link succeeds: leaves Tether / opens the OS file location.
   - If deep-link fails: an **inline hint appears within the same card** (no new screen):
@@ -196,7 +200,7 @@ Replaces any inline inbound card after a successful inbound transfer completes. 
 - Copy when receiver cancelled: "Received \<X\> files from \<peer\> — you cancelled."
 - Copy when connection lost: "Received \<X\> files from \<peer\> — connection lost."
 - [Dismiss ×] affordance present.
-- A [Show received files →] button navigates to TransferDetailsScreen for the per-file outcome breakdown.
+- A [Show details →] button navigates to TransferDetailsScreen for the per-file outcome breakdown.
 
 #### 7. Sent (outbound complete)
 
@@ -205,6 +209,7 @@ Symmetric to Received. Persistent — does not self-dismiss.
 - Peer name.
 - `•—•` in success state for ~700 ms, then settles.
 - Copy: "Sent \<N\> files to \<peer\>".
+- A [Show details →] button navigates to TransferDetailsScreen for the per-file breakdown (all files listed under "Received").
 - [Dismiss ×] affordance in the trailing corner (semantic label: "Dismiss sent notification to \<peer\>").
 
 **Partial-completion variant (cancelled mid-batch by receiver, connection-lost, or per-file read errors):**
@@ -212,7 +217,7 @@ Symmetric to Received. Persistent — does not self-dismiss.
 - Copy when receiver cancelled: "Sent \<X\> of \<Y\> files to \<peer\> (transfer was cancelled)".
 - Copy when connection lost: "Sent \<X\> of \<Y\> files to \<peer\> (connection lost)".
 - Copy when files unreadable: "Sent \<X\> of \<Y\> files to \<peer\> (\<Z\> files couldn't be read)".
-- A [Show received files →] button navigates to TransferDetailsScreen showing which files were confirmed received and which were not sent.
+- A [Show details →] button navigates to TransferDetailsScreen showing which files were confirmed received and which were not sent.
 - [Dismiss ×] affordance.
 
 #### 8. Error
@@ -223,7 +228,7 @@ Persistent — does not self-dismiss.
 - `•—•` in error state: line truncated at failure point, right dot hollow in error tone.
 - Error copy (see error matrix below).
 - [Retry button] and [Dismiss × button] in trailing area. [Retry button] is disabled (grayed, not hidden) when the peer is offline.
-- A [Show received files →] button (appears only when ≥1 file was confirmed received before the error): navigates to TransferDetailsScreen for the per-file outcome breakdown.
+- A [Show details →] button navigates to TransferDetailsScreen for the per-file outcome breakdown (shows the "Not sent" section even when no files arrived).
 
 **Error matrix:**
 
@@ -243,7 +248,8 @@ Brief inline state. Persistent — does not self-dismiss.
 
 - Peer name.
 - Copy: "Cancelled".
-- If files were partially received before cancel, additional copy: "\<X\> files were received before cancel. \<Y\> were not sent." with [Show received files →] button that navigates to TransferDetailsScreen.
+- If files were partially received before cancel, additional copy: "\<X\> files were received before cancel. \<Y\> were not sent.".
+- A [Show details →] button navigates to TransferDetailsScreen for the per-file breakdown.
 - [Dismiss × button] in trailing corner.
 
 **Cancel / partial-failure semantics:** files already received in full on the receiver stay on the receiver — no rollback. The Cancelled state on the sender surfaces this explicitly. The receiver's peer-card simultaneously enters its own Received state (partial-completion variant) for the files that did arrive.
@@ -260,7 +266,7 @@ Brief inline state. Persistent — does not self-dismiss.
 - Tap [Dismiss × button] (Received / Sent / Error / Cancelled): clears that state; card returns to Idle.
 - Tap [Retry button] (Error, enabled): re-initiates transfer to peer with only un-received files. Card returns to Active outbound state.
 - Tap [Retry button] (Error, disabled): no action (button is non-interactive; grayed).
-- Tap [Show received files →] (Received partial / Sent partial / Cancelled / Error with partial receives): navigates to TransferDetailsScreen.
+- Tap [Show details →] (Active outbound / Active inbound / Sent / Received / Cancelled / Error): navigates to TransferDetailsScreen. In Active states the screen opens in its in-progress mode.
 
 **Copy.**
 
@@ -292,7 +298,7 @@ Brief inline state. Persistent — does not self-dismiss.
 - "Couldn't save on \<peer\>. Free up space and try again."
 - "Couldn't send to \<peer\>. Try again."
 - "Retry" (button label on Error state)
-- "Show received files →" (navigation button label — Error state, Cancelled state, and Sent/Received partial-completion states)
+- "Show details →" (navigation button label — available in Active, Sent, Received, Cancelled, and Error states)
 - "Cancelled"
 
 **Per-platform deltas.**
@@ -324,11 +330,11 @@ Brief inline state. Persistent — does not self-dismiss.
 - [Dismiss × button] semantic label: "Dismiss received notification from \<peer\>" / "Dismiss sent notification to \<peer\>" / "Dismiss error for \<peer\>" / "Dismiss cancelled transfer for \<peer\>".
 - [Retry button] semantic label (enabled): "Retry sending to \<peer\>".
 - [Retry button] semantic label (disabled): "Retry not available — \<peer\> is offline".
-- [Show received files →] button: semantic label "Show details of received files for transfer from \<peer\>".
+- [Show details →] button: semantic label "Show transfer details for \<peer\>".
 - Skip-count badge: "\<N\> files skipped so far".
 - Speed label: "Transfer speed: \<value\>".
 - Filename label: "Currently sending: \<filename\>" or "Currently receiving: \<filename\>".
-- Keyboard focus order within card (Desktop/macOS): peer name → status → chevron → (if expanded: toggle → [i] icon) → [Cancel button] (if active) → [Show received files →] (if present) → [Retry button] (if error, enabled) → [Dismiss × button] (if dismissible).
+- Keyboard focus order within card (Desktop/macOS): peer name → status → chevron → (if expanded: toggle → [i] icon) → [Cancel button] (if active) → [Show details →] (if present) → [Retry button] (if error, enabled) → [Dismiss × button] (if dismissible).
 
 ---
 
@@ -443,50 +449,65 @@ Brief inline state. Persistent — does not self-dismiss.
 
 ### TransferDetailsScreen
 
-**Purpose.** Shows the per-file outcome of a completed (full, partial, cancelled, or errored) transfer.
+**Purpose.** Supplementary per-file view of a transfer — during transit, after full success, after partial failure, after cancel, or after error. Always opt-in via [Show details →] on the PeerCard; the card remains the primary transfer surface.
 
-**Entry points.** Tapping [Show received files →] on a PeerCard in Cancelled, Error (with partial receives), Received (partial-completion), or Sent (partial-completion) state.
+**Entry points.** Tapping [Show details →] on a PeerCard in any of: Active outbound, Active inbound, Sent (full), Sent (partial), Received (full), Received (partial), Cancelled, or Error.
 
 **Layout.**
 
-- Top bar with back affordance and peer name as title; transfer summary as subtitle (e.g. "Received 3 of 8 files").
-- Scrollable list of files grouped into two sections:
-  - "Received" section: file names and sizes for every file that arrived in full.
-  - "Not sent" section: file names only (no sizes — they never arrived) for files that did not complete.
-- Empty section is omitted entirely (if all files arrived, only "Received" section appears; if none arrived, only "Not sent" section appears).
+- Top bar with back affordance and peer name as title; transfer summary as subtitle (e.g. "Receiving 3 of 8…" while active, "Received 3 of 8 files" once finished).
+- Scrollable list of files grouped into sections:
+  - "Received" section: files that arrived in full (file name + size).
+  - "Sending" section (active states only, sender side): the file currently in flight, plus files queued. Each row shows a small inline progress bar for the active file; queued rows show file name only.
+  - "Receiving" section (active states only, receiver side): same as "Sending" from the receiver's perspective.
+  - "Not sent" section (terminal states only): files that did not complete (name only, no size).
+- Empty sections are omitted entirely.
+- Sender-side terminal states with a non-empty "Not sent" section: a [Retry all →] CTA above the list re-sends every file in "Not sent". Per-row [Retry] button on each "Not sent" entry re-sends that single file.
 
 **States.**
 
-- **Loading:** brief loading indicator while the file list is materialized from the transfer log. Rare; shown only if log access is not instant.
-- **Populated:** both sections (or one, if the other is empty) shown with their file rows.
+- **In-progress:** list updates live. When a file finishes transferring, its row animates from the active section ("Sending" / "Receiving") into the "Received" section. Section counts update live. When the underlying transfer reaches a terminal state while this screen is open, the screen transitions in-place to the appropriate terminal layout — the active section disappears, the "Not sent" section appears if applicable, the subtitle updates, and retry affordances appear if applicable. The user is never navigated away involuntarily.
+- **Terminal — all success:** only the "Received" section visible. No retry affordances (nothing failed).
+- **Terminal — partial:** "Received" + "Not sent" sections. Sender side: [Retry all →] CTA + per-row [Retry]. Receiver side: no retry (cannot initiate from receiver).
+- **Terminal — all failed:** only "Not sent" section. Sender side: [Retry all →] CTA visible.
+- **Loading:** brief indicator while the file list materializes. Rare.
 
 **Interactions.**
 
-- Tap a file row in the "Received" section: attempts an OS deep-link to that file in the save folder (same affordance as tapping PeerCard body in Received state); fallback to an inline hint within the row if deep-link fails (platform-specific path copy, same strings as PeerCard deep-link failure hints).
-- Tap back affordance (top bar) / hardware back / swipe-back: returns to DeviceListScreen.
-- Tap a file row in the "Not sent" section: no action (rows are informational only).
+- Tap a file row in "Received" section: attempts OS deep-link to that file. Fallback to inline hint within the row if deep-link fails (same platform-specific copy as PeerCard).
+- Tap [Retry button] on a "Not sent" row (sender side, peer reachable): re-initiates transfer of that single file. The row moves to a "Retrying…" state with an inline progress bar; on success, the row animates into the "Received" section; on failure, the row returns to "Not sent" with the new error inline.
+- Tap [Retry button] when peer offline: button is disabled (grayed). Helper text: "\<peer\> is offline."
+- Tap [Retry all →] CTA: re-initiates transfer for every file in "Not sent". Rows show inline progress and move to "Received" on success.
+- Tap a file row in "Sending" / "Receiving" / "Not sent" sections (non-retry interactions): no action.
+- Tap back affordance / hardware back / swipe-back: returns to DeviceListScreen. PeerCard underneath retains its current state (active or terminal).
 
 **Copy.**
 
-- "Received \<X\> files" (section header)
-- "Not sent \<Y\> files" (section header)
-- Per-row: file name + size (Received section); file name only (Not sent section)
-- "\<peer name\>" (top bar title)
-- "Received \<X\> of \<Y\> files" (subtitle)
+- "Sending \<X\> of \<Y\>…" / "Receiving \<X\> of \<Y\>…" (subtitle, in-progress)
+- "Received \<X\> of \<Y\> files" / "Sent \<X\> of \<Y\> files" (subtitle, terminal)
+- "Received" / "Sending" / "Receiving" / "Not sent" (section headers)
+- Per-row: file name + size (Received); file name + inline progress bar (active row); file name only (queued / Not sent)
+- "Retry" (per-row button)
+- "Retry all" (CTA)
+- "\<peer\> is offline." (retry-disabled helper)
 
 **Per-platform deltas.**
 
 - Android: hardware back returns to DeviceListScreen.
-- iOS: swipe-back gesture returns to DeviceListScreen; top bar back chevron follows iOS HIG.
-- macOS: top bar back affordance rendered as ◀ button.
-- Desktop JVM: top bar back affordance rendered as ◀ button.
+- iOS: swipe-back gesture; top bar back chevron follows iOS HIG.
+- macOS / Desktop JVM: top bar back affordance rendered as ◀ button.
 
 **Accessibility.**
 
 - On screen entry, focus moves to the first list item (or loading indicator).
 - Back affordance semantic label: "Back to device list".
-- Each file row in "Received" section: role `button`; semantic label "Open \<filename\> in file manager".
-- Each file row in "Not sent" section: role `text`; semantic label "\<filename\>, not sent".
+- File row in "Received": role `button`; semantic label "Open \<filename\> in file manager".
+- File row in "Sending" / "Receiving" (currently active): role `text`; semantic label "\<filename\>, in progress, \<percent\> percent".
+- File row in "Not sent": role `text`; semantic label "\<filename\>, not sent".
+- [Retry button] (per-row, enabled): semantic label "Retry sending \<filename\>".
+- [Retry button] (per-row, disabled): "Retry not available — \<peer\> is offline".
+- [Retry all →] CTA: semantic label "Retry all \<N\> failed files".
+- Live region (polite): announces "Received \<filename\>" as each file completes during in-progress state. Announcements are paced to remain intelligible on fast batches.
 - Section headers announced as headings.
 
 ---
@@ -530,10 +551,10 @@ Auto-send is configured per-peer via the expanded PeerCard (see PeerCard § Idle
 
 **Per-platform deltas.**
 
-- Android: save location editable via the OS folder picker. Large-selection warning toggle: default.
-- iOS: save location read-only with explanatory caption. Large-selection warning toggle: default.
-- macOS: save location editable via system folder picker (Open Panel, folder selection mode). Large-selection warning toggle: default.
-- Desktop JVM: save location editable via system folder picker. Large-selection warning toggle: default.
+- Android: save location editable via the OS folder picker.
+- iOS: save location read-only with explanatory caption.
+- macOS: save location editable via system folder picker (Open Panel, folder selection mode).
+- Desktop JVM: save location editable via system folder picker.
 
 **Accessibility.**
 
@@ -580,8 +601,8 @@ Auto-send is configured per-peer via the expanded PeerCard (see PeerCard § Idle
 ### Flow 5 — Partial batch failure and retry
 
 1. Transfer completes with some file failures (per-file errors during send).
-2. Sender's PeerCard transitions to Sent state (partial-completion variant): "Sent \<X\> of \<Y\> files to \<peer\> (\<Z\> files couldn't be read)". [Show received files →] button and [Retry button] present. [Dismiss ×] present.
-3. User taps [Show received files →] → TransferDetailsScreen opens; shows "Received \<X\> files" and "Not sent \<Y\> files" sections.
+2. Sender's PeerCard transitions to Sent state (partial-completion variant): "Sent \<X\> of \<Y\> files to \<peer\> (\<Z\> files couldn't be read)". [Show details →] button and [Retry button] present. [Dismiss ×] present.
+3. User taps [Show details →] → TransferDetailsScreen opens; shows "Received \<X\> files" and "Not sent \<Y\> files" sections.
 4. User returns to DeviceListScreen (back). Taps [Retry button] on PeerCard (peer still online) → card returns to Active outbound for only the un-received files.
 5. If retry succeeds: PeerCard transitions to Sent state again for the retried batch.
 6. If peer went offline: [Retry button] is disabled (grayed); card remains in Error state awaiting dismissal.
@@ -592,7 +613,7 @@ Auto-send is configured per-peer via the expanded PeerCard (see PeerCard § Idle
 2. Sender taps [Cancel button] on the PeerCard.
 3. Both sides stop immediately. No confirm dialog.
 4. Files already received in full on the receiver stay on the receiver.
-5. Sender's PeerCard transitions to Cancelled state: "Cancelled. \<X\> files were received before cancel. \<Y\> were not sent." [Show received files →] button available → navigates to TransferDetailsScreen.
+5. Sender's PeerCard transitions to Cancelled state: "Cancelled. \<X\> files were received before cancel. \<Y\> were not sent." [Show details →] button available → navigates to TransferDetailsScreen.
 6. Receiver's PeerCard transitions to Received state (partial-completion variant): "Received \<X\> files from \<peer\> — sender cancelled."
 7. Both states persist until [Dismiss × button] is tapped; [Dismiss × button] returns card to Idle.
 
@@ -630,13 +651,14 @@ Auto-send is configured per-peer via the expanded PeerCard (see PeerCard § Idle
 3. User clicks target PeerCard body.
 4. No picker sheet — files already selected. If threshold exceeded: LargeSelectionConfirmDialog. Otherwise: PeerCard transitions to Active outbound.
 
-### Flow 11 — View partial-transfer details
+### Flow 11 — View transfer details (per-file)
 
-1. A transfer ends in a partial state (Cancelled, Error with partial receives, Received partial, or Sent partial). PeerCard shows [Show received files →] button.
-2. User taps [Show received files →] → TransferDetailsScreen opens.
-3. "Received" section lists files that arrived (with sizes). "Not sent" section lists files that did not complete (names only). Empty section is omitted.
+1. A transfer is in any non-Idle state (Active outbound, Active inbound, Sent, Received, Cancelled, Error). PeerCard shows [Show details →] button.
+2. User taps [Show details →] → TransferDetailsScreen opens. In active states, the screen renders in in-progress mode; in terminal states, the appropriate terminal layout.
+3. Sections render per the screen's state contract: "Received" / "Sending" / "Receiving" / "Not sent". Empty sections are omitted.
 4. User taps a file in "Received" section → OS deep-link to that file; fallback to inline hint if deep-link fails.
-5. User taps back → returns to DeviceListScreen; PeerCard remains in its post-transfer state.
+5. Sender-side, partial terminal state: user taps [Retry button] on a "Not sent" row → that file is re-sent; row moves to "Received" on success or shows new error on failure. [Retry all →] CTA re-sends every "Not sent" file at once.
+6. User taps back → returns to DeviceListScreen; PeerCard underneath retains its current state.
 
 ---
 
@@ -648,7 +670,7 @@ Auto-send is configured per-peer via the expanded PeerCard (see PeerCard § Idle
 
 **LargeSelectionConfirmDialog** is a modal dialog. It can appear over DeviceListScreen (if triggered from the picker sheet or from drag-drop). Dismissing returns to DeviceListScreen.
 
-**TransferDetailsScreen** is pushed onto the navigation stack from DeviceListScreen (triggered by tapping [Show received files →] on a PeerCard). Back returns to DeviceListScreen (the PeerCard remains in its post-transfer state).
+**TransferDetailsScreen** is pushed onto the navigation stack from DeviceListScreen (triggered by tapping [Show details →] on a PeerCard in any non-Idle state). Back returns to DeviceListScreen; the PeerCard underneath retains its current state (active or terminal).
 
 **SettingsSection — File Transfer** lives within the existing settings navigation surface. It does not introduce a new navigation root.
 
@@ -694,13 +716,15 @@ Auto-send is configured per-peer via the expanded PeerCard (see PeerCard § Idle
 11. **Skip-count badge** — muted-tone secondary badge showing running file-skip count. Used on PeerCard Active outbound.
 12. **Picker chooser sheet (mobile)** — bottom sheet with three tappable source options (Photos / Files / Folder). Android + iOS only.
 13. **Large-selection confirm dialog** — destructive-default modal dialog with real file count and size; "Don't show again" checkbox; default focus on [Cancel button]. Applies on all platforms wherever a selection exceeds the threshold.
-14. **Per-file outcome list** — scrollable list within TransferDetailsScreen; two sections ("Received" with file name + size, "Not sent" with file name only); empty section omitted.
+14. **Per-file outcome list** — scrollable list within TransferDetailsScreen; up to four sections ("Received" with file name + size, "Sending" with inline progress, "Receiving" with inline progress, "Not sent" with file name only); empty sections omitted.
 15. **Retry-failed-files button** — primary button on Error PeerCard that is disabled (grayed) when the peer is offline.
-16. **Navigational transfer-details button** — [Show received files →] button on PeerCard Cancelled / Error / Received partial / Sent partial states; opens TransferDetailsScreen rather than expanding inline.
-17. **Deep-link failure hint** — inline platform-specific copy that appears within PeerCard Received state (or within a TransferDetailsScreen file row) when the OS deep-link to the saved folder fails.
-18. **macOS/Desktop window-close transfer warning** — sheet attached to the window when the user closes Tether mid-transfer.
-19. **Settings save-location row** — editable (with system folder picker disclosure) on Android/macOS/Desktop; read-only with explanatory caption on iOS.
-20. **Settings large-selection warning toggle** — toggle in SettingsSection — File Transfer; On by default; re-enables LargeSelectionConfirmDialog after "Don't show again" suppression.
+16. **Navigational transfer-details button** — [Show details →] button on PeerCard in Active outbound, Active inbound, Sent, Received, Cancelled, and Error states; opens TransferDetailsScreen.
+17. **Per-file retry button** — [Retry button] on each row in the "Not sent" section of TransferDetailsScreen; sender-side only; disabled when peer is offline. Successful retry moves the row into the "Received" section live.
+18. **Retry-all-failed CTA** — [Retry all →] button above the file list on TransferDetailsScreen when "Not sent" section is non-empty; sender-side only.
+19. **Deep-link failure hint** — inline platform-specific copy that appears within PeerCard Received state (or within a TransferDetailsScreen file row) when the OS deep-link to the saved folder fails.
+20. **macOS/Desktop window-close transfer warning** — sheet attached to the window when the user closes Tether mid-transfer.
+21. **Settings save-location row** — editable (with system folder picker disclosure) on Android/macOS/Desktop; read-only with explanatory caption on iOS.
+22. **Settings large-selection warning toggle** — toggle in SettingsSection — File Transfer; On by default; re-enables LargeSelectionConfirmDialog after "Don't show again" suppression.
 
 ---
 
