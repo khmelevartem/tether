@@ -17,8 +17,9 @@ One screen — DeviceListScreen, the root of the app. This brief specifies the *
 
 **Layout.**
 
-- Scrollable list of device rows, filling the available screen area below the top bar.
 - Top bar: app name / title; no action buttons relevant to this brief.
+- Banner stack region: a slot directly below the top bar reserved for cross-feature banners contributed by other briefs (e.g. file-transfer's pending-outbound banner and iOS foreground constraint banner; wifi-availability's no-network state replaces the whole screen and does not use this slot). Banners stack vertically; their order, copy, and dismiss semantics are owned by the contributing brief.
+- Scrollable list of PeerCards, filling the available screen area below the banner stack (or below the top bar when no banners are present).
 - No pinned action at the bottom — actions are row-level.
 - If the list contains only offline-paired rows and no reachable peers, the list is still shown — no searching overlay on top.
 
@@ -131,9 +132,9 @@ DeviceListScreen is the root screen. Row variants and transitions are within-scr
 
 ## Conceptual components
 
-1. **Device row (standard)** — the base reachable-peer row (online & unpaired and online & paired share this base). Device name + secondary detail, tappable, leads to file-send flow.
-2. **Peer-identity accent** — a contained visual marker in the `peerIdentity` hue applied to paired device rows (Cases 2 and 3) to signal trust / prior relationship. Not interactive; not a text element.
-3. **Dimmed device row** — the offline-paired row variant: same structure as the standard row, rendered at reduced opacity with the peer-identity accent retained.
+1. **PeerCard (standard)** — the base reachable-peer row (online & unpaired and online & paired share this base). Device name + secondary detail, tappable, leads to file-send flow. PeerCard is the umbrella component name — its baseline (Cases 1–4 row variants here) is owned by this brief; file-transfer extends it with transfer-active states (see [file-transfer/ux-brief.md](../file-transfer/ux-brief.md)).
+2. **Peer-identity accent** — a contained visual marker in the `peerIdentity` hue applied to paired PeerCards (Cases 2 and 3) to signal trust / prior relationship. Not interactive; not a text element. The accent persists across every PeerCard extension owned by other features (transfer-active states, expanded settings, post-transfer terminal states) — once a peer is paired, the accent stays visible on its PeerCard in all states.
+3. **Dimmed PeerCard** — the offline-paired row variant: same structure as the standard row, rendered at reduced opacity with the peer-identity accent retained.
 4. **Offline row inline hint** — an in-place expansion (below the row, non-modal) triggered by tapping a dimmed row. Plain-language hint about the absent peer. Dismisses on tap/click elsewhere.
 5. **Row state transition** — the animated in-place dimming/brightening when a row moves between Case 2 and Case 3 (200–300 ms ease-out).
 

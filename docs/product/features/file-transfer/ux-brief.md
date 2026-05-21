@@ -7,7 +7,7 @@
 
 ## Information architecture
 
-This feature introduces four new screens / dialogs plus one settings section, touches one existing screen (DeviceListScreen). All per-peer transfer state — including in-progress transfers — is contained within PeerCard. The card is the sole transfer surface; there is no separate full-screen progress view.
+This feature introduces four new screens / dialogs plus one settings section, and extends the PeerCard component (baseline owned by [device-list/ux-brief.md](../device-list/ux-brief.md)) with transfer-active states. All per-peer transfer state — including in-progress transfers — is contained within PeerCard. The card is the sole transfer surface; there is no separate full-screen progress view.
 
 ```
 DeviceListScreen  (existing — touched)
@@ -51,60 +51,52 @@ SettingsSection — File Transfer  (inside the app's existing settings surface)
 
 Screens introduced: LargeSelectionConfirmDialog, TransferDetailsScreen, MobilePickerChooserSheet, SettingsSection — File Transfer.
 
-Screens touched: DeviceListScreen (peer rows replaced by PeerCards with full state machine).
+Screens touched: DeviceListScreen — extended with file-transfer banners and PeerCard state extensions (baseline owned by [device-list/ux-brief.md](../device-list/ux-brief.md)).
 
 ---
 
 ## Screens
 
-### DeviceListScreen
+### DeviceListScreen (file-transfer contributions)
 
-**Purpose.** The home screen where the user sees online peers (as PeerCards) and manages any in-flight or pending transfer state.
+DeviceListScreen is owned by [device-list/ux-brief.md](../device-list/ux-brief.md) — that brief specifies its top bar, banner stack region, PeerCard list, sort, searching/populated states, row transitions, and per-platform navigation chrome. This section names only what file-transfer contributes to the screen.
 
-**Entry points.** App launch; OS share-sheet / "Open with" routing Tether to foreground with files pre-selected; drag-and-drop files onto the Tether window (macOS/Desktop).
+**Entry points contributed by file-transfer.** OS share-sheet / "Open with" routing Tether to foreground with files pre-selected; drag-and-drop files onto the Tether window (macOS/Desktop). Both arrival paths set a pending-outbound state on the screen.
 
-**Layout.**
+**Banners contributed to the banner stack region.**
 
-- iOS foreground constraint banner (iOS only, present during any active transfer): persistent, non-dismissible, at very top. Copy: "Keep Tether open to complete the transfer."
-- Pending-outbound banner (present only when files are queued but no peer chosen yet): renders below the iOS constraint banner (if shown) and above the peer-card list. Copy: "Ready to send \<N\> files (\<size\>). Pick a device below." with [Cancel button] on the right. No self-dismiss.
-- Scrollable list of PeerCards, each independently stateful.
+- **iOS foreground constraint banner** (iOS only, present during any active transfer): persistent, non-dismissible. Copy: "Keep Tether open to complete the transfer."
+- **Pending-outbound banner** (present only when files are queued but no peer chosen yet): renders below the iOS constraint banner when both are shown. Copy: "Ready to send \<N\> files (\<size\>). Pick a device below." with [Cancel button] on the right. No self-dismiss.
 
-**States.**
+**State overlays on the populated list.**
 
-- **Searching (no peers yet, no pending transfer):** the `•—•` brand mark in its searching state (hollow right dot, opacity oscillation); copy: "Searching for devices…". No pending-outbound banner.
-- **Searching (with pending outbound):** same searching animation; pending-outbound banner above reads "Ready to send \<N\> files (\<size\>). Pick a device below." with [Cancel button].
-- **Populated (no pending transfer):** peer-cards visible, each in Idle (collapsed) state unless otherwise.
-- **Populated (pending outbound):** peer-cards visible; pending-outbound banner shows. Tapping any peer-card body transitions that card to Active outbound and dismisses the banner.
-- **iOS foreground constraint:** an additional persistent banner at top (iOS only) during any active transfer. Disappears automatically when no transfer is active.
+- **With pending outbound:** Tapping any PeerCard body transitions that card to Active outbound (per PeerCard below) and dismisses the pending-outbound banner.
+- **iOS foreground constraint:** banner persists while any transfer is active; disappears automatically when no transfer is active.
 
-**Interactions.**
+**Interactions contributed by file-transfer.**
 
 - Tap pending-outbound banner [Cancel button]: clears pending selection, dismisses the banner. No confirm dialog.
-- Tap PeerCard body (idle, pending outbound exists): initiates send to that peer. On any platform: first shows LargeSelectionConfirmDialog if threshold exceeded, then transitions card to Active outbound.
-- Tap PeerCard body (idle, no pending outbound): on Android/iOS, opens MobilePickerChooserSheet. On macOS/Desktop, opens system file dialog.
-- Tap PeerCard chevron (idle): expands or collapses that card's inline settings block.
+- Tap PeerCard body when pending outbound exists: initiates send to that peer. On any platform: first shows LargeSelectionConfirmDialog if threshold exceeded, then transitions card to Active outbound.
+- Tap PeerCard body when no pending outbound exists: on Android/iOS, opens MobilePickerChooserSheet. On macOS/Desktop, opens system file dialog. (This extends device-list's "tap reachable PeerCard → file-send flow" hand-off.)
 - All other PeerCard interactions: handled within the card itself (see PeerCard below).
 
-**Copy.**
+**Copy contributed by file-transfer.**
 
-- "Searching for devices…"
 - "Ready to send \<N\> files (\<size\>). Pick a device below."
 - "Keep Tether open to complete the transfer." (iOS only)
 
-**Per-platform deltas.**
+**Per-platform deltas contributed by file-transfer.**
 
-- Android: default. Share-sheet entry sets pending state and shows banner.
-- iOS: adds persistent iOS foreground constraint banner during any transfer. Share-sheet entry sets pending state.
-- macOS: drag-and-drop of files onto the Tether window sets pending state and shows the banner. System file dialog replaces MobilePickerChooserSheet. No foreground constraint banner.
+- Android: share-sheet entry sets pending state and shows banner.
+- iOS: persistent iOS foreground constraint banner during any transfer. Share-sheet entry sets pending state.
+- macOS: drag-and-drop onto the Tether window sets pending state and shows banner. System file dialog replaces MobilePickerChooserSheet. No foreground constraint banner.
 - Desktop JVM: same as macOS for drag-and-drop and file dialog. No share-sheet. No foreground constraint banner.
 
-**Accessibility.**
+**Accessibility contributed by file-transfer.**
 
 - Pending-outbound banner is a live region (assertive); announces once when it first appears and when content changes.
 - [Cancel button] semantic label: "Cancel pending transfer".
 - iOS foreground constraint banner: role is `alert`; announced once when it appears.
-- Searching state `•—•` mark `contentDescription`: "Searching for devices".
-- PeerCard list: each card is independently focusable (see PeerCard accessibility).
 
 ---
 
@@ -120,19 +112,13 @@ Screens touched: DeviceListScreen (peer rows replaced by PeerCards with full sta
 
 #### 1. Idle (collapsed)
 
-The card's resting state.
-
-- Peer name (primary label).
-- Status indicator: "Online" / "Paired — offline" (muted).
-- Trailing: chevron `▾` (expand affordance, not a button label — icon only).
-
-No transfer-related content visible.
+The card's resting state. Layout — peer name, status indicator ("Online" / "Paired — offline" / etc.), peer-identity accent for paired peers — is owned by [device-list/ux-brief.md](../device-list/ux-brief.md) (row variants, Cases 1–4). File-transfer contributes one additional trailing affordance: a chevron `▾` (icon only, not a button label) that expands the card to Idle (expanded) below.
 
 #### 2. Idle (expanded)
 
 The card expanded to reveal per-peer settings.
 
-- Same idle row at top; chevron rotates to `▴`.
+- Same idle row at top (per device-list); chevron rotates to `▴`.
 - Inline block beneath the row:
   - Per-peer auto-send toggle: label "Auto-send to this device when it's your only online device"; description "Sends immediately — no device-list tap required." Toggle control (On/Off).
   - [i] info icon button beside the label: tap → tooltip (or popover on Desktop/macOS): "Tether will skip the device list and send straight to \<peer\> when no other paired devices are online."
@@ -310,9 +296,7 @@ Brief inline state. Persistent — does not self-dismiss.
 
 **Accessibility.**
 
-- Card is a focusable container; role is `listitem` within the peer list.
-- Peer name announced as the card's accessible heading.
-- Status indicator ("Online" / "Paired — offline"): announced as part of the card's accessible description.
+- Baseline (focusable container, peer name as heading, status indicator readout, role of the row as `listitem`): owned by [device-list/ux-brief.md](../device-list/ux-brief.md). File-transfer accessibility additions follow.
 - Chevron `▾` / `▴`: semantic label "Expand \<peer\> settings" / "Collapse \<peer\> settings".
 - Per-peer auto-send toggle: semantic label "Auto-send to \<peer\> when it's the only online device, currently \<On/Off\>".
 - [i] info icon: semantic label "More information about auto-send".
@@ -725,7 +709,7 @@ Auto-send is configured per-peer via the expanded PeerCard (see PeerCard § Idle
 
 ## Conceptual components
 
-1. **PeerCard** — inline card within DeviceListScreen's peer list; a state machine covering nine states (Idle collapsed, Idle expanded, Active outbound, Active inbound, Connection paused/reconnecting, Received, Sent, Error, Cancelled); the single surface for all per-peer interaction.
+1. **PeerCard** — inline card within DeviceListScreen's peer list; baseline (Idle collapsed row variants Cases 1–4) owned by [device-list/ux-brief.md](../device-list/ux-brief.md). File-transfer extends it with the Idle (expanded) state and the transfer-active states (Active outbound, Active inbound, Connection paused/reconnecting, Received, Sent, Error, Cancelled).
 2. **PeerCard auto-send toggle** — per-peer toggle with [i] info affordance; lives in PeerCard Idle (expanded); drives the auto-send preference for that specific peer.
 3. **Transfer progress mark** — the `•—•` brand mark in transfer-progress state (line fills left-to-right). Used in PeerCard Active states.
 4. **Transfer success mark** — the `•—•` in success state (~700 ms animation). Used in PeerCard Received/Sent states.
