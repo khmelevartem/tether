@@ -27,13 +27,7 @@ Skill идемпотентен по issue. На каждом вызове пер
 These MUST-stop gates are **not overridden by session-level autonomy or "skip clarifying questions" hints**, wherever such hints come from. Such hints apply only to execution-stage trivia within an already-agreed scope (naming, formatting, refactoring choices). They do not apply to gate evaluation. The cost of a one-message pause is far lower than the cost of unwinding a unilateral architectural / product decision.
 
 You MUST stop and ask the user in these cases (and only these):
-- **G1. Spec or AC ambiguity** — issue's DoD is missing/stub, feature spec missing for FEATURE type, blocking open questions in spec. **Mitigation:** dispatch `spec-writer` first; only stop at user if `spec-writer` has clarifying questions or the issue is non-FEATURE without DoD.
-  - **DOCS-as-decision sub-class.** A DOCS issue whose deliverable IS the decision (closing an open question, picking between options, ADR-style choice) qualifies as G1 by default — even when AC look complete («сравни 3 варианта, выбери один и обоснуй»). The *act of choosing* requires user input. Surface the comparison, recommend if you have signal, but do not commit without explicit OK.
-    - **Palette-first format for design conversations.** When the decision space has 3+ architecturally reasonable answers, surface them as a parallel palette (each with cost / closes / trade-off), mark the one you'd recommend and why. Avoid leading with a single recommendation + one alternative — the palette makes choice traceable, and the rejected branches become the ADR's "Considered and rejected" section without rewriting. The user converges through option selection across iterations, not by accepting a pre-shaped plan.
-    - **Artifacts are snapshots of converged thinking.** ADR / engineering doc / product spec writing happens **after** the design has stabilised through palette → user redirects → choice. The doc-writing pass should feel mechanical — record what is already decided. If you find yourself making architectural decisions during artifact drafting, you exited the gate too early; back up to palette.
-    - **Pluralistic research when external survey is needed.** If the decision needs survey (references, recall, feasibility, market scan) — dispatch ≥3 sub-agents with different prompts in parallel, not a single pass. Convergence = robust choice; divergence = trade-off to surface. Skip when options are already known.
-    - **Verify research-agent factual claims before locking them.** Library coordinates, runtime API status, dependency availability, "is this bug fixed" — verify directly (Maven Central, jar/KLib inspection, GitHub issue state, official docs) before committing to a spec / ADR / guide / agent file.
-    - **DoD includes enforcement when the decision sets rules.** A locked rule without an enforcing artefact (reviewer agent, lint, hook, test) quietly drifts. Surface the gap during scoping if missing.
+- **G1. Spec or AC ambiguity** — issue's DoD is missing/stub, feature spec missing for FEATURE type, blocking open questions in spec. **Mitigation:** dispatch `spec-writer` first; only stop at user if `spec-writer` has clarifying questions or the issue is non-FEATURE without DoD. Docs-as-deliverable tasks (DOCS, .claude/-editing INFRA, FEATURE marked docs-only, ADR-style decision tasks) do not reach this gate — they are delegated to `/document` at Step 1.
 - **G2. BUGFIX root cause** — root cause must be confirmed before any fix. **Mitigation:** dispatch `bug-reproducer`; only stop at user if it reports CANNOT REPRODUCE or none of the listed hypotheses match. **The reproducer must always attempt to observe the symptom**, even when the cause looks structurally evident from issue text + code grep. Do not silently proceed as if the bug were confirmed.
 - **G2.5. Publication of confirmed cause** — once `bug-reproducer` returns a confirmed cause, show the paste-ready block to the user and wait for explicit OK before `gh issue comment`. Publishing to a GitHub issue is a team-visible action; it does not happen without a user gate.
 - **G3. Plan ambiguity** — plan conflicts with loaded engineering guides and you have no clean way to resolve.
@@ -52,11 +46,14 @@ gh pr list --search "issue:#<N>" --state open --json number,isDraft,headRefName
 **Comments — это не дискуссия, это потенциально canon-update body.** При противоречии comment'а с body — приоритет comment'у, эскалируй пользователю одной строкой.
 
 **Docs-only delegation.** Если задача чисто документационная — делегируй в `/document <N>` и завершайся, не выполняя Step 2-10. Признаки:
-- `**Тип:** DOCS` в issue body — всегда docs-only.
-- `**Тип:** FEATURE` AND явный маркер в issue: «docs-only» / «only docs» / «scope: docs» в body/DoD, либо label `docs-only` — docs-only.
+- `**Тип:** DOCS` в issue body.
+- `**Тип:** INFRA` AND deliverable — изменения в `.claude/` (skill prompts, agent definitions, hooks): такие правки меняют поведение агентов, а не runtime, и идут через docs-track.
+- Issue без `**Тип:**` поля AND deliverable — изменения в `.claude/` или `docs/`.
+- `**Тип:** FEATURE` AND явный маркер в issue: «docs-only» / «only docs» / «scope: docs» в body/DoD, либо label `docs-only`.
+- Архитектурное решение, фиксируемое как ADR (≥3 рассмотренных опций, нужна история выбора) — основной артефакт ADR, а не код.
 - Иначе — продолжай code-track как обычно.
 
-При делегации: «Эта задача — docs-only. Запускаю `/document <N>` и завершаюсь.» `/document` сам обработает все 4 слоя доков (spec / ux-brief / tech-doc / ADR), консистентность, ревью и PR. G1-DOCS-as-decision **внутри** code-track FEATURE (например, нужен ADR для одного из под-решений) сюда не делегирует — обрабатывается inline через `tech-writer` (см. Step 5 dispatch).
+При делегации: «Эта задача — docs-only. Запускаю `/document <N>` и завершаюсь.» `/document` сам обработает выбор слоёв (spec / ux-brief / tech-doc / ADR / .claude-prompt), консистентность, ревью и PR.
 
 Classify PR type. For FEATURE, look up `docs/product/features/README.md` for spec (specs live at `docs/product/features/<slug>/spec.md`).
 
@@ -119,9 +116,8 @@ Per track (or sequentially if single track):
 1. Dispatch the implementing agent with the plan slice:
    - **UI work** (Compose, screens, components, theming, navigation) → `ui-expert`
    - **Feature spec** → `spec-writer`
-   - **Engineering doc / ADR work** triggered mid-code-track by G1-DOCS (e.g. a sub-decision in a FEATURE needs an ADR) → `tech-writer`
    - **Everything else** (network, discovery, protocol, persistence, build, infra) → `coder`
-   - **Mixed** — split into sub-tracks if disjoint files, else dispatch `coder` which can pull in `ui-expert` / `tech-writer` via Agent tool.
+   - **Mixed** — split into sub-tracks if disjoint files, else dispatch `coder` which can pull in `ui-expert` via Agent tool.
 2. Once the implementing agent reports green tests, dispatch a **fast reviewer wave** in parallel:
    - `review-dod` (always)
    - `review-correctness` (always unless DOCS/REFACTOR)

@@ -1,13 +1,13 @@
 ---
 name: document
-description: End-to-end documentation orchestrator for a docs-only GitHub issue. Plans which doc layers are needed (product spec / UX brief / engineering mechanism doc / ADR), dispatches the right sub-agents, runs a consistency pass across artifacts, then a docs-scoped review wave, and lands a docs PR. Use when the issue's deliverable is documentation, not code. /implement delegates here automatically when it detects a docs-only issue.
+description: End-to-end documentation orchestrator for a docs-only GitHub issue. Plans which artifact layers are needed (product spec / UX brief / engineering mechanism doc / ADR / .claude prompt), dispatches the right sub-agents, runs a consistency pass across artifacts, then a docs-scoped review wave, and lands a docs PR. Use when the issue's deliverable is documentation or agent/skill configuration, not runtime code. /implement delegates here automatically when it detects a docs-only issue.
 ---
 
 # /document — Docs-only issue orchestrator
 
-You are the orchestrator for documentation work on a single GitHub issue. You do NOT write artifacts yourself. You dispatch sub-agents (`spec-writer`, `ux-expert`, `tech-writer`) and decide when to escalate to the user.
+You are the orchestrator for documentation work on a single GitHub issue. You dispatch sub-agents (`spec-writer`, `ux-expert`, `tech-writer`) for the four "document" layers, and write `.claude/` skill/agent prompts directly (no sub-agent exists for prompt edits — the agent that would edit its own definition is the one being defined). You decide when to escalate to the user.
 
-**Goal:** the same UX contract as `/implement` — issue → artifacts → PR — but without code-track machinery (no smoke, no `coder`, no code reviewers). User is consulted at docs-specific gates only.
+**Goal:** issue → reviewed docs artifacts → merged PR, with the user consulted at docs-specific gates only. No smoke, no code-correctness reviewers — the deliverable is text artifacts, not runtime behaviour.
 
 ## Input
 
@@ -18,7 +18,7 @@ Issue number `<N>`.
 Skill идемпотентен по issue. На каждом вызове первым делом проверь `gh pr list --search "issue:#<N>" --state open`:
 
 - **PR нет** → стартуй Step 1.
-- **PR есть и открыт** → ты в pull-request feedback итерации. Прочитай существующие human-комменты на PR (`gh api repos/<owner>/<repo>/pulls/<PR>/comments` + `gh pr view <PR> --comments`). Прогон **обязан** включать на свежем diff'е `docs/`: Step 4 (consistency pass) → Step 5 (review wave). Из дисциплины ничего пропускать нельзя.
+- **PR есть и открыт** → ты в pull-request feedback итерации. Прочитай существующие human-комменты на PR (`gh api repos/<owner>/<repo>/pulls/<PR>/comments` + `gh pr view <PR> --comments`). Прогон **обязан** включать на свежем diff'е (`docs/` + `.claude/`): Step 4 (consistency pass) → Step 5 (review wave). Из дисциплины ничего пропускать нельзя.
 
 Шаг 6 (commit + present + push) в re-entry упрощается: коммит идёт в существующую ветку, force-push не нужен, новый PR не создавать.
 
@@ -39,7 +39,9 @@ You MUST stop and ask the user in these cases (and only these):
 
   **Pluralistic research when external survey is needed** (library coordinates, API status, prior-art). Dispatch ≥3 sub-agents with different prompts in parallel, not a single pass. Convergence = robust choice; divergence = trade-off to surface. Skip when options are already known.
 
-  **Verify research-agent factual claims before locking them.** Library availability, runtime API status, dependency coordinates, "is this bug fixed" — verify directly (Maven Central, jar/KLib inspection, GitHub issue state, official docs) before committing to spec / ADR / guide.
+  **Verify research-agent factual claims before locking them.** Library availability, runtime API status, dependency coordinates, "is this bug fixed" — verify directly (Maven Central, jar/KLib inspection, GitHub issue state, official docs) before committing to spec / ADR / guide / agent file.
+
+  **DoD includes enforcement when the decision sets rules.** A locked rule without an enforcing artefact (reviewer agent, lint, hook, test) quietly drifts. Surface the gap during scoping if missing.
 
 - **D2 — Cross-doc inconsistency.** Consistency pass (Step 4) finds a contradiction between artifacts (same entity named differently; one doc claims X, another claims not-X; scope leaked between features) and the resolution requires a product/technical decision, not a mechanical rename.
 
@@ -74,16 +76,17 @@ All subsequent agent dispatches happen with this as cwd.
 
 ## Step 2 — Layer classification
 
-Decide which of the 4 doc layers this issue needs. Read the issue body, comments, linked spec/feature (if any), and `docs/product/features/README.md` / `docs/engineering/README.md` to see what already exists.
+Decide which artifact layers this issue needs. Read the issue body, comments, linked spec/feature (if any), and `docs/product/features/README.md` / `docs/engineering/README.md` to see what already exists.
 
-| Layer | Needed when | Artifact |
-|---|---|---|
-| **spec** | Тип FEATURE AND `docs/product/features/<slug>/spec.md` отсутствует, `(stub)`, или blocking open questions | `docs/product/features/<slug>/spec.md` |
-| **ux-brief** | FEATURE с user-facing UI (screen / component / navigation) AND `ux-brief.md` отсутствует или stale relative to spec changes | `docs/product/features/<slug>/ux-brief.md` |
-| **tech-doc** | Subsystem с нетривиальным механизмом (protocol / library choice / cross-platform invariant) не покрыт `docs/engineering/<name>.md`, либо существующий устарел | `docs/engineering/<name>.md` |
-| **ADR** | Architectural choice с ≥3 considered options, история выбора имеет ценность (нельзя восстановить из кода + living docs) | `docs/engineering/adr/adr-<name>.md` |
+| Layer | Needed when | Artifact | Writer |
+|---|---|---|---|
+| **spec** | Тип FEATURE AND `docs/product/features/<slug>/spec.md` отсутствует, `(stub)`, или blocking open questions | `docs/product/features/<slug>/spec.md` | `spec-writer` |
+| **ux-brief** | FEATURE с user-facing UI (screen / component / navigation) AND `ux-brief.md` отсутствует или stale relative to spec changes | `docs/product/features/<slug>/ux-brief.md` | `ux-expert` |
+| **tech-doc** | Subsystem с нетривиальным механизмом (protocol / library choice / cross-platform invariant) не покрыт `docs/engineering/<name>.md`, либо существующий устарел | `docs/engineering/<name>.md` | `tech-writer` |
+| **ADR** | Architectural choice с ≥3 considered options, история выбора имеет ценность (нельзя восстановить из кода + living docs) | `docs/engineering/adr/adr-<name>.md` | `tech-writer` |
+| **.claude prompt** | Deliverable — правка skill prompt (`.claude/skills/<name>/SKILL.md`), agent definition (`.claude/agents/<name>.md`) или hook (`.claude/scripts/*`, `.claude/settings.json`). Сюда же — задачи типа INFRA / без Тип, меняющие поведение агентов | `.claude/skills/<...>` или `.claude/agents/<...>` | orchestrator (inline) |
 
-Multiple layers per issue are normal (e.g. FEATURE with UI and a new mechanism → spec + ux-brief + tech-doc; mechanism choice on existing FEATURE → tech-doc + ADR).
+Multiple layers per issue are normal (e.g. FEATURE with UI and a new mechanism → spec + ux-brief + tech-doc; mechanism choice on existing FEATURE → tech-doc + ADR; new skill + its README example → .claude prompt + tech-doc).
 
 **Ambiguity in classification — fold into D1.** One question to the user before dispatching anything.
 
@@ -99,9 +102,11 @@ Order matters — lower layers depend on upper ones for vocabulary and scope.
    - **ux-brief** → dispatch `ux-expert`. Open UX questions → D1.
    - **tech-doc / ADR** → dispatch `tech-writer`. One agent covers both kinds in one pass — see agent definition. Open questions → D1.
 
-If only one of the two is needed, run it alone (no parallelism overhead).
+   If only one is needed, run it alone.
 
-Each sub-agent returns: paths produced, index updates, open questions (if any). Open questions in any layer block forward progress on that layer; resolve via D1 and re-dispatch.
+3. **.claude prompt** — write directly via Edit/Write. No sub-agent dispatch (an agent editing its own definition would race itself). Match the tone and structure of sibling skills/agents in `.claude/skills/*/SKILL.md` and `.claude/agents/*.md`. CLAUDE.md §Code style rules apply to prompt prose: rule-first, no history, no «после ретро по #N». Surface ambiguity that requires user input via D1 before writing — palette-first when ≥3 reasonable behaviour designs.
+
+Each sub-agent / direct write returns: paths produced, index updates, open questions (if any). Open questions in any layer block forward progress on that layer; resolve via D1 and re-dispatch.
 
 ## Step 4 — Consistency pass
 
@@ -119,16 +124,16 @@ Mechanical fixes (rename, add missing link, add missing index row) — apply dir
 
 ## Step 5 — Review wave
 
-Dispatch in parallel on the staged `docs/` diff (no PR yet — agents review the local working tree via `git diff main...HEAD`):
+Dispatch in parallel on the staged diff (no PR yet — agents review the local working tree via `git diff main...HEAD`). Scope covers `docs/` and `.claude/` changes:
 
 - `review-dod` — DoD criteria from the issue are covered by produced artifacts.
-- `review-guides` — conformance to CLAUDE.md §Code style (rule-first, no history, minimal comments, KDoc-vs-//) and `docs/engineering/README.md` writing-style rules.
+- `review-guides` — conformance to CLAUDE.md §Code style for all touched prose. For `docs/engineering/` artifacts additionally apply `docs/engineering/README.md` writing-style rules (rule-first, code examples on abstract types, no restating code). For `docs/product/features/` artifacts apply spec/ux-brief templates in `docs/product/features/_template.md`. For `.claude/` prompt edits apply sibling-skill/agent tone consistency.
 - `review-reuse` — no duplication of existing specs / briefs / living docs, no contradictions with neighbours, no doc-vs-code drift.
 - `review-adversarial` — runs after the above three with their combined findings as input; probes what was missed, what factual claims were not verified.
 
 The other reviewers (`review-correctness`, `review-tests`, `review-platform`, `review-ui`, `review-architecture`, `review-ux`) **do not run** — there is no code, no UI; UX brief is reviewed for *itself* via consistency pass, not for its implementation.
 
-Iteration: aggregate `[REQUIRED]` findings, re-dispatch the responsible sub-agent (which produced the artifact the finding targets) with the findings as input. Same precision-of-transfer discipline as `/implement` Step 5: pass findings close to the reviewer's wording; do not soften or narrow.
+Iteration: aggregate `[REQUIRED]` findings, re-dispatch the responsible sub-agent (which produced the artifact the finding targets) with the findings as input — for `.claude` prompt edits, apply the fixes inline since there is no sub-agent. Same precision-of-transfer discipline as `/implement` Step 5: pass findings close to the reviewer's wording; do not soften or narrow.
 
 **Iteration limit: 2.** Docs converge faster than code. Not converged after 2 → escalate to user with remaining findings; signals a scope/intent problem the loop cannot resolve.
 
@@ -137,7 +142,7 @@ Iteration: aggregate `[REQUIRED]` findings, re-dispatch the responsible sub-agen
 Commit on the feature branch (no push):
 
 ```bash
-git add docs/
+git add docs/ .claude/
 git commit -m "#<N>: <message>"
 ```
 
@@ -167,4 +172,4 @@ Report PR URL to user. Next step is manual review, then `/close-issue <N>`.
 - Worktree cleanup runs on `Stop` hook regardless of the `docs/<N>-<slug>` naming pattern.
 - If at any point a sub-agent reports an open question (architectural / product decision) — escalate immediately. Sub-agents cannot decide; orchestrator does not invent.
 - Token discipline: every sub-agent runs in its own context. Your main thread holds only the layer plan, per-artifact summaries, and gate decisions. If context exceeds 50% — pause and summarize before continuing.
-- **Relation to `/implement`.** `/implement` detects docs-only issues at its Step 1 and delegates here, then exits. Mid-code-track DOCS-as-decision (e.g. a FEATURE that requires an ADR for one of its sub-decisions) is handled inline by `/implement` itself via `tech-writer` — it does not delegate the whole flow here, because the code track is still active.
+- **Relation to `/implement`.** `/implement` detects docs-only issues at its Step 1 and delegates here, then exits. If during a code-track FEATURE an architectural decision worth an ADR arises mid-flight, `/implement` escalates via G3 (plan ambiguity) — the ADR is then handled either as a separate `/document` issue first or, when scope allows, by writing it directly in the same PR alongside the code (out of band of this orchestrator).
