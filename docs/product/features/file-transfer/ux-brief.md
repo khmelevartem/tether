@@ -64,7 +64,6 @@ Screens touched: DeviceListScreen (peer rows replaced by PeerCards with full sta
 
 **Layout.**
 
-- Top bar: app title only.
 - iOS foreground constraint banner (iOS only, present during any active transfer): persistent, non-dismissible, at very top. Copy: "Keep Tether open to complete the transfer."
 - Pending-outbound banner (present only when files are queued but no peer chosen yet): renders below the iOS constraint banner (if shown) and above the peer-card list. Copy: "Ready to send \<N\> files (\<size\>). Pick a device below." with [Cancel button] on the right. No self-dismiss.
 - Scrollable list of PeerCards, each independently stateful.
