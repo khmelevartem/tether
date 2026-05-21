@@ -51,6 +51,13 @@ gh pr list --search "issue:#<N>" --state open --json number,isDraft,headRefName
 
 **Comments — это не дискуссия, это потенциально canon-update body.** При противоречии comment'а с body — приоритет comment'у, эскалируй пользователю одной строкой.
 
+**Docs-only delegation.** Если задача чисто документационная — делегируй в `/document <N>` и завершайся, не выполняя Step 2-10. Признаки:
+- `**Тип:** DOCS` в issue body — всегда docs-only.
+- `**Тип:** FEATURE` AND явный маркер в issue: «docs-only» / «only docs» / «scope: docs» в body/DoD, либо label `docs-only` — docs-only.
+- Иначе — продолжай code-track как обычно.
+
+При делегации: «Эта задача — docs-only. Запускаю `/document <N>` и завершаюсь.» `/document` сам обработает все 4 слоя доков (spec / ux-brief / tech-doc / ADR), консистентность, ревью и PR. G1-DOCS-as-decision **внутри** code-track FEATURE (например, нужен ADR для одного из под-решений) сюда не делегирует — обрабатывается inline через `tech-writer` (см. Step 5 dispatch).
+
 Classify PR type. For FEATURE, look up `docs/product/features/README.md` for spec (specs live at `docs/product/features/<slug>/spec.md`).
 
 **Critical reading.** Воспринимай описание issue как **стартовую точку, не как факт**. Подсвечивай и эскалируй пользователю до начала работы, если видишь хотя бы один пробел:
@@ -112,8 +119,9 @@ Per track (or sequentially if single track):
 1. Dispatch the implementing agent with the plan slice:
    - **UI work** (Compose, screens, components, theming, navigation) → `ui-expert`
    - **Feature spec** → `spec-writer`
+   - **Engineering doc / ADR work** triggered mid-code-track by G1-DOCS (e.g. a sub-decision in a FEATURE needs an ADR) → `tech-writer`
    - **Everything else** (network, discovery, protocol, persistence, build, infra) → `coder`
-   - **Mixed** — split into sub-tracks if disjoint files, else dispatch `coder` which can pull in `ui-expert` via Agent tool.
+   - **Mixed** — split into sub-tracks if disjoint files, else dispatch `coder` which can pull in `ui-expert` / `tech-writer` via Agent tool.
 2. Once the implementing agent reports green tests, dispatch a **fast reviewer wave** in parallel:
    - `review-dod` (always)
    - `review-correctness` (always unless DOCS/REFACTOR)
