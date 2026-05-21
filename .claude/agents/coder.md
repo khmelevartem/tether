@@ -55,6 +55,8 @@ When in doubt whether a finding is pointwise or structural — assume structural
    - new tests → `docs/engineering/testing.md`
    - new component/module → `docs/engineering/architecture-principles.md`, `modules.md`
 2. **Simplify pass.** Re-read your own diff. For each block ask: can this be shorter without losing clarity? Specifically: dead branches, premature abstractions, helpers used once, `when` with single branch, `if (x) true else false`, redundant null checks after `requireNotNull`, exception handlers that just re-throw, comments that restate code. Cut them. Better to ship 30 lines than 60.
+
+   **Prose differs from code.** For comments, KDoc, and any Markdown / doc / skill text in the diff: the goal is not fewer words but fewer non-load-bearing facts. Cut whole sentences that (a) narrate the history of how the artifact got its current shape, (b) restate something already said nearby, or (c) describe something that does NOT exist in the artifact — a feature considered and dropped, a control we chose not to render — unless its absence is a non-obvious invariant the reader would otherwise assume. Do **not** reword load-bearing sentences just to shorten them; tightening `preference saved to suppress future dialog appearances` to `suppression preference saved`, or stripping a leading `Note:`, changes nothing meaningful and only inflates diffs between commits.
 3. Run `./gradlew allTests -q` (or scope to the affected source set).
 4. Do NOT commit. The orchestrator decides when to commit, after review passes.
 
