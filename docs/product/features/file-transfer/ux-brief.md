@@ -7,9 +7,7 @@
 
 ## Information architecture
 
-This feature introduces four new screens / dialogs plus one settings section, touches one existing screen (DeviceListScreen). All per-peer transfer state is contained within PeerCard.
-
-The PeerCard Active state is the sole transfer surface. A separate full-screen progress view was considered and rejected — it would duplicate state, force a tap-to-discover affordance, and create ambiguous cancel semantics. Card-only keeps the cancel target unambiguous and removes the screen-transition design problem entirely.
+This feature introduces four new screens / dialogs plus one settings section, touches one existing screen (DeviceListScreen). All per-peer transfer state — including in-progress transfers — is contained within PeerCard. The card is the sole transfer surface; there is no separate full-screen progress view.
 
 ```
 DeviceListScreen  (existing — touched)
@@ -66,7 +64,7 @@ Screens touched: DeviceListScreen (peer rows replaced by PeerCards with full sta
 
 **Layout.**
 
-- Top bar: app title only. No settings affordance (settings is a separate feature).
+- Top bar: app title only.
 - iOS foreground constraint banner (iOS only, present during any active transfer): persistent, non-dismissible, at very top. Copy: "Keep Tether open to complete the transfer."
 - Pending-outbound banner (present only when files are queued but no peer chosen yet): renders below the iOS constraint banner (if shown) and above the peer-card list. Copy: "Ready to send \<N\> files (\<size\>). Pick a device below." with [Cancel button] on the right. No self-dismiss.
 - Scrollable list of PeerCards, each independently stateful.
@@ -190,7 +188,7 @@ Replaces any inline inbound card after a successful inbound transfer completes. 
     - Android: "Open Files app → Downloads → Tether"
     - macOS: "Open Finder → Downloads → Tether"
     - Desktop JVM: "Open file manager → Downloads → Tether"
-  - The hint persists within the card until [Dismiss × button] is tapped. No separate dismiss affordance for the hint itself.
+  - The hint persists until [Dismiss × button] is tapped, which clears the Received state and returns the card to Idle. The hint has no separate dismiss affordance.
 - [Dismiss ×] affordance in the trailing corner (explicit button, labeled with × icon; semantic label: "Dismiss received notification from \<peer\>").
 
 **Partial-completion variant (transfer cancelled mid-batch, or connection-lost recovery):** card still enters Received for the files that DID arrive.
@@ -504,7 +502,7 @@ Brief inline state. Persistent — does not self-dismiss.
 - Save location row: label "Save location"; value shows the current path (e.g. "Downloads/Tether/"); on editable platforms, a disclosure affordance (chevron or "Change" link) opens the system folder picker. On iOS: read-only, no disclosure affordance.
 - Large-selection warning toggle row: label "Show large-selection warnings"; toggle control (On by default). When Off, LargeSelectionConfirmDialog is suppressed globally.
 
-There is no auto-send toggle row in this section — auto-send is configured per-peer via the expanded PeerCard.
+Auto-send is configured per-peer via the expanded PeerCard (see PeerCard § Idle expanded).
 
 **States.**
 
