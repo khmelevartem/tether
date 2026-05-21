@@ -18,7 +18,7 @@ Issue number `<N>`.
 Skill идемпотентен по issue. На каждом вызове первым делом проверь `gh pr list --search "issue:#<N>" --state open`:
 
 - **PR нет** → стартуй Step 1.
-- **PR есть и открыт** → ты в pull-request feedback итерации. На текущей feature-branch могут быть новые комменты ревьюера или коммиты после прошлого прогона. **Сначала** прочитай существующие human-комменты на PR (`gh api repos/<owner>/<repo>/pulls/<PR>/comments` + `gh pr view <PR> --comments`). Прогон **обязан** включать на свежем diff'е: Step 4 (inner loop reviewers) → Step 5 (simplify) → Step 6 (full review wave A + adversarial) → Step 7 (smoke, скоуп по diff'у). Из дисциплины на re-entry ничего пропускать нельзя — иначе review-итерации проходят с меньшим качеством, чем первичная имплементация.
+- **PR есть и открыт** → ты в pull-request feedback итерации. На текущей feature-branch могут быть новые комменты ревьюера или коммиты после прошлого прогона. **Сначала** прочитай **все** human-комменты на PR (`gh api repos/<owner>/<repo>/pulls/<PR>/comments` + `gh pr view <PR> --comments`) и для каждого определи статус: адресован в коммитах после него — или нет. **Дата создания не определяет актуальность** — фильтровать комменты по `created_at > <дата-прошлого-прогона>` запрещено, потому что неадресованный коммент остаётся актуальным независимо от того, насколько он старый. Прогон **обязан** включать на свежем diff'е: Step 4 (inner loop reviewers) → Step 5 (simplify) → Step 6 (full review wave A + adversarial) → Step 7 (smoke, скоуп по diff'у). Из дисциплины на re-entry ничего пропускать нельзя — иначе review-итерации проходят с меньшим качеством, чем первичная имплементация.
 
 Шаги 8-9 (commit + present G5 + push) — в re-entry упрощаются: коммит идёт в существующую ветку, force-push не нужен, новый PR не создавать.
 
@@ -111,6 +111,7 @@ Per track (or sequentially if single track):
 
 1. Dispatch the implementing agent with the plan slice:
    - **UI work** (Compose, screens, components, theming, navigation) → `ui-expert`
+   - **Feature spec** → `spec-writer`
    - **Everything else** (network, discovery, protocol, persistence, build, infra) → `coder`
    - **Mixed** — split into sub-tracks if disjoint files, else dispatch `coder` which can pull in `ui-expert` via Agent tool.
 2. Once the implementing agent reports green tests, dispatch a **fast reviewer wave** in parallel:
@@ -144,7 +145,9 @@ After all tracks converge. Iterative fix cycles accumulate scaffolding (temp hel
 
 Dispatch the implementing agent once more:
 
-> All findings are resolved. Make one simplification pass over the diff: remove dead branches, inline single-use helpers, collapse trivial wrappers. **For every comment / KDoc / prose paragraph in the diff — including `.claude/skills/**`, `docs/`, and Markdown — apply CLAUDE.md §Code style rules (lines 72-75) literally, not by personal taste.** Do not change behavior; do not touch anything outside the diff. Run `./gradlew allTests -q` after.
+> All findings are resolved. Make one simplification pass over the diff: remove dead branches, inline single-use helpers, collapse trivial wrappers. 
+> **For every comment / KDoc / prose paragraph in the diff — including `.claude/skills/**`, `docs/`, and Markdown — apply CLAUDE.md §Code style rules literally, not by personal taste.** Only those may be left, that carry additional non-obvious context or further instructions. No history of implementing or decision-making is permitted in code or docs, except ADRs.
+> Do not change behavior; do not touch anything outside the diff. Run `./gradlew allTests -q` after.
 
 If anything was simplified — re-run **the same set of agents that ran in Step 5 for this PR type** (i.e. dod + guides + correctness + tests + platform-if-touched + ux-if-touched + ui-if-touched) **plus `review-reuse`** on the simplified diff. `review-reuse` is critical here because duplication is what most likely accumulated across iterations and tracks. `review-platform`, `review-ux`, and `review-ui` follow the same skip rules as Step 5 (platform set touched / `composeApp/src/**` touched). If clean, proceed.
 
