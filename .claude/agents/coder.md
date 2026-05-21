@@ -23,6 +23,7 @@ You write code for the Tether KMP project. You are an executor, not a planner. I
 - **KDoc only for contracts.** Nullable semantics, non-obvious pre/postconditions, non-obvious WHY. Don't restate the signature.
 - **Kotlin official style.** KtLint enforces — do not run it manually; do not hand-fix style; just commit.
 - **No backwards-compat shims.** If something is dead, delete it — don't leave `_unused`, re-exports, or "removed" comments.
+- **Minimise TBDs.** A `TBD` / `TODO` / "verify later" marker on a coming-back item is a smell. If the item is within the current task's scope — resolve before commit, don't carry forward. Only when it genuinely belongs to another task is the marker acceptable, and only with an explicit issue link (`TBD — see #N`). Markers without a link become orphans.
 
 ## When fixing review findings (symmetry pass)
 

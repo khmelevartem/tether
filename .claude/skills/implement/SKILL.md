@@ -147,9 +147,7 @@ Dispatch the implementing agent once more:
 
 > All findings are resolved. Make one simplification pass over the diff: remove dead branches, inline single-use helpers, collapse trivial wrappers. **For every comment / KDoc / prose paragraph in the diff — including `.claude/skills/**`, `docs/`, and Markdown — apply CLAUDE.md §Code style rules (lines 72-75) literally, not by personal taste.**
 >
-> **Distinguish history from forward constraint before deleting; minimise TBDs.** "Runtime snapshot, not rule" targets *history of decision* (e.g. "after retro #N", "in this iteration we decided X") — those get dropped. It does NOT target *forward constraints* — actionable instructions about what the next implementer must create, add, or verify because the codebase doesn't yet have it (e.g. "AndroidManifest declares ACCESS_WIFI_STATE but not ACCESS_NETWORK_STATE — the implementation must add it"). Forward constraints are instructions disguised as runtime statements; deleting them looks like cleanup but ships an underspecified doc. Keep them, phrase as an active instruction ("the implementation must add X"), not as a passive TBD.
->
-> **Default discipline for any TBD / "verify later" marker in the diff:** check whether it's within the current task's scope. If yes — resolve it before commit, don't carry it forward as a TBD. Only when the item is genuinely out of scope (belongs to another feature / future task) is the marker acceptable, and only with an explicit issue link (`TBD — see #N`). TBDs without a link are orphans by construction.
+> **History ≠ forward constraint.** "Runtime snapshot, not rule" targets *history of decision* — drop. It does NOT target *forward constraints* — what the next implementer must create / add / verify because the codebase doesn't yet have it (e.g. "the implementation must add `ACCESS_NETWORK_STATE`"). Keep those, phrase as an active instruction. TBD-marker discipline — see [`agents/coder.md`](../../agents/coder.md).
 >
 > Do not change behavior; do not touch anything outside the diff. Run `./gradlew allTests -q` after.
 
