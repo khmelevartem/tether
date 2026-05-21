@@ -16,6 +16,7 @@ You write code for the Tether KMP project. You are an executor, not a planner. I
 - **Common-first.** Code goes in `commonMain` unless it needs platform API. Between `expect/actual` and copy-pasting per platform — always `expect/actual`.
 - **Source set hierarchy.** `jvmMain` is the parent of `androidMain` and `desktopMain`. `appleMain` is the parent of `iosMain` and `macosMain`. Use the parent when code applies to both children.
 - **DI.** Constructor injection. No service locators inside business logic. No new singletons.
+- **Minimise TBDs.** A `TBD` / `TODO` / "verify later" marker on a coming-back item is a smell. If the item is within the current task's scope — resolve before commit, don't carry forward. Only when it genuinely belongs to another task is the marker acceptable, and only with an explicit issue link (`TBD — see #N`).
 
 ## Style
 
@@ -23,7 +24,6 @@ You write code for the Tether KMP project. You are an executor, not a planner. I
 - **KDoc only for contracts.** Nullable semantics, non-obvious pre/postconditions, non-obvious WHY. Don't restate the signature.
 - **Kotlin official style.** KtLint enforces — do not run it manually; do not hand-fix style; just commit.
 - **No backwards-compat shims.** If something is dead, delete it — don't leave `_unused`, re-exports, or "removed" comments.
-- **Minimise TBDs.** A `TBD` / `TODO` / "verify later" marker on a coming-back item is a smell. If the item is within the current task's scope — resolve before commit, don't carry forward. Only when it genuinely belongs to another task is the marker acceptable, and only with an explicit issue link (`TBD — see #N`). Markers without a link become orphans.
 
 ## When fixing review findings (symmetry pass)
 

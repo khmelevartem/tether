@@ -111,7 +111,7 @@ Per track (or sequentially if single track):
 
 1. Dispatch the implementing agent with the plan slice:
    - **UI work** (Compose, screens, components, theming, navigation) → `ui-expert`
-   - **Engineering doc / ADR with concrete API, geometry, coordinate, or version claims** (e.g. `docs/engineering/*.md` describing a platform contract) → dispatch `general-purpose` or `coder`, **then mandate `review-adversarial` BEFORE Wave A**. Self-reported verification by the writer doesn't catch math errors, wrong API semantics, hallucinated min-versions, or false "already-in-codebase" assumptions; adversarial does. Treat adversarial output as Wave 0 findings, fix, then proceed to Wave A.
+   - **Feature spec** → `spec-writer`
    - **Everything else** (network, discovery, protocol, persistence, build, infra) → `coder`
    - **Mixed** — split into sub-tracks if disjoint files, else dispatch `coder` which can pull in `ui-expert` via Agent tool.
 2. Once the implementing agent reports green tests, dispatch a **fast reviewer wave** in parallel:
@@ -145,10 +145,8 @@ After all tracks converge. Iterative fix cycles accumulate scaffolding (temp hel
 
 Dispatch the implementing agent once more:
 
-> All findings are resolved. Make one simplification pass over the diff: remove dead branches, inline single-use helpers, collapse trivial wrappers. **For every comment / KDoc / prose paragraph in the diff — including `.claude/skills/**`, `docs/`, and Markdown — apply CLAUDE.md §Code style rules (lines 72-75) literally, not by personal taste.**
->
-> **History ≠ forward constraint.** "Runtime snapshot, not rule" targets *history of decision* — drop. It does NOT target *forward constraints* — what the next implementer must create / add / verify because the codebase doesn't yet have it (e.g. "the implementation must add `ACCESS_NETWORK_STATE`"). Keep those, phrase as an active instruction. TBD-marker discipline — see [`agents/coder.md`](../../agents/coder.md).
->
+> All findings are resolved. Make one simplification pass over the diff: remove dead branches, inline single-use helpers, collapse trivial wrappers. 
+> **For every comment / KDoc / prose paragraph in the diff — including `.claude/skills/**`, `docs/`, and Markdown — apply CLAUDE.md §Code style rules literally, not by personal taste.** Only those may be left, that carry additional non-obvious context or further instructions. No history of implementing or decision-making is permitted in code or docs, except ADRs.
 > Do not change behavior; do not touch anything outside the diff. Run `./gradlew allTests -q` after.
 
 If anything was simplified — re-run **the same set of agents that ran in Step 5 for this PR type** (i.e. dod + guides + correctness + tests + platform-if-touched + ux-if-touched + ui-if-touched) **plus `review-reuse`** on the simplified diff. `review-reuse` is critical here because duplication is what most likely accumulated across iterations and tracks. `review-platform`, `review-ux`, and `review-ui` follow the same skip rules as Step 5 (platform set touched / `composeApp/src/**` touched). If clean, proceed.
