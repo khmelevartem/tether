@@ -21,7 +21,7 @@ Skill идемпотентен по issue. На каждом вызове пер
 - **PR есть и открыт** → ты в pull-request feedback итерации. **Сначала** перепроверь docs-only детекцию (Step 1 классификация) на текущем состоянии issue + diff'а PR: если задача docs-only, делегируй re-entry в `/document <N>` и завершайся (`/document` сам идемпотентен и подхватит этот PR). Иначе остаёшься в code-track re-entry.
 - **Code-track re-entry.** На текущей feature-branch могут быть новые комменты ревьюера или коммиты после прошлого прогона. Прочитай **все** human-комменты на PR (`gh api repos/<owner>/<repo>/pulls/<PR>/comments` + `gh pr view <PR> --comments`) и для каждого определи статус: адресован в коммитах после него — или нет. **Дата создания не определяет актуальность** — фильтровать комменты по `created_at > <дата-прошлого-прогона>` запрещено, потому что неадресованный коммент остаётся актуальным независимо от того, насколько он старый. Прогон **обязан** включать на свежем diff'е: Step 5 (inner loop reviewers) → Step 6 (simplify) → Step 7 (full review wave A + adversarial) → Step 8 (smoke, скоуп по diff'у). Из дисциплины на re-entry ничего пропускать нельзя — иначе review-итерации проходят с меньшим качеством, чем первичная имплементация.
 
-Шаги 9-10 (commit + present G5 + push) — в re-entry упрощаются: коммит идёт в существующую ветку, force-push не нужен, новый PR не создавать.
+Шаг 9 (commit + push + G5 summary) — в re-entry упрощается: коммит идёт в существующую ветку, force-push не нужен, новый PR не создавать.
 
 ## Gate semantics — when to stop and ask the user
 
@@ -33,7 +33,7 @@ You MUST stop and ask the user in these cases (and only these):
 - **G2.5. Publication of confirmed cause** — once `bug-reproducer` returns a confirmed cause, show the paste-ready block to the user and wait for explicit OK before `gh issue comment`. Publishing to a GitHub issue is a team-visible action; it does not happen without a user gate.
 - **G3. Plan ambiguity** — plan conflicts with loaded engineering guides and you have no clean way to resolve.
 - **G4. Smoke red/yellow** — smoke verdict is not 🟢 after the inner loop.
-- **G5. Final approval before push** — after the inner loop converges to APPROVE and smoke is green, present the committed-but-not-pushed diff to the user for approval. Push + PR creation happen only after the user OKs.
+- **G5. Final summary to the user** — after the inner loop converges to APPROVE and smoke is green, commit + push + create the PR, then present the PR URL with a short summary (files changed, AC verdict, smoke verdict, any `[UNVERIFIABLE]` findings). The user reviews on GitHub; do not block on explicit OK before push.
 
 Everything else — implementation details, reviewer findings, fix iterations — you handle internally without the user.
 
@@ -162,13 +162,13 @@ If anything was simplified — re-run **the same set of agents that ran in Step 
 
 ## Step 7 — Full pre-PR review (inline, not via /code-review skill)
 
-`/code-review` skill requires an existing PR (it posts via `gh pr review`). At this step the PR does not exist yet — Step 10 creates it. So instead of calling the skill, **orchestrate the same agent fan-out inline, without GitHub publication**:
+`/code-review` skill requires an existing PR (it posts via `gh pr review`). At this step the PR does not exist yet — Step 9 creates it. So instead of calling the skill, **orchestrate the same agent fan-out inline, without GitHub publication**:
 
 1. Wave A in parallel: `review-dod`, `review-guides`, `review-reuse`, plus (if applicable to PR type / diff) `review-architecture`, `review-correctness`, `review-tests`, `review-platform`, `review-ux`, `review-ui`. Each agent receives the issue number and is told to review the local working tree (`git diff main...HEAD`) instead of a PR. `review-ux` and `review-ui` both run whenever the diff touches `composeApp/src/**`; each agent decides skip vs. block.
 2. Wave B: `review-adversarial` with the combined Wave A findings as input.
 3. Aggregate. Apply any `[REQUIRED]` via the implementing agent (with the symmetry-pass instruction). Re-run until approved or 2 iterations.
 
-No `gh pr review` here — findings are consumed locally only. The post-PR `/code-review` skill will be invoked separately after Step 10 if a reviewer requests it, or as part of normal team review.
+No `gh pr review` here — findings are consumed locally only. The post-PR `/code-review` skill will be invoked separately after Step 9 if a reviewer requests it, or as part of normal team review.
 
 ## Step 8 — Smoke
 
@@ -188,34 +188,27 @@ Record the verdict (🟢/🟡/🔴) and blocks executed.
 
 Apply Gate G4: if 🟡/🔴 → present to user, stop.
 
-## Step 9 — Commit locally, present to user (Gate G5)
+## Step 9 — Commit, push, PR (G5 summary)
 
-Only after Step 8 is 🟢. Commit on the feature branch (no push):
+Only after Step 8 is 🟢. Commit on the feature branch, push, create the PR:
 
 ```bash
 git add <relevant files>
 git commit -m "#<N>: <message>"
-```
-
-Present to user:
-- Files changed (summary)
-- AC: all `[DONE]` (from review-dod)
-- Smoke: 🟢 with blocks
-- Any `[UNVERIFIABLE]` from reviewers
-- Proposed PR title and body
-
-Ask: "Push and create PR?" Wait for explicit OK.
-
-## Step 10 — Push + PR (only after G5 OK)
-
-```bash
 git push -u origin feature/<N>-<short-slug>
 gh pr create --title "<title>" --body "<...>"
 ```
 
 PR body must include: AC verdict (DONE checklist), `## Dependency check` (if new deps), smoke verdict.
 
-Report PR URL to user. Next step is manual verification, then `/close-issue <N>`.
+Report to the user:
+- PR URL.
+- Files changed (summary).
+- AC: all `[DONE]` (from `review-dod`).
+- Smoke: 🟢 with blocks executed.
+- Any `[UNVERIFIABLE]` from reviewers.
+
+Next step is manual review on GitHub, then `/close-issue <N>`.
 
 ## Notes
 

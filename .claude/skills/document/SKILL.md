@@ -1,6 +1,6 @@
 ---
 name: document
-description: End-to-end documentation orchestrator for a docs-only GitHub issue. Plans which artifact layers are needed (product spec / UX brief / engineering mechanism doc / ADR / .claude prompt), dispatches the right sub-agents, runs a consistency pass across artifacts, then a docs-scoped review wave, and lands a docs PR. Use when the issue's deliverable is documentation or agent/skill configuration, not runtime code. /implement delegates here automatically when it detects a docs-only issue.
+description: End-to-end documentation orchestrator for a docs-only GitHub issue. Plans which artifact layers are needed (product spec / UX brief / engineering mechanism doc / ADR / knowledge entry / .claude prompt), dispatches the right sub-agents, runs a consistency pass across artifacts, then a docs-scoped review wave, and lands a docs PR. Use when the issue's deliverable is documentation or agent/skill configuration, not runtime code.
 ---
 
 # /document — Docs-only issue orchestrator
@@ -9,7 +9,9 @@ You are the orchestrator for documentation work on a single GitHub issue. You do
 
 **You are a router and gate-keeper, not a designer.** Architectural, product, and UX decisions are made by the sub-agents who own them. Your job is to route to the right owner and stop only at the human-required gates below.
 
-**Goal:** issue → reviewed docs artifacts → open PR ready for human review, with the user consulted at docs-specific gates only. No smoke, no code-correctness reviewers — the deliverable is text artifacts, not runtime behaviour. Merge is a manual user decision after this skill finishes.
+**Context discipline.** Your own context window is finite and shared across every sub-agent dispatch you orchestrate. Hold only the layer plan, per-artifact summaries, and gate decisions. Don't pull whole artifacts into your thread to «cross-check» — sub-agents and reviewers do that with their own contexts. If context approaches half-full, pause and summarise what you've routed so far before continuing.
+
+**Goal:** issue → reviewed docs artifacts → open PR, with the user consulted at docs-specific gates only. No smoke, no code-correctness reviewers — the deliverable is text artifacts, not runtime behaviour. Merge is a manual user decision after this skill finishes.
 
 ## Input
 
@@ -39,11 +41,9 @@ You MUST stop and ask the user in these cases (and only these):
 
 - **D2 — Cross-doc inconsistency.** Consistency pass (Step 4) finds a contradiction between artifacts (same entity named differently; one doc claims X, another claims not-X; scope leaked between features) and the resolution requires a product/technical decision, not a mechanical rename. Route the resolution to the owning sub-agent (spec issue → `spec-writer`; tech issue → `architect`; ux issue → `ux-expert`), not to the user directly.
 
-- **D5 — Final approval before push.** After review wave converges, present the committed-but-not-pushed diff to the user for approval. Push + PR creation happen only after the user OKs.
+- **D5 — Final summary to the user.** After review wave converges, commit, push, create the PR, and present the PR URL with a short summary of layers produced and any `[UNVERIFIABLE]` findings. The user reviews on GitHub; you do not block on explicit OK before push.
 
-Gates G2 (BUGFIX root cause) and G4 (smoke) from `/implement` do not apply — no runtime, no bug.
-
-Everything else — sub-agent dispatch, mechanical fixes, review iterations — you handle internally without the user.
+Everything else — sub-agent dispatch, mechanical fixes, aggregation of reviewer findings — you handle internally without the user. You do not perform reviews yourself; reviewers are dispatched as sub-agents.
 
 ## Step 1 — Read issue + worktree setup
 
@@ -78,9 +78,10 @@ Decide which artifact layers this issue needs. Read the issue body, comments, li
 | **ux-brief** | FEATURE с user-facing UI (screen / component / navigation) AND `ux-brief.md` отсутствует или stale relative to spec changes | `docs/product/features/<slug>/ux-brief.md` | `ux-expert` |
 | **tech-doc** | Subsystem с нетривиальным механизмом (protocol / library choice / cross-platform invariant) не покрыт `docs/engineering/<name>.md`, либо существующий устарел | `docs/engineering/<name>.md` | `architect` |
 | **ADR** | Architectural choice с ≥3 considered options, история выбора имеет ценность (нельзя восстановить из кода + living docs) | `docs/engineering/adr/adr-<name>.md` | `architect` |
-| **.claude prompt** | Deliverable — правка skill prompt (`.claude/skills/<name>/SKILL.md`), agent definition (`.claude/agents/<name>.md`) или hook (`.claude/scripts/*`, `.claude/settings.json`). Сюда же — задачи типа INFRA / без Тип, меняющие поведение агентов | `.claude/skills/<...>` или `.claude/agents/<...>` | orchestrator (inline) |
+| **knowledge** | Solved problem / platform quirk / workaround worth capturing for the next person (the kind currently in `docs/knowledge/`: Android FGS gotchas, Apple platform quirks, Ktor CIO traps, mDNS-Bonjour interactions, …). Trigger usually from a retro or a closed BUGFIX — issue says «зафиксируй вот это поведение» | `docs/knowledge/<name>.md` | `architect` |
+| **.claude prompt** | Deliverable — правка skill prompt (`.claude/skills/<name>/SKILL.md`), agent definition (`.claude/agents/<name>.md`), slash command (`.claude/commands/<name>.md`), hook (`.claude/scripts/*`, `.claude/settings.json`). Сюда же — задачи типа INFRA / без Тип, меняющие поведение агентов или slash-commands | `.claude/skills/<...>` / `.claude/agents/<...>` / `.claude/commands/<...>` | orchestrator (inline) |
 
-Multiple layers per issue are normal (e.g. FEATURE with UI and a new mechanism → spec + ux-brief + tech-doc; mechanism choice on existing FEATURE → tech-doc + ADR; new skill + its README example → .claude prompt + tech-doc).
+Multiple layers per issue are normal (e.g. FEATURE with UI and a new mechanism → spec + ux-brief + tech-doc; mechanism choice on existing FEATURE → tech-doc + ADR; new skill + its README example → .claude prompt + tech-doc; closed BUGFIX revealing a platform quirk → knowledge).
 
 **Ambiguity in classification — fold into D1.** One question to the user before dispatching anything.
 
@@ -94,13 +95,13 @@ Each sub-agent owns the decisions inside its layer — palette, clarifying quest
 
 1. **spec** (if needed) → dispatch `spec-writer`. It decides user needs and scenarios, runs its own clarifying-questions phase, scope cohesion pass, and `docs/product/features/README.md` row update. Open questions it could not converge on → D1 → relay to user verbatim → re-dispatch with answers.
 
-2. **ux-brief** AND **tech-doc / ADR** — if both needed, dispatch **in parallel** (file-disjoint by construction: ux-brief lives in `docs/product/features/<slug>/`, tech-doc/ADR in `docs/engineering/`):
+2. **ux-brief** AND **tech-doc / ADR / knowledge** — if both needed, dispatch **in parallel** (file-disjoint by construction: ux-brief lives in `docs/product/features/<slug>/`, the others in `docs/engineering/` or `docs/knowledge/`):
    - **ux-brief** → dispatch `ux-expert`. It decides interaction model and platform idioms. Open UX questions → D1.
-   - **tech-doc / ADR** → dispatch `architect`. It decides technical realisation — mechanism, libraries, protocols, lifecycle, cross-platform invariants — through its own design palette and trade-off questions to the user. It then writes the living doc and (when warranted) the ADR. Open questions → D1.
+   - **tech-doc / ADR / knowledge** → dispatch `architect`. For tech-doc / ADR it decides technical realisation — mechanism, libraries, protocols, lifecycle, cross-platform invariants — through its own design palette and trade-off questions. For knowledge entries the design work was already done (the incident happened, the workaround is known); architect just records it in sibling-matching shape. Open questions → D1.
 
    If only one is needed, run it alone.
 
-3. **.claude prompt** — write directly via Edit/Write. No sub-agent dispatch (an agent editing its own definition would race itself). Match the tone and structure of sibling skills/agents in `.claude/skills/*/SKILL.md` and `.claude/agents/*.md`. CLAUDE.md §Code style rules apply to prompt prose: rule-first, no history, no «после ретро по #N». If the prompt change encodes a non-trivial behavioural choice, dispatch `architect` first to converge the choice and produce an ADR; only then write the prompt edit.
+3. **.claude prompt** — write directly via Edit/Write. No sub-agent dispatch (an agent editing its own definition would race itself). Match the tone and structure of siblings in `.claude/skills/*/SKILL.md`, `.claude/agents/*.md`, `.claude/commands/*.md`. CLAUDE.md §Code style rules apply to prompt prose: rule-first, no history, no «после ретро по #N». If the prompt change encodes a non-trivial behavioural choice, dispatch `architect` first to converge the choice and produce an ADR; only then write the prompt edit.
 
 Each sub-agent / direct write returns: paths produced, index updates, converged-decision summary, open questions (if any). Open questions in any layer block forward progress on that layer; resolve via D1 and re-dispatch the same agent (not yourself).
 
@@ -123,43 +124,37 @@ Mechanical fixes (rename, add missing link, add missing index row) — apply dir
 Dispatch in parallel on the staged diff (no PR yet — agents review the local working tree via `git diff main...HEAD`). Scope covers `docs/` and `.claude/` changes:
 
 - `review-dod` — DoD criteria from the issue are covered by produced artifacts.
-- `review-guides` — conformance to CLAUDE.md §Code style for all touched prose. For `docs/engineering/` artifacts additionally apply `docs/engineering/README.md` writing-style rules (rule-first, code examples on abstract types, no restating code). For `docs/product/features/<slug>/spec.md` apply `docs/product/features/_template.md`. UX brief structure lives inline in `.claude/agents/ux-expert.md` §Output. For `.claude/` prompt edits apply sibling-skill/agent tone consistency.
-- `review-reuse` — no duplication of existing specs / briefs / living docs, no contradictions with neighbours, no doc-vs-code drift.
-- `review-adversarial` — runs after the above three with their combined findings as input; probes what was missed, what factual claims were not verified.
+- `review-guides` — conformance to CLAUDE.md §Code style for all touched prose. For `docs/engineering/` artifacts additionally apply `docs/engineering/README.md` writing-style rules (rule-first, code examples on abstract types, no restating code). For `docs/product/features/<slug>/spec.md` apply `docs/product/features/_template.md`. For ADRs apply `docs/engineering/adr/_template.md` shape. For `.claude/` prompt edits apply sibling-skill/agent/command tone consistency.
+- `review-reuse` — no duplication of existing specs / briefs / living docs / knowledge, no contradictions with neighbours, no doc-vs-code drift.
+- `review-ux` (if diff touches `docs/product/features/**/ux-brief.md`) — reviews the brief itself for structural completeness against `.claude/agents/ux-expert.md` §Output.
+- `review-adversarial` — runs after the above with their combined findings as input; probes what was missed, what factual claims were not verified.
 
-The other reviewers (`review-correctness`, `review-tests`, `review-platform`, `review-ui`, `review-architecture`, `review-ux`) **do not run** — there is no code, no UI; UX brief is reviewed for *itself* via consistency pass, not for its implementation.
+The other reviewers (`review-correctness`, `review-tests`, `review-platform`, `review-ui`, `review-architecture`) **do not run** — there is no code, no UI implementation to check against the brief.
 
-Iteration: aggregate `[REQUIRED]` findings, re-dispatch the responsible sub-agent (which produced the artifact the finding targets) with the findings as input — for `.claude` prompt edits, apply the fixes inline since there is no sub-agent. Same precision-of-transfer discipline as `/implement` Step 5: pass findings close to the reviewer's wording; do not soften or narrow.
+Iteration: aggregate `[REQUIRED]` findings, re-dispatch the responsible sub-agent (which produced the artifact the finding targets) with the findings as input — for `.claude` prompt edits, apply the fixes inline since there is no sub-agent. Pass findings close to the reviewer's wording; do not soften or narrow.
 
 **Iteration limit: 2.** Docs converge faster than code. Not converged after 2 → escalate to user with remaining findings; signals a scope/intent problem the loop cannot resolve.
 
-## Step 6 — Commit, present (D5), push, PR
+## Step 6 — Commit, push, PR (D5 summary)
 
-Commit on the feature branch (no push):
+Commit on the feature branch, push, create the PR:
 
 ```bash
 git add docs/ .claude/
 git commit -m "#<N>: <message>"
-```
-
-Present to user:
-- Layers produced and artifact paths.
-- DoD verdict: all `[DONE]` (from `review-dod`).
-- Any `[UNVERIFIABLE]` from reviewers.
-- Proposed PR title and body.
-
-Ask: "Push and create PR?" Wait for explicit OK (D5).
-
-After OK:
-
-```bash
 git push -u origin docs/<N>-<short-slug>
 gh pr create --title "<title>" --body "<...>"
 ```
 
 PR body must include: layers touched, artifact paths, DoD checklist, `Dependency check: n/a (docs-only)`.
 
-Report PR URL to user. Next step is manual review, then `/close-issue <N>`.
+Report to the user:
+- PR URL.
+- Layers produced and artifact paths.
+- DoD verdict: all `[DONE]` (from `review-dod`).
+- Any `[UNVERIFIABLE]` from reviewers.
+
+Next step is manual review on GitHub, then `/close-issue <N>`.
 
 ## Notes
 
@@ -167,5 +162,3 @@ Report PR URL to user. Next step is manual review, then `/close-issue <N>`.
 - This skill is for one issue at a time. Multiple parallel docs issues = multiple invocations on multiple worktrees.
 - Worktree cleanup runs on `Stop` hook regardless of the `docs/<N>-<slug>` naming pattern.
 - If at any point a sub-agent reports an open question (architectural / product decision) — escalate immediately. Sub-agents cannot decide; orchestrator does not invent.
-- Token discipline: every sub-agent runs in its own context. Your main thread holds only the layer plan, per-artifact summaries, and gate decisions. If context exceeds 50% — pause and summarize before continuing.
-- **Relation to `/implement`.** `/implement` detects docs-only issues at its Step 1 and delegates here, then exits. If during a code-track FEATURE an architectural decision worth an ADR arises mid-flight, `/implement` escalates via G3 (plan ambiguity) — the ADR is then handled either as a separate `/document` issue first or, when scope allows, by writing it directly in the same PR alongside the code (out of band of this orchestrator).
