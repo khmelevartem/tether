@@ -1,6 +1,6 @@
 ---
 name: implement
-description: End-to-end implementation orchestrator for a GitHub issue. Plans, dispatches coder sub-agent, runs a fast review loop (coder ↔ reviewers) without user in the loop, runs smoke, and reports to user only at human-required gates (AC ambiguity, root cause uncertainty, smoke failure, final approval). Use when starting work on an issue.
+description: End-to-end implementation orchestrator for a GitHub issue. Detects docs-only issues and delegates to `/document`; for code-track issues plans, dispatches coder / ui-expert / architect, runs a fast review loop (implementer ↔ reviewers) without user in the loop, runs smoke, and reports to user only at human-required gates (AC ambiguity, root cause uncertainty, smoke failure, final approval). Use when starting work on an issue.
 ---
 
 # /implement — Issue-to-PR orchestrator
@@ -18,16 +18,17 @@ Issue number `<N>`.
 Skill идемпотентен по issue. На каждом вызове первым делом проверь `gh pr list --search "issue:#<N>" --state open`:
 
 - **PR нет** → стартуй Step 1.
-- **PR есть и открыт** → ты в pull-request feedback итерации. На текущей feature-branch могут быть новые комменты ревьюера или коммиты после прошлого прогона. **Сначала** прочитай **все** human-комменты на PR (`gh api repos/<owner>/<repo>/pulls/<PR>/comments` + `gh pr view <PR> --comments`) и для каждого определи статус: адресован в коммитах после него — или нет. **Дата создания не определяет актуальность** — фильтровать комменты по `created_at > <дата-прошлого-прогона>` запрещено, потому что неадресованный коммент остаётся актуальным независимо от того, насколько он старый. Прогон **обязан** включать на свежем diff'е: Step 4 (inner loop reviewers) → Step 5 (simplify) → Step 6 (full review wave A + adversarial) → Step 7 (smoke, скоуп по diff'у). Из дисциплины на re-entry ничего пропускать нельзя — иначе review-итерации проходят с меньшим качеством, чем первичная имплементация.
+- **PR есть и открыт** → ты в pull-request feedback итерации. **Сначала** перепроверь docs-only детекцию (Step 1 классификация) на текущем состоянии issue + diff'а PR: если задача docs-only, делегируй re-entry в `/document <N>` и завершайся (`/document` сам идемпотентен и подхватит этот PR). Иначе остаёшься в code-track re-entry.
+- **Code-track re-entry.** На текущей feature-branch могут быть новые комменты ревьюера или коммиты после прошлого прогона. Прочитай **все** human-комменты на PR (`gh api repos/<owner>/<repo>/pulls/<PR>/comments` + `gh pr view <PR> --comments`) и для каждого определи статус: адресован в коммитах после него — или нет. **Дата создания не определяет актуальность** — фильтровать комменты по `created_at > <дата-прошлого-прогона>` запрещено, потому что неадресованный коммент остаётся актуальным независимо от того, насколько он старый. Прогон **обязан** включать на свежем diff'е: Step 5 (inner loop reviewers) → Step 6 (simplify) → Step 7 (full review wave A + adversarial) → Step 8 (smoke, скоуп по diff'у). Из дисциплины на re-entry ничего пропускать нельзя — иначе review-итерации проходят с меньшим качеством, чем первичная имплементация.
 
-Шаги 8-9 (commit + present G5 + push) — в re-entry упрощаются: коммит идёт в существующую ветку, force-push не нужен, новый PR не создавать.
+Шаги 9-10 (commit + present G5 + push) — в re-entry упрощаются: коммит идёт в существующую ветку, force-push не нужен, новый PR не создавать.
 
 ## Gate semantics — when to stop and ask the user
 
 These MUST-stop gates are **not overridden by session-level autonomy or "skip clarifying questions" hints**, wherever such hints come from. Such hints apply only to execution-stage trivia within an already-agreed scope (naming, formatting, refactoring choices). They do not apply to gate evaluation. The cost of a one-message pause is far lower than the cost of unwinding a unilateral architectural / product decision.
 
 You MUST stop and ask the user in these cases (and only these):
-- **G1. Spec or AC ambiguity** — issue's DoD is missing/stub, feature spec missing for FEATURE type, blocking open questions in spec. **Mitigation:** dispatch `spec-writer` first; only stop at user if `spec-writer` has clarifying questions or the issue is non-FEATURE without DoD. Docs-as-deliverable tasks (DOCS, .claude/-editing INFRA, FEATURE marked docs-only, ADR-style decision tasks) do not reach this gate — they are delegated to `/document` at Step 1.
+- **G1. Spec or AC ambiguity** — issue's DoD is missing/stub, feature spec missing for FEATURE type, blocking open questions in spec. **Mitigation:** dispatch `spec-writer` first; only stop at user if `spec-writer` has clarifying questions or the issue is non-FEATURE without DoD.
 - **G2. BUGFIX root cause** — root cause must be confirmed before any fix. **Mitigation:** dispatch `bug-reproducer`; only stop at user if it reports CANNOT REPRODUCE or none of the listed hypotheses match. **The reproducer must always attempt to observe the symptom**, even when the cause looks structurally evident from issue text + code grep. Do not silently proceed as if the bug were confirmed.
 - **G2.5. Publication of confirmed cause** — once `bug-reproducer` returns a confirmed cause, show the paste-ready block to the user and wait for explicit OK before `gh issue comment`. Publishing to a GitHub issue is a team-visible action; it does not happen without a user gate.
 - **G3. Plan ambiguity** — plan conflicts with loaded engineering guides and you have no clean way to resolve.
@@ -45,18 +46,6 @@ gh pr list --search "issue:#<N>" --state open --json number,isDraft,headRefName
 
 **Comments — это не дискуссия, это потенциально canon-update body.** При противоречии comment'а с body — приоритет comment'у, эскалируй пользователю одной строкой.
 
-**Docs-only delegation.** Если задача чисто документационная — делегируй в `/document <N>` и завершайся, не выполняя Step 2-10. Признаки:
-- `**Тип:** DOCS` в issue body.
-- `**Тип:** INFRA` AND deliverable — изменения в `.claude/` (skill prompts, agent definitions, hooks): такие правки меняют поведение агентов, а не runtime, и идут через docs-track.
-- Issue без `**Тип:**` поля AND deliverable — изменения в `.claude/` или `docs/`.
-- `**Тип:** FEATURE` AND явный маркер в issue: «docs-only» / «only docs» / «scope: docs» в body/DoD, либо label `docs-only`.
-- Архитектурное решение, фиксируемое как ADR (≥3 рассмотренных опций, нужна история выбора) — основной артефакт ADR, а не код.
-- Иначе — продолжай code-track как обычно.
-
-При делегации: «Эта задача — docs-only. Запускаю `/document <N>` и завершаюсь.» `/document` сам обработает выбор слоёв (spec / ux-brief / tech-doc / ADR / .claude-prompt), консистентность, ревью и PR.
-
-Classify PR type. For FEATURE, look up `docs/product/features/README.md` for spec (specs live at `docs/product/features/<slug>/spec.md`).
-
 **Critical reading.** Воспринимай описание issue как **стартовую точку, не как факт**. Подсвечивай и эскалируй пользователю до начала работы, если видишь хотя бы один пробел:
 - упомянута только одна платформа, хотя задача общая;
 - не описаны ошибки и fail-paths;
@@ -65,6 +54,20 @@ Classify PR type. For FEATURE, look up `docs/product/features/README.md` for spe
 - фразы-затычки: «дополни если есть чем», «должно работать корректно», «и так далее».
 
 Любой такой пробел — повод вернуться к G1, не «допилить по дороге».
+
+**Classification.** На основе issue body — `**Тип:**` поля, описания deliverable, label'ов — отнеси задачу к одной из веток:
+
+| Trigger | Track | Действие |
+|---|---|---|
+| `**Тип:** DOCS` | docs-only | делегируй в `/document <N>` и завершайся |
+| `**Тип:** FEATURE` + явный маркер docs-only (фраза «docs-only» / «only docs» / «scope: docs» в body/DoD, либо label `docs-only`) | docs-only | то же |
+| Issue без `**Тип:**` AND deliverable **ограничен исключительно** правкой `.claude/` или `docs/` (никакого кода в исходниках) | docs-only | то же |
+| `**Тип:** INFRA` AND deliverable **ограничен исключительно** правкой `.claude/` файлов (skill prompts, agent definitions, hooks) | docs-only | то же |
+| `**Тип:** FEATURE` / `BUGFIX` / `REFACTOR` / `INFRA` с deliverable в исходниках или build/CI/scripts (даже если попутно нужен ADR) | code-track | продолжай Step 2-10 |
+
+При делегации в /document: «Эта задача — docs-only. Запускаю `/document <N>` и завершаюсь.» `/document` сам обработает выбор слоёв, консистентность, ревью и PR. **НЕ делегируй** код-FEATURE с попутным ADR — для таких задач Step 5 диспатчит `architect` mid-flight, и ADR пишется в той же PR что и код.
+
+Для code-track FEATURE: подними `docs/product/features/README.md` — спека лежит в `docs/product/features/<slug>/spec.md`.
 
 **Worktree setup — do this BEFORE dispatching any agent that edits files.** If you are not already in `.claude/worktrees/<branch>/`:
 
