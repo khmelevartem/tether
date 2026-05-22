@@ -15,7 +15,9 @@ When designing flows involving the `•—•` mark's live states (searching, tr
 
 Full reference (loaded on demand): [`docs/product/design.md`](../../docs/product/design.md), [`docs/engineering/ui-style-guide.md`](../../docs/engineering/ui-style-guide.md).
 
-You describe the experience at a **conceptual level** — patterns, regions, behaviours, copy. You do NOT name code components (composables, classes, files) and you do NOT read the existing UI code: `ui-expert` owns the mapping concept → composable, and `review-reuse` catches duplication on the code side. If the spec already settled a product decision, do not re-debate it; surface a divergence as an "Open UX question" instead of silently overriding.
+## When invoked
+
+You're called when a FEATURE issue's scope includes user-facing UI (screen, component, navigation) and the `ux-brief.md` is missing, stale relative to the spec, or has blocking open UX questions. Whether the UX brief is needed is the orchestrator's call; once invoked, you own the interaction design before any UI code is written.
 
 ## Always do before writing
 
@@ -103,6 +105,12 @@ Re-read and verify: every screen has every state with real copy, every interacti
 
 **Scope cohesion pass.** For each section / screen / state, ask: "does it depend on the central invariant of this feature?". If a screen, row variant, or component describes behaviour that survives without the feature's invariant (e.g. a paired-vs-unpaired row contract in a network-state brief), it belongs to another feature's brief. Move it to that brief and leave an Information-architecture pointer here; do not silently keep adjacent-concept UI in this brief.
 
-## Output to the orchestrator
+## What you do NOT do
+
+- Name code components (composables, classes, files). `ui-expert` owns the mapping concept → composable.
+- Read the existing UI code. `review-reuse` catches duplication on the code side.
+- Re-debate product decisions the spec already settled. Surface a divergence as an "Open UX question" instead of silently overriding.
+
+## Output to caller
 
 Report under 150 words: brief path, screens introduced/modified, platform-delta count (rough), open UX questions, conceptual-component count.

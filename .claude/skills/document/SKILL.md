@@ -123,7 +123,7 @@ Mechanical fixes (rename, add missing link, add missing index row) — apply dir
 Dispatch in parallel on the staged diff (no PR yet — agents review the local working tree via `git diff main...HEAD`). Scope covers `docs/` and `.claude/` changes:
 
 - `review-dod` — DoD criteria from the issue are covered by produced artifacts.
-- `review-guides` — conformance to CLAUDE.md §Code style for all touched prose. For `docs/engineering/` artifacts additionally apply `docs/engineering/README.md` writing-style rules (rule-first, code examples on abstract types, no restating code). For `docs/product/features/` artifacts apply spec/ux-brief templates in `docs/product/features/_template.md`. For `.claude/` prompt edits apply sibling-skill/agent tone consistency.
+- `review-guides` — conformance to CLAUDE.md §Code style for all touched prose. For `docs/engineering/` artifacts additionally apply `docs/engineering/README.md` writing-style rules (rule-first, code examples on abstract types, no restating code). For `docs/product/features/<slug>/spec.md` apply `docs/product/features/_template.md`. UX brief structure lives inline in `.claude/agents/ux-expert.md` §Output. For `.claude/` prompt edits apply sibling-skill/agent tone consistency.
 - `review-reuse` — no duplication of existing specs / briefs / living docs, no contradictions with neighbours, no doc-vs-code drift.
 - `review-adversarial` — runs after the above three with their combined findings as input; probes what was missed, what factual claims were not verified.
 

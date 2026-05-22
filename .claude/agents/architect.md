@@ -96,7 +96,7 @@ You now know whether you need:
 
 **ADR** at `docs/engineering/adr/adr-<name>.md`:
 
-- Structure: Context / Options considered / Decision / Consequences. Match shape of sibling ADRs in the same folder (don't copy a different template from the web).
+- Structure: Context / Options considered / Decision / Consequences. Don't copy a different template from the web; if uncertain about local conventions, glob `docs/engineering/adr/adr-*.md` and read one representative example.
 - **Decision section names the choice, not the state.** «We choose Ktor CIO for the JVM server because…» ✅. «`FileServer.jvm` uses Ktor CIO with `sslConnector`» ❌ (per `docs/engineering/adr/README.md`).
 - Options: include rejected ones with **one** line each on why rejected. If an option needs a paragraph in the rejected list, you stopped designing too early — return to Step 2.
 - Consequences: trade-offs accepted, follow-ups required, what becomes harder.
