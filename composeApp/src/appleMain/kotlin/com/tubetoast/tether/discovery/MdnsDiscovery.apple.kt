@@ -93,6 +93,11 @@ actual class MdnsDiscovery(
         NSLog("mDNS: stopped")
     }
 
+    /**
+     * In-flight ResolutionDelegate entries are NOT cleared here — their NSNetService.delegate
+     * is a weak ObjC ref; clearing the strong Kotlin ref would create a GC window.
+     * Each delegate self-removes on resolve/timeout.
+     */
     actual override fun republish(name: String) {
         if (netService == null && browser == null) return
         NSLog("mDNS: republishing as %s", name)
@@ -101,7 +106,6 @@ actual class MdnsDiscovery(
         } catch (e: Exception) {
             NSLog("mDNS: failed to stop service for republish — %s", e.message ?: "unknown error")
         }
-        resolutionDelegates.clear()
         ownServiceName = name
 
         val service = NSNetService(
@@ -169,7 +173,6 @@ actual class MdnsDiscovery(
         NSLog("mDNS: failed to resolve service %s", serviceName)
     }
 
-    // NSNetService delegate: handles service publication and resolution callbacks.
     // Kotlin/Native maps ObjC "method:arg1:arg2:" to fun method(arg1, arg2).
     private class ServiceDelegate(
         private val discovery: MdnsDiscovery,
@@ -201,7 +204,7 @@ actual class MdnsDiscovery(
         }
     }
 
-    // NSNetServiceBrowser delegate: handles service discovery callbacks.
+    // Kotlin/Native maps ObjC "method:arg1:arg2:" to fun method(arg1, arg2).
     private class BrowserDelegate(
         private val discovery: MdnsDiscovery,
     ) : NSObject(),
@@ -247,12 +250,14 @@ actual class MdnsDiscovery(
         NSNetServiceDelegateProtocol {
         override fun netServiceDidResolveAddress(sender: NSNetService) {
             discovery.onServiceResolved(sender)
+            discovery.resolutionDelegates.remove(this)
         }
 
         @ObjCSignatureOverride
         @Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE")
         override fun netService(sender: NSNetService, didNotResolve: Map<Any?, *>) {
             discovery.onServiceResolutionFailed(serviceName)
+            discovery.resolutionDelegates.remove(this)
         }
     }
 }

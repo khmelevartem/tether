@@ -172,18 +172,22 @@ actual class MdnsDiscovery(
         nm.discoverServices(SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, discoveryListener)
     }
 
-    @Synchronized
-    actual override fun republish(name: String) {
-        val nm = nsdManager ?: return
-        Log.d(TAG, "Republishing NSD as name=$name")
+    private fun unregisterPreviousListener(nm: NsdManager, label: String) {
         val old = registrationListener
         if (old != null) {
             try {
                 nm.unregisterService(old)
             } catch (e: Exception) {
-                Log.w(TAG, "NSD unregisterService (republish) failed: ${e.message}")
+                Log.w(TAG, "NSD unregisterService ($label) failed: ${e.message}")
             }
         }
+    }
+
+    @Synchronized
+    actual override fun republish(name: String) {
+        val nm = nsdManager ?: return
+        Log.d(TAG, "Republishing NSD as name=$name")
+        unregisterPreviousListener(nm, "republish")
         ownName = name
         val serviceInfo = NsdServiceInfo().apply {
             serviceName = name
@@ -200,15 +204,8 @@ actual class MdnsDiscovery(
     actual override fun stop() {
         val nm = nsdManager ?: return
         Log.d(TAG, "Stopping NSD")
-        val listener = registrationListener
+        unregisterPreviousListener(nm, "stop")
         registrationListener = null
-        if (listener != null) {
-            try {
-                nm.unregisterService(listener)
-            } catch (e: Exception) {
-                Log.w(TAG, "NSD unregisterService failed: ${e.message}")
-            }
-        }
         try {
             nm.stopServiceDiscovery(discoveryListener)
         } catch (e: Exception) {

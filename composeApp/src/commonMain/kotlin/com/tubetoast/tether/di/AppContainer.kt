@@ -1,5 +1,6 @@
 package com.tubetoast.tether.di
 
+import com.tubetoast.tether.config.DeviceNamePersistence
 import com.tubetoast.tether.config.DeviceNameStore
 import com.tubetoast.tether.discovery.MdnsDiscovery
 import com.tubetoast.tether.network.DefaultTransferActivityTracker
@@ -9,9 +10,11 @@ import com.tubetoast.tether.network.TransferActivityTracker
 import com.tubetoast.tether.security.TrustedDeviceStore
 
 abstract class AppContainer {
-    abstract val nameStore: DeviceNameStore
+    protected abstract val namePersistence: DeviceNamePersistence
+    open val nameStore: DeviceNameStore by lazy { DeviceNameStore(namePersistence) }
     abstract val fileServer: FileServer
     abstract val mdnsDiscovery: MdnsDiscovery
+    open val nameRepublisher: DeviceNameRepublisher by lazy { DeviceNameRepublisher(nameStore, mdnsDiscovery) }
     open val transferActivityTracker: TransferActivityTracker = DefaultTransferActivityTracker()
     open val fileClient: FileClient by lazy { FileClient.default(transferActivityTracker) }
     abstract val trustedDeviceStore: TrustedDeviceStore

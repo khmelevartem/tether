@@ -14,11 +14,11 @@ import org.jetbrains.compose.resources.painterResource
 import tether.composeapp.generated.resources.Res
 import tether.composeapp.generated.resources.icon
 
-fun main() {
+fun main() = runBlocking {
     val container = DesktopAppContainer(
         DefaultDesktopAppConfig(port = 0),
     )
-    runBlocking { container.nameStore.init() }
+    container.nameStore.init()
     val handle = container.startBackendOrFail()
     registerShutdownHook(handle)
 

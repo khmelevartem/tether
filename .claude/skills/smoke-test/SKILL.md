@@ -176,7 +176,7 @@ Cleanup инстанса C — в Блоке 7.
 
 ### Блок 3.5: Device name rename — peer видит новое имя
 
-Стdin `name <new>` на A; B должен увидеть новое имя через mDNS republish. Валидация и CLI-ephemeral-семантика покрыты юнит-тестами (`DeviceNameValidatorTest`, `CliNameTest`, `DeviceNameStoreTest`) — smoke проверяет только cross-peer happy-path.
+stdin `name <new>` на A; B должен увидеть новое имя через mDNS republish.
 
 ```bash
 echo "name RenamedA" > /tmp/smoke-cliA-in &

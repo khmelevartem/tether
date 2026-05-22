@@ -9,7 +9,6 @@ import com.arkivanov.essenty.lifecycle.resume
 import com.arkivanov.essenty.lifecycle.stop
 import com.tubetoast.tether.di.DefaultIosAppConfig
 import com.tubetoast.tether.di.IosAppContainer
-import com.tubetoast.tether.discovery.republishOnNameChange
 import com.tubetoast.tether.presentation.DeviceListComponent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -36,9 +35,10 @@ fun MainViewController() = run {
                 val name = container.nameStore.name.first()
                 val port = container.fileServer.start()
                 container.mdnsDiscovery.start(name, port = port)
-                republishOnNameChange(container.nameStore, container.mdnsDiscovery)
+                container.nameRepublisher.start(scope)
             }
             onDispose {
+                container.nameRepublisher.stop()
                 scope.cancel()
                 container.mdnsDiscovery.stop()
                 container.fileServer.stop()

@@ -44,9 +44,12 @@ internal class MdnsDiscoveryBonjour(
 
     @Volatile private var currentPort: Int = 0
 
+    @Volatile private var stopped: Boolean = false
+
     override fun start(deviceName: String, port: Int) {
         synchronized(lifecycleLock) {
             if (session != null) throw IllegalStateException("MdnsDiscovery already started; call stop() first")
+            stopped = false
             currentPort = port
             session = Session.start(deviceName, port, store)
         }
@@ -54,6 +57,7 @@ internal class MdnsDiscoveryBonjour(
 
     override fun stop() {
         val toClose = synchronized(lifecycleLock) {
+            stopped = true
             val current = session
             session = null
             currentPort = 0
@@ -73,6 +77,7 @@ internal class MdnsDiscoveryBonjour(
         val (toClose, port) = captured ?: return
         toClose.close()
         synchronized(lifecycleLock) {
+            if (stopped) return
             if (session == null) session = Session.start(name, port, store)
         }
     }

@@ -1,13 +1,11 @@
 package com.tubetoast.tether
 
 import com.tubetoast.tether.di.DesktopAppContainer
-import com.tubetoast.tether.discovery.republishOnNameChange
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
 
 internal sealed class BackendStartException(
     message: String,
@@ -29,29 +27,28 @@ internal class BackendHandle internal constructor(
     fun close() = onClose()
 }
 
-internal fun DesktopAppContainer.startBackendOrFail(): BackendHandle {
-    val backendScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    val deviceName = runBlocking { nameStore.name.first() }
+internal suspend fun DesktopAppContainer.startBackendOrFail(): BackendHandle {
+    val deviceName = nameStore.name.first()
     val server = fileServer
     val port = try {
         server.start()
     } catch (e: Exception) {
         throw BackendStartException.FileServer(e)
     }
+    val backendScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     try {
         mdnsDiscovery.start(deviceName, port)
     } catch (e: Exception) {
+        backendScope.cancel()
         runCatching { server.stop() }
         throw BackendStartException.Mdns(e)
     }
-    val republishJob = backendScope.republishOnNameChange(nameStore, mdnsDiscovery)
+    nameRepublisher.start(backendScope)
     return BackendHandle(port) {
-        runCatching { republishJob.cancel() }.onFailure {
-            System.err.println("WARN: republishJob cancel failed — ${it.message}")
+        runCatching { nameRepublisher.stop() }.onFailure {
+            System.err.println("WARN: nameRepublisher stop failed — ${it.message}")
         }
-        runCatching { backendScope.cancel() }.onFailure {
-            System.err.println("WARN: backendScope cancel failed — ${it.message}")
-        }
+        runCatching { backendScope.cancel() }
         runCatching { mdnsDiscovery.stop() }.onFailure {
             System.err.println("WARN: mDNS stop failed — ${it.message}")
         }

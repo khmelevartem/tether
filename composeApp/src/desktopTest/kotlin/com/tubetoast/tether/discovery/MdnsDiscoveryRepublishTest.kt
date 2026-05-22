@@ -7,20 +7,25 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
+private fun testDiscovery(store: DiscoveredDevicesStore = DiscoveredDevicesStore()) =
+    MdnsDiscovery(store)
+
 class MdnsDiscoveryRepublishTest {
     @Test
     fun `republish before start is a no-op and adds no peers`() {
         val store = DiscoveredDevicesStore()
-        val discovery = MdnsDiscovery(store)
+        val discovery = testDiscovery(store)
         discovery.republish("SomeName")
         assertTrue(store.devices.value.isEmpty(), "republish without start must not add peers")
         discovery.stop()
     }
 
+    // JmDNS callbacks fire on OS-owned threads outside runTest's virtual clock,
+    // so real time is needed here — virtual time cannot substitute.
     @Test
     fun `peer sees new name after republish`() = runBlocking {
-        val a = MdnsDiscovery(DiscoveredDevicesStore())
-        val b = MdnsDiscovery(DiscoveredDevicesStore())
+        val a = testDiscovery()
+        val b = testDiscovery()
         try {
             a.start("NameA-Before", 19100)
             b.start("NameB-Observer", 19101)

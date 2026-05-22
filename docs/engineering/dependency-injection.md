@@ -188,10 +188,10 @@ When a class takes container components, the test builds a fake container by sub
 
 ```kotlin
 class FakeContainer : AppContainer() {
-    override val nameStore = DeviceNameStore(InMemoryDeviceNamePersistence("test"))
-    override val mdnsDiscovery = FakeMdnsDiscovery()
-    override val fileServer = FakeFileServer()
-    override val trustedDeviceStore = FakeTrustedDeviceStore()
+    override val namePersistence = <fixture>
+    override val mdnsDiscovery = <fake>
+    override val fileServer = <fake>
+    override val trustedDeviceStore = <fake>
 }
 ```
 
