@@ -64,7 +64,7 @@ Desktop исходники разделены на два source set: `desktopMa
 - `/code-review <PR>` — параллельный multi-agent review с постингом в GitHub.
 
 **Команды** (`.claude/commands/`):
-- `/close-issue`, `/check-review`, `/grooming`, `/retro`, `/quick-issue` — рабочий процесс вокруг issue/PR.
+- `/close-issue`, `/check-review`, `/grooming`, `/sprint-pick`, `/retro`, `/quick-issue` — рабочий процесс вокруг issue/PR. `/sprint-pick` — экспресс: что брать сейчас из текущего спринта (статусы + 1–3 кандидата); лёгкий аналог `/grooming` для регулярного вызова.
 - `/work-on-issue` — **manual fallback** для `/implement`. Используется когда хочешь пройти процесс руками: отладка оркестратора, нестандартная семантика, эксперимент.
 
 `/smoke-test` — runtime happy-path по платформам (Desktop CLI, Desktop↔Desktop send, Android если adb подключён, native compile macosArm64/iosSimulatorArm64). Прогоняй когда сомневаешься в рантайме после нетривиальных правок в сетевой части / FileServer / mDNS / FGS, перед merge runtime-changing PR, и в `/close-issue`. Skip для DOCS-only / `.claude/`-only / comment-only изменений. Smoke не заменяет `allTests`.
