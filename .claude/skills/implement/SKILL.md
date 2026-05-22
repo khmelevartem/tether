@@ -116,8 +116,9 @@ Per track (or sequentially if single track):
 1. Dispatch the implementing agent with the plan slice:
    - **UI work** (Compose, screens, components, theming, navigation) → `ui-expert`
    - **Feature spec** → `spec-writer`
+   - **Architectural design point** — plan from Step 4 surfaces a non-trivial mechanism / library / structural choice that `coder` should not make alone → `architect` first. It converges the choice (its own palette + user trade-off questions + ADR/living doc), returns a one-line decision summary; that summary then becomes a hard constraint for the subsequent `coder` dispatch in the same track.
    - **Everything else** (network, discovery, protocol, persistence, build, infra) → `coder`
-   - **Mixed** — split into sub-tracks if disjoint files, else dispatch `coder` which can pull in `ui-expert` via Agent tool.
+   - **Mixed** — split into sub-tracks if disjoint files, else dispatch `coder` which can pull in `ui-expert` / `architect` via Agent tool.
 2. Once the implementing agent reports green tests, dispatch a **fast reviewer wave** in parallel:
    - `review-dod` (always)
    - `review-correctness` (always unless DOCS/REFACTOR)
