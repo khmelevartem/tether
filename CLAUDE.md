@@ -67,6 +67,8 @@ Desktop исходники разделены на два source set: `desktopMa
 - `/close-issue`, `/check-review`, `/grooming`, `/retro`, `/quick-issue` — рабочий процесс вокруг issue/PR.
 - `/work-on-issue` — **manual fallback** для `/implement`. Используется когда хочешь пройти процесс руками: отладка оркестратора, нестандартная семантика, эксперимент.
 
+**Когда новый артефакт — скилл, а не команда.** Уноси в `.claude/skills/<name>/SKILL.md` (плюс `assets/*.json` для словарей и палитры) если выполняется хотя бы одно: инструкция включает фиксированные словари / цветовую палитру / конфигурацию, которые хочется править отдельно от prose; артефакт >~150 строк; в инструкции зашиты «магические» имена, ради сравнимости результатов между запусками; полезен skill discovery по описанию (`name` + `description` в YAML frontmatter). Простой prompt-шаблон без assets и discovery — `.claude/commands/<name>.md`.
+
 `/smoke-test` — runtime happy-path по платформам (Desktop CLI, Desktop↔Desktop send, Android если adb подключён, native compile macosArm64/iosSimulatorArm64). Прогоняй когда сомневаешься в рантайме после нетривиальных правок в сетевой части / FileServer / mDNS / FGS, перед merge runtime-changing PR, и в `/close-issue`. Skip для DOCS-only / `.claude/`-only / comment-only изменений. Smoke не заменяет `allTests`.
 
 ## Code style
