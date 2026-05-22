@@ -68,13 +68,12 @@ internal class MdnsDiscoveryBonjour(
     }
 
     override fun republish(name: String) {
-        val captured: Pair<Session, Int>? = synchronized(lifecycleLock) {
+        val (toClose, port) = synchronized(lifecycleLock) {
             val current = session ?: return
             val port = currentPort
             session = null
             current to port
         }
-        val (toClose, port) = captured ?: return
         toClose.close()
         synchronized(lifecycleLock) {
             if (stopped) return

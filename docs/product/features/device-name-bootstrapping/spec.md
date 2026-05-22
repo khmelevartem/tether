@@ -72,6 +72,8 @@ User-visible default per platform — Tether takes the most personal name the OS
 - **macOS:** the OS "Computer Name" (the one shown in System Settings → General → About, e.g. "Artem's MacBook Pro"). This is typically already personalised by the macOS setup assistant.
 - **Desktop:** the OS hostname. If it is empty, a loopback alias, or another technical placeholder, fall back to a name based on the account the device is logged in under ("Artem's Desktop").
 
+The Desktop CLI runner is a developer-only entry point and is **per-process ephemeral** — the name set via `--name` or the `name <new>` stdin command lives only for that invocation and is not persisted across restarts. Persistence applies only to the four end-user runners (Android, iOS, macOS, Desktop UI). Parallel CLI instances on the same host therefore each carry their own runtime name without sharing or conflict.
+
 ## Not in this feature
 
 - **A separate Settings screen** for renaming.
