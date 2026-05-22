@@ -1,0 +1,16 @@
+{
+  "_doc": "Title-эвристики для категоризации PR / issue в feature vs infra. Используются в Хронике Подвигов (PR-по-неделям split), Печати Долга (planned vs unplanned), классификации фичей. infra перевешивает feature при коллизии — это намеренно (rule of thumb: вспомогательная работа маркируется в title явнее, продуктовая часто generic).",
+  "infra_keywords": [
+    "retro", "skill", "agent", "sprint", "ci", "gradle", "workflow",
+    "hook", "claude", "adr", "readme", "engineering", "rule",
+    "template", "review", "grooming"
+  ],
+  "feature_keywords": [
+    "discovery", "mdns", "filetransfer", "file transfer", "pairing",
+    "fileserver", "file server", "send", "receive", "android ui",
+    "ios ui", "desktop ui", "progress", "transfer", "device list",
+    "device name", "foreground", "wakelock", "wifi", "ktor", "timeout"
+  ],
+  "default_category": "feature",
+  "rule": "if title starts with 'retro' OR matches any infra_keyword → infra; else if matches any feature_keyword → feature; else default_category."
+}
