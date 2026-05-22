@@ -1,6 +1,6 @@
 ---
 name: implement
-description: End-to-end implementation orchestrator for a GitHub issue. Plans, dispatches coder sub-agent, runs a fast review loop (coder ↔ reviewers) without user in the loop, runs smoke, and reports to user only at human-required gates (AC ambiguity, root cause uncertainty, smoke failure, final approval). Use when starting work on an issue.
+description: Issue-to-PR orchestrator. Detects docs-only issues and delegates to `/document`; for code-track plans, dispatches coder / ui-expert / architect, runs implementer↔reviewers loop, smoke, lands a PR. Stops for user only at human-required gates (G1 AC ambiguity, G2 root-cause uncertainty, G3 plan conflicts guides, G4 smoke red). Use when starting work on an issue.
 ---
 
 # /implement — Issue-to-PR orchestrator
@@ -18,9 +18,10 @@ Issue number `<N>`.
 Skill идемпотентен по issue. На каждом вызове первым делом проверь `gh pr list --search "issue:#<N>" --state open`:
 
 - **PR нет** → стартуй Step 1.
-- **PR есть и открыт** → ты в pull-request feedback итерации. На текущей feature-branch могут быть новые комменты ревьюера или коммиты после прошлого прогона. **Сначала** прочитай **все** human-комменты на PR (`gh api repos/<owner>/<repo>/pulls/<PR>/comments` + `gh pr view <PR> --comments`) и для каждого определи статус: адресован в коммитах после него — или нет. **Дата создания не определяет актуальность** — фильтровать комменты по `created_at > <дата-прошлого-прогона>` запрещено, потому что неадресованный коммент остаётся актуальным независимо от того, насколько он старый. Прогон **обязан** включать на свежем diff'е: Step 4 (inner loop reviewers) → Step 5 (simplify) → Step 6 (full review wave A + adversarial) → Step 7 (smoke, скоуп по diff'у). Из дисциплины на re-entry ничего пропускать нельзя — иначе review-итерации проходят с меньшим качеством, чем первичная имплементация.
+- **PR есть и открыт** → ты в pull-request feedback итерации. **Сначала** перепроверь docs-only детекцию (Step 1 классификация) на текущем состоянии issue + diff'а PR: если задача docs-only, делегируй re-entry в `/document <N>` и завершайся (`/document` сам идемпотентен и подхватит этот PR). Иначе остаёшься в code-track re-entry.
+- **Code-track re-entry.** На текущей feature-branch могут быть новые комменты ревьюера или коммиты после прошлого прогона. Прочитай **все** human-комменты на PR (`gh api repos/<owner>/<repo>/pulls/<PR>/comments` + `gh pr view <PR> --comments`) и для каждого определи статус: адресован в коммитах после него — или нет. **Дата создания не определяет актуальность** — фильтровать комменты по `created_at > <дата-прошлого-прогона>` запрещено, потому что неадресованный коммент остаётся актуальным независимо от того, насколько он старый. Прогон **обязан** включать на свежем diff'е: Step 5 (inner loop reviewers) → Step 6 (simplify) → Step 7 (full review wave A + adversarial) → Step 8 (smoke, скоуп по diff'у). Из дисциплины на re-entry ничего пропускать нельзя — иначе review-итерации проходят с меньшим качеством, чем первичная имплементация.
 
-Шаги 8-9 (commit + present G5 + push) — в re-entry упрощаются: коммит идёт в существующую ветку, force-push не нужен, новый PR не создавать.
+Шаг 9 (commit + push + G5 summary) — в re-entry упрощается: коммит идёт в существующую ветку, force-push не нужен, новый PR не создавать.
 
 ## Gate semantics — when to stop and ask the user
 
@@ -28,17 +29,11 @@ These MUST-stop gates are **not overridden by session-level autonomy or "skip cl
 
 You MUST stop and ask the user in these cases (and only these):
 - **G1. Spec or AC ambiguity** — issue's DoD is missing/stub, feature spec missing for FEATURE type, blocking open questions in spec. **Mitigation:** dispatch `spec-writer` first; only stop at user if `spec-writer` has clarifying questions or the issue is non-FEATURE without DoD.
-  - **DOCS-as-decision sub-class.** A DOCS issue whose deliverable IS the decision (closing an open question, picking between options, ADR-style choice) qualifies as G1 by default — even when AC look complete («сравни 3 варианта, выбери один и обоснуй»). The *act of choosing* requires user input. Surface the comparison, recommend if you have signal, but do not commit without explicit OK.
-    - **Palette-first format for design conversations.** When the decision space has 3+ architecturally reasonable answers, surface them as a parallel palette (each with cost / closes / trade-off), mark the one you'd recommend and why. Avoid leading with a single recommendation + one alternative — the palette makes choice traceable, and the rejected branches become the ADR's "Considered and rejected" section without rewriting. The user converges through option selection across iterations, not by accepting a pre-shaped plan.
-    - **Artifacts are snapshots of converged thinking.** ADR / engineering doc / product spec writing happens **after** the design has stabilised through palette → user redirects → choice. The doc-writing pass should feel mechanical — record what is already decided. If you find yourself making architectural decisions during artifact drafting, you exited the gate too early; back up to palette.
-    - **Pluralistic research when external survey is needed.** If the decision needs survey (references, recall, feasibility, market scan) — dispatch ≥3 sub-agents with different prompts in parallel, not a single pass. Convergence = robust choice; divergence = trade-off to surface. Skip when options are already known.
-    - **Verify research-agent factual claims before locking them.** Library coordinates, runtime API status, dependency availability, "is this bug fixed" — verify directly (Maven Central, jar/KLib inspection, GitHub issue state, official docs) before committing to a spec / ADR / guide / agent file.
-    - **DoD includes enforcement when the decision sets rules.** A locked rule without an enforcing artefact (reviewer agent, lint, hook, test) quietly drifts. Surface the gap during scoping if missing.
 - **G2. BUGFIX root cause** — root cause must be confirmed before any fix. **Mitigation:** dispatch `bug-reproducer`; only stop at user if it reports CANNOT REPRODUCE or none of the listed hypotheses match. **The reproducer must always attempt to observe the symptom**, even when the cause looks structurally evident from issue text + code grep. Do not silently proceed as if the bug were confirmed.
 - **G2.5. Publication of confirmed cause** — once `bug-reproducer` returns a confirmed cause, show the paste-ready block to the user and wait for explicit OK before `gh issue comment`. Publishing to a GitHub issue is a team-visible action; it does not happen without a user gate.
 - **G3. Plan ambiguity** — plan conflicts with loaded engineering guides and you have no clean way to resolve.
 - **G4. Smoke red/yellow** — smoke verdict is not 🟢 after the inner loop.
-- **G5. Final approval before push** — after the inner loop converges to APPROVE and smoke is green, present the committed-but-not-pushed diff to the user for approval. Push + PR creation happen only after the user OKs.
+- **G5. Final summary to the user** — after the inner loop converges to APPROVE and smoke is green, commit + push + create the PR, then present the PR URL with a short summary (files changed, AC verdict, smoke verdict, any `[UNVERIFIABLE]` findings). The user reviews on GitHub; do not block on explicit OK before push.
 
 Everything else — implementation details, reviewer findings, fix iterations — you handle internally without the user.
 
@@ -51,8 +46,6 @@ gh pr list --search "issue:#<N>" --state open --json number,isDraft,headRefName
 
 **Comments — это не дискуссия, это потенциально canon-update body.** При противоречии comment'а с body — приоритет comment'у, эскалируй пользователю одной строкой.
 
-Classify PR type. For FEATURE, look up `docs/product/features/README.md` for spec (specs live at `docs/product/features/<slug>/spec.md`).
-
 **Critical reading.** Воспринимай описание issue как **стартовую точку, не как факт**. Подсвечивай и эскалируй пользователю до начала работы, если видишь хотя бы один пробел:
 - упомянута только одна платформа, хотя задача общая;
 - не описаны ошибки и fail-paths;
@@ -61,6 +54,20 @@ Classify PR type. For FEATURE, look up `docs/product/features/README.md` for spe
 - фразы-затычки: «дополни если есть чем», «должно работать корректно», «и так далее».
 
 Любой такой пробел — повод вернуться к G1, не «допилить по дороге».
+
+**Classification.** На основе issue body — `**Тип:**` поля, описания deliverable, label'ов — отнеси задачу к одной из веток:
+
+| Trigger | Track | Действие |
+|---|---|---|
+| `**Тип:** DOCS` | docs-only | делегируй в `/document <N>` и завершайся |
+| `**Тип:** FEATURE` + явный маркер docs-only (фраза «docs-only» / «only docs» / «scope: docs» в body/DoD, либо label `docs-only`) | docs-only | то же |
+| Issue без `**Тип:**` AND deliverable **ограничен исключительно** правкой `.claude/` или `docs/` (никакого кода в исходниках) | docs-only | то же |
+| `**Тип:** INFRA` AND deliverable **ограничен исключительно** правкой `.claude/` файлов (skill prompts, agent definitions, hooks) | docs-only | то же |
+| `**Тип:** FEATURE` / `BUGFIX` / `REFACTOR` / `INFRA` с deliverable в исходниках или build/CI/scripts (даже если попутно нужен ADR) | code-track | продолжай Step 2-10 |
+
+При делегации в /document: «Эта задача — docs-only. Запускаю `/document <N>` и завершаюсь.» `/document` сам обработает выбор слоёв, консистентность, ревью и PR. **НЕ делегируй** код-FEATURE с попутным ADR — для таких задач Step 5 диспатчит `architect` mid-flight, и ADR пишется в той же PR что и код.
+
+Для code-track FEATURE: подними `docs/product/features/README.md` — спека лежит в `docs/product/features/<slug>/spec.md`.
 
 **Worktree setup — do this BEFORE dispatching any agent that edits files.** If you are not already in `.claude/worktrees/<branch>/`:
 
@@ -112,8 +119,9 @@ Per track (or sequentially if single track):
 1. Dispatch the implementing agent with the plan slice:
    - **UI work** (Compose, screens, components, theming, navigation) → `ui-expert`
    - **Feature spec** → `spec-writer`
+   - **Architectural design point** — plan from Step 4 surfaces a non-trivial mechanism / library / structural choice that `coder` should not make alone → `architect` first. It converges the choice (its own palette + user trade-off questions + ADR/living doc), returns a one-line decision summary; that summary then becomes a hard constraint for the subsequent `coder` dispatch in the same track.
    - **Everything else** (network, discovery, protocol, persistence, build, infra) → `coder`
-   - **Mixed** — split into sub-tracks if disjoint files, else dispatch `coder` which can pull in `ui-expert` via Agent tool.
+   - **Mixed** — split into sub-tracks if disjoint files, else dispatch `coder` which can pull in `ui-expert` / `architect` via Agent tool.
 2. Once the implementing agent reports green tests, dispatch a **fast reviewer wave** in parallel:
    - `review-dod` (always)
    - `review-correctness` (always unless DOCS/REFACTOR)
@@ -154,13 +162,13 @@ If anything was simplified — re-run **the same set of agents that ran in Step 
 
 ## Step 7 — Full pre-PR review (inline, not via /code-review skill)
 
-`/code-review` skill requires an existing PR (it posts via `gh pr review`). At this step the PR does not exist yet — Step 10 creates it. So instead of calling the skill, **orchestrate the same agent fan-out inline, without GitHub publication**:
+`/code-review` skill requires an existing PR (it posts via `gh pr review`). At this step the PR does not exist yet — Step 9 creates it. So instead of calling the skill, **orchestrate the same agent fan-out inline, without GitHub publication**:
 
 1. Wave A in parallel: `review-dod`, `review-guides`, `review-reuse`, plus (if applicable to PR type / diff) `review-architecture`, `review-correctness`, `review-tests`, `review-platform`, `review-ux`, `review-ui`. Each agent receives the issue number and is told to review the local working tree (`git diff main...HEAD`) instead of a PR. `review-ux` and `review-ui` both run whenever the diff touches `composeApp/src/**`; each agent decides skip vs. block.
 2. Wave B: `review-adversarial` with the combined Wave A findings as input.
 3. Aggregate. Apply any `[REQUIRED]` via the implementing agent (with the symmetry-pass instruction). Re-run until approved or 2 iterations.
 
-No `gh pr review` here — findings are consumed locally only. The post-PR `/code-review` skill will be invoked separately after Step 10 if a reviewer requests it, or as part of normal team review.
+No `gh pr review` here — findings are consumed locally only. The post-PR `/code-review` skill will be invoked separately after Step 9 if a reviewer requests it, or as part of normal team review.
 
 ## Step 8 — Smoke
 
@@ -180,34 +188,27 @@ Record the verdict (🟢/🟡/🔴) and blocks executed.
 
 Apply Gate G4: if 🟡/🔴 → present to user, stop.
 
-## Step 9 — Commit locally, present to user (Gate G5)
+## Step 9 — Commit, push, PR (G5 summary)
 
-Only after Step 8 is 🟢. Commit on the feature branch (no push):
+Only after Step 8 is 🟢. Commit on the feature branch, push, create the PR:
 
 ```bash
 git add <relevant files>
 git commit -m "#<N>: <message>"
-```
-
-Present to user:
-- Files changed (summary)
-- AC: all `[DONE]` (from review-dod)
-- Smoke: 🟢 with blocks
-- Any `[UNVERIFIABLE]` from reviewers
-- Proposed PR title and body
-
-Ask: "Push and create PR?" Wait for explicit OK.
-
-## Step 10 — Push + PR (only after G5 OK)
-
-```bash
 git push -u origin feature/<N>-<short-slug>
 gh pr create --title "<title>" --body "<...>"
 ```
 
 PR body must include: AC verdict (DONE checklist), `## Dependency check` (if new deps), smoke verdict.
 
-Report PR URL to user. Next step is manual verification, then `/close-issue <N>`.
+Report to the user:
+- PR URL.
+- Files changed (summary).
+- AC: all `[DONE]` (from `review-dod`).
+- Smoke: 🟢 with blocks executed.
+- Any `[UNVERIFIABLE]` from reviewers.
+
+Next step is manual review on GitHub, then `/close-issue <N>`.
 
 ## Notes
 

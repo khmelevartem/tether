@@ -24,6 +24,7 @@ Always read `CLAUDE.md`. Then read the engineering doc that maps to the diff:
 | new tests | `testing.md` |
 | commonMain or expect/actual | `architecture-principles.md` (common-first rule) |
 | `docs/product/features/**/spec.md` | `docs/product/features/_template.md` (product-spec rules) |
+| `docs/product/features/**/ux-brief.md` | `.claude/agents/ux-expert.md` §Output (UX brief structure) |
 
 ## What to check
 
