@@ -1,0 +1,45 @@
+{
+  "_doc": "Цветовая палитра для HTML-снапшота /progress. Тёмная пергаментная тема: золото / кровь как акцент опасности / приглушённые оттенки. Изменения здесь меняют визуал во всём отчёте; не вводи новые цвета произвольно — нарушает сравнимость снапшотов.",
+  "background": {
+    "page": "#1a1410",
+    "section": "#1f1812",
+    "card": "#15100c",
+    "input": "#0d0907"
+  },
+  "text": {
+    "primary": "#e8d8a8",
+    "muted": "#8a7d5e",
+    "muted_dim": "#6a5a3a"
+  },
+  "gold": {
+    "primary": "#d4af37",
+    "secondary": "#b89030",
+    "tertiary": "#9c7826",
+    "quaternary": "#80601e",
+    "dim": "#8a6820",
+    "darker": "#644818"
+  },
+  "blood": "#c9302c",
+  "graph_nodes": {
+    "free":     { "fill": "#d4af37", "comment": "open, без блокеров, не сирый" },
+    "blocked":  { "fill": "#c9302c", "comment": "open, в цепях" },
+    "orphan":   { "fill": "#e8d070", "stroke": "#d4af37", "comment": "ни parent, ни blocked_by, ни blocks; яркий жёлтый чтобы не сливался с закрытыми" },
+    "closed":   { "fill": "#3a2e1c", "stroke": "#6a5a40" }
+  },
+  "graph_edges": {
+    "parent": { "stroke": "#8a7028", "style": "solid",  "comment": "sub-issue parent→child" },
+    "block":  { "stroke": "#c9302c", "style": "dashed", "comment": "blocks" }
+  },
+  "artifact_rarity": {
+    "legendary": { "border": "#d4af37", "glow": "rgba(212,175,55,.45)" },
+    "epic":      { "border": "#9b4dca" },
+    "rare":      { "border": "#4a7bc8" },
+    "uncommon":  { "border": "#5a8a3a" },
+    "common":    { "border": "#6a5a40" }
+  },
+  "fonts": {
+    "headings": "Cinzel",
+    "body":     "IM Fell English SC",
+    "numbers":  "JetBrains Mono"
+  }
+}

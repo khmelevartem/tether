@@ -1,0 +1,47 @@
+{
+  "_doc": "Кластеры для force-clustering графа зависимостей в /progress. Порядок фиксирован — определяет угловое размещение на радиальной окружности. Названия — стилизованные имена «школ», ассоциируются с предметной областью. keywords — case-insensitive подстроки в title issue для классификации.",
+  "schools": [
+    {
+      "id": "discovery",
+      "name": "Школа Зова",
+      "summary": "mDNS, peer discovery, NSD, Bonjour, JmDNS",
+      "keywords": ["mdns", "discovery", "peer", "nsd", "bonjour", "jmdns"]
+    },
+    {
+      "id": "transfer",
+      "name": "Школа Переправы",
+      "summary": "передача файлов, Ktor, FileClient/Server, send/receive, transport",
+      "keywords": ["file", "transfer", "send", "receive", "stream", "ktor", "fileclient", "fileserver", "upload", "download", "transport"]
+    },
+    {
+      "id": "pairing",
+      "name": "Школа Печатей",
+      "summary": "pairing, PIN, ключи, доверие, TLS, шифрование",
+      "keywords": ["pair", "pin", "key", "trust", "encryption", "tls", "handshake", "security"]
+    },
+    {
+      "id": "ui",
+      "name": "Школа Иллюзий",
+      "summary": "экраны, Compose, picker, list, progress, onboarding",
+      "keywords": ["ui", "screen", "compose", "picker", "list", "progress", "share", "onboarding"]
+    },
+    {
+      "id": "system",
+      "name": "Школа Хранителей",
+      "summary": "foreground service, wakelock, Wi-Fi, разрешения, device name",
+      "keywords": ["foreground", "wakelock", "wifi", "permission", "manifest", "device name", "android", "background", "service"]
+    },
+    {
+      "id": "infra",
+      "name": "Школа Ритуалов",
+      "summary": "скиллы, агенты, спринты, CI, ретро, доки, ADR, ревью",
+      "keywords": ["skill", "agent", "claude", "sprint", "ci", "retro", "doc", "spec", "adr", "engineering", "review", "grooming", "workflow", "hook", "template", "rule", "gradle"]
+    },
+    {
+      "id": "other",
+      "name": "Безымянные",
+      "summary": "не подошли ни под одну школу (мета-задачи, разное)",
+      "keywords": []
+    }
+  ]
+}
