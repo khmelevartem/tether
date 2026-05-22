@@ -19,8 +19,8 @@ fun main() {
         DefaultDesktopAppConfig(port = 0),
     )
     runBlocking { container.nameStore.init() }
-    val (_, republishJob) = container.startBackendOrFail()
-    container.registerShutdownHook(republishJob)
+    val handle = container.startBackendOrFail()
+    registerShutdownHook(handle)
 
     val lifecycle = LifecycleRegistry()
     val component = DeviceListComponent(

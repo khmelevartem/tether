@@ -4,8 +4,8 @@ import com.tubetoast.tether.di.DesktopAppContainer
 import com.tubetoast.tether.discovery.republishOnNameChange
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 
@@ -22,7 +22,14 @@ internal sealed class BackendStartException(
     ) : BackendStartException("mDNS start failed: ${cause.message}", cause)
 }
 
-internal fun DesktopAppContainer.startBackendOrFail(): Pair<Int, Job> {
+internal class BackendHandle internal constructor(
+    val port: Int,
+    private val onClose: () -> Unit,
+) {
+    fun close() = onClose()
+}
+
+internal fun DesktopAppContainer.startBackendOrFail(): BackendHandle {
     val backendScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     val deviceName = runBlocking { nameStore.name.first() }
     val server = fileServer
@@ -38,24 +45,31 @@ internal fun DesktopAppContainer.startBackendOrFail(): Pair<Int, Job> {
         throw BackendStartException.Mdns(e)
     }
     val republishJob = backendScope.republishOnNameChange(nameStore, mdnsDiscovery)
-    return port to republishJob
+    return BackendHandle(port) {
+        runCatching { republishJob.cancel() }.onFailure {
+            System.err.println("WARN: republishJob cancel failed — ${it.message}")
+        }
+        runCatching { backendScope.cancel() }.onFailure {
+            System.err.println("WARN: backendScope cancel failed — ${it.message}")
+        }
+        runCatching { mdnsDiscovery.stop() }.onFailure {
+            System.err.println("WARN: mDNS stop failed — ${it.message}")
+        }
+        runCatching { server.stop() }.onFailure {
+            System.err.println("WARN: FileServer stop failed — ${it.message}")
+        }
+        runCatching { fileClient.close() }.onFailure {
+            System.err.println("WARN: FileClient close failed — ${it.message}")
+        }
+    }
 }
 
-internal fun DesktopAppContainer.registerShutdownHook(republishJob: Job) {
+internal fun registerShutdownHook(handle: BackendHandle) {
     Runtime.getRuntime().addShutdownHook(
         Thread {
             val cleanup = Thread {
-                runCatching { republishJob.cancel() }.onFailure {
-                    System.err.println("WARN: republishJob cancel failed — ${it.message}")
-                }
-                runCatching { mdnsDiscovery.stop() }.onFailure {
-                    System.err.println("WARN: mDNS stop failed — ${it.message}")
-                }
-                runCatching { fileServer.stop() }.onFailure {
-                    System.err.println("WARN: FileServer stop failed — ${it.message}")
-                }
-                runCatching { fileClient.close() }.onFailure {
-                    System.err.println("WARN: FileClient close failed — ${it.message}")
+                runCatching { handle.close() }.onFailure {
+                    System.err.println("WARN: backend cleanup failed — ${it.message}")
                 }
             }
             cleanup.isDaemon = true

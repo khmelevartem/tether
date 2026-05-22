@@ -38,8 +38,7 @@ class TetherCommand :
 
     override fun run() = runBlocking {
         val container = DesktopAppContainer(
-            DefaultDesktopAppConfig(port = port ?: 0),
-            namePersistence = EphemeralDeviceNamePersistence(),
+            DefaultDesktopAppConfig(port = port ?: 0, namePersistence = EphemeralDeviceNamePersistence()),
         )
 
         container.nameStore.init()
@@ -54,7 +53,7 @@ class TetherCommand :
         echo("=== Tether debug runner ===")
         echo("device : $deviceName")
 
-        val (actualPort, republishJob) = try {
+        val handle = try {
             container.startBackendOrFail()
         } catch (e: BackendStartException.FileServer) {
             echo("ERROR: Could not start FileServer on port ${port ?: 0} — ${e.cause?.message}", err = true)
@@ -64,11 +63,11 @@ class TetherCommand :
             echo("ERROR: Could not start mDNS — ${e.cause?.message}", err = true)
             throw ProgramResult(1)
         }
-        echo("port   : $actualPort")
-        echo("FileServer started  →  http://localhost:$actualPort/health")
-        echo("mDNS started → advertising '$deviceName' on port $actualPort\n")
+        echo("port   : ${handle.port}")
+        echo("FileServer started  →  http://localhost:${handle.port}/health")
+        echo("mDNS started → advertising '$deviceName' on port ${handle.port}\n")
 
-        container.registerShutdownHook(republishJob)
+        registerShutdownHook(handle)
 
         val discovery = container.mdnsDiscovery
         var peersLinePrinted = false
