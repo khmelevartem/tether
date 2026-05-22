@@ -14,6 +14,7 @@
 - `kotlin.test`.
 - Для корутин — `runTest` + `TestDispatcher` (из `kotlinx-coroutines-test`), **не `runBlocking`**.
 - Управляй временем виртуально через `advanceTimeBy()` / `advanceUntilIdle()` — это ускоряет тесты и делает их детерминированными.
+- Правило `tether:no-run-blocking-in-tests` (`:ktlint-rules`) автоматически запрещает `runBlocking` в test source set'ах. Для легитимных integration-тестов на реальных потоках добавляй `@Suppress("ktlint:tether:no-run-blocking-in-tests")` — на класс, когда класс целиком — integration-suite вокруг одного внешнего API (real CIO server, JmDNS), даже если отдельные тесты этого класса не используют `runBlocking`; на функцию, когда integration-метод стоит в неинтеграционном по природе классе. Рядом с suppress'ом — `//`-комментарий, какое именно real-thread событие ждём.
 
 ## Реальное время vs виртуальное
 

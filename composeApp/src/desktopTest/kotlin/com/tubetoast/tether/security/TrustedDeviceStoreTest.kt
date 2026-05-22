@@ -3,7 +3,7 @@ package com.tubetoast.tether.security
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -94,22 +94,20 @@ class TrustedDeviceStoreTest {
     }
 
     @Test
-    fun `50 parallel saveTrustedKey calls all persist atomically`() {
+    fun `50 parallel saveTrustedKey calls all persist atomically`() = runTest {
         val configDir = Files.createTempDirectory("tether-store-test").toFile()
         try {
             val store = TrustedDeviceStore(configDir)
             val n = 50
-            runBlocking(Dispatchers.IO) {
-                (0 until n)
-                    .map { i ->
-                        async {
-                            store.saveTrustedKey(
-                                "device-$i",
-                                byteArrayOf(i.toByte(), (i + 1).toByte(), (i + 2).toByte()),
-                            )
-                        }
-                    }.awaitAll()
-            }
+            (0 until n)
+                .map { i ->
+                    async(Dispatchers.IO) {
+                        store.saveTrustedKey(
+                            "device-$i",
+                            byteArrayOf(i.toByte(), (i + 1).toByte(), (i + 2).toByte()),
+                        )
+                    }
+                }.awaitAll()
             val reloaded = TrustedDeviceStore(configDir)
             for (i in 0 until n) {
                 val key = reloaded.getPublicKey("device-$i")

@@ -4,7 +4,7 @@ How the code is organized today, where it's headed, and what triggers each step.
 
 ## Current state
 
-All code lives in a single Gradle module: `:composeApp`. Source sets follow a custom KMP
+All application code lives in a single Gradle module: `:composeApp`. Build tooling lives in `:ktlint-rules` (custom KtLint rules consumed via `ktlintRuleset`; not in the app runtime graph). Source sets follow a custom KMP
 hierarchy (configured via `applyHierarchyTemplate` in `build.gradle.kts`):
 
 ```

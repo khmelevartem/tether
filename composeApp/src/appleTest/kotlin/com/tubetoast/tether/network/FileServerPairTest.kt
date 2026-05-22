@@ -29,6 +29,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
+// real CIO server — CIOApplicationEngine hardcodes real-thread dispatchers
+@Suppress("ktlint:tether:no-run-blocking-in-tests")
 class FileServerPairTest {
     private val tempPaths = mutableListOf<String>()
     private lateinit var configDir: String

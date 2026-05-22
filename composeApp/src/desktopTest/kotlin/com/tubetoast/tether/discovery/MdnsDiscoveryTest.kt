@@ -12,6 +12,8 @@ import kotlin.test.assertTrue
 
 private fun testDiscovery() = MdnsDiscovery(DiscoveredDevicesStore())
 
+// JmDNS delivers callbacks on real threads outside our CoroutineScope
+@Suppress("ktlint:tether:no-run-blocking-in-tests")
 class MdnsDiscoveryTest {
     @Test
     fun `stop before start does not throw`() {

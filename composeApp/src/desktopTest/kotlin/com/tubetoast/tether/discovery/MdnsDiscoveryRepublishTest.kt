@@ -22,6 +22,7 @@ class MdnsDiscoveryRepublishTest {
 
     // JmDNS callbacks fire on OS-owned threads outside runTest's virtual clock,
     // so real time is needed here — virtual time cannot substitute.
+    @Suppress("ktlint:tether:no-run-blocking-in-tests")
     @Test
     fun `peer sees new name after republish`() = runBlocking {
         val a = testDiscovery()

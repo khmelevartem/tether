@@ -40,6 +40,8 @@ class FileServerAndroidPairTest {
         keyPairDir.deleteRecursively()
     }
 
+    // real CIO server — CIOApplicationEngine hardcodes real-thread dispatchers
+    @Suppress("ktlint:tether:no-run-blocking-in-tests")
     @Test
     fun `pair returns 500 when Android store fails to persist`() {
         val throwingStore = object : TrustedDeviceStore(context) {

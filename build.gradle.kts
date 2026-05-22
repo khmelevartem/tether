@@ -11,23 +11,3 @@ plugins {
     alias(libs.plugins.ktlintGradle) apply false
 }
 
-// Typed catalog accessors are only available at root build script scope.
-val composeRulesCoordinates = libs.compose.rules.ktlint.get().let {
-    "${it.module.group}:${it.module.name}:${it.versionConstraint.requiredVersion}"
-}
-
-allprojects {
-    apply(plugin = "org.jlleitschuh.gradle.ktlint")
-
-    dependencies {
-        "ktlintRuleset"(composeRulesCoordinates)
-    }
-
-    configure<org.jlleitschuh.gradle.ktlint.KtlintExtension> {
-        android.set(true)
-        outputToConsole.set(true)
-        filter {
-            exclude { it.file.path.contains("/build/") }
-        }
-    }
-}

@@ -16,6 +16,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
+// real CIO server — CIOApplicationEngine hardcodes real-thread dispatchers
+@Suppress("ktlint:tether:no-run-blocking-in-tests")
 class CliSendTest {
     private lateinit var tmpDir: File
     private lateinit var configDir: File

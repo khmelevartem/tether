@@ -11,6 +11,7 @@ plugins {
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.composeHotReload)
     alias(libs.plugins.kotlinxSerialization)
+    alias(libs.plugins.ktlintGradle)
 }
 
 kotlin {
@@ -277,6 +278,23 @@ tasks.register("installCli") {
         println("✓ Installed to ${wrapperScript.absolutePath}")
         println("  Add to PATH: export PATH=\"\$PATH:$userHome/.local/bin\"")
         println("  Then run: tether --help")
+    }
+}
+
+val composeRulesCoordinates = libs.compose.rules.ktlint.get().let {
+    "${it.module.group}:${it.module.name}:${it.versionConstraint.requiredVersion}"
+}
+
+dependencies {
+    "ktlintRuleset"(composeRulesCoordinates)
+    "ktlintRuleset"(project(":ktlint-rules"))
+}
+
+configure<org.jlleitschuh.gradle.ktlint.KtlintExtension> {
+    android.set(true)
+    outputToConsole.set(true)
+    filter {
+        exclude { it.file.path.contains("/build/") }
     }
 }
 
