@@ -1,6 +1,6 @@
 ---
 name: document
-description: End-to-end documentation orchestrator for a docs-only GitHub issue. Plans which artifact layers are needed (product spec / UX brief / engineering mechanism doc / ADR / knowledge entry / .claude prompt), dispatches the right sub-agents, runs a consistency pass across artifacts, then a docs-scoped review wave, and lands a docs PR. Use when the issue's deliverable is documentation or agent/skill configuration, not runtime code.
+description: Docs-only issue orchestrator. Picks artifact layers (spec / UX brief / tech-doc / ADR / knowledge / `.claude` prompt), dispatches the right sub-agents, runs a consistency pass and a docs-scoped review wave, lands a PR. Use when issue's deliverable is documentation or agent/skill configuration, not runtime code.
 ---
 
 # /document — Docs-only issue orchestrator
@@ -41,7 +41,7 @@ You MUST stop and ask the user in these cases (and only these):
 
 - **D2 — Cross-doc inconsistency.** Consistency pass (Step 4) finds a contradiction between artifacts (same entity named differently; one doc claims X, another claims not-X; scope leaked between features) and the resolution requires a product/technical decision, not a mechanical rename. Route the resolution to the owning sub-agent (spec issue → `spec-writer`; tech issue → `architect`; ux issue → `ux-expert`), not to the user directly.
 
-- **D5 — Final summary to the user.** After review wave converges, commit, push, create the PR, and present the PR URL with a short summary of layers produced and any `[UNVERIFIABLE]` findings. The user reviews on GitHub; you do not block on explicit OK before push.
+- **D3 — Final summary to the user.** After review wave converges, commit, push, create the PR, and present the PR URL with a short summary of layers produced and any `[UNVERIFIABLE]` findings. The user reviews on GitHub; you do not block on explicit OK before push.
 
 Everything else — sub-agent dispatch, mechanical fixes, aggregation of reviewer findings — you handle internally without the user. You do not perform reviews yourself; reviewers are dispatched as sub-agents.
 
@@ -135,7 +135,7 @@ Iteration: aggregate `[REQUIRED]` findings, re-dispatch the responsible sub-agen
 
 **Iteration limit: 2.** Docs converge faster than code. Not converged after 2 → escalate to user with remaining findings; signals a scope/intent problem the loop cannot resolve.
 
-## Step 6 — Commit, push, PR (D5 summary)
+## Step 6 — Commit, push, PR (D3 summary)
 
 Commit on the feature branch, push, create the PR:
 

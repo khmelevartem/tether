@@ -1,6 +1,6 @@
 ---
 name: implement
-description: End-to-end implementation orchestrator for a GitHub issue. Detects docs-only issues and delegates to `/document`; for code-track issues plans, dispatches coder / ui-expert / architect, runs a fast review loop (implementer ↔ reviewers) without user in the loop, runs smoke, and reports to user only at human-required gates (AC ambiguity, root cause uncertainty, smoke failure, final approval). Use when starting work on an issue.
+description: Issue-to-PR orchestrator. Detects docs-only issues and delegates to `/document`; for code-track plans, dispatches coder / ui-expert / architect, runs implementer↔reviewers loop, smoke, lands a PR. Stops for user only at human-required gates (G1 AC ambiguity, G2 root-cause uncertainty, G3 plan conflicts guides, G4 smoke red). Use when starting work on an issue.
 ---
 
 # /implement — Issue-to-PR orchestrator
