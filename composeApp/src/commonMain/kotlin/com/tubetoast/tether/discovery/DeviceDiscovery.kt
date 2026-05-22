@@ -9,4 +9,7 @@ interface DeviceDiscovery {
     fun start(deviceName: String, port: Int)
 
     fun stop()
+
+    /** No-op if [start] was never called. */
+    fun republish(name: String)
 }

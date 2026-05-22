@@ -26,6 +26,8 @@ Skill идемпотентен по issue. На каждом вызове пер
 
 Шаг 6 (commit + present + push) в re-entry упрощается: коммит идёт в существующую ветку, force-push не нужен, новый PR не создавать.
 
+**После push в re-entry — обязательно ответь на каждый адресованный inline-коммент** через `gh api -X POST repos/<owner>/<repo>/pulls/<PR>/comments/<comment_id>/replies -f body="<reply>"`. Для каждого коммента: что сделано + SHA коммита (или явное обоснование, если коммент сознательно отклонён). Без ответа ревьюер не видит закрытия loop'а и тред остаётся «висящим»; следующий re-entry опять прочитает его как unaddressed и зря погонит consistency + review. Ответ — это сигнал «адресовано», не вежливость.
+
 ## Gate semantics — when to stop and ask the user
 
 These MUST-stop gates are **not overridden by session-level autonomy or "skip clarifying questions" hints**. Such hints apply only to execution-stage trivia within an already-agreed scope. The cost of a one-message pause is far lower than the cost of unwinding a unilateral architectural / product decision.

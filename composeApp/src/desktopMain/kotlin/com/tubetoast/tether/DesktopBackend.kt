@@ -1,6 +1,11 @@
 package com.tubetoast.tether
 
 import com.tubetoast.tether.di.DesktopAppContainer
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.first
 
 internal sealed class BackendStartException(
     message: String,
@@ -15,37 +20,53 @@ internal sealed class BackendStartException(
     ) : BackendStartException("mDNS start failed: ${cause.message}", cause)
 }
 
-internal fun defaultDesktopDeviceName(): String =
-    "Tether-${System.getenv("USER") ?: "dev"}"
+internal class BackendHandle internal constructor(
+    val port: Int,
+    private val onClose: () -> Unit,
+) {
+    fun close() = onClose()
+}
 
-internal fun DesktopAppContainer.startBackendOrFail(deviceName: String): Int {
+internal suspend fun DesktopAppContainer.startBackendOrFail(): BackendHandle {
+    val deviceName = nameStore.name.first()
     val server = fileServer
     val port = try {
         server.start()
     } catch (e: Exception) {
         throw BackendStartException.FileServer(e)
     }
+    val backendScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     try {
         mdnsDiscovery.start(deviceName, port)
     } catch (e: Exception) {
+        backendScope.cancel()
         runCatching { server.stop() }
         throw BackendStartException.Mdns(e)
     }
-    return port
+    nameRepublisher.start(backendScope)
+    return BackendHandle(port) {
+        runCatching { nameRepublisher.stop() }.onFailure {
+            System.err.println("WARN: nameRepublisher stop failed — ${it.message}")
+        }
+        runCatching { backendScope.cancel() }
+        runCatching { mdnsDiscovery.stop() }.onFailure {
+            System.err.println("WARN: mDNS stop failed — ${it.message}")
+        }
+        runCatching { server.stop() }.onFailure {
+            System.err.println("WARN: FileServer stop failed — ${it.message}")
+        }
+        runCatching { fileClient.close() }.onFailure {
+            System.err.println("WARN: FileClient close failed — ${it.message}")
+        }
+    }
 }
 
-internal fun DesktopAppContainer.registerShutdownHook() {
+internal fun registerShutdownHook(handle: BackendHandle) {
     Runtime.getRuntime().addShutdownHook(
         Thread {
             val cleanup = Thread {
-                runCatching { mdnsDiscovery.stop() }.onFailure {
-                    System.err.println("WARN: mDNS stop failed — ${it.message}")
-                }
-                runCatching { fileServer.stop() }.onFailure {
-                    System.err.println("WARN: FileServer stop failed — ${it.message}")
-                }
-                runCatching { fileClient.close() }.onFailure {
-                    System.err.println("WARN: FileClient close failed — ${it.message}")
+                runCatching { handle.close() }.onFailure {
+                    System.err.println("WARN: backend cleanup failed — ${it.message}")
                 }
             }
             cleanup.isDaemon = true

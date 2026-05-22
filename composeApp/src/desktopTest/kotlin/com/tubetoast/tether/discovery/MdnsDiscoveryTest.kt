@@ -10,15 +10,17 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
+private fun testDiscovery() = MdnsDiscovery(DiscoveredDevicesStore())
+
 class MdnsDiscoveryTest {
     @Test
     fun `stop before start does not throw`() {
-        MdnsDiscovery(DiscoveredDevicesStore()).stop()
+        testDiscovery().stop()
     }
 
     @Test
     fun `start twice without stop throws IllegalStateException`() {
-        val discovery = MdnsDiscovery(DiscoveredDevicesStore())
+        val discovery = testDiscovery()
         discovery.start("DoubleStart", 19001)
         try {
             assertFailsWith<IllegalStateException> {
@@ -31,7 +33,7 @@ class MdnsDiscoveryTest {
 
     @Test
     fun `stop emits empty list`() = runBlocking {
-        val discovery = MdnsDiscovery(DiscoveredDevicesStore())
+        val discovery = testDiscovery()
         discovery.start("StopEmits", 19003)
         discovery.stop()
         assertTrue(discovery.discoveredDevices.first().isEmpty())
@@ -39,8 +41,8 @@ class MdnsDiscoveryTest {
 
     @Test
     fun `two instances discover each other`() = runBlocking {
-        val a = MdnsDiscovery(DiscoveredDevicesStore())
-        val b = MdnsDiscovery(DiscoveredDevicesStore())
+        val a = testDiscovery()
+        val b = testDiscovery()
         try {
             a.start("PeerA", 19010)
             b.start("PeerB", 19011)
@@ -87,8 +89,8 @@ class MdnsDiscoveryTest {
 
     @Test
     fun `instances do not discover themselves`() = runBlocking {
-        val a = MdnsDiscovery(DiscoveredDevicesStore())
-        val b = MdnsDiscovery(DiscoveredDevicesStore())
+        val a = testDiscovery()
+        val b = testDiscovery()
         try {
             a.start("SelfA", 19020)
             b.start("SelfB", 19021)
@@ -127,8 +129,8 @@ class MdnsDiscoveryTest {
 
     @Test
     fun `restart — stop then start works correctly`() = runBlocking {
-        val a = MdnsDiscovery(DiscoveredDevicesStore())
-        val b = MdnsDiscovery(DiscoveredDevicesStore())
+        val a = testDiscovery()
+        val b = testDiscovery()
         try {
             a.start("RestartA", 19050)
             b.start("RestartB", 19051)
@@ -154,8 +156,8 @@ class MdnsDiscoveryTest {
 
     @Test
     fun `stop clears previously discovered peers`() = runBlocking {
-        val a = MdnsDiscovery(DiscoveredDevicesStore())
-        val b = MdnsDiscovery(DiscoveredDevicesStore())
+        val a = testDiscovery()
+        val b = testDiscovery()
         try {
             a.start("ClearA", 19030)
             b.start("ClearB", 19031)
@@ -173,8 +175,8 @@ class MdnsDiscoveryTest {
 
     @Test
     fun `peer re-resolved with new port replaces old entry`() = runBlocking {
-        val a = MdnsDiscovery(DiscoveredDevicesStore())
-        val b = MdnsDiscovery(DiscoveredDevicesStore())
+        val a = testDiscovery()
+        val b = testDiscovery()
         try {
             a.start("PortChangeA", 19060)
             b.start("PortChangeB", 19061)
@@ -203,8 +205,8 @@ class MdnsDiscoveryTest {
 
     @Test
     fun `late-joining peer is discovered after initial browse cycle`(): Unit = runBlocking {
-        val a = MdnsDiscovery(DiscoveredDevicesStore())
-        val b = MdnsDiscovery(DiscoveredDevicesStore())
+        val a = testDiscovery()
+        val b = testDiscovery()
         try {
             a.start("LateA", 19070)
             Thread.sleep(2_000)
@@ -220,8 +222,8 @@ class MdnsDiscoveryTest {
 
     @Test
     fun `discovered device has correct host and port`() = runBlocking {
-        val a = MdnsDiscovery(DiscoveredDevicesStore())
-        val b = MdnsDiscovery(DiscoveredDevicesStore())
+        val a = testDiscovery()
+        val b = testDiscovery()
         try {
             a.start("HostA", 19040)
             b.start("HostB", 19041)

@@ -9,20 +9,18 @@ import com.arkivanov.essenty.lifecycle.resume
 import com.tubetoast.tether.di.DefaultDesktopAppConfig
 import com.tubetoast.tether.di.DesktopAppContainer
 import com.tubetoast.tether.presentation.DeviceListComponent
+import kotlinx.coroutines.runBlocking
 import org.jetbrains.compose.resources.painterResource
 import tether.composeapp.generated.resources.Res
 import tether.composeapp.generated.resources.icon
 
-fun main() {
-    val deviceName = defaultDesktopDeviceName()
+fun main() = runBlocking {
     val container = DesktopAppContainer(
-        DefaultDesktopAppConfig(
-            deviceName = deviceName,
-            port = 0,
-        ),
+        DefaultDesktopAppConfig(port = 0),
     )
-    container.startBackendOrFail(deviceName)
-    container.registerShutdownHook()
+    container.nameStore.init()
+    val handle = container.startBackendOrFail()
+    registerShutdownHook(handle)
 
     val lifecycle = LifecycleRegistry()
     val component = DeviceListComponent(

@@ -9,7 +9,13 @@ class FakeDeviceDiscovery(
 ) : DeviceDiscovery {
     override val discoveredDevices: StateFlow<List<Device>> = flow
 
+    val republishCalls = mutableListOf<String>()
+
     override fun start(deviceName: String, port: Int) = Unit
 
     override fun stop() = Unit
+
+    override fun republish(name: String) {
+        republishCalls.add(name)
+    }
 }

@@ -18,6 +18,7 @@ import com.tubetoast.tether.di.AppContainerProvider
 import com.tubetoast.tether.discovery.MdnsDiscovery
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 private const val TAG = "TetherFGService"
@@ -45,10 +46,12 @@ class TetherForegroundService : LifecycleService() {
         val container = (application as AppContainerProvider).container
         val fileServer = container.fileServer
         val mdnsDiscovery = container.mdnsDiscovery
-        val deviceName = container.deviceName
         val downloadsDir = container.downloadsDir
 
         lifecycleScope.launch(Dispatchers.IO) {
+            container.nameStore.init()
+            val deviceName = container.nameStore.name.first()
+
             val port = try {
                 fileServer.start()
             } catch (e: CancellationException) {
@@ -67,6 +70,7 @@ class TetherForegroundService : LifecycleService() {
 
             try {
                 mdnsDiscovery.start(deviceName, port)
+                container.nameRepublisher.start(lifecycleScope)
                 runningMdnsDiscovery = mdnsDiscovery
                 Log.i(TAG, "mDNS started: name=$deviceName port=$port")
             } catch (e: Exception) {
@@ -96,7 +100,9 @@ class TetherForegroundService : LifecycleService() {
     }
 
     override fun onDestroy() {
-        (application as AppContainerProvider).container.transferActivityTracker.releaseAll()
+        val container = (application as AppContainerProvider).container
+        container.transferActivityTracker.releaseAll()
+        container.nameRepublisher.stop()
         runningMdnsDiscovery?.let { mdnsDiscovery ->
             try {
                 mdnsDiscovery.stop()

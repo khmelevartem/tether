@@ -6,7 +6,7 @@ import java.io.File
 
 abstract class JvmAppContainer(
     private val config: JvmAppConfig,
-) : AppContainer(config) {
+) : AppContainer() {
     val downloadsDir: File = config.downloadsDir
     override val trustedDeviceStore: TrustedDeviceStore get() = config.trustedDeviceStore
     override val fileServer: FileServer by lazy {

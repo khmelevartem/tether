@@ -20,7 +20,7 @@ AppContainer            (commonMain)
     └── MacosAppContainer   (macosMain)
 ```
 
-Every container takes an `AppConfig` interface in its constructor. `AppConfig` is the input — the values the entry point chooses (device name, port, downloads dir, Android `Application`). The hierarchy of `*AppConfig` interfaces tracks the container hierarchy: [`AppConfig`](../../composeApp/src/commonMain/kotlin/com/tubetoast/tether/di/AppConfig.kt), [`JvmAppConfig`](../../composeApp/src/jvmMain/kotlin/com/tubetoast/tether/di/JvmAppConfig.kt), [`AndroidAppConfig`](../../composeApp/src/androidMain/kotlin/com/tubetoast/tether/di/AndroidAppConfig.kt), etc.
+`AppContainer` (commonMain) is no-arg. Intermediate containers — `JvmAppContainer`, `AppleAppContainer` — take a typed `*AppConfig` subtype in their constructor; leaves (`AndroidAppContainer`, `DesktopAppContainer`, `IosAppContainer`, `MacosAppContainer`) may pass a concrete config up to the intermediate. `AppConfig` is the input — the values the entry point chooses (port, downloads dir, Android `Application`). The hierarchy of `*AppConfig` interfaces tracks the container hierarchy: [`AppConfig`](../../composeApp/src/commonMain/kotlin/com/tubetoast/tether/di/AppConfig.kt), [`JvmAppConfig`](../../composeApp/src/jvmMain/kotlin/com/tubetoast/tether/di/JvmAppConfig.kt), [`AndroidAppConfig`](../../composeApp/src/androidMain/kotlin/com/tubetoast/tether/di/AndroidAppConfig.kt), etc.
 
 Concrete `*AppConfig` implementations are **named classes in their own files** (per [architecture-principles.md](architecture-principles.md) — "Named classes over anonymous objects"): [`TetherAppConfig`](../../composeApp/src/androidMain/kotlin/com/tubetoast/tether/di/TetherAppConfig.kt) for Android, [`DefaultDesktopAppConfig`](../../composeApp/src/desktopMain/kotlin/com/tubetoast/tether/di/DesktopAppConfig.kt), [`DefaultIosAppConfig`](../../composeApp/src/iosMain/kotlin/com/tubetoast/tether/di/IosAppConfig.kt), [`DefaultMacosAppConfig`](../../composeApp/src/macosMain/kotlin/com/tubetoast/tether/di/MacosAppConfig.kt). Anonymous `object : AppConfig { ... }` literals invite drift between call sites.
 
@@ -187,10 +187,11 @@ Components take their dependencies through the constructor and are tested direct
 When a class takes container components, the test builds a fake container by subclassing and overriding `open val`s — exactly what the `open val` declarations are for:
 
 ```kotlin
-class FakeContainer(name: String = "test") : Container(
-    object : Config { override val deviceName = name },
-) {
-    override val service: SomeService = FakeSomeService()
+class FakeContainer : AppContainer() {
+    override val namePersistence = <fixture>
+    override val mdnsDiscovery = <fake>
+    override val fileServer = <fake>
+    override val trustedDeviceStore = <fake>
 }
 ```
 

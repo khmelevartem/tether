@@ -12,6 +12,8 @@ import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
 
+private fun testDiscovery() = MdnsDiscovery(DiscoveredDevicesStore())
+
 // NSNetService delivers callbacks via NSRunLoop, not via coroutine dispatchers.
 // runBlocking / TestDispatcher / Turbine don't pump NSRunLoop, so integration tests
 // use awaitCondition() which explicitly ticks the run loop in short bursts via
@@ -34,12 +36,12 @@ class MdnsDiscoveryTest {
 
     @Test
     fun `stop before start does not throw`() {
-        MdnsDiscovery(DiscoveredDevicesStore()).stop()
+        testDiscovery().stop()
     }
 
     @Test
     fun `start twice without stop throws IllegalStateException`() {
-        val discovery = MdnsDiscovery(DiscoveredDevicesStore())
+        val discovery = testDiscovery()
         discovery.start("DoubleStart", 19001)
         try {
             assertFailsWith<IllegalStateException> {
@@ -52,7 +54,7 @@ class MdnsDiscoveryTest {
 
     @Test
     fun `stop emits empty list`() = runBlocking {
-        val discovery = MdnsDiscovery(DiscoveredDevicesStore())
+        val discovery = testDiscovery()
         discovery.start("StopEmits", 19003)
         discovery.stop()
         assertTrue(discovery.discoveredDevices.first().isEmpty())
@@ -60,7 +62,7 @@ class MdnsDiscoveryTest {
 
     @Test
     fun `restart — stop then start does not throw`() {
-        val discovery = MdnsDiscovery(DiscoveredDevicesStore())
+        val discovery = testDiscovery()
         discovery.start("RestartDevice", 19004)
         discovery.stop()
         discovery.start("RestartDevice", 19004)
@@ -69,7 +71,7 @@ class MdnsDiscoveryTest {
 
     @Test
     fun `multiple stops do not throw`() {
-        val discovery = MdnsDiscovery(DiscoveredDevicesStore())
+        val discovery = testDiscovery()
         discovery.start("MultiStop", 19005)
         discovery.stop()
         discovery.stop()
@@ -79,8 +81,8 @@ class MdnsDiscoveryTest {
 
     @Test
     fun `two instances discover each other`() {
-        val a = MdnsDiscovery(DiscoveredDevicesStore())
-        val b = MdnsDiscovery(DiscoveredDevicesStore())
+        val a = testDiscovery()
+        val b = testDiscovery()
         try {
             a.start("ApplePeerA", 19110)
             b.start("ApplePeerB", 19111)
@@ -100,8 +102,8 @@ class MdnsDiscoveryTest {
 
     @Test
     fun `instances do not discover themselves`() {
-        val a = MdnsDiscovery(DiscoveredDevicesStore())
-        val b = MdnsDiscovery(DiscoveredDevicesStore())
+        val a = testDiscovery()
+        val b = testDiscovery()
         try {
             a.start("AppleSelfA", 19120)
             b.start("AppleSelfB", 19121)
@@ -125,8 +127,8 @@ class MdnsDiscoveryTest {
 
     @Test
     fun `discovered device has correct port`() {
-        val a = MdnsDiscovery(DiscoveredDevicesStore())
-        val b = MdnsDiscovery(DiscoveredDevicesStore())
+        val a = testDiscovery()
+        val b = testDiscovery()
         try {
             a.start("AppleHostA", 19130)
             b.start("AppleHostB", 19131)

@@ -1,5 +1,6 @@
 package com.tubetoast.tether.security
 
+import com.tubetoast.tether.foundation.writeOrThrow
 import platform.Foundation.NSLog
 import platform.Foundation.NSUserDefaults
 
@@ -10,10 +11,7 @@ actual open class TrustedDeviceStore {
 
     actual open fun saveTrustedKey(deviceId: String, publicKey: ByteArray) {
         val encoded = publicKey.joinToString(",")
-        defaults.setObject(encoded, forKey = "tether_trust_$deviceId")
-        if (!defaults.synchronize()) {
-            throw IllegalStateException("NSUserDefaults.synchronize() returned false for deviceId=$deviceId")
-        }
+        defaults.writeOrThrow("tether_trust_$deviceId", encoded)
     }
 
     actual open fun getPublicKey(deviceId: String): ByteArray? {

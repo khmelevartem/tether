@@ -174,6 +174,19 @@ PASS если каждый из A/B/C видит ≥ 2 уникальных Smok
 
 Cleanup инстанса C — в Блоке 7.
 
+### Блок 3.5: Device name rename — peer видит новое имя
+
+stdin `name <new>` на A; B должен увидеть новое имя через mDNS republish.
+
+```bash
+echo "name RenamedA" > /tmp/smoke-cliA-in &
+for i in $(seq 1 15); do
+  grep -q "RenamedA" $LOG_B && break
+  sleep 1
+done
+grep -q "RenamedA" $LOG_B && echo PASS || echo FAIL
+```
+
 ### Блок 4: graceful quit инстанса A
 
 `echo "quit" > /tmp/smoke-cliA-in &`, ждать до 8 сек, проверить `ps -p $JPID_A`. PASS если процесс умер. Если не умер — FAIL «не graceful», `kill -9` и идти дальше.
@@ -301,6 +314,7 @@ PASS если exit=0. FAIL — приложить последние ~30 стр�
 | Desktop CLI A | stdin `list` | ✓ PASS | peer printed |
 | Desktop↔Desktop | send via CLI | ✓ PASS | savedPath parsed, diff empty |
 | Same-name discovery | A/B/C convergence | ✓ PASS | each sees 2 SmokeMac peers in 3s |
+| Device name | rename via stdin | ✓ PASS | peer sees new name in <15s |
 | Desktop CLI A | graceful `quit` | ✓ PASS | exit in 3s |
 | Android | adb device | ✓ PASS | <serial>, model, API |
 | Android | installDebug | ✓ PASS | 4s |
