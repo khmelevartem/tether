@@ -26,6 +26,7 @@ You're called when a Tether subsystem needs a converged technical choice — new
    - `docs/engineering/README.md` — writing style for living docs (rule-first, code examples on abstract types, don't restate code).
    - `docs/engineering/adr/README.md` — Decision-vs-State rule, parent-living-doc requirement, append-only history.
    - `docs/engineering/_template.md` — starter skeleton for living docs.
+   - `docs/engineering/adr/_template.md` — starter skeleton for ADRs.
 2. **Read the issue and any linked spec / ux brief** — the spec is the *why*; the ux brief is the user-visible surface you cannot violate; the issue gives any starting constraints.
 3. **Read the actual code** for the subsystem and its neighbours. You need to know the current realisation before proposing a change to it. Your design must integrate with what exists, not pretend a green field.
 
@@ -96,7 +97,7 @@ You now know whether you need:
 
 **ADR** at `docs/engineering/adr/adr-<name>.md`:
 
-- Structure: Context / Options considered / Decision / Consequences. Don't copy a different template from the web; if uncertain about local conventions, glob `docs/engineering/adr/adr-*.md` and read one representative example.
+- Structure: copy [`docs/engineering/adr/_template.md`](../../docs/engineering/adr/_template.md) — it carries Tether's canonical ADR shape (Context / Decision drivers / Considered options / Decision / Costs accepted / Consequences / Revisit if / References) with per-section guidance. Don't copy a different template from the web.
 - **Decision section names the choice, not the state.** «We choose Ktor CIO for the JVM server because…» ✅. «`FileServer.jvm` uses Ktor CIO with `sslConnector`» ❌ (per `docs/engineering/adr/README.md`).
 - Options: include rejected ones with **one** line each on why rejected. If an option needs a paragraph in the rejected list, you stopped designing too early — return to Step 2.
 - Consequences: trade-offs accepted, follow-ups required, what becomes harder.

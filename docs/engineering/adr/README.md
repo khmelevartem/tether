@@ -4,7 +4,7 @@ ADRs in this folder record one-time architectural choices: context, options cons
 
 Operational artefacts — agent definitions in `.claude/agents/` and skills in `.claude/skills/` — reference the living docs in `docs/engineering/`, not the ADRs. The ADR carries the *why* for human readers; the living doc carries the *what is currently true* that agents enforce.
 
-For ADR conventions and templates, see [adr.github.io](https://adr.github.io/) and [Joel Parker Henderson's collection](https://github.com/joelparkerhenderson/architecture-decision-record). No need to copy them — pick a template that fits the decision.
+Start a new ADR from [`_template.md`](_template.md) — it captures the canonical shape used across the existing ADRs (Context / Decision drivers / Considered options / Decision / Costs accepted / Consequences / Revisit if / References) with one-line guidance per section. Optional sections (Decision drivers, Comparison, Revisit if, References) are marked — drop them when the decision is narrow. For broader background on the format, see [adr.github.io](https://adr.github.io/) and [Joel Parker Henderson's collection](https://github.com/joelparkerhenderson/architecture-decision-record).
 
 Write an ADR when a non-trivial choice will be questioned by future contributors (library, framework, structural pattern). Skip it for naming or style — those belong in living docs.
 
