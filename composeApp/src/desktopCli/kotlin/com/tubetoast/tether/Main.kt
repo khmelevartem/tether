@@ -5,6 +5,7 @@ import com.github.ajalt.clikt.core.ProgramResult
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
 import com.tubetoast.tether.config.DeviceNameStore
+import com.tubetoast.tether.config.EphemeralDeviceNamePersistence
 import com.tubetoast.tether.di.DefaultDesktopAppConfig
 import com.tubetoast.tether.di.DesktopAppContainer
 import com.tubetoast.tether.network.FileClient
@@ -23,7 +24,7 @@ import kotlin.io.path.exists
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.TimeSource
 
-private const val ESC = ""
+private const val ESC = ""
 
 class TetherCommand :
     CliktCommand(
@@ -38,6 +39,7 @@ class TetherCommand :
     override fun run() = runBlocking {
         val container = DesktopAppContainer(
             DefaultDesktopAppConfig(port = port ?: 0),
+            namePersistence = EphemeralDeviceNamePersistence(),
         )
 
         container.nameStore.init()
@@ -52,7 +54,7 @@ class TetherCommand :
         echo("=== Tether debug runner ===")
         echo("device : $deviceName")
 
-        val actualPort = try {
+        val (actualPort, republishJob) = try {
             container.startBackendOrFail()
         } catch (e: BackendStartException.FileServer) {
             echo("ERROR: Could not start FileServer on port ${port ?: 0} — ${e.cause?.message}", err = true)
@@ -66,7 +68,7 @@ class TetherCommand :
         echo("FileServer started  →  http://localhost:$actualPort/health")
         echo("mDNS started → advertising '$deviceName' on port $actualPort\n")
 
-        container.registerShutdownHook()
+        container.registerShutdownHook(republishJob)
 
         val discovery = container.mdnsDiscovery
         var peersLinePrinted = false

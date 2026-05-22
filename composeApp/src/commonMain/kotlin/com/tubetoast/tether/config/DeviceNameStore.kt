@@ -15,19 +15,10 @@ class DeviceNameStore(
     }
 
     suspend fun setName(value: String): Result<String> {
-        val validated = DeviceNameValidator.validate(value)
-        return validated.fold(
-            onSuccess = { trimmed ->
-                runCatching { persistence.write(trimmed) }
-                    .fold(
-                        onSuccess = {
-                            _name.value = trimmed
-                            Result.success(trimmed)
-                        },
-                        onFailure = { Result.failure(it) },
-                    )
-            },
-            onFailure = { Result.failure(it) },
-        )
+        val trimmed = DeviceNameValidator.validate(value).getOrElse { return Result.failure(it) }
+        return runCatching { persistence.write(trimmed) }.map {
+            _name.value = trimmed
+            trimmed
+        }
     }
 }

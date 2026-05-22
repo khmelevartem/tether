@@ -7,12 +7,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-// Same-default-name dedup after rename (DoD #147 bullet 6) is covered by:
-//  - `DiscoveredDevicesStoreTest.upsert with same name and new address evicts stale entry`
-//    (in-memory dedup contract, #90 regression)
-//  - smoke-test Block 3 «Same-name discovery» (runtime cover for both Bonjour + JmDNS paths)
-// Per #174: a JmDNS unit test with two same-name peers depends on conflict-rename probing
-// timing (~750 ms/instance), unreliable on Linux CI.
 class MdnsDiscoveryRepublishTest {
     @Test
     fun `republish before start is a no-op and adds no peers`() {

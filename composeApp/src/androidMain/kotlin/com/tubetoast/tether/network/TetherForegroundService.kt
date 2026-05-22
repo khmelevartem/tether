@@ -16,8 +16,10 @@ import androidx.lifecycle.lifecycleScope
 import com.tubetoast.tether.R
 import com.tubetoast.tether.di.AppContainerProvider
 import com.tubetoast.tether.discovery.MdnsDiscovery
+import com.tubetoast.tether.discovery.republishOnNameChange
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -34,6 +36,8 @@ class TetherForegroundService : LifecycleService() {
     @Volatile private var runningFileServer: FileServer? = null
 
     @Volatile private var runningMdnsDiscovery: MdnsDiscovery? = null
+
+    @Volatile private var runningRepublishJob: Job? = null
 
     // Binder returned from onBind so MainActivity can check if the service is running
     // via bindService(intent, connection, flags=0) without BIND_AUTO_CREATE.
@@ -72,7 +76,7 @@ class TetherForegroundService : LifecycleService() {
                 mdnsDiscovery.start(deviceName, port)
                 runningMdnsDiscovery = mdnsDiscovery
                 Log.i(TAG, "mDNS started: name=$deviceName port=$port")
-                container.nameRepublisher.start(lifecycleScope)
+                runningRepublishJob = lifecycleScope.republishOnNameChange(container.nameStore, mdnsDiscovery)
             } catch (e: Exception) {
                 Log.e(TAG, "mDNS failed to start: ${e.message}", e)
                 fileServer.stop()
@@ -102,7 +106,8 @@ class TetherForegroundService : LifecycleService() {
     override fun onDestroy() {
         val container = (application as AppContainerProvider).container
         container.transferActivityTracker.releaseAll()
-        container.nameRepublisher.stop()
+        runningRepublishJob?.cancel()
+        runningRepublishJob = null
         runningMdnsDiscovery?.let { mdnsDiscovery ->
             try {
                 mdnsDiscovery.stop()

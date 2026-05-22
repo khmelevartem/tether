@@ -28,6 +28,11 @@ actual class MdnsDiscovery(
 
     @Volatile private var registrationListener: NsdManager.RegistrationListener? = null
 
+    /**
+     * NsdManager throws `IllegalArgumentException("listener already in use")` if the same
+     * `RegistrationListener` instance is passed to `registerService` before its async
+     * `onServiceUnregistered` callback fires. A fresh instance per registration sidesteps this.
+     */
     private fun makeRegistrationListener(): NsdManager.RegistrationListener =
         object : NsdManager.RegistrationListener {
             override fun onRegistrationFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
@@ -160,9 +165,10 @@ actual class MdnsDiscovery(
             this.port = port
         }
         Log.d(TAG, "Starting NSD: name=$deviceName, port=$port")
-        val listener = makeRegistrationListener()
-        registrationListener = listener
-        nm.registerService(serviceInfo, NsdManager.PROTOCOL_DNS_SD, listener)
+        makeRegistrationListener().also { fresh ->
+            registrationListener = fresh
+            nm.registerService(serviceInfo, NsdManager.PROTOCOL_DNS_SD, fresh)
+        }
         nm.discoverServices(SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, discoveryListener)
     }
 
@@ -171,8 +177,6 @@ actual class MdnsDiscovery(
         val nm = nsdManager ?: return
         Log.d(TAG, "Republishing NSD as name=$name")
         val old = registrationListener
-        val fresh = makeRegistrationListener()
-        registrationListener = fresh
         if (old != null) {
             try {
                 nm.unregisterService(old)
@@ -186,7 +190,10 @@ actual class MdnsDiscovery(
             serviceType = SERVICE_TYPE
             this.port = currentPort
         }
-        nm.registerService(serviceInfo, NsdManager.PROTOCOL_DNS_SD, fresh)
+        makeRegistrationListener().also { fresh ->
+            registrationListener = fresh
+            nm.registerService(serviceInfo, NsdManager.PROTOCOL_DNS_SD, fresh)
+        }
     }
 
     @Synchronized

@@ -9,9 +9,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class CliNameTest {
-    private fun storeWith(initial: String? = null): DeviceNameStore =
-        DeviceNameStore(InMemoryDeviceNamePersistence(initial))
-
     @Test
     fun `success prints OK and persists`() = runTest {
         val persistence = InMemoryDeviceNamePersistence(null)

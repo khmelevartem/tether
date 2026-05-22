@@ -1,8 +1,10 @@
 package com.tubetoast.tether
 
 import com.tubetoast.tether.di.DesktopAppContainer
+import com.tubetoast.tether.discovery.republishOnNameChange
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -20,7 +22,7 @@ internal sealed class BackendStartException(
     ) : BackendStartException("mDNS start failed: ${cause.message}", cause)
 }
 
-internal fun DesktopAppContainer.startBackendOrFail(): Int {
+internal fun DesktopAppContainer.startBackendOrFail(): Pair<Int, Job> {
     val backendScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     val deviceName = runBlocking { nameStore.name.first() }
     val server = fileServer
@@ -35,16 +37,16 @@ internal fun DesktopAppContainer.startBackendOrFail(): Int {
         runCatching { server.stop() }
         throw BackendStartException.Mdns(e)
     }
-    nameRepublisher.start(backendScope)
-    return port
+    val republishJob = backendScope.republishOnNameChange(nameStore, mdnsDiscovery)
+    return port to republishJob
 }
 
-internal fun DesktopAppContainer.registerShutdownHook() {
+internal fun DesktopAppContainer.registerShutdownHook(republishJob: Job) {
     Runtime.getRuntime().addShutdownHook(
         Thread {
             val cleanup = Thread {
-                runCatching { nameRepublisher.stop() }.onFailure {
-                    System.err.println("WARN: DeviceNameRepublisher stop failed — ${it.message}")
+                runCatching { republishJob.cancel() }.onFailure {
+                    System.err.println("WARN: republishJob cancel failed — ${it.message}")
                 }
                 runCatching { mdnsDiscovery.stop() }.onFailure {
                     System.err.println("WARN: mDNS stop failed — ${it.message}")
