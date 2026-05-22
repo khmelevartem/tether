@@ -22,7 +22,11 @@ Issue number `<N>`.
 Skill идемпотентен по issue. На каждом вызове первым делом проверь `gh pr list --search "issue:#<N>" --state open`:
 
 - **PR нет** → стартуй Step 1.
-- **PR есть и открыт** → ты в pull-request feedback итерации. Прочитай существующие human-комменты на PR (`gh api repos/<owner>/<repo>/pulls/<PR>/comments` + `gh pr view <PR> --comments`). Прогон **обязан** включать на свежем diff'е (`docs/` + `.claude/`): Step 4 (consistency pass) → Step 5 (review wave). Из дисциплины ничего пропускать нельзя.
+- **PR есть и открыт** → ты в pull-request feedback итерации. На PR есть **две независимые ветки комментов** — обработай каждую отдельно, они не сливаются и не дублируют друг друга:
+  1. **PR-level conversation** — top-level комменты на странице PR (архитектурные / общие / cross-cutting). `gh api repos/<owner>/<repo>/issues/<PR>/comments`.
+  2. **Inline review threads** — привязаны к строкам diff'а, группируются в threads. `gh api repos/<owner>/<repo>/pulls/<PR>/comments`.
+
+  Пропуск PR-level ветки — распространённая ошибка: inline-batch визуально перекрывает её, а именно там часто живут структурные вопросы. Прогон **обязан** включать на свежем diff'е (`docs/` + `.claude/`): Step 4 (consistency pass) → Step 5 (review wave). Из дисциплины ничего пропускать нельзя.
 
 Шаг 6 (commit + present + push) в re-entry упрощается: коммит идёт в существующую ветку, force-push не нужен, новый PR не создавать.
 
