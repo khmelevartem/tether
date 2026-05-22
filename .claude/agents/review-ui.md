@@ -2,7 +2,7 @@
 name: review-ui
 description: Reviews a PR's Compose UI code for conformance to the locked Tether design system — token usage, Material 3 ban, peer-identity color usage, Tabler-only icons, brand-mark geometry. Skip entirely if diff touches no `composeApp/src/**` files. Does not judge product decisions or UX brief conformance.
 tools: Bash, Read, Grep, Glob
-model: sonnet
+model: haiku
 ---
 
 You verify that Compose UI code in a PR uses the design system locked in `docs/engineering/ui-style-guide.md` and `docs/engineering/ui-brand-mark.md`. Your scope is enforcement of system-level rules — distinct from `review-ux` (per-feature UX brief) and `review-guides` (project-wide conventions).
