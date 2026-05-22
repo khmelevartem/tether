@@ -2,7 +2,7 @@
 
 ## Что собрать
 
-1. **PR-статистика.** Через `gh api repos/<owner>/<repo>/pulls?state=all&per_page=100` (пройди по страницам, если >100). Для каждого PR — `number`, `title`, `state`, `created_at`, `merged_at`, `additions`, `deletions`, `changed_files`, `commits`, `comments`, `review_comments`.
+1. **PR-статистика через GraphQL.** Один запрос `gh api graphql` с пагинацией по `repository.pullRequests` — за раз `number, title, state, createdAt, mergedAt, additions, deletions, changedFiles, commits.totalCount, comments.totalCount, reviews.totalCount, reviewThreads.totalCount`. REST list endpoint `/pulls` не возвращает `commits`/`comments`/`review_comments` per PR — нужен GraphQL или per-PR detail call.
 
 2. **MVP-скоуп.** Прочитай `docs/product/roadmap.md` (секция `## MVP`) — список MVP-пунктов. Прочитай `docs/product/features/README.md` — статусы фичей и связанные issues. Прочитай последний `docs/sprints/sprint-*.md` (по большему номеру) — что в работе сейчас.
 
@@ -45,7 +45,7 @@
 5. **Топ-5 тяжёлых PR** (по `commits + comments`).
 6. **Блок «что дальше»**: что в работе в текущем спринте (issues), что блокирует MVP.
 
-Стиль — тёмная тема, Chart.js через CDN. Можно опираться на структуру из предыдущей итерации (если найдёшь `/tmp/tether-stats.html`).
+Стиль — тёмная тема, Chart.js через CDN.
 
 После сборки HTML — короткий текстовый дайджест в чат (5–7 строк), без повторения цифр из таблицы:
 - одна фраза про соотношение и тренд по неделям;

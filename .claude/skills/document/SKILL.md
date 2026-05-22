@@ -43,7 +43,7 @@ You MUST stop and ask the user in these cases (and only these):
 
 - **D2 — Cross-doc inconsistency.** Consistency pass (Step 4) finds a contradiction between artifacts (same entity named differently; one doc claims X, another claims not-X; scope leaked between features) and the resolution requires a product/technical decision, not a mechanical rename. Route the resolution to the owning sub-agent (spec issue → `spec-writer`; tech issue → `architect`; ux issue → `ux-expert`), not to the user directly.
 
-- **D3 — Final summary to the user.** After review wave converges, commit, push, create the PR, and present the PR URL with a short summary of layers produced and any `[UNVERIFIABLE]` findings. The user reviews on GitHub; you do not block on explicit OK before push.
+- **D3 — Final summary to the user.** After review wave converges, commit, push, create the PR, and present the PR URL with a short summary of layers produced and any `[UNVERIFIABLE]` findings. The user reviews on GitHub; you do not block on explicit OK before push. Before push, verify PR body follows [`.github/pull_request_template.md`](../../../.github/pull_request_template.md): `Closes #<N>` present; every defer-decision made during docs work (open question parked, follow-up artifact planned, layer skipped) appears in `👀 Sanity-check`, not buried at the bottom.
 
 Everything else — sub-agent dispatch, mechanical fixes, aggregation of reviewer findings — you handle internally without the user. You do not perform reviews yourself; reviewers are dispatched as sub-agents.
 
@@ -147,7 +147,7 @@ git push -u origin docs/<N>-<short-slug>
 gh pr create --title "<title>" --body "<...>"
 ```
 
-PR body must include: layers touched, artifact paths, DoD checklist, `Dependency check: n/a (docs-only)`.
+Read [`.github/pull_request_template.md`](../../../.github/pull_request_template.md) before composing the body. `Closes #<N>` is required. `👀 Sanity-check` lists every defer-decision (open question parked, follow-up artifact planned, layer skipped). List layers touched + artifact paths in `Что / зачем` or as a trailing line; omit `Dependency check: n/a` boilerplate.
 
 Report to the user:
 - PR URL.

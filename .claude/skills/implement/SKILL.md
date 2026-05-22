@@ -35,7 +35,7 @@ You MUST stop and ask the user in these cases (and only these):
 - **G2.5. Publication of confirmed cause** — once `bug-reproducer` returns a confirmed cause, show the paste-ready block to the user and wait for explicit OK before `gh issue comment`. Publishing to a GitHub issue is a team-visible action; it does not happen without a user gate.
 - **G3. Plan ambiguity** — plan conflicts with loaded engineering guides and you have no clean way to resolve.
 - **G4. Smoke red/yellow** — smoke verdict is not 🟢 after the inner loop.
-- **G5. Final summary to the user** — after the inner loop converges to APPROVE and smoke is green, commit + push + create the PR, then present the PR URL with a short summary (files changed, AC verdict, smoke verdict, any `[UNVERIFIABLE]` findings). The user reviews on GitHub; do not block on explicit OK before push.
+- **G5. Final summary to the user** — after the inner loop converges to APPROVE and smoke is green, commit + push + create the PR, then present the PR URL with a short summary (files changed, AC verdict, smoke verdict, any `[UNVERIFIABLE]` findings). The user reviews on GitHub; do not block on explicit OK before push. Before push, verify PR body follows [`.github/pull_request_template.md`](../../../.github/pull_request_template.md): `Closes #<N>` present; every defer-decision made during implementation (skipped scope, TODO/FIXME left in code, follow-up issue planned) appears in `👀 Sanity-check`, not buried at the bottom — user redirects defer-vs-do-now from this section.
 
 Everything else — implementation details, reviewer findings, fix iterations — you handle internally without the user.
 
@@ -201,7 +201,7 @@ git push -u origin feature/<N>-<short-slug>
 gh pr create --title "<title>" --body "<...>"
 ```
 
-PR body must include: AC verdict (DONE checklist), `## Dependency check` (if new deps), smoke verdict.
+Read [`.github/pull_request_template.md`](../../../.github/pull_request_template.md) before composing the body. `Closes #<N>` is required. `👀 Sanity-check` must list every defer-decision (skipped scope, TODO/FIXME left in diff, follow-up planned). Add smoke verdict + `## Dependency check` (if new deps) as trailing sections only when non-trivial; for green smoke and no new deps, omit.
 
 Report to the user:
 - PR URL.

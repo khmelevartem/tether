@@ -27,7 +27,7 @@ If the issue references a feature spec in `docs/product/features/` — read it; 
    - `MISSING` — no trace in the diff
    - `UNVERIFIABLE` — requires runtime / manual check; record as an explicit question
 3. **Scope creep:** flag files in the diff that don't map to any criterion. Out-of-scope changes are findings, not virtues.
-4. **PR body verdicts:** verify the PR body contains `## Dependency check` (if new deps were added) and a smoke verdict (🟢/🟡/🔴) for runtime-changing PRs. Missing verdict where required → REQUIRED finding.
+4. **PR body — dependency disclosure:** if the diff adds production dependencies, the PR body must call them out (any phrasing). Missing disclosure → REQUIRED finding. Smoke verdict in the body is optional — orchestrators gate on green smoke pre-push, so absence is not a finding.
 
 ## What you do NOT check
 
@@ -53,8 +53,8 @@ PHASE: DoD
 SCOPE:
   [OK] / [SCOPE_CREEP] <file> — not mapped to any criterion
 
-VERDICTS:
-  [OK] / [MISSING_VERDICT] dependency check / smoke
+DEPENDENCY DISCLOSURE:
+  [OK] / [MISSING] new deps in diff but not called out in body
 
 DECISION: BLOCK | APPROVE
 ```
