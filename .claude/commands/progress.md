@@ -4,92 +4,155 @@
 
 ## Что собрать (сырые данные)
 
-1. **PR-статистика.** Через `gh api repos/<owner>/<repo>/pulls?state=all&per_page=100` (пройди по страницам, если >100). Для каждого PR — `number`, `title`, `state`, `created_at`, `merged_at`, `additions`, `deletions`, `changed_files`, `commits`, `comments`, `review_comments`, labels, author.
+1. **PR-статистика через GraphQL.** `gh api graphql` с пагинацией по `repository.pullRequests` — за один запрос получи `number, title, state, createdAt, mergedAt, additions, deletions, changedFiles, commits.totalCount, comments.totalCount, reviews.totalCount, reviewThreads.totalCount`. REST list endpoint не возвращает commits/comments/review_threads — нужен GraphQL или per-PR detail call.
 
-2. **Issues.** `gh issue list --state all --limit 500 --json number,title,state,labels,createdAt,closedAt` — для подсчёта закрытых квестов, активных, эпиков.
+2. **Issues.** `gh issue list --state all --limit 500 --json number,title,state,labels,createdAt,closedAt` плюс `gh api 'repos/<owner>/<repo>/issues?state=all&per_page=100' --paginate` для получения `parent_issue_url` и `issue_dependencies_summary`. Без этого зависимости и parent-связи не восстановить.
 
-3. **MVP-скоуп.** `docs/product/roadmap.md` (секция `## MVP`), `docs/product/features/README.md` (статусы и issues), последний `docs/sprints/sprint-*.md`.
+3. **Зависимости issue.** Для тех, у кого `issue_dependencies_summary.total_blocked_by > 0` — отдельный вызов `gh api 'repos/<owner>/<repo>/issues/<N>/dependencies/blocked_by'` (REST issue-dependencies endpoint; GraphQL `addIssueDependency` mutation у GitHub не существует — память по проекту). Parent — из `parent_issue_url` основного issue endpoint'а.
 
-4. **Файлы кода для оценки навыков:** `git ls-files 'composeApp/src/**'` + быстрый подсчёт LOC по source set'ам (commonMain / androidMain / appleMain / desktopMain / iosMain / macosMain / jvmMain).
+4. **MVP-скоуп.** `docs/product/roadmap.md` секция `## MVP`. `docs/product/features/README.md` — статусы фичей и связанные issues. Последний `docs/sprints/sprint-*.md` (по большему номеру) — активный спринт.
+
+5. **Файлы кода для локаций:** `git ls-files 'composeApp/src/<sourceSet>/'` + подсчёт LOC по `.kt` / `.swift` файлам. Source set'ы: `commonMain`, `androidMain`, `appleMain`, `desktopMain`, `desktopCli`, `iosMain`, `macosMain`, `jvmMain`.
+
+6. **Спринт-планы.** Парсинг секции `## Состав` каждого `docs/sprints/sprint-*.md` (regex `## Состав .. (?=^## |\Z)`) — извлечь `#N` упоминания в эту секцию. Это множество «запланированных».
+
+7. **Дата первого спринт-плана.** `git log --diff-filter=A --follow --format='%aI' -- docs/sprints/sprint-01.md | tail -1`. Используется как cutoff для секции «Печать Долга».
 
 ## RPG-маппинг
 
 ### Класс персонажа
-Вычисли по доминирующему типу работы за всё время:
-- **Архитектор-некромант** — много PR в `.claude/**`, `docs/engineering/**`, ретро, скиллы; поднимает мёртвую инфру и заставляет её работать.
-- **Инженер-рейнджер** — баланс feature/infra, много платформенного кода, mDNS/Ktor.
-- **Боевой маг протоколов** — преобладает сетевой/discovery код.
-- **Жрец документации** — преобладают спеки, vision, roadmap.
+Доминанта PR за всё время:
 - **Паладин ретро** — >20% PR это retro/процессные улучшения.
+- **Архитектор-некромант** — >55% инфра.
+- **Инженер-рейнджер** — 40–55% инфра (баланс).
+- **Боевой маг протоколов** — иначе.
 
-Выбери один класс, обоснуй одной строкой («87% свитков и 13% мечей — путь жреца ясен»).
+Обоснуй одной строкой («каждый пятый PR — ретро»).
 
 ### Уровень
-`Level = floor(sqrt(merged_PRs * 2 + closed_issues))`. Над уровнем — XP-bar до следующего: `(merged_PRs + closed_issues) mod уровень_threshold`.
+`Level = floor(sqrt(2·merged_PRs + closed_issues))`. XP-бар: `xp_in_level = total_xp − level²`, `xp_needed = (level+1)² − level²`. Та же формула в обеих позициях — иначе бар уходит в отрицательные значения.
 
-### Навыки (Skills, 0–100)
-Каждый — % от максимума по доказательствам. Покажи как Skyrim-style список с числом справа.
+### Категоризация PR (feature/infra)
+По title-эвристике:
+- **infra**: retro/skill/agent/sprint/CI/gradle/workflow/hook/claude/ADR/readme/engineering/rule/template/review/grooming.
+- **feature**: discovery/mDNS/transfer/pairing/UI/send/receive/progress/device-list/device-name/wakelock/wifi/ktor/timeout/FileServer/FileClient.
 
-- **Kotlin Multiplatform** — LOC в `commonMain` / общий LOC * 100, capped 100.
-- **Apple Conjuration** — LOC в `appleMain|iosMain|macosMain` нормированно (от 2000 LOC = 100).
-- **Android Smithing** — аналогично `androidMain`.
-- **Desktop Enchanting** — аналогично `desktopMain|desktopCli|jvmMain`.
-- **Networking & Discovery** — # PR, тронувших mDNS / FileServer / Ktor (grep по title+files).
-- **Scripture (документация)** — # PR в `docs/**` нормированно.
-- **Ritual Mastery (скиллы и агенты)** — # PR в `.claude/**`.
-- **Code-Review Lore** — total `review_comments` получено / 5, capped 100.
-- **Sprint Discipline** — # завершённых спринтов * 15, capped 100.
-- **Retrospection** — # retro-PR * 10, capped 100.
+Смешанные — по доминанте title; default — feature.
 
-### Квесты
-- **Main Quest (главный сюжет):** каждый пункт MVP из roadmap = глава главного квеста. Статус: `Завершено ✓` / `В пути` / `Не начато`. Подпись эпическая: например MVP-пункт «cross-platform discovery» → «Глава II: Зов Аркейна — соединить четыре королевства одним сигналом».
-- **Side Quests (побочки):** не-MVP feature issues, открытые. Считай число.
-- **Misc / Bounties (контракты):** infra issues, открытые.
-- **Defeated foes:** закрытые issues с лейблом `bug` (если есть) — иначе пропусти.
+### MVP (Главный Сюжет)
+7 глав из roadmap с эпическими подзаголовками («Глава II: Печать Доверия — четыре руны связывают двоих»). Каждой — % готовности (0–100) по доказательствам:
+- 100% — feature `done` + смерженные PR по всем платформам.
+- 50–80% — частично (один из слоёв / часть платформ).
+- 20–40% — только spec scoped.
+- 5% — ни кода, ни решения.
 
-### Locations Discovered (открытые локации)
-Source set'ы, где есть код: `commonMain`, `androidMain`, `iosMain`, `macosMain`, `desktopMain`, `desktopCli`, `appleMain`, `jvmMain`. Каждой — атмосферное имя:
-- `commonMain` → «Великий Перекрёсток» (центр карты).
-- `appleMain` → «Сады Купертино».
-- `androidMain` → «Зелёные Кузни».
-- `desktopMain` → «Башня JVM».
-- `iosMain` → «Острова iOS».
-- `macosMain` → «Утёсы macOS Arm».
-- `desktopCli` → «Подземелье CLI».
-- `jvmMain` → «Цитадель Байткода».
+Прогресс-бары под статусом, в палитре золото→золото-pale (закрытые) и серый (не начатые).
+
+### Локации (source sets)
+Имена сохраняются от запуска к запуску ради сравнимости:
+- `commonMain` → «Великий Перекрёсток»
+- `appleMain` → «Сады Купертино»
+- `iosMain` → «Острова iOS»
+- `macosMain` → «Утёсы macOS Arm»
+- `androidMain` → «Зелёные Кузни»
+- `desktopMain` → «Башня JVM»
+- `desktopCli` → «Подземелье CLI»
+- `jvmMain` → «Цитадель Байткода»
+
+LOC = 0 → пометить «не открыто», не показывать в bar-chart'е.
 
 ### Артефакты (топ-5 PR)
-Топ-5 PR по `commits + comments + (additions+deletions)/100`. Каждому — имя редкости (Common / Uncommon / Rare / Epic / Legendary) и одно-строчное описание в стиле item card.
+Вес: `commits·2 + comments + review_threads·3 + (additions+deletions)/200`. Топ-5 с rarity-цветами рамок:
+- Legendary — золото со свечением (`box-shadow`)
+- Epic — пурпур
+- Rare — синий
+- Uncommon — зелёный
+- Common — серый
 
-### Bestiary (поверженные)
-Топ-3 closed bug-issues или просто 3 самых «зубастых» PR (по review_comments). «Поверженный страж #N: ...».
+Внутри карточки три строки: коммиты, обсуждения (= `comments + review_threads`), +/− строк.
 
-### Текущая глава
+### Жаркие Сражения / Тяжёлые Походы
+Чистая статистика, без RPG-обёртки в значениях:
+- **Жаркие** — топ-5 PR по `comments + review_threads`.
+- **Тяжёлые** — топ-5 PR по `additions + deletions`.
+
+Таблицы `#PR | название | значение`, моноширинные цифры справа.
+
+### Печать Долга — план vs импровизация
+**Фильтр по дате cutoff**: учитываем только issues, созданные после даты заведения `sprint-01.md` в git. Ретро-PR не учитываются (идут без отдельного issue).
+
+- `planned ∩ closed` (создано после cutoff) — «По свитку спринтов».
+- `closed − planned` (создано после cutoff) — «Случайные встречи».
+
+Три цифры + двуцветная stacked-полоска (золото ↔ пурпур) + последние 6 в каждой категории.
+
+### Карта Заданий — граф зависимостей
+Force-directed граф через D3 v7 + force-clustering по 7 школам:
+- **Школа Зова** (`discovery`) — mDNS, peer discovery, NSD, Bonjour, JmDNS.
+- **Школа Переправы** (`transfer`) — передача файлов, Ktor, FileClient/Server, send/receive, transport.
+- **Школа Печатей** (`pairing`) — pairing, PIN, ключи, доверие, TLS, шифрование.
+- **Школа Иллюзий** (`ui`) — экраны, Compose, picker, list, progress, onboarding.
+- **Школа Хранителей** (`system`) — foreground service, wakelock, Wi-Fi, разрешения, device name.
+- **Школа Ритуалов** (`infra`) — скиллы, агенты, спринты, CI, ретро, доки, ADR, ревью.
+- **Безымянные** (`other`) — не подошли ни под одну школу.
+
+Кластеризация по title-эвристике. Якоря школ на радиальной окружности `R = min(W,H)·0.30`, подписи на внешнем кольце `R_LBL = min(W·0.46, H·0.48)` с динамическим `text-anchor` по углу. Сила притяжения к якорю `0.14`.
+
+**Цвета узлов:**
+- `#d4af37` золото — open, без блокеров, не сирый
+- `#c9302c` кровь — open, в цепях (есть открытые `blocked_by` предки)
+- `#e8d070` с золотой обводкой — сирый (ни parent, ни blocked_by, ни blocks)
+- `#3a2e1c` с серой обводкой — closed
+
+**Рёбра:**
+- Сплошная золотая со стрелкой — `parent → child` (sub-issue).
+- Пунктирная кровавая со стрелкой — «блокирует».
+
+**Интерактив:** drag узлов, scroll/drag-by-empty для pan+zoom, кнопки `+/−/⤺`. Тултип при наведении показывает `#N`, полный title, кластер, статус.
+
+**Подписи узлов** в `monospace 9px` с halo (paint-order stroke 3px цвета фона) на отдельном top-слое.
+
+**Сводка над графом** — 3 карточки: свободные открытые (золото), в цепях (кровь), сирые открытые (бледный жёлтый).
+
+**Под графом** — две легенды: цвета узлов/рёбер; школы и что в них.
+
+### Текущая Глава
 Активный спринт → «Глава N: <название из заголовка sprint-N.md>». Список активных issues — «текущие задания пути».
 
-### Угрозы / Blockers
-Open MVP-связанные issues, `blocked-by` зависимости (через issue body или REST relationships endpoint, если просто — через текстовый парсинг body на `blocked by #`). Подай как «Тёмные угрозы на горизонте».
+### Хроника Подвигов
+Chart.js area chart по неделям, две заливки (feature золото, infra тёмный янтарь `#8a6820`) + пунктирная кровавая линия «доля feature, %» по правой Y-оси (0–100).
+
+### Книга Знаний (Compendium)
+Внизу страницы — раздел с формулами и расшифровками: уровень+XP, вес артефакта, как определяется класс, прогресс MVP-глав, Жаркие/Тяжёлые. Двухколоночный layout в Cinzel-золоте.
 
 ## Вывод
 
-HTML `/tmp/tether-progress.html`, тёмная тема в палитре пергамент/золото/кровь (например, `#1a1410` фон, `#d4af37` золото, `#c9302c` акцент, `#e8d8a8` текст). Шрифты — попробуй `Cinzel` или `IM Fell English SC` через Google Fonts (CDN), для цифр — `JetBrains Mono`. Никакого Material / sans-serif в заголовках.
+HTML `/tmp/tether-progress.html`, тёмная тема в палитре пергамент/золото/кровь:
+- Фон `#1a1410`, секции `#1f1812`
+- Золото `#d4af37`, тусклое золото `#8a6820`, кровь `#c9302c` (только акцент опасности)
+- Текст `#e8d8a8`, muted `#8a7d5e`
 
-Структура страницы (сверху вниз, как раскрытая книга персонажа):
+Шрифты через Google Fonts CDN: `Cinzel` (заголовки), `IM Fell English SC` (тело), `JetBrains Mono` (цифры). Никакого Material / sans-serif.
 
-1. **Header banner:** имя — «Tether Saga», подзаголовок — «Хроники Драконорождённого Разработчика», дата снапшота.
-2. **Character sheet (двухколоночный блок):**
-   - слева: Класс, Уровень + XP-bar (золотая полоска), краткая характеристика («Артефактов выковано: N · Тварей повержено: M · Дней в пути: D»).
-   - справа: радар-чарт навыков (Chart.js radar, 6 ключевых из 10 — выбери самые показательные).
-3. **Skills list:** все 10 навыков Skyrim-style — две колонки, название слева, цифра справа моноширинно, тонкая полоска прогресса под каждым.
-4. **Main Quest (главный сюжет):** таблица-свиток. Колонки: Глава | Название | Статус | Доказательства (PR/issue ссылки). Завершённые — приглушённое золото, активные — яркое, не начатые — серое.
-5. **Locations Discovered:** карточки 3×N с именем локации, source set, LOC, числом файлов.
-6. **Legendary Artifacts (топ-5 PR):** карточки item-style — рамка по редкости (Legendary — золотая со свечением через box-shadow, Epic — пурпурная, Rare — синяя, Uncommon — зелёная, Common — серая). Внутри: имя PR, редкость, «характеристики» (commits, comments, LOC), одна строка flavor text.
-7. **Bestiary:** короткий список с «portrait» (эмодзи или Unicode-символ типа `☠` `✦` `⚔`).
-8. **Активная глава + квесты:** список текущих side-quest'ов из активного спринта.
-9. **Dark Omens (угрозы):** блокеры MVP, красный акцент.
-10. **Chronicle chart:** Chart.js — area chart недельной активности (PR merged по неделям), стиль — пергаментная линия с золотой заливкой. Подпись: «Хроника подвигов».
+Подключи через CDN:
+- `https://cdn.jsdelivr.net/npm/chart.js` — для chronicle area chart, LOC bar, PR-size doughnut.
+- `https://cdn.jsdelivr.net/npm/d3@7` — для графа зависимостей.
 
-Используй CSS-границы в стиле декоративных рамок (двойные линии, угловые орнаменты — можно псевдо-элементами или SVG corner-ornament inline). Чуть-чуть `text-shadow` для золота. Без анимаций (или минимум — лёгкий glow на Legendary).
+Декоративные рамки — двойная золотая линия `border:2px double var(--gold-dim)` с псевдо-элементами-орнаментами (`❧` в углах).
+
+Структура страницы (сверху вниз):
+
+1. **Header banner** — «Tether Saga» / «Хроники Драконорождённого Разработчика» / дата.
+2. **Лист Персонажа** — Класс/Уровень/XP слева, Хроника пути справа (артефакты, свитки, дни, обсуждения, самое жаркое, текущая глава).
+3. **Главный Сюжет — Хроника MVP** — таблица 7 глав с прогресс-барами.
+4. **Открытые Локации** — карточки + LOC bar-chart (отсортирован по убыванию, палитра золото→бронза).
+5. **Легендарные Артефакты** — top-5 PR с rarity-рамками.
+6. **Жаркие Сражения / Тяжёлые Походы** — две таблицы статистики PR.
+7. **Текущая Глава — Спринт N** — название + список квестов.
+8. **Карта Заданий** — сводка + D3 force-граф + легенды (цвета и школы).
+9. **Печать Долга** — планируемое vs импровизация с фильтром по дате.
+10. **Хроника Подвигов** + **Размах Артефактов** (two-col) — area chart недель + doughnut размеров PR.
+11. **Книга Знаний** — формулы.
 
 После HTML — выведи в чат **дайджест в виде записи в дневнике искателя приключений**, 6–10 строк, от первого лица:
 
@@ -97,17 +160,18 @@ HTML `/tmp/tether-progress.html`, тёмная тема в палитре пер
 
 Внутри:
 - одна строка про класс и уровень;
-- что выросло сильнее всего за последние недели (по тренду);
+- что выросло сильнее всего по тренду;
 - какая глава главного квеста ближе всего к завершению, какая буксует;
 - одно тёмное предзнаменование (блокер) или вызов впереди;
-- финальная строка в духе «впереди — <следующий MVP-пункт>. Пусть Восемь хранят сборку».
+- финальная строка «впереди — <следующий MVP-пункт>. Пусть Восемь хранят сборку».
 
-Запрещено: голые проценты без RPG-обёртки, «KPI», «velocity», «throughput», смайлы 😀, эмодзи флагов. Разрешено: ✦ ✧ ⚔ ☠ ❧ ◈ — сдержанно.
+Запрещено: голые проценты без RPG-обёртки в нарративных блоках, «KPI», «velocity», «throughput», смайлы 😀, эмодзи флагов. Разрешено: ✦ ✧ ⚔ ☠ ❧ ◈ — сдержанно. В чистых статистических таблицах (Жаркие Сражения, Тяжёлые Походы) — голые цифры допустимы.
 
 ## Чего не делать
 
-- Не запускай Gradle, тесты, smoke.
+- Не запускай Gradle, тесты, smoke — чистая аналитика.
 - Не пиши отчёт в `docs/` — снапшот живёт в `/tmp/`.
-- Не категоризируй вручную >10 PR — пиши короткий Python-скрипт прямо в `/tmp/`.
-- Не выдумывай навыки/локации сверх списка выше — стиль зафиксирован, чтобы снапшоты между запусками были сравнимы.
-- Не оценивай «навык» если LOC = 0 — пиши «не открыто» вместо 0/100, чтобы было видно непройденные ветки.
+- Не категоризируй вручную >10 PR — пиши Python-скрипт в `/tmp/build_progress.py`.
+- Не оценивай локацию если LOC = 0 — пиши «не открыто», скрывай из диаграммы.
+- Не выдумывай школы/локации/имена кластеров сверх перечисленных — фиксированная палитра обеспечивает сравнимость снапшотов между запусками.
+- Не используй REST `/pulls` list endpoint для PR-статистики — он не возвращает commits/comments/review_comments. Только GraphQL или per-PR detail.
