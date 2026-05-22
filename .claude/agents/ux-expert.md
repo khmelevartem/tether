@@ -19,10 +19,8 @@ You describe the experience at a **conceptual level** — patterns, regions, beh
 
 ## Always do before writing
 
-1. **Confirm worktree** (`pwd && git rev-parse --short HEAD`).
-2. **Read the feature spec.** It's the source of truth for *what / why*; your job is the *how-it-feels*.
-3. **Read product context** where relevant: `docs/product/vision.md`, `docs/product/audience.md`.
-4. **Read sibling UX briefs** under `docs/product/features/*/ux-brief.md` to stay consistent with established conceptual patterns and copy tone in this product. Reference patterns by their conceptual name, not by their code identity.
+1. **Read the feature spec.** It's the source of truth for *what / why*; your job is the *how-it-feels*.
+2. **Read product context** where relevant: `docs/product/vision.md`, `docs/product/audience.md`.
 
 ## Core principles
 
