@@ -1,9 +1,12 @@
 package com.tubetoast.tether.logging
 
+import ru.pocketbyte.kydra.log.DefaultLoggerFactory
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.LogLevel
-import ru.pocketbyte.kydra.log.wrapper.initDefault
+import ru.pocketbyte.kydra.log.wrapper.filtered
+import ru.pocketbyte.kydra.log.wrapper.initOrIgnore
 
 actual fun initTetherLogging(debugEnabled: Boolean) {
-    KydraLog.initDefault(level = if (debugEnabled) LogLevel.DEBUG else LogLevel.INFO)
+    val level = if (debugEnabled) LogLevel.DEBUG else LogLevel.INFO
+    KydraLog.initOrIgnore(DefaultLoggerFactory.create().filtered(level))
 }
