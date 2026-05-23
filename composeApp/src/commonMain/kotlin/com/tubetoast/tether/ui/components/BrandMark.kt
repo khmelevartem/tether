@@ -121,8 +121,7 @@ fun BrandMark(
             LaunchedEffect(Unit) {
                 rightDotColorFraction = 1f
                 rightDotScale = 1.05f
-                delay(200)
-                delay(300)
+                delay(500)
                 rightDotColorFraction = 0f
                 rightDotScale = 1f
             }
