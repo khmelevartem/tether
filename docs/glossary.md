@@ -1,6 +1,6 @@
 # Glossary
 
-Single source of vocabulary for Tether. Owned collectively, written through the [`grill-with-docs`](../.claude/skills/grill-with-docs/SKILL.md) skill; never edited outside a grill pass. Mechanism, who invokes the grill, and the «one term enters when it appears in two or more long-lived artifacts» rule: [`grilling-and-glossary.md`](engineering/grilling-and-glossary.md).
+Single source of vocabulary for Tether. New entries land when [`review-glossary`](../.claude/agents/review-glossary.md) flags an undocumented term in a PR diff and the writing agent adds the entry as part of addressing the finding. Mechanism: [`grilling-and-glossary.md`](engineering/grilling-and-glossary.md).
 
 Sections are in fixed order. Each entry is one line: bold term, 1–2 sentence definition, optional `_Avoid:_` list of near-synonyms, optional `(see <link>)` to the living doc that owns the deeper rule.
 
@@ -28,7 +28,6 @@ Engineering concepts. The vocabulary [`architect`](../.claude/agents/architect.m
 - **Composition root** — the platform entry point that constructs the DI container; by extension, the `AppContainer` instance it constructs. See [dependency-injection.md](engineering/dependency-injection.md).
 - **Container** — the DI container that holds singletons for one process lifetime; the construct that lives at the composition root.
 - **Session** — the post-rendezvous logical connection between two peers, lasting from `/hello` until either side closes it.
-- **Mount point** — a place in the workflow where an agent invokes the grill on a draft before returning. See [grilling-and-glossary.md](engineering/grilling-and-glossary.md) §Who invokes the grill.
-- **Drift** — a usage of a term that contradicts its glossary definition, or absence of a glossary entry for a term that recurs across two or more long-lived artifacts.
+- **Drift** — a usage of a term that contradicts its glossary definition, or absence of a glossary entry for a term that recurs across long-lived artifacts.
 - **Living doc** — a `docs/engineering/<name>.md` artifact that captures the present-tense rules for a subsystem; distinct from an ADR (one-time decision) and a knowledge entry (solved-problem note).
 

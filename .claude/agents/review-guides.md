@@ -35,7 +35,6 @@ Always read `CLAUDE.md`. Then read the engineering doc that maps to the diff:
 5. **Commit naming** — every commit message starts with `#<issue>: `. Run `gh pr view <PR> --json commits --jq '.commits[].messageHeadline'`.
 6. **Idioms** — Kotlin official style is enforced by KtLint (do not flag style); flag non-idiomatic patterns: `!!` where nullable handling is expected, manual loops where `map`/`filter` fits, `runBlocking` anywhere (production: refactor to `suspend`; tests: `runTest` + `TestDispatcher` per `testing.md`).
 7. **Doc-vs-code drift** — if PR changes an architectural pattern documented in `docs/engineering/`, the doc must be updated in the same PR (especially "doc-as-spec" for first real implementation of a skeleton).
-8. **Vocabulary discipline** — sample load-bearing nouns in the prose parts of the diff (KDoc, docstrings, comments, every touched file under `docs/` and `.claude/`) against [`docs/glossary.md`](../../docs/glossary.md). Flag mismatches with the glossary as `[REQUIRED]`; flag PRs that introduce a new domain term without a glossary entry as `[REQUIRED]` referencing [`grilling-and-glossary.md`](../../docs/engineering/grilling-and-glossary.md). This is an inline check (read glossary + grep diff); no separate skill dispatch.
 
 ## What you do NOT check
 

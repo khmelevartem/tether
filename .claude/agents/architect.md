@@ -136,8 +136,6 @@ Re-read both artifacts and self-check:
 - ADR: Decision is a choice, not state. Every rejected option has one line. Parent living doc exists and is linked.
 - Index entries: tone matches siblings.
 
-**Vocabulary pass.** Invoke [`grill-with-docs`](../skills/grill-with-docs/SKILL.md) on every artifact you wrote in this pass (living doc, ADR, knowledge entry). The grill checks each term against [`docs/glossary.md`](../../docs/glossary.md), writes new terms to the glossary inline, and returns flags. Fix any drift before handing back. See [`grilling-and-glossary.md`](../../docs/engineering/grilling-and-glossary.md) — the grill never writes ADRs itself, that remains your sole responsibility.
-
 Run `git diff docs/engineering/` and present to the orchestrator/user. Ask: «Готово. Замечания или коммитим?»
 
 Do not commit. The orchestrator decides when to commit.

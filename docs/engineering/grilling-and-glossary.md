@@ -1,17 +1,17 @@
-# Grilling and the Glossary
+# Glossary discipline
 
-How Tether keeps a single shared vocabulary between humans and AI agents, and how that vocabulary is grown and policed.
+How Tether keeps a single shared vocabulary between humans and AI agents.
 
 Two artifacts work together:
 
 - The **glossary** — one file at [`docs/glossary.md`](../glossary.md) that holds every load-bearing term Tether uses across product, engineering, and platform layers.
-- The **grill-with-docs skill** — a sub-agent at [`.claude/skills/grill-with-docs/`](../../.claude/skills/grill-with-docs/SKILL.md) that interrogates a draft (spec, ux brief, ADR, issue body, review prompt) against the glossary, flags every term that drifts from its definition, and updates the glossary inline when a genuinely new term appears.
+- The **`review-glossary` agent** at [`.claude/agents/review-glossary.md`](../../.claude/agents/review-glossary.md) — a sub-agent that samples load-bearing nouns in a diff against the glossary, flags drift, and flags terms used without an entry. It does not edit the glossary itself.
 
 ## Why this exists
 
 A cross-platform P2P file-transfer app produces a lot of near-synonyms: "device" vs "peer" vs "node", "pairing" vs "trust" vs "handshake", "discovery" vs "rendezvous" vs "announce". Without one shared definition file, every spec invents its own naming and every agent latches onto a different synonym. The artifact that pays the cost is the next reviewer — human or AI — who cannot tell whether two passages describe the same mechanism.
 
-The glossary is the rule the grill enforces; the grill is the mechanism that keeps the rule alive in everything written.
+The glossary is the rule `review-glossary` enforces on every PR diff.
 
 ## The glossary
 
@@ -19,20 +19,24 @@ Lives at [`docs/glossary.md`](../glossary.md). Terms cross all three documentati
 
 Each entry is one line: bold term — one-sentence definition — optional `_Avoid:_` near-synonyms — optional `(see <link>)` to the living doc that owns the deeper rule. Definitions in present tense, no history.
 
+## How drift is caught
+
+`review-glossary` runs in every PR review wave:
+
+- `/implement` Step 4 (inner-loop reviewer wave) and Step 6 (full pre-PR review wave A);
+- `/document` Step 5 (review wave);
+- `github-issue-author` Step 4 (before showing the draft to the user).
+
+The agent samples load-bearing nouns in the prose surfaces of the diff (KDoc, docstrings, comments, every touched file under `docs/` and `.claude/`), compares against the glossary, and emits `[REQUIRED]` findings for drift and for new domain terms without an entry.
+
 ## Adding and editing terms
 
-The glossary is owned collectively but written through one mechanism: the grill skill. When the grill is invoked on a draft and finds a term that is either new or used with a meaning that contradicts the existing entry, it updates the glossary in the same pass and references the update in its grill report. No agent edits the glossary outside a grill pass — this keeps drift visible.
+A glossary entry is added by the writing agent (`spec-writer` / `ux-expert` / `architect`, or the orchestrator for inline edits) as part of addressing a `[REQUIRED]` finding from `review-glossary`. The agent picks the section (Product / Technical), writes one line in the canonical shape (bold term — definition — optional `_Avoid:_` — optional `(see <link>)`), and re-runs the review wave; the next pass verifies the entry shape.
 
-The grill writes a term on first sighting if it judges the term as Tether-domain-specific (the «is this unique to Tether or general programming?» filter inside the skill). One-off task-local terms stay out by that judgement, not by waiting for a second artifact to confirm. Pruning of accidental additions is `review-guides`' role on later PRs.
-
-## Who invokes the grill
-
-Every agent whose output is a long-lived prose artifact (spec, UX brief, engineering doc, ADR, knowledge entry, issue body, review prompt, `.claude/` skill or agent prompt) invokes the grill on its draft before returning. Each agent's own definition encodes the call; the orchestrators (`/implement`, `/document`) mirror the discipline with one vocabulary-pass paragraph each.
-
-The grill is not optional at these surfaces — skipping it is a process violation, not a style preference. Conformance is verified by `review-guides`, which runs the grill on the prose parts of every PR diff as the long-tail safety net.
+Pruning accidental additions is `review-glossary`'s role on later PRs — an entry whose term does not recur across the codebase is `[REQUIRED]` for removal.
 
 ## ADR authorship: only the architect
 
-ADRs are written exclusively by the [architect](../../.claude/agents/architect.md) sub-agent. Other agents — including grill-with-docs — may surface that an ADR is *needed*, but they do not write the ADR themselves.
+ADRs are written exclusively by the [architect](../../.claude/agents/architect.md) sub-agent. Other agents may surface that an ADR is *needed*, but they do not write the ADR themselves.
 
-The grill enforces vocabulary inside an ADR draft; it does not author the ADR.
+`review-glossary` enforces vocabulary inside an ADR draft; it does not author the ADR.

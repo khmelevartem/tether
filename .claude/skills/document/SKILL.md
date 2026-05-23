@@ -89,8 +89,6 @@ Multiple layers per issue are normal (e.g. FEATURE with UI and a new mechanism �
 
 **Read-only result of this step:** an ordered list of layers to produce, and for each layer the target path and which sub-agent will write it. No artifacts created yet.
 
-**Vocabulary pass at draft time.** Each layer artifact passes through [`grill-with-docs`](../grill-with-docs/SKILL.md) as it is drafted in Step 3 — the sub-agent that owns the layer invokes the grill on its draft before returning to the orchestrator. For `.claude` prompt edits (no sub-agent), invoke the grill inline on the staged edit. See [`grilling-and-glossary.md`](../../../docs/engineering/grilling-and-glossary.md). The grill's drift flags and glossary additions flow into the Step 4 consistency pass automatically — same vocabulary, same source.
-
 ## Step 3 — Dispatch wave
 
 Order matters — lower layers depend on upper ones for vocabulary and scope.
@@ -130,6 +128,7 @@ Dispatch in parallel on the staged diff (no PR yet — agents review the local w
 - `review-dod` — DoD criteria from the issue are covered by produced artifacts.
 - `review-guides` — conformance to CLAUDE.md §Code style for all touched prose. For `docs/engineering/` artifacts additionally apply `docs/engineering/README.md` writing-style rules (rule-first, code examples on abstract types, no restating code). For `docs/product/features/<slug>/spec.md` apply `docs/product/features/_template.md`. For ADRs apply `docs/engineering/adr/_template.md` shape. For `.claude/` prompt edits apply sibling-skill/agent/command tone consistency.
 - `review-reuse` — no duplication of existing specs / briefs / living docs / knowledge, no contradictions with neighbours, no doc-vs-code drift.
+- `review-glossary` — load-bearing terms in the produced artifacts match [`docs/glossary.md`](../../../docs/glossary.md); new domain terms get an entry.
 - `review-adversarial` — runs after the above with their combined findings as input; probes what was missed, what factual claims were not verified.
 
 The other reviewers (`review-correctness`, `review-tests`, `review-platform`, `review-design-system`, `review-ux`, `review-visual`, `review-architecture`) **do not run** — there is no code, no UI implementation to check against the brief. UX-brief structural completeness is covered by `review-guides` (it knows the routing `ux-brief.md → ux-expert.md §Output`).

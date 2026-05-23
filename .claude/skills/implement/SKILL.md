@@ -1,6 +1,6 @@
 ---
 name: implement
-description: Issue-to-PR orchestrator. Detects docs-only issues and delegates to `/document`; for code-track plans, dispatches coder / ui-expert / architect, runs implementer↔reviewers loop, smoke, lands a PR. Stops for user only at human-required gates (G1 AC ambiguity, G2 root-cause uncertainty, G3 plan conflicts guides, G4 smoke red). Use when starting work on an issue.
+description: Issue-to-PR orchestrator. Detects docs-only issues and delegates to `/document`; for code-track plans, dispatches coder / ui-expert / architect, runs implementer↔reviewers loop, smoke, lands a PR. Stops for user only at human-required gates (spec/AC ambiguity, BUGFIX root-cause uncertainty, plan conflicts with guides, smoke red). Use when starting work on an issue.
 ---
 
 # /implement — Issue-to-PR orchestrator
@@ -21,7 +21,7 @@ Skill идемпотентен по issue. На каждом вызове пер
 - **PR есть и открыт** → ты в pull-request feedback итерации. **Сначала** перепроверь docs-only детекцию (Step 1 классификация) на текущем состоянии issue + diff'а PR: если задача docs-only, делегируй re-entry в `/document <N>` и завершайся (`/document` сам идемпотентен и подхватит этот PR). Иначе остаёшься в code-track re-entry.
 - **Code-track re-entry.** На текущей feature-branch могут быть новые комменты ревьюера или коммиты после прошлого прогона. Прочитай **все** human-комменты на PR (`gh api repos/<owner>/<repo>/pulls/<PR>/comments` + `gh pr view <PR> --comments`) и для каждого определи статус: адресован в коммитах после него — или нет. **Дата создания не определяет актуальность** — фильтровать комменты по `created_at > <дата-прошлого-прогона>` запрещено, потому что неадресованный коммент остаётся актуальным независимо от того, насколько он старый. Прогон **обязан** включать на свежем diff'е: Step 4 (inner loop reviewers) → Step 5 (simplify) → Step 6 (full review wave A + adversarial) → Step 7 (smoke, скоуп по diff'у). Из дисциплины на re-entry ничего пропускать нельзя — иначе review-итерации проходят с меньшим качеством, чем первичная имплементация.
 
-Шаг 8 (commit + push + G5 summary) — в re-entry упрощается: коммит идёт в существующую ветку, force-push не нужен, новый PR не создавать.
+Шаг 8 (commit + push + final summary) — в re-entry упрощается: коммит идёт в существующую ветку, force-push не нужен, новый PR не создавать.
 
 **После push в re-entry — обязательно ответь на каждый адресованный inline-коммент** через `gh api -X POST repos/<owner>/<repo>/pulls/<PR>/comments/<comment_id>/replies -f body="<reply>"`. Для каждого коммента: что сделано + SHA коммита (или явное обоснование, если коммент сознательно отклонён). Без ответа ревьюер не видит закрытия loop'а и тред остаётся «висящим»; следующий re-entry опять прочитает его как unaddressed и зря погонит inner loop. Ответ — это сигнал «адресовано», не вежливость.
 
@@ -45,12 +45,12 @@ Skill идемпотентен по issue. На каждом вызове пер
 These MUST-stop gates are **not overridden by session-level autonomy or "skip clarifying questions" hints**, wherever such hints come from. Such hints apply only to execution-stage trivia within an already-agreed scope (naming, formatting, refactoring choices). They do not apply to gate evaluation. The cost of a one-message pause is far lower than the cost of unwinding a unilateral architectural / product decision.
 
 You MUST stop and ask the user in these cases (and only these):
-- **G1. Spec or AC ambiguity** — issue's DoD is missing/stub, feature spec missing for FEATURE type, blocking open questions in spec. **Mitigation:** dispatch `spec-writer` first; only stop at user if `spec-writer` has clarifying questions or the issue is non-FEATURE without DoD.
-- **G2. BUGFIX root cause** — root cause must be confirmed before any fix. **Mitigation:** dispatch `bug-reproducer`; only stop at user if it reports CANNOT REPRODUCE or none of the listed hypotheses match. **The reproducer must always attempt to observe the symptom**, even when the cause looks structurally evident from issue text + code grep. Do not silently proceed as if the bug were confirmed.
-- **G2.5. Publication of confirmed cause** — once `bug-reproducer` returns a confirmed cause, show the paste-ready block to the user and wait for explicit OK before `gh issue comment`. Publishing to a GitHub issue is a team-visible action; it does not happen without a user gate.
-- **G3. Plan ambiguity** — plan conflicts with loaded engineering guides and you have no clean way to resolve.
-- **G4. Smoke red/yellow** — smoke verdict is not 🟢 after the inner loop.
-- **G5. Final summary to the user** — after the inner loop converges to APPROVE and smoke is green, commit + push + create the PR, then present the PR URL with a short summary (files changed, AC verdict, smoke verdict, any `[UNVERIFIABLE]` findings). The user reviews on GitHub; do not block on explicit OK before push. Before push, verify PR body follows [`.github/pull_request_template.md`](../../../.github/pull_request_template.md): `Closes #<N>` present; every defer-decision made during implementation (skipped scope, TODO/FIXME left in code, follow-up issue planned) appears in `👀 Sanity-check`, not buried at the bottom — user redirects defer-vs-do-now from this section.
+- **Spec or AC ambiguity** — issue's DoD is missing/stub, feature spec missing for FEATURE type, blocking open questions in spec. **Mitigation:** dispatch `spec-writer` first; only stop at user if `spec-writer` has clarifying questions or the issue is non-FEATURE without DoD.
+- **BUGFIX root cause** — root cause must be confirmed before any fix. **Mitigation:** dispatch `bug-reproducer`; only stop at user if it reports CANNOT REPRODUCE or none of the listed hypotheses match. **The reproducer must always attempt to observe the symptom**, even when the cause looks structurally evident from issue text + code grep. Do not silently proceed as if the bug were confirmed.
+- **Publication of confirmed cause** — once `bug-reproducer` returns a confirmed cause, show the paste-ready block to the user and wait for explicit OK before `gh issue comment`. Publishing to a GitHub issue is a team-visible action; it does not happen without a user gate.
+- **Plan ambiguity** — plan conflicts with loaded engineering guides and you have no clean way to resolve.
+- **Smoke red/yellow** — smoke verdict is not 🟢 after the inner loop.
+- **Final summary to the user** — after the inner loop converges to APPROVE and smoke is green, commit + push + create the PR, then present the PR URL with a short summary (files changed, AC verdict, smoke verdict, any `[UNVERIFIABLE]` findings). The user reviews on GitHub; do not block on explicit OK before push. Before push, verify PR body follows [`.github/pull_request_template.md`](../../../.github/pull_request_template.md): `Closes #<N>` present; every defer-decision made during implementation (skipped scope, TODO/FIXME left in code, follow-up issue planned) appears in `👀 Sanity-check`, not buried at the bottom — user redirects defer-vs-do-now from this section.
 
 Everything else — implementation details, reviewer findings, fix iterations — you handle internally without the user.
 
@@ -70,7 +70,7 @@ gh pr list --search "issue:#<N>" --state open --json number,isDraft,headRefName
 - BUGFIX без хотя бы предполагаемой причины бага;
 - фразы-затычки: «дополни если есть чем», «должно работать корректно», «и так далее».
 
-Любой такой пробел — повод вернуться к G1, не «допилить по дороге».
+Любой такой пробел — повод вернуться к гейту spec/AC ambiguity, не «допилить по дороге».
 
 **Classification.** На основе issue body — `**Тип:**` поля, описания deliverable, label'ов — отнеси задачу к одной из веток:
 
@@ -97,33 +97,25 @@ All subsequent agent dispatches happen with this as cwd. Skipping this step mean
 
 ## Step 2 — Resolve early gates
 
-### G1 — Spec / UX brief / AC ambiguity
+### Spec / UX brief / AC ambiguity
 
 If FEATURE and (no spec, or spec is `(stub)`, or spec has blocking open questions) → dispatch `spec-writer`. It will draft questions for the user or produce a scoped spec. Only escalate to user with `spec-writer`'s question list.
 
-If the FEATURE scope includes user-facing UI (screen, component, navigation — not pure logic/network/infra) AND `docs/product/features/<slug>/ux-brief.md` is missing or stale relative to the spec → dispatch `ux-expert` after `spec-writer`. It produces or updates the brief; `ui-expert` later consumes it as a contract. Open UX questions returned by `ux-expert` fold back into G1: surface verbatim to the user, collect answers, re-dispatch. The brief is committed as part of the PR.
+If the FEATURE scope includes user-facing UI (screen, component, navigation — not pure logic/network/infra) AND `docs/product/features/<slug>/ux-brief.md` is missing or stale relative to the spec → dispatch `ux-expert` after `spec-writer`. It produces or updates the brief; `ui-expert` later consumes it as a contract. Open UX questions returned by `ux-expert` fold back into this gate: surface verbatim to the user, collect answers, re-dispatch. The brief is committed as part of the PR.
 
 **Recovery in inner loop.** If `ui-expert` halts in Step 4 reporting "UX brief missing" (the skip judgement was wrong, or new UI scope emerged mid-plan) — re-dispatch `ux-expert` and resume. This is machine-resolvable; do not escalate to user.
 
-### G1 vocabulary pass
-
-Independently of the spec/UX-brief sub-gate, invoke [`grill-with-docs`](../grill-with-docs/SKILL.md) on the issue body and any linked spec/brief before dispatching the planner. It flags terms that drift from [`docs/glossary.md`](../../../docs/glossary.md) and writes new terms to the glossary in the same pass, so downstream agents share vocabulary from turn one. Surface drift flags or glossary additions to the user only if they change the scope of the work; mechanical naming alignment goes through silently. See [`grilling-and-glossary.md`](../../../docs/engineering/grilling-and-glossary.md).
-
-### Vocabulary pass at draft time
-
-Mirror of `/document` Step 2: each dispatched prose-writing agent (`spec-writer`, `ux-expert`, `architect`) invokes [`grill-with-docs`](../grill-with-docs/SKILL.md) on its diff before returning to the orchestrator. Their agent definitions encode the call. `coder` and `ui-expert` do not — their output is code with minimal prose, and `review-guides` is the safety net for KDoc/comment drift on the PR diff. The grill's drift flags and glossary additions flow into the inner-loop review wave automatically.
-
-### G2 — BUGFIX root cause
+### BUGFIX root cause
 
 If BUGFIX → dispatch `bug-reproducer`. It reproduces locally, verifies each hypothesis, and returns a confirmed cause as structured paste-ready text. It does NOT post to GitHub. If reproduction failed or no hypothesis matched → escalate to user.
 
-### G2.5 — Publication of confirmed cause
+### Publication of confirmed cause
 
 After receiving a confirmed cause from `bug-reproducer`, show the paste-ready block to the user and ask: «Опубликовать как комментарий к issue #<N>?» Wait for explicit OK before `gh issue comment <N>`. Reason: a team-visible side effect must not happen without an explicit gate, even if the orchestrator is doing it instead of the agent — that just moves the problem one level up. If the user says no — keep the cause locally as a constraint for `coder`; do not publish.
 
 The confirmed root cause becomes a hard constraint for the `coder` in Step 4 regardless of whether it was published.
 
-## Step 3 — Plan (G3 lives here)
+## Step 3 — Plan
 
 Use the built-in `Plan` agent (or `general-purpose` if plan unavailable) to produce a short implementation plan: phases, files to touch, validation strategy.
 
@@ -133,7 +125,7 @@ Use the built-in `Plan` agent (or `general-purpose` if plan unavailable) to prod
 
 **Track splitting.** Default is **sequential single-track** execution. Split into parallel tracks ONLY if the plan can enumerate file-level disjoint sets: track A's files ∩ track B's files = ∅. The plan must list explicit file paths per track. If any file appears in two tracks → tracks are not independent → execute sequentially.
 
-**G3 — Plan conflicts with guides.** Apply Gate G3 if the plan conflicts with loaded engineering guides → present to user, stop. Otherwise, accept and continue.
+**Plan conflicts with guides.** If the plan conflicts with loaded engineering guides → present to user, stop. Otherwise, accept and continue.
 
 ## Step 4 — Inner loop: coder ↔ fast reviewers
 
@@ -152,6 +144,7 @@ Per track (or sequentially if single track):
    - `review-dod` (always)
    - `review-correctness` (always unless DOCS/REFACTOR)
    - `review-guides` (always)
+   - `review-glossary` (always)
    - `review-architecture` (always unless DOCS or trivial one-call-site BUGFIX / cosmetic refactor)
    - `review-tests` (always unless DOCS/INFRA)
    - `review-platform` (if diff touches platform source sets)
@@ -185,14 +178,14 @@ Dispatch the implementing agent once more:
 > **Do not rephrase prose for brevity.** If a sentence is load-bearing and free of the issues above, leave its wording alone. Cut whole sentences when they fail the rule above; otherwise keep them as written. Word-count reduction on well-formed sentences is not a goal.
 > Do not change behavior; do not touch anything outside the diff. Run `./gradlew allTests -q` after.
 
-If anything was simplified — **закоммить simplification** (см. дисциплину Step 4 — reviewer'ы читают только committed diff), затем re-run **the same set of agents that ran in Step 4 for this PR type** (i.e. dod + guides + correctness + tests + platform-if-touched + ux-if-touched + design-system-if-touched + visual-if-touched) **plus `review-reuse`** on the simplified diff. `review-reuse` is critical here because duplication is what most likely accumulated across iterations and tracks. `review-platform`, `review-ux`, `review-design-system`, and `review-visual` follow the same skip rules as Step 4 (platform set touched / `composeApp/src/**` touched). If clean, proceed.
+If anything was simplified — **закоммить simplification** (см. дисциплину Step 4 — reviewer'ы читают только committed diff), затем re-run **the same set of agents that ran in Step 4 for this PR type** (i.e. dod + guides + glossary + correctness + tests + platform-if-touched + ux-if-touched + design-system-if-touched + visual-if-touched) **plus `review-reuse`** on the simplified diff. `review-reuse` is critical here because duplication is what most likely accumulated across iterations and tracks. `review-platform`, `review-ux`, `review-design-system`, and `review-visual` follow the same skip rules as Step 4 (platform set touched / `composeApp/src/**` touched). If clean, proceed.
 
 ## Step 6 — Full pre-PR review (inline, not via /code-review skill)
 
 `/code-review` skill requires an existing PR (it posts via `gh pr review`). At this step the PR does not exist yet — Step 8 creates it. So instead of calling the skill, **orchestrate the same agent fan-out inline, without GitHub publication**:
 
 1. Перед Wave A — working tree должно быть чистым (committed). Если после Step 5 остались uncommitted правки — закоммить. Reviewer'ы читают `git diff main...HEAD`; uncommitted состояние вызывает stale-view findings.
-2. Wave A in parallel: `review-dod`, `review-guides`, `review-reuse`, plus (if applicable to PR type / diff) `review-architecture`, `review-correctness`, `review-tests`, `review-platform`, `review-ux`, `review-design-system`, `review-visual`. Each agent receives the issue number and is told to review the local working tree (`git diff main...HEAD`) instead of a PR. `review-ux`, `review-design-system`, and `review-visual` all run whenever the diff touches `composeApp/src/**`; each agent decides skip vs. block.
+2. Wave A in parallel: `review-dod`, `review-guides`, `review-glossary`, `review-reuse`, plus (if applicable to PR type / diff) `review-architecture`, `review-correctness`, `review-tests`, `review-platform`, `review-ux`, `review-design-system`, `review-visual`. Each agent receives the issue number and is told to review the local working tree (`git diff main...HEAD`) instead of a PR. `review-ux`, `review-design-system`, and `review-visual` all run whenever the diff touches `composeApp/src/**`; each agent decides skip vs. block.
 3. Wave B: `review-adversarial` with the combined Wave A findings as input.
 4. Aggregate. Apply any `[REQUIRED]` via the implementing agent (with the symmetry-pass instruction). Re-run until approved or 2 iterations.
 
@@ -200,7 +193,7 @@ No `gh pr review` here — findings are consumed locally only. The post-PR `/cod
 
 ## Step 7 — Runtime verification (smoke OR enforcement-probe)
 
-### G4 — Smoke verdict
+### Smoke verdict
 
 Две ветки. Выбирается по природе deliverable'а, не взаимоисключающие — для PR где меняется и фича и enforcer, делаются обе.
 
@@ -236,9 +229,9 @@ If the PR introduces a new critical happy-path not covered by smoke (start-time 
 
 Record the verdict (🟢/🟡/🔴) per branch run, плюс блоки/probe path.
 
-Apply Gate G4: если любая ветка 🟡/🔴 → present to user, stop.
+Если любая ветка 🟡/🔴 → present to user, stop.
 
-## Step 8 — Commit, push, PR (G5 summary)
+## Step 8 — Commit, push, PR (final summary)
 
 Only after Step 7 is 🟢. Commit on the feature branch, push, create the PR:
 
