@@ -15,6 +15,7 @@ Product-side docs (vision, audience, features) live in [`docs/product/`](../prod
 - [UI Style Guide](ui-style-guide.md) — token tables, `TetherTheme` rule, Tabler Icons usage, motion specs, accessibility checklist.
 - [UI Brand Mark](ui-brand-mark.md) — `•—•` geometry, animation states, where the mark appears, and design rationale (why a line, not a knot or arrow).
 - [Testing](testing.md) — структура тестов по source sets, стиль (`runTest`/виртуальное время), особенности Apple-таргетов.
+- [Logging](logging.md) — KydraLog как единый KMP-фасад; именование `Tether.<Subsystem>`, уровни, DEBUG-гейтинг по платформам, тестовая тишина.
 
 ## Writing style for these guides
 
@@ -37,4 +38,5 @@ ADRs in [`adr/`](adr/) capture the *why* behind one-time architectural choices. 
 - [Apple FileServer engine](adr/adr-apple-fileserver-engine.md) — chose Ktor CIO Native over hand-rolled HTTP for the Apple-side `FileServer.actual`.
 - [Channel encryption](adr/adr-channel-encryption.md) — chose TLS-with-paired-key-pinning + SecureTransport on Apple. Includes 2026-05-16 Amendment with implementation-plan corrections.
 - [Hotspot-first Discovery](adr/adr-hotspot-discovery.md) — chose layered mDNS + `/hello` rendezvous + HTTP-subnet-scan + UDP-broadcast over raw-multicast-as-primary or Wi-Fi Direct / NAN. Motivated primarily by phone-hotspot transfer.
+- [Logging — KydraLog](adr/adr-logging-kydra.md) — chose KydraLog as the single KMP logging facade; SLF4J handled via `slf4j-simple` on JVM; per-platform DEBUG gates.
 

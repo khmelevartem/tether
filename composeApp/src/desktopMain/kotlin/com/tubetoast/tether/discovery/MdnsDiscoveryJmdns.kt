@@ -9,6 +9,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import ru.pocketbyte.kydra.log.KydraLog
+import ru.pocketbyte.kydra.log.debug
+import ru.pocketbyte.kydra.log.info
+import ru.pocketbyte.kydra.log.warn
+import ru.pocketbyte.kydra.log.wrapper.withTag
 import javax.jmdns.JmDNS
 import javax.jmdns.ServiceEvent
 import javax.jmdns.ServiceInfo
@@ -19,6 +24,7 @@ private const val SERVICE_TYPE = "_tether._tcp.local."
 private val IPV4_REGEX = Regex("""\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}""")
 internal const val REQUERY_INITIAL_INTERVAL_MS = 5_000L
 private const val REQUERY_MAX_INTERVAL_MS = 60_000L
+private val log = KydraLog.withTag(default = "Tether.MdnsDiscovery.JmDNS")
 
 /**
  * JmDNS-based discovery for non-macOS JVM hosts (Linux, Windows).
@@ -61,7 +67,7 @@ internal class MdnsDiscoveryJmdns(
             }
 
             override fun serviceRemoved(event: ServiceEvent) {
-                System.err.println("INFO: serviceRemoved '${event.name}'")
+                log.info { "serviceRemoved '${event.name}'" }
                 store.removeByName(event.name)
             }
 
@@ -70,7 +76,7 @@ internal class MdnsDiscoveryJmdns(
                 try {
                     val info: ServiceInfo = event.info
                     if (info.port !in 1..65535) {
-                        System.err.println("WARN: invalid port ${info.port} for '${event.name}', skipping")
+                        log.warn { "invalid port ${info.port} for '${event.name}', skipping" }
                         return
                     }
                     val ipv4 = resolveIPv4(info, event.name) ?: return
@@ -82,7 +88,7 @@ internal class MdnsDiscoveryJmdns(
                     )
                     store.upsert(device)
                 } catch (e: Exception) {
-                    System.err.println("WARN: serviceResolved error for '${event.name}' — ${e.message}")
+                    log.warn { "serviceResolved error for '${event.name}' — ${e.message}" }
                 }
             }
         }
@@ -126,12 +132,12 @@ internal class MdnsDiscoveryJmdns(
         try {
             instance.unregisterAllServices()
         } catch (e: Exception) {
-            System.err.println("WARN: unregisterAllServices (republish) failed — ${e.message}")
+            log.warn { "unregisterAllServices (republish) failed — ${e.message}" }
         }
         try {
             instance.registerService(ServiceInfo.create(SERVICE_TYPE, name, ownPort, ""))
         } catch (e: Exception) {
-            System.err.println("WARN: registerService (republish) failed — ${e.message}")
+            log.warn { "registerService (republish) failed — ${e.message}" }
         }
     }
 
@@ -143,12 +149,12 @@ internal class MdnsDiscoveryJmdns(
             try {
                 jmdns?.unregisterAllServices()
             } catch (e: Exception) {
-                System.err.println("WARN: unregisterAllServices failed — ${e.message}")
+                log.warn { "unregisterAllServices failed — ${e.message}" }
             }
             try {
                 jmdns?.close()
             } catch (e: Exception) {
-                System.err.println("WARN: jmdns close failed — ${e.message}")
+                log.warn { "jmdns close failed — ${e.message}" }
             }
         } finally {
             jmdns = null
@@ -162,7 +168,7 @@ internal class MdnsDiscoveryJmdns(
     private fun resolveIPv4(info: ServiceInfo, serviceName: String): String? {
         val ipv4 = info.getHostAddresses().firstOrNull { IPV4_REGEX.matches(it) }
         if (ipv4 == null) {
-            System.err.println("DEBUG: serviceResolved — no IPv4 yet for '$serviceName', skipping")
+            log.debug { "serviceResolved — no IPv4 yet for '$serviceName', skipping" }
         }
         return ipv4
     }

@@ -9,6 +9,7 @@ import com.arkivanov.essenty.lifecycle.resume
 import com.arkivanov.essenty.lifecycle.stop
 import com.tubetoast.tether.di.DefaultIosAppConfig
 import com.tubetoast.tether.di.IosAppContainer
+import com.tubetoast.tether.logging.initLogging
 import com.tubetoast.tether.presentation.DeviceListComponent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -19,6 +20,7 @@ import kotlinx.coroutines.launch
 
 @Suppress("ktlint:standard:function-naming")
 fun MainViewController() = run {
+    initLogging()
     val container = IosAppContainer(DefaultIosAppConfig())
     val lifecycle = LifecycleRegistry()
     val context = DefaultComponentContext(lifecycle)

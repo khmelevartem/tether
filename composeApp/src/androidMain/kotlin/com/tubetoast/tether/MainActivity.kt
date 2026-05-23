@@ -5,7 +5,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -15,15 +14,18 @@ import com.arkivanov.decompose.retainedComponent
 import com.tubetoast.tether.di.AppContainerProvider
 import com.tubetoast.tether.network.TetherForegroundService
 import com.tubetoast.tether.presentation.DeviceListComponent
+import ru.pocketbyte.kydra.log.KydraLog
+import ru.pocketbyte.kydra.log.warn
+import ru.pocketbyte.kydra.log.wrapper.withTag
 
-private const val TAG = "MainActivity"
+private val log = KydraLog.withTag(default = "Tether.MainActivity")
 
 class MainActivity : ComponentActivity() {
     private val notificationPermissionRequest = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { granted ->
         if (!granted) {
-            Log.w(TAG, "POST_NOTIFICATIONS denied — foreground service notification will not appear")
+            log.warn { "POST_NOTIFICATIONS denied — foreground service notification will not appear" }
         }
     }
 

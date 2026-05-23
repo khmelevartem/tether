@@ -1,6 +1,8 @@
 [versions]
 agp = "8.11.2"
 clikt = "4.4.0"
+kydraLog = "3.0.0"
+slf4jSimple = "2.0.17"
 decompose = "3.2.2"
 essenty = "2.2.1"
 android-compileSdk = "36"
@@ -29,6 +31,8 @@ slf4j = "1.7.36"
 
 [libraries]
 clikt = { module = "com.github.ajalt.clikt:clikt", version.ref = "clikt" }
+kydra-log = { module = "ru.pocketbyte.kydra:kydra-log", version.ref = "kydraLog" }
+slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "slf4jSimple" }
 jmdns = { module = "org.jmdns:jmdns", version.ref = "jmdns" }
 jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }

@@ -7,6 +7,11 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import ru.pocketbyte.kydra.log.KydraLog
+import ru.pocketbyte.kydra.log.error
+import ru.pocketbyte.kydra.log.wrapper.withTag
+
+private val log = KydraLog.withTag(default = "Tether.TrustedDeviceStore")
 
 // Stored values are public keys, so confidentiality at rest is intentionally not provided.
 private val Context.trustedDevicesDataStore: androidx.datastore.core.DataStore<Preferences> by
@@ -38,7 +43,7 @@ actual open class TrustedDeviceStore(
         return try {
             value.split(",").map { it.trim().toByte() }.toByteArray()
         } catch (e: Exception) {
-            System.err.println("ERROR: corrupted trusted key for '$deviceId' — ${e.message}")
+            log.error { "corrupted trusted key for '$deviceId' — ${e.message}" }
             null
         }
     }

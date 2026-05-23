@@ -18,9 +18,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import ru.pocketbyte.kydra.log.KydraLog
+import ru.pocketbyte.kydra.log.warn
+import ru.pocketbyte.kydra.log.wrapper.withTag
 import java.net.NetworkInterface
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
+
+private val log = KydraLog.withTag(default = "Tether.MdnsDiscovery.Bonjour")
 
 /**
  * JVM-on-macOS mDNS discovery backed by Apple's DNS-SD API ([DnsSd]).
@@ -194,7 +199,7 @@ internal class MdnsDiscoveryBonjour(
                 null,
             )
             if (error != DnsSd.NO_ERROR) {
-                System.err.println("WARN: DNSServiceResolve('$peerName') failed error=$error")
+                log.warn { "DNSServiceResolve('$peerName') failed error=$error" }
                 return null
             }
             return outRef.value
@@ -230,7 +235,7 @@ internal class MdnsDiscoveryBonjour(
                 null,
             )
             if (error != DnsSd.NO_ERROR) {
-                System.err.println("WARN: DNSServiceGetAddrInfo('$hostname') failed error=$error")
+                log.warn { "DNSServiceGetAddrInfo('$hostname') failed error=$error" }
                 return null
             }
             return outRef.value
@@ -387,7 +392,7 @@ internal class MdnsDiscoveryBonjour(
                         context: Pointer?,
                     ) {
                         if (errorCode != DnsSd.NO_ERROR) {
-                            System.err.println("WARN: DNSServiceRegister callback errorCode=$errorCode")
+                            log.warn { "DNSServiceRegister callback errorCode=$errorCode" }
                         }
                     }
                 }
@@ -407,7 +412,7 @@ internal class MdnsDiscoveryBonjour(
                     null,
                 )
                 if (error != DnsSd.NO_ERROR) {
-                    System.err.println("WARN: DNSServiceRegister failed error=$error; running browse-only")
+                    log.warn { "DNSServiceRegister failed error=$error; running browse-only" }
                     return null
                 }
                 return outRef.value
@@ -417,7 +422,7 @@ internal class MdnsDiscoveryBonjour(
                 try {
                     DnsSd.INSTANCE.DNSServiceRefDeallocate(ref)
                 } catch (e: Throwable) {
-                    System.err.println("WARN: Bonjour $label deallocate failed — ${e.message}")
+                    log.warn { "Bonjour $label deallocate failed — ${e.message}" }
                 }
             }
 

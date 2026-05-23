@@ -92,6 +92,7 @@ kotlin {
         // src/appleMain/ and src/jvmMain/ are picked up by their respective source sets.
 
         commonMain.dependencies {
+            implementation(libs.kydra.log)
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)
@@ -120,6 +121,10 @@ kotlin {
         commonTest.dependencies {
             implementation(libs.kotlin.test)
             implementation(libs.kotlinx.coroutines.test)
+        }
+
+        jvmMain.dependencies {
+            implementation(libs.slf4j.simple)
         }
 
         androidMain.dependencies {

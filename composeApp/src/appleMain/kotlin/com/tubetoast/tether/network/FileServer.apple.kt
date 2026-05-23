@@ -15,13 +15,19 @@ import kotlinx.cinterop.usePinned
 import kotlinx.coroutines.runBlocking
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
-import platform.Foundation.NSLog
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSUserDomainMask
 import platform.posix.fclose
 import platform.posix.fflush
 import platform.posix.fopen
 import platform.posix.fwrite
+import ru.pocketbyte.kydra.log.KydraLog
+import ru.pocketbyte.kydra.log.error
+import ru.pocketbyte.kydra.log.info
+import ru.pocketbyte.kydra.log.withMessage
+import ru.pocketbyte.kydra.log.wrapper.withTag
+
+private val log = KydraLog.withTag(default = "Tether.FileServer")
 
 actual class FileServer(
     private val port: Int,
@@ -37,16 +43,24 @@ actual class FileServer(
         check(server == null) { "FileServer is already running" }
         val storage = AppleUploadStorage(downloadsDir)
         storage.ensureRoot()
-        val srv = embeddedServer(CIO, port = port) {
-            installFileServerRoutes(storage, trustedDeviceStore, deviceKeyPair.publicKey, tracker)
-        }.start(wait = false)
+        val srv = try {
+            embeddedServer(CIO, port = port) {
+                installFileServerRoutes(storage, trustedDeviceStore, deviceKeyPair.publicKey, tracker)
+            }.start(wait = false)
+        } catch (e: Exception) {
+            log.error { e withMessage "FileServer start failed on port $port" }
+            throw e
+        }
         server = srv
-        return runBlocking { srv.engine.resolvedConnectors() }.first().port
+        val resolvedPort = runBlocking { srv.engine.resolvedConnectors() }.first().port
+        log.info { "started on port $resolvedPort, downloads → $downloadsDir" }
+        return resolvedPort
     }
 
     actual fun stop() {
         server?.stop(gracePeriodMillis = 500, timeoutMillis = 1_000)
         server = null
+        log.info { "stopped" }
     }
 }
 
@@ -113,14 +127,6 @@ private class AppleUploadStorage(
         if (fm.fileExistsAtPath(destination)) {
             fm.removeItemAtPath(destination, error = null)
         }
-    }
-
-    override fun logInfo(message: String) {
-        NSLog("[FileServer] %s", message)
-    }
-
-    override fun logError(message: String) {
-        NSLog("[FileServer] ERROR: %s", message)
     }
 }
 

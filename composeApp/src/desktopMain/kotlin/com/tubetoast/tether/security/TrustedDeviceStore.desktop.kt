@@ -8,11 +8,15 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
+import ru.pocketbyte.kydra.log.KydraLog
+import ru.pocketbyte.kydra.log.error
+import ru.pocketbyte.kydra.log.wrapper.withTag
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 
 private val defaultConfigDir = File(System.getProperty("user.home"), ".config/tether")
+private val log = KydraLog.withTag(default = "Tether.TrustedDeviceStore")
 
 actual open class TrustedDeviceStore(
     private val configDir: File = defaultConfigDir,
@@ -41,7 +45,7 @@ actual open class TrustedDeviceStore(
                     key to value.jsonArray.map { it.jsonPrimitive.int.toByte() }.toByteArray()
                 }
         } catch (e: Exception) {
-            System.err.println("ERROR: failed to load trusted device store — ${e.message}")
+            log.error { "failed to load trusted device store — ${e.message}" }
             mutableMapOf()
         }
     }
