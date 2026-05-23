@@ -132,7 +132,7 @@ Dispatch in parallel on the staged diff (no PR yet — agents review the local w
 - `review-reuse` — no duplication of existing specs / briefs / living docs / knowledge, no contradictions with neighbours, no doc-vs-code drift.
 - `review-adversarial` — runs after the above with their combined findings as input; probes what was missed, what factual claims were not verified.
 
-The other reviewers (`review-correctness`, `review-tests`, `review-platform`, `review-design-system`, `review-ux`, `review-architecture`) **do not run** — there is no code, no UI implementation to check against the brief. UX-brief structural completeness is covered by `review-guides` (it knows the routing `ux-brief.md → ux-expert.md §Output`).
+The other reviewers (`review-correctness`, `review-tests`, `review-platform`, `review-design-system`, `review-ux`, `review-visual`, `review-architecture`) **do not run** — there is no code, no UI implementation to check against the brief. UX-brief structural completeness is covered by `review-guides` (it knows the routing `ux-brief.md → ux-expert.md §Output`).
 
 Iteration: aggregate `[REQUIRED]` findings, re-dispatch the responsible sub-agent (which produced the artifact the finding targets) with the findings as input — for `.claude` prompt edits, apply the fixes inline since there is no sub-agent. Pass findings close to the reviewer's wording; do not soften or narrow.
 
