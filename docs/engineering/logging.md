@@ -77,9 +77,21 @@ All three should return no production hits. Test source sets may print freely.
 
 Test source sets (`commonTest`, `jvmTest`, `androidUnitTest`, `desktopTest`, `appleTest`) must not produce log output during `./gradlew allTests`. The writer initialised in test setup is a no-op writer or a WARNING-threshold writer — chosen at test-helper level, not per test. A test that needs to assert against logged content uses an in-memory writer it installs itself in `@BeforeTest`.
 
-## DEBUG content discipline
+## Sensitive data
 
-DEBUG carries operational metadata, never payload contents. For file transfer: file name, byte count, peer host:port, response status are DEBUG-eligible. The transferred bytes themselves are not. The contract is enforced at write-site, not at writer level — there is no PII filter; reviewers reject diff hunks that violate it.
+Logs from this app land on the same device the user runs it on — Logcat on Android, OSLog on Apple, stderr on Desktop. There is no central aggregation. The threat model is therefore narrow: a bug report or screen share exfiltrates whatever was in the log at that moment, and a separate process with log-read permission can see it. Logs are not a network exfiltration channel.
+
+Three categories never appear in any log line at any level:
+
+- **Payload bytes** — file content, stream chunks, hex dumps, `toString()` of binary buffers.
+- **Private cryptographic material** — raw bytes, base64, PEM.
+- **Auth tokens, session IDs, nonces** — including short prefixes (`token=abc1...`); a prefix is enough to scope an attack. Public keys and their fingerprints are fine — they are identifying but not exfiltratable.
+
+Local-identifier values — file names, absolute paths, peer device names (user-set), peer host:port — may appear at any level for operator correlation. Reviewer judgement, not a hard rule: keep them out of WARN/ERROR when an alternative correlator (logger tag, opaque id, fingerprint) carries the same information. Authors should remember that logs surfaced via bug reports leak whatever they contain.
+
+Exception messages reaching the log are inspected for embedded values before they go in. A library `IllegalArgumentException` may carry a secret in its message; log a synthetic summary and keep the original on the return path only.
+
+The contract is enforced at the write-site; there is no runtime filter. Reviewers reject diff hunks that violate the three never categories.
 
 ## What this doc does *not* commit to
 

@@ -15,7 +15,7 @@ Product-side docs (vision, audience, features) live in [`docs/product/`](../prod
 - [UI Style Guide](ui-style-guide.md) — token tables, `TetherTheme` rule, Tabler Icons usage, motion specs, accessibility checklist.
 - [UI Brand Mark](ui-brand-mark.md) — `•—•` geometry, animation states, where the mark appears, and design rationale (why a line, not a knot or arrow).
 - [Testing](testing.md) — структура тестов по source sets, стиль (`runTest`/виртуальное время), особенности Apple-таргетов.
-- [Logging](logging.md) — KydraLog как единый KMP-фасад; именование `Tether.<Subsystem>`, уровни, DEBUG-гейтинг по платформам, тестовая тишина.
+- [Logging](logging.md) — KydraLog как единый KMP-фасад; именование `Tether.<Subsystem>`, уровни, DEBUG-гейтинг по платформам, тестовая тишина, политика sensitive-данных.
 
 ## Writing style for these guides
 
