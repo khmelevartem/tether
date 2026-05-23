@@ -83,6 +83,15 @@ A Component's lifetime is bound to the screen (or flow) it represents. Anything 
 
 In particular: **we do not use `InstanceKeeper` to retain domain state across configuration changes.** The repository in `AppContainer` already outlives the Activity; the Component just rebuilds and re-subscribes on rotation.
 
+## Screens and previews
+
+A screen is two composables in the same file:
+
+- **`XxxScreen(component, modifier)`** — thin wrapper that subscribes to the Component's `Value<State>` and forwards events as callbacks. The only call site of the real Component.
+- **`XxxContent(state, callbacks, modifier)`** — stateless. Renders the UI given a plain state object. No Decompose, no DI, no coroutines.
+
+Every `@Preview` targets `XxxContent` — never `XxxScreen`. Previews live in `commonMain` next to the screen (`androidx.compose.ui.tooling.preview.Preview`, the unified CMP annotation). Build fake state from `PreviewFixtures` and wrap content in `PreviewSurface { }`, both under `com.tubetoast.tether.ui.preview`. This split is what lets Roborazzi render previews headlessly under Robolectric (the Decompose lifecycle does not boot in that environment) and lets `review-visual` consume the resulting PNGs against the UX brief — see [testing.md §Screenshot tests](testing.md#screenshot-tests).
+
 ## Navigation
 
 Decompose provides two navigation primitives we use, introduced one at a time as flows require them:
