@@ -11,16 +11,6 @@
         ]
       }
     ],
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node .claude/hooks/name-session.js"
-          }
-        ]
-      }
-    ],
     "Stop": [
       {
         "hooks": [

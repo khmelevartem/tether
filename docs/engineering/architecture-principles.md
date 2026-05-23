@@ -32,7 +32,7 @@ Clean Architecture and adjacent patterns are full of ceremony that doesn't pay r
 
 Всё, что может жить в `commonMain` — там и лежит; платформенные source sets только для кода, требующего platform API. Это применимо ко всему — domain, network, presentation, UI. Реализация в `commonMain` поставляется на все активные таргеты одной кодовой базой.
 
-- Компиляция ≠ корректность: код едет на все таргеты, но визуальная/runtime-корректность на каждом не гарантирована билдом. **Ручной smoke обязателен на каждой платформе** перед запросом ревью (`/implement` Step 7 / `/work-on-issue` Step 7).
+- Компиляция ≠ корректность: код едет на все таргеты, но визуальная/runtime-корректность на каждом не гарантирована билдом. **Ручной smoke обязателен на каждой платформе** перед запросом ревью (`/implement` Step 7).
 
 **UI specifically** — самый видимый multiplier: Compose Multiplatform в `commonMain` едет на Android, iOS и Desktop (когда entry point вызывает `App()`) одной имплементацией.
 
