@@ -72,6 +72,13 @@ One `@Preview` per state listed in the UX brief (minimum: populated, empty, load
 
 Previews are the visual artifact the future vision-reviewer reads — a screen without them is unverifiable and will be rejected. They must be self-contained: build a fake state inline and pass it to a stateless variant of the screen; do not instantiate Decompose components in previews.
 
+**Required conventions for every `@Preview`:**
+- Target the stateless `XxxContent(state, callbacks)` composable — never `XxxScreen(component)`. The screen wrapper depends on Decompose and cannot be rendered by Roborazzi under Robolectric.
+- Wrap the content in `PreviewSurface { }` from `com.tubetoast.tether.ui.preview`. This provides theme + background with zero per-file boilerplate.
+- Source fake state exclusively from `PreviewFixtures` in the same package. Add new fixtures there when a screen needs data not yet covered; do not fabricate data inline in individual preview functions.
+
+These conventions ensure `./gradlew :composeApp:recordRoborazziDebug -q` can render every preview headlessly and `review-visual` can read the resulting PNGs against the UX brief.
+
 ## After writing
 
 1. **Self-check against `docs/engineering/presentation-layer.md`.** Read it, then check your diff: layering (no business logic in composables), state hoisting, recomposition discipline, platform placement. Fix violations before reporting.

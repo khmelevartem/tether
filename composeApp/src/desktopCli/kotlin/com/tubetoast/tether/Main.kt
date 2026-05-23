@@ -32,6 +32,11 @@ class TetherCommand :
     CliktCommand(
         name = "tether",
         help = "Tether debug runner — local peer-to-peer file transfer over WiFi",
+        epilog = buildString {
+            append("Environment:\n```\n")
+            append("TETHER_LOG_DEBUG=true       Enable DEBUG-level logs.\n")
+            append("-Dtether.log.debug=true     Same, via JVM system property.\n")
+        },
     ) {
     private val nameOverride by option("--name", help = "Device name advertised via mDNS (persisted)")
 
