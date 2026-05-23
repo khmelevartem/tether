@@ -23,18 +23,27 @@ fun SkipCountBadge(
     val colors = TetherTheme.colors
     val spacing = TetherTheme.spacing
     val shapes = TetherTheme.shapes
+    val noun = if (count == 1) "file" else "files"
 
     Box(
         modifier = modifier
-            .semantics { contentDescription = "$count files skipped so far" }
+            .semantics { contentDescription = "$count $noun skipped so far" }
             .clip(shapes.sm)
             .background(colors.surfaceRaised)
             .padding(horizontal = spacing.sm, vertical = spacing.xs),
     ) {
         BasicText(
-            text = "$count files skipped",
+            text = "$count $noun skipped",
             style = TetherTheme.typography.labelSmall.copy(color = colors.textMuted),
         )
+    }
+}
+
+@Preview(name = "SkipCountBadge — count = 1 (singular)")
+@Composable
+private fun PreviewSkipCountBadgeSingular() {
+    PreviewSurface {
+        SkipCountBadge(count = 1)
     }
 }
 

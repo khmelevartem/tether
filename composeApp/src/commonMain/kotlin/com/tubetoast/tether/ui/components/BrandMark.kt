@@ -14,7 +14,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -107,9 +106,8 @@ fun BrandMark(
         }
 
         is BrandMarkState.Success -> {
-            var generation by remember { mutableIntStateOf(0) }
-            var rightDotColorFraction by remember(generation) { mutableFloatStateOf(0f) }
-            var rightDotScale by remember(generation) { mutableFloatStateOf(1f) }
+            var rightDotColorFraction by remember { mutableFloatStateOf(0f) }
+            var rightDotScale by remember { mutableFloatStateOf(1f) }
             val animatedColorFraction by animateFloatAsState(
                 targetValue = rightDotColorFraction,
                 animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
@@ -120,8 +118,7 @@ fun BrandMark(
                 animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
                 label = "successScale",
             )
-            LaunchedEffect(state) {
-                generation++
+            LaunchedEffect(Unit) {
                 rightDotColorFraction = 1f
                 rightDotScale = 1.05f
                 delay(200)
