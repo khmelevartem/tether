@@ -75,6 +75,8 @@ Roborazzi renders every `@Preview` composable to a PNG via Robolectric — no em
 
 PNGs land in `composeApp/build/outputs/roborazzi/`. Filenames encode the composable's FQN and the `@Preview` `name` parameter. `review-visual` reads these PNGs and compares them against the UX brief; baseline-diffing in CI is out of scope.
 
+`captureRoboImage` is a no-op outside the `record*` / `verify*` / `compare*` Roborazzi tasks (which set `-Proborazzi.test.record=true` etc.), so `./gradlew allTests` and pre-commit hooks do not pay the Robolectric cold-start cost for screenshot rendering.
+
 **Rules for new `@Preview`s:**
 - Always target the stateless `XxxContent(state, callbacks)` variant of a composable, never the `XxxScreen(component)` wrapper. The wrapper depends on Decompose and cannot render under Robolectric.
 - Wrap every preview in `PreviewSurface { }` from `com.tubetoast.tether.ui.preview` for consistent theme + background.
