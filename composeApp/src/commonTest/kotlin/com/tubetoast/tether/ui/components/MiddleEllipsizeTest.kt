@@ -42,8 +42,10 @@ class MiddleEllipsizeTest {
 
     @Test
     fun `max width of Int_MAX_VALUE returns text unchanged`() {
+        // fits always returns false — without the Int.MAX_VALUE early-return the binary search
+        // would run and return "…". The early-return is what makes this test pass.
         val text = "some-file-name.pdf"
-        val result = middleEllipsize(text, availableWidth = Int.MAX_VALUE, fits = { true })
+        val result = middleEllipsize(text, availableWidth = Int.MAX_VALUE, fits = { false })
         assertEquals(text, result)
     }
 }

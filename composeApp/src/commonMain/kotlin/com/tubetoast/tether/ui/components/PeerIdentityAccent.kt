@@ -13,12 +13,6 @@ import androidx.compose.ui.unit.dp
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.theme.TetherTheme
 
-/**
- * A narrow vertical strip rendered as a standalone composable on the leading edge of a row.
- * Callers place it inside a Row at the start; it fills the parent's height automatically.
- * A standalone composable is preferred over a Modifier extension because the strip is always
- * a visible child element, not a decoration layered on an existing element.
- */
 @Composable
 fun PeerIdentityAccent(
     identityColor: Color,

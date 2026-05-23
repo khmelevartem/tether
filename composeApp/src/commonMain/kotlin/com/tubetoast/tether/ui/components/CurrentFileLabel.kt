@@ -9,6 +9,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -17,14 +19,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.theme.TetherTheme
 
-/**
- * Displays a file name with middle ellipsis — head and tail both remain visible
- * when the text overflows, rather than clipping only the tail.
- */
 @Composable
 fun CurrentFileLabel(
     fileName: String,
     modifier: Modifier = Modifier,
+    contentDescription: String? = null,
 ) {
     val style = TetherTheme.typography.bodyMedium.copy(color = TetherTheme.colors.textPrimary)
     val textMeasurer = rememberTextMeasurer()
@@ -37,8 +36,15 @@ fun CurrentFileLabel(
         }
     }
 
+    val semanticsModifier = if (contentDescription != null) {
+        Modifier.semantics { this.contentDescription = contentDescription }
+    } else {
+        Modifier
+    }
     Box(
-        modifier = modifier.onSizeChanged { availableWidth = it.width },
+        modifier = modifier
+            .then(semanticsModifier)
+            .onSizeChanged { availableWidth = it.width },
     ) {
         BasicText(
             text = displayText,
@@ -86,7 +92,10 @@ internal fun middleEllipsize(
 @Composable
 private fun PreviewCurrentFileLabelShort() {
     PreviewSurface {
-        CurrentFileLabel(fileName = "photo.jpg")
+        CurrentFileLabel(
+            fileName = "photo.jpg",
+            contentDescription = "Currently sending: photo.jpg",
+        )
     }
 }
 
