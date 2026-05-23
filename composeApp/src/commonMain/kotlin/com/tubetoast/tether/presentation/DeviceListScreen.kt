@@ -1,26 +1,30 @@
 package com.tubetoast.tether.presentation
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.tubetoast.tether.protocol.Device
+import com.tubetoast.tether.ui.components.BrandMark
+import com.tubetoast.tether.ui.components.BrandMarkState
 import com.tubetoast.tether.ui.preview.PreviewFixtures
 import com.tubetoast.tether.ui.preview.PreviewSurface
+import com.tubetoast.tether.ui.theme.TetherTheme
 
 @Composable
 fun DeviceListScreen(component: DeviceListComponent, modifier: Modifier = Modifier) {
@@ -38,39 +42,49 @@ private fun DeviceListContent(
     onDeviceClick: (Device) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val spacing = TetherTheme.spacing
+    val colors = TetherTheme.colors
+    val typography = TetherTheme.typography
+    val shapes = TetherTheme.shapes
+
     if (devices.isEmpty()) {
         Column(
             modifier = modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            CircularProgressIndicator()
+            BrandMark(state = BrandMarkState.Searching)
             // TODO: move to resources after an approach is picked — #100
-            Text(
+            BasicText(
                 text = "Ищем устройства в сети…",
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(top = 16.dp),
+                style = typography.bodyMedium.copy(color = colors.textMuted),
+                modifier = Modifier.padding(top = spacing.lg),
             )
         }
     } else {
         LazyColumn(modifier = modifier.fillMaxSize()) {
             items(devices, key = { it.id }) { device ->
-                Card(
-                    onClick = { onDeviceClick(device) },
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .padding(horizontal = spacing.lg, vertical = spacing.sm)
+                        .clip(shapes.md)
+                        .background(colors.surfaceRaised)
+                        .border(width = spacing.borderWidth, color = colors.border, shape = shapes.md)
+                        .clickable { onDeviceClick(device) }
+                        .padding(horizontal = spacing.lg, vertical = spacing.lg),
                 ) {
-                    Text(
-                        text = device.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp),
-                    )
-                    Text(
-                        text = "${device.host}:${device.port}",
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
-                    )
+                    Column {
+                        BasicText(
+                            text = device.name,
+                            style = typography.titleMedium.copy(color = colors.textPrimary),
+                        )
+                        BasicText(
+                            text = "${device.host}:${device.port}",
+                            style = typography.bodyMedium.copy(color = colors.textMuted),
+                            modifier = Modifier.padding(top = spacing.xs),
+                        )
+                    }
                 }
             }
         }
@@ -103,6 +117,17 @@ private fun PreviewSingleDevice() {
 @Composable
 private fun PreviewMultipleDevices() {
     PreviewSurface {
+        DeviceListContent(
+            devices = PreviewFixtures.multipleDevices,
+            onDeviceClick = {},
+        )
+    }
+}
+
+@Preview(name = "Multiple devices — dark")
+@Composable
+private fun PreviewMultipleDevicesDark() {
+    PreviewSurface(darkTheme = true) {
         DeviceListContent(
             devices = PreviewFixtures.multipleDevices,
             onDeviceClick = {},

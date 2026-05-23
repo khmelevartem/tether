@@ -19,3 +19,6 @@ ktlint_standard_multiline-expression-wrapping = disabled
 ktlint_standard_string-template-indent = disabled
 
 compose_preview_public_check = false
+
+# Tether design-system tokens live in dedicated CompositionLocals by design — see docs/engineering/ui-style-guide.md.
+compose_allowed_composition_locals = LocalTetherColors,LocalTetherTypography,LocalTetherSpacing,LocalTetherShapes
