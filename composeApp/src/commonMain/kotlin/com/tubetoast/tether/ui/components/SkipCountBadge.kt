@@ -52,7 +52,8 @@ private fun PreviewSkipCountBadgeNonZero() = LightDarkPreview {
     SkipCountBadge(count = 3)
 }
 
-@Preview(name = "SkipCountBadge — count = 0 (emits nothing)")
+// emits nothing
+@Preview(name = "SkipCountBadge — count = 0")
 @Composable
 private fun PreviewSkipCountBadgeZero() {
     PreviewSurface {
