@@ -1,0 +1,118 @@
+package com.tubetoast.tether.presentation
+
+import com.arkivanov.decompose.DefaultComponentContext
+import com.arkivanov.essenty.backhandler.BackDispatcher
+import com.arkivanov.essenty.lifecycle.LifecycleRegistry
+import com.arkivanov.essenty.lifecycle.resume
+import com.arkivanov.essenty.statekeeper.StateKeeperDispatcher
+import com.tubetoast.tether.discovery.FakeDeviceDiscovery
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.runTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class RootComponentTest {
+    @Test
+    fun `initial stack contains single DeviceListChild`() = runTest {
+        val component = buildComponent(coroutineScope = backgroundScope)
+
+        assertEquals(1, component.stack.value.items.size)
+        assertIs<RootComponent.Child.DeviceListChild>(component.stack.value.active.instance)
+    }
+
+    @Test
+    fun `showTransferDetails pushes TransferDetailsChild then back pops to DeviceListChild`() = runTest {
+        val peer = PeerIdentity("peer-1")
+        val backDispatcher = BackDispatcher()
+        val component = buildComponent(
+            backDispatcher = backDispatcher,
+            coroutineScope = backgroundScope,
+        )
+
+        component.showTransferDetails(peer)
+
+        assertEquals(2, component.stack.value.items.size)
+        assertIs<RootComponent.Child.TransferDetailsChild>(component.stack.value.active.instance)
+
+        backDispatcher.back()
+
+        assertEquals(1, component.stack.value.items.size)
+        assertIs<RootComponent.Child.DeviceListChild>(component.stack.value.active.instance)
+    }
+
+    @Test
+    fun `process recreation drops pushed TransferDetailsChild and resets to DeviceListChild`() = runTest {
+        val priorDispatcher = StateKeeperDispatcher()
+        val priorContext = DefaultComponentContext(
+            lifecycle = LifecycleRegistry().also { it.resume() },
+            stateKeeper = priorDispatcher,
+        )
+        val priorComponent = buildComponent(context = priorContext, coroutineScope = backgroundScope)
+        priorComponent.showTransferDetails(PeerIdentity("peer-restored"))
+        assertEquals(2, priorComponent.stack.value.items.size)
+
+        val savedState = priorDispatcher.save()
+        val restoredContext = DefaultComponentContext(
+            lifecycle = LifecycleRegistry().also { it.resume() },
+            stateKeeper = StateKeeperDispatcher(savedState),
+        )
+        val restoredComponent = buildComponent(context = restoredContext, coroutineScope = backgroundScope)
+
+        assertEquals(1, restoredComponent.stack.value.items.size)
+        assertIs<RootComponent.Child.DeviceListChild>(restoredComponent.stack.value.active.instance)
+    }
+
+    @Test
+    fun `setPendingFiles stores summary and clearPendingFiles nulls it`() = runTest {
+        val component = buildComponent(coroutineScope = backgroundScope)
+
+        assertNull(component.pendingFiles.value)
+
+        component.setPendingFiles(PendingFilesSummary())
+
+        assertNotNull(component.pendingFiles.value)
+
+        component.clearPendingFiles()
+
+        assertNull(component.pendingFiles.value)
+    }
+
+    private fun buildComponent(
+        context: DefaultComponentContext = defaultContext(),
+        backDispatcher: BackDispatcher? = null,
+        coroutineScope: CoroutineScope,
+    ): RootComponent {
+        val ctx = if (backDispatcher != null) {
+            DefaultComponentContext(
+                lifecycle = context.lifecycle,
+                stateKeeper = context.stateKeeper,
+                instanceKeeper = context.instanceKeeper,
+                backHandler = backDispatcher,
+            )
+        } else {
+            context
+        }
+        return RootComponent(
+            componentContext = ctx,
+            deviceListFactory = { childCtx ->
+                DeviceListComponent(
+                    componentContext = childCtx,
+                    discovery = FakeDeviceDiscovery(),
+                    coroutineScope = coroutineScope,
+                )
+            },
+            transferDetailsFactory = { _, peer -> TransferDetailsComponent(peer) },
+        )
+    }
+
+    private fun defaultContext(): DefaultComponentContext {
+        val lifecycle = LifecycleRegistry()
+        lifecycle.resume()
+        return DefaultComponentContext(lifecycle)
+    }
+}

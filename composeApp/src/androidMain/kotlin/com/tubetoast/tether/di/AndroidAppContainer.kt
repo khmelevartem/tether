@@ -12,6 +12,7 @@ class AndroidAppContainer(
     config: AndroidAppConfig,
 ) : JvmAppContainer(config) {
     val application = config.application
+    val activityProvider = ActivityProvider(application)
     private val lockHolder = AndroidTransferLockHolder(application)
     override val transferActivityTracker: TransferActivityTracker = DefaultTransferActivityTracker(
         onFirstEnter = lockHolder::acquire,

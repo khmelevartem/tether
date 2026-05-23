@@ -11,6 +11,9 @@ import com.tubetoast.tether.di.DefaultIosAppConfig
 import com.tubetoast.tether.di.IosAppContainer
 import com.tubetoast.tether.logging.initLogging
 import com.tubetoast.tether.presentation.DeviceListComponent
+import com.tubetoast.tether.presentation.RootComponent
+import com.tubetoast.tether.presentation.RootContent
+import com.tubetoast.tether.presentation.TransferDetailsComponent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -23,10 +26,15 @@ fun MainViewController() = run {
     initLogging()
     val container = IosAppContainer(DefaultIosAppConfig())
     val lifecycle = LifecycleRegistry()
-    val context = DefaultComponentContext(lifecycle)
-    val component = DeviceListComponent(
-        componentContext = context,
-        discovery = container.mdnsDiscovery,
+    val component = RootComponent(
+        componentContext = DefaultComponentContext(lifecycle),
+        deviceListFactory = { ctx ->
+            DeviceListComponent(
+                componentContext = ctx,
+                discovery = container.mdnsDiscovery,
+            )
+        },
+        transferDetailsFactory = { _, peer -> TransferDetailsComponent(peer) },
     )
     ComposeUIViewController {
         DisposableEffect(Unit) {
@@ -48,6 +56,6 @@ fun MainViewController() = run {
                 lifecycle.destroy()
             }
         }
-        App(component)
+        RootContent(component)
     }
 }

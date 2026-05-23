@@ -14,6 +14,9 @@ import com.arkivanov.decompose.retainedComponent
 import com.tubetoast.tether.di.AppContainerProvider
 import com.tubetoast.tether.network.TetherForegroundService
 import com.tubetoast.tether.presentation.DeviceListComponent
+import com.tubetoast.tether.presentation.RootComponent
+import com.tubetoast.tether.presentation.RootContent
+import com.tubetoast.tether.presentation.TransferDetailsComponent
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.warn
 import ru.pocketbyte.kydra.log.wrapper.withTag
@@ -47,13 +50,19 @@ class MainActivity : ComponentActivity() {
 
         val container = (application as AppContainerProvider).container
         val component = retainedComponent { componentContext ->
-            DeviceListComponent(
+            RootComponent(
                 componentContext = componentContext,
-                discovery = container.mdnsDiscovery,
+                deviceListFactory = { ctx ->
+                    DeviceListComponent(
+                        componentContext = ctx,
+                        discovery = container.mdnsDiscovery,
+                    )
+                },
+                transferDetailsFactory = { _, peer -> TransferDetailsComponent(peer) },
             )
         }
         setContent {
-            App(component)
+            RootContent(component)
         }
     }
 
