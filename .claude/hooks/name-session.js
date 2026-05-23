@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-// Sets sessionTitle when a session starts with /work-on-issue or /code-review.
+// Sets sessionTitle when a session starts with /implement or /code-review.
 // Format: "#<N> impl: <title>" or "#<N> review: <title>"
 
 const input = JSON.parse(require('fs').readFileSync('/dev/stdin', 'utf8'));
 const prompt = (input.prompt || '').toLowerCase();
 
-const workMatch = prompt.match(/work[_-]on[_-]issue\D*(\d+)|изучи\s+issue\s+(\d+)/);
+const workMatch = prompt.match(/implement\D*(\d+)|изучи\s+issue\s+(\d+)/);
 const reviewMatch = prompt.match(/code[_-]review\D*(\d+)/);
 
 let issueNum = null;
