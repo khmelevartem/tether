@@ -21,5 +21,5 @@ dependencies {
     testImplementation(libs.ktlint.rule.engine)
     testImplementation(libs.ktlint.rule.engine.core)
     testImplementation(kotlin("test"))
-    testRuntimeOnly("org.slf4j:slf4j-simple:1.7.36")
+    testRuntimeOnly(libs.slf4j.simple)
 }
