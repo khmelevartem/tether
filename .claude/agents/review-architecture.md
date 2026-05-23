@@ -82,7 +82,19 @@ For non-trivial structural decisions (new module, new abstraction crossing layer
 
 If the decision contradicts `architecture-principles.md`, an ADR, a feature-spec architectural call, or a prior decision visible in `docs/engineering/adr/` — flag it as REQUIRED unless the PR explicitly amends the doc/ADR in the same change.
 
-### 6. Scope of the architectural change
+### 6. Trade-off vs violation
+
+`[REQUIRED]` — нарушение принципа: несимметрия слоёв, развернутое направление зависимости, абстракция против документированного правила, пропущенный source set. Принцип нарушен — фикс однозначен, выбор уровня не у автора.
+
+`[QUESTION]` — обмен между двумя валидными shape'ами, где оба удовлетворяют принципам, но имеют разные ergonomic / robustness / maintainability profile'ы. Особенно в build-tooling / `.claude/` / CI / Gradle subprojects слое, где выбор часто упирается в «удобство для будущих контрибьюторов» vs «защита от опечатки». Не флагай как `[REQUIRED]` — это policy-выбор, не correctness. Назови два варианта явно, опиши trade-off, оставь решение пользователю.
+
+Сигналы что находка — trade-off, а не violation:
+- Оба варианта работают и тесты зелёные;
+- Принцип, который нарушается, сам формулируется как «лучше» / «чище» / «менее хрупко», а не как абсолют («запрещено», «никогда», «всегда»);
+- В смежных модулях / прошлых PR живут оба shape'а;
+- Стоимость переключения значительная (ломает ergonomics для всех будущих модулей ради одного edge case).
+
+### 7. Scope of the architectural change
 
 - Is the structural change proportional to the task? A one-line bug solved by introducing a new module is over-engineering. A multi-platform feature added entirely inside one `androidMain` file is under-engineering (the next platform will pay).
 - For BUGFIX: does the fix preserve or improve the architecture, or does it bolt on a workaround that erodes a boundary? A workaround at a layer boundary is a finding even if the bug is fixed; propose where the proper fix would live.

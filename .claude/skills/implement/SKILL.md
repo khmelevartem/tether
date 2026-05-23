@@ -124,7 +124,8 @@ Per track (or sequentially if single track):
    - **Architectural design point** — plan from Step 4 surfaces a non-trivial mechanism / library / structural choice that `coder` should not make alone → `architect` first. It converges the choice (its own palette + user trade-off questions + ADR/living doc), returns a one-line decision summary; that summary then becomes a hard constraint for the subsequent `coder` dispatch in the same track.
    - **Everything else** (network, discovery, protocol, persistence, build, infra) → `coder`
    - **Mixed** — split into sub-tracks if disjoint files, else dispatch `coder` which can pull in `ui-expert` / `architect` via Agent tool.
-2. Once the implementing agent reports green tests, dispatch a **fast reviewer wave** in parallel:
+2. **Перед dispatch'ем reviewer wave — закоммить изменения coder'а** на feature-branch (новый коммит или `--amend`, на твоё усмотрение). Reviewer'ы читают `git diff main...HEAD` и **в working tree не должно быть uncommitted изменений** на момент их запуска. Иначе часть агентов читает только committed state и шлёт stale [REQUIRED] на проблемах, которые уже починены, но не видны им — оркестратор тратит контекст на разбор фантомных flag'ов, плюс риск false-block'a. Один источник истины = один коммит per inner-loop iteration.
+3. Dispatch a **fast reviewer wave** in parallel:
    - `review-dod` (always)
    - `review-correctness` (always unless DOCS/REFACTOR)
    - `review-guides` (always)
@@ -134,8 +135,8 @@ Per track (or sequentially if single track):
    - `review-ux` (if diff touches `composeApp/src/**` — the agent itself decides skip vs. block on missing brief)
    - `review-ui` (if diff touches `composeApp/src/**`)
    Skip `review-reuse` and `review-adversarial` here — they run in the simplify wave (Step 6) and the full review (Step 7).
-3. If every reviewer says `APPROVE` and zero `[REQUIRED]` → track done.
-4. Else → aggregate `[REQUIRED]` findings, dispatch the implementing agent again with the findings as input:
+4. If every reviewer says `APPROVE` and zero `[REQUIRED]` → track done.
+5. Else → aggregate `[REQUIRED]` findings, dispatch the implementing agent again with the findings as input:
 
 > Previous review found these issues that block the PR. Address each. For each finding, classify as pointwise or structural; for structural findings, do a symmetry pass per your agent definition — check sibling files, sibling methods, sibling platforms, sibling source sets for the same anti-pattern, and fix in this same pass. Do not change anything outside the PR's scope.
 >
@@ -160,21 +161,28 @@ Dispatch the implementing agent once more:
 > **Do not rephrase prose for brevity.** If a sentence is load-bearing and free of the issues above, leave its wording alone. Cut whole sentences when they fail the rule above; otherwise keep them as written. Word-count reduction on well-formed sentences is not a goal.
 > Do not change behavior; do not touch anything outside the diff. Run `./gradlew allTests -q` after.
 
-If anything was simplified — re-run **the same set of agents that ran in Step 5 for this PR type** (i.e. dod + guides + correctness + tests + platform-if-touched + ux-if-touched + ui-if-touched) **plus `review-reuse`** on the simplified diff. `review-reuse` is critical here because duplication is what most likely accumulated across iterations and tracks. `review-platform`, `review-ux`, and `review-ui` follow the same skip rules as Step 5 (platform set touched / `composeApp/src/**` touched). If clean, proceed.
+If anything was simplified — **закоммить simplification** (см. дисциплину Step 5 — reviewer'ы читают только committed diff), затем re-run **the same set of agents that ran in Step 5 for this PR type** (i.e. dod + guides + correctness + tests + platform-if-touched + ux-if-touched + ui-if-touched) **plus `review-reuse`** on the simplified diff. `review-reuse` is critical here because duplication is what most likely accumulated across iterations and tracks. `review-platform`, `review-ux`, and `review-ui` follow the same skip rules as Step 5 (platform set touched / `composeApp/src/**` touched). If clean, proceed.
 
 ## Step 7 — Full pre-PR review (inline, not via /code-review skill)
 
 `/code-review` skill requires an existing PR (it posts via `gh pr review`). At this step the PR does not exist yet — Step 9 creates it. So instead of calling the skill, **orchestrate the same agent fan-out inline, without GitHub publication**:
 
-1. Wave A in parallel: `review-dod`, `review-guides`, `review-reuse`, plus (if applicable to PR type / diff) `review-architecture`, `review-correctness`, `review-tests`, `review-platform`, `review-ux`, `review-ui`. Each agent receives the issue number and is told to review the local working tree (`git diff main...HEAD`) instead of a PR. `review-ux` and `review-ui` both run whenever the diff touches `composeApp/src/**`; each agent decides skip vs. block.
-2. Wave B: `review-adversarial` with the combined Wave A findings as input.
-3. Aggregate. Apply any `[REQUIRED]` via the implementing agent (with the symmetry-pass instruction). Re-run until approved or 2 iterations.
+1. Перед Wave A — working tree должно быть чистым (committed). Если после Step 6 остались uncommitted правки — закоммить. Reviewer'ы читают `git diff main...HEAD`; uncommitted состояние вызывает stale-view findings.
+2. Wave A in parallel: `review-dod`, `review-guides`, `review-reuse`, plus (if applicable to PR type / diff) `review-architecture`, `review-correctness`, `review-tests`, `review-platform`, `review-ux`, `review-ui`. Each agent receives the issue number and is told to review the local working tree (`git diff main...HEAD`) instead of a PR. `review-ux` and `review-ui` both run whenever the diff touches `composeApp/src/**`; each agent decides skip vs. block.
+3. Wave B: `review-adversarial` with the combined Wave A findings as input.
+4. Aggregate. Apply any `[REQUIRED]` via the implementing agent (with the symmetry-pass instruction). Re-run until approved or 2 iterations.
 
 No `gh pr review` here — findings are consumed locally only. The post-PR `/code-review` skill will be invoked separately after Step 9 if a reviewer requests it, or as part of normal team review.
 
-## Step 8 — Smoke
+## Step 8 — Runtime verification (smoke OR enforcement-probe)
 
-Run `/smoke-test` blocks relevant to the diff. Selection heuristic:
+Две ветки. Выбирается по природе deliverable'а, не взаимоисключающие — для PR где меняется и фича и enforcer, делаются обе.
+
+### 8a — Smoke (feature behavior)
+
+Когда deliverable PR — runtime-поведение фичи (пользовательский путь, сетевой обмен, lifecycle).
+
+Run `/smoke-test` blocks relevant to the diff:
 
 | Diff touches | Run |
 |---|---|
@@ -186,9 +194,23 @@ Run `/smoke-test` blocks relevant to the diff. Selection heuristic:
 
 If the PR introduces a new critical happy-path not covered by smoke (start-time failure point, cross-platform UI, new external interface) — extend `.claude/skills/smoke-test/SKILL.md` in this same PR before running. Keep blocks lean; smoke runs often.
 
-Record the verdict (🟢/🟡/🔴) and blocks executed.
+### 8b — Enforcement probe (static check is wired in)
 
-Apply Gate G4: if 🟡/🔴 → present to user, stop.
+Когда deliverable PR — сам enforcement mechanism (custom lint rule, CI guard, git hook, custom Gradle check, ktlint/detekt правило, schema validator). Unit-тесты механизма не доказывают, что он подключён через ServiceLoader / Gradle / hook chain — нужна инъекция через ту же дверь, через которую пройдёт реальный нарушитель.
+
+Шаги:
+1. Создай минимальный артефакт, нарушающий проверку, в реальном месте кодовой базы (там, где enforcer должен сработать — `src/.../Test.kt` для ktlint test rule, `.github/workflows/` для CI guard).
+2. Запусти соответствующий Gradle/CI task (`./gradlew ktlintCheck`, `./gradlew <task>`, `git commit` для pre-commit hook).
+3. Проверь: build FAILED **с ожидаемым сообщением** (rule id / hook name).
+4. Удали probe, убедись через `git status -s` что ничего не осталось.
+
+Если шаг 3 проходит зелёно — enforcer не подключён, несмотря на зелёные unit-тесты. Это red gate, эскалируй пользователю.
+
+### Verdict
+
+Record the verdict (🟢/🟡/🔴) per branch run, плюс блоки/probe path.
+
+Apply Gate G4: если любая ветка 🟡/🔴 → present to user, stop.
 
 ## Step 9 — Commit, push, PR (G5 summary)
 
