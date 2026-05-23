@@ -28,7 +28,3 @@ fun RootContent(component: RootComponent, modifier: Modifier = Modifier) {
         }
     }
 }
-
-@Composable
-fun TransferDetailsScreen(component: TransferDetailsComponent) {
-}
