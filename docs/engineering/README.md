@@ -41,5 +41,5 @@ ADRs in [`adr/`](adr/) capture the *why* behind one-time architectural choices. 
 - [Hotspot-first Discovery](adr/adr-hotspot-discovery.md) — chose layered mDNS + `/hello` rendezvous + HTTP-subnet-scan + UDP-broadcast over raw-multicast-as-primary or Wi-Fi Direct / NAN. Motivated primarily by phone-hotspot transfer.
 - [Logging — KydraLog](adr/adr-logging-kydra.md) — chose KydraLog as the single KMP logging facade; SLF4J handled via `slf4j-simple` on JVM; per-platform DEBUG gates.
 - [Screenshot testing](adr/adr-screenshot-testing.md) — chose Roborazzi + ComposablePreviewScanner on the Android target via Robolectric for headless `@Preview`-to-PNG rendering in the agent loop.
-- [Pocock skills adoption](adr/adr-pocock-skills-adoption.md) — vendored `grill-with-docs` + `handoff` flat into `.claude/skills/` over writing from scratch / adopting partial PR #221 / accepting full Pocock bundle / inline vocabulary instructions. Living-doc сторона — [`grilling-and-glossary.md`](grilling-and-glossary.md).
+- [Vocabulary scaffolding — vendor Pocock's `grill-with-docs`](adr/adr-pocock-skills-adoption.md) — chose flat-vendoring `grill-with-docs` + `handoff` into `.claude/skills/` over writing a Tether-native grill from scratch. Living-doc сторона — [`grilling-and-glossary.md`](grilling-and-glossary.md).
 

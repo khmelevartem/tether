@@ -25,7 +25,7 @@ The glossary has three sections, each holding terms native to one concern:
 
 - **Product** — user-facing concepts: *transfer*, *pairing*, *device list*, *trusted device*, *hotspot transfer*. The vocabulary spec-writer and ux-expert use.
 - **Technical** — engineering concepts: *discovery layer*, *rendezvous*, *composition root*, *container*, *expect/actual*, *source set*. The vocabulary the architect, coder, and reviewers use.
-- **Platform mapping** — the canonical names of platforms and their Kotlin Multiplatform targets: *Android* → `androidTarget`, *Desktop* → `jvm("desktop")`, *iOS* → `iosArm64` / `iosSimulatorArm64`, *macOS* → `macosArm64`. This section exists because platform-naming drift is the single most frequent vocabulary incident — issue bodies, commits, and code comments routinely confuse "JVM" with "Desktop" or "Apple" with "iOS".
+- **Platform mapping** — the canonical names of platforms and their Kotlin Multiplatform targets: *Android* → `androidTarget`, *Desktop* → `jvm("desktop")`, *iOS* → `iosArm64` / `iosSimulatorArm64`, *macOS* → `macosArm64`. Platform names and target names are not interchangeable: "JVM" covers both Android and Desktop, "Apple" covers both iOS and macOS, and a draft that uses one where the other is meant points at a different subset of code than its author intends.
 
 Each entry is one line: term — one-sentence definition — optional `(see <link>)` to the living doc that owns the deeper rule. Definitions in present tense, no history.
 
@@ -33,7 +33,7 @@ Each entry is one line: term — one-sentence definition — optional `(see <lin
 
 The glossary is owned collectively but written through one mechanism: the grill skill. When the grill is invoked on a draft and finds a term that is either new or used with a meaning that contradicts the existing entry, it updates the glossary in the same pass and references the update in its grill report. No agent edits the glossary outside a grill pass — this keeps drift visible.
 
-A term enters the glossary when it appears in two or more long-lived artifacts, or when its absence caused a concrete naming incident. One-off task-local terms stay out.
+A term enters the glossary when it appears in two or more long-lived artifacts, or when two writers (human or agent) use it with conflicting meanings in the same artifact surface. One-off task-local terms stay out.
 
 ## The grill-with-docs skill
 

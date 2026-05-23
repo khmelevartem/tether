@@ -18,7 +18,9 @@ User-facing concepts. The vocabulary [`spec-writer`](../.claude/agents/spec-writ
 
 Engineering concepts. The vocabulary [`architect`](../.claude/agents/architect.md), `coder`, and the review agents use.
 
-- **Discovery** — the layer that announces a device's presence and finds peers on the local network. Currently mDNS over Wi-Fi (see [discovery.md](engineering/discovery.md)). _Avoid:_ rendezvous (reserve for a future cross-network mechanism), announce (verb only).
+- **Discovery** — the layer that announces a device's presence and finds peers on the local network (see [discovery.md](engineering/discovery.md)). _Avoid:_ announce (verb only).
+- **Rendezvous** — the post-discovery `/hello` exchange that establishes a session between two peers that have already found each other through Discovery. Distinct from Discovery itself (see [discovery.md](engineering/discovery.md) §Layer 2).
+- **grill-with-docs** — the sub-agent at [`.claude/skills/grill-with-docs/`](../.claude/skills/grill-with-docs/SKILL.md) that interrogates a draft against this glossary, flags drift, and writes new terms in the same pass. The only writer to this file (see [grilling-and-glossary.md](engineering/grilling-and-glossary.md)).
 - **Peer** — a device visible through discovery, regardless of pairing status. _Avoid:_ node, neighbour.
 - **FileServer** — the per-device HTTP server that accepts incoming transfers. _Avoid:_ receiver, listener.
 - **FileClient** — the per-device HTTP client that initiates outgoing transfers. _Avoid:_ sender, uploader.
@@ -30,11 +32,11 @@ Engineering concepts. The vocabulary [`architect`](../.claude/agents/architect.m
 
 Canonical names for platforms and their Kotlin Multiplatform targets. Use the canonical name in product docs, issues, commits, and user-facing copy; use the target name in build files, source-set paths, and code.
 
-| Canonical name | KMP target(s) | Notes |
-|---|---|---|
-| Android | `androidTarget` | API levels per [build.gradle.kts](../composeApp/build.gradle.kts). |
-| Desktop | `jvm("desktop")` | Covers Windows, Linux, macOS desktop. _Avoid:_ saying «JVM» when the audience is end-users. |
-| iOS | `iosArm64`, `iosSimulatorArm64` | Apple Silicon simulator only. |
-| macOS | `macosArm64` | Apple Silicon only; no x86_64. |
+| Canonical name | KMP target(s) | Use canonical name when | Use target name when |
+|---|---|---|---|
+| Android | `androidTarget` | speaking about user-visible behaviour or product scope | referring to Kotlin source-set placement or Gradle tasks |
+| Desktop | `jvm("desktop")` | speaking about user-visible behaviour; covers Windows / Linux / macOS desktop | referring to source-set placement or Gradle tasks |
+| iOS | `iosArm64`, `iosSimulatorArm64` | speaking about user-visible behaviour | referring to source-set placement or Gradle tasks |
+| macOS | `macosArm64` | speaking about user-visible behaviour | referring to source-set placement or Gradle tasks |
 
-When an issue or commit talks about user-visible behaviour on a personal computer, write «Desktop» (or the specific OS — Windows / Linux / macOS). When it talks about Kotlin source-set placement or Gradle tasks, write the target name. Mixing the two is the most common drift incident.
+_Avoid:_ saying «JVM» when the audience is end-users; mixing canonical and target names within one sentence.

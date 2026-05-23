@@ -1,45 +1,47 @@
-# Adopt Pocock's `grill-with-docs` + `handoff` skills as Tether's vocabulary scaffolding
+# Vocabulary scaffolding — vendor Pocock's `grill-with-docs` over write-from-scratch
 
 **Status:** Accepted — 2026-05-23
 **Issue:** [#36](https://github.com/khmelevartem/tether/issues/36)
 
 ## Context
 
-Tether's spec / ux-brief / ADR / issue / review-prompt artifacts are written by a mix of humans and sub-agents (`spec-writer`, `ux-expert`, `architect`, `github-issue-author`, `review-guides`). Each writer reaches for its own near-synonyms — *device* vs *peer* vs *node*, *Desktop* vs *JVM*, *pairing* vs *trust*. Concrete incidents (notably PR #32's platform-naming drift between issue body, commit messages, and code) showed that the cost is paid by the next reviewer who cannot tell whether two passages describe the same thing.
+Tether's spec / ux-brief / ADR / issue / review-prompt artifacts are written by a mix of humans and sub-agents (`spec-writer`, `ux-expert`, `architect`, `github-issue-author`, `review-guides`). Each writer reaches for its own near-synonyms — *device* vs *peer* vs *node*, *Desktop* vs *JVM*, *pairing* vs *trust*. The cost is paid by the next reviewer who cannot tell whether two passages describe the same thing.
 
 The fix needs two pieces: a single glossary file that all layers link into, and a mechanism that runs on every new draft and updates the glossary inline when a genuinely new term appears.
 
 Matt Pocock's [`mattpocock/skills`](https://github.com/mattpocock/skills) repo ships exactly this pair as Claude sub-agents: `grill-with-docs` (the interrogator) and `handoff` (a passing-context-between-agents helper). The form is proven, MIT-licensed, and small enough to vendor without becoming a maintenance liability. Parent living doc: [grilling-and-glossary.md](../grilling-and-glossary.md).
 
+## Decision drivers
+
+| Driver | Why it matters for Tether |
+|---|---|
+| One glossary reachable from every layer | Product, engineering, and platform-mapping terms all collide in the same artifacts; splitting the glossary by layer recreates the drift the mechanism is meant to close. |
+| Minimal vendoring surface | Anything copied from upstream becomes a maintenance liability proportional to its size; smaller is better. |
+| Coverage of the actual writing surface | The mechanism is only as good as the number of mount points it reaches; a partial wiring leaves silent gaps. |
+| No new workflow conventions | The grill must slot into existing agent procedures and the existing ADR shape, not require renaming docs or restructuring `.claude/`. |
+| Reusable scaffolding for future Pocock skills | Tether's roadmap includes a second Pocock-family skill ([#233](https://github.com/khmelevartem/tether/issues/233)); the chosen form should make that follow-up a copy, not a rebuild. |
+
 ## Considered options
 
 ### Option 1 — Vendor Pocock's `grill-with-docs` + `handoff` flat into `.claude/skills/`
 
-Copy the two skills from `mattpocock/skills` into `.claude/skills/grill-with-docs/` and `.claude/skills/handoff/` as-is, with MIT-attribution in each `SKILL.md` header. Seed `docs/glossary.md` manually. Wire six mount points (spec-writer, `/implement` G1, `/document` Step 2, github-issue-author, review-guides, architect). Adapt only the ADR-format references inside the grill prompt to point at Tether's [`adr/_template.md`](_template.md).
+Copy the two skills from `mattpocock/skills` into `.claude/skills/grill-with-docs/` and `.claude/skills/handoff/` as-is, with MIT-attribution in each `SKILL.md` header. Seed `docs/glossary.md` manually. Wire six mount points (spec-writer, `/implement` G1, `/document` Step 2, github-issue-author, review-guides, architect). Adapt only the ADR-format references inside the grill prompt to point at Tether's [`adr/_template.md`](_template.md). Closes all five drivers; costs are bounded vendoring drift and one extra grill turn per artifact.
 
 ### Option 2 — Write a Tether-native grill skill + glossary from scratch
 
-Design our own grill prompt and glossary structure based on what the team already knows. No external dependency, full freedom to shape the report format.
-
-Rejected: re-invents a form Pocock's repo has already iterated. Loses the planned synergy with a future `improve-codebase-architecture` skill (#233) that builds on the same Pocock skill family — having the same scaffolding makes that follow-up adoption a one-step copy rather than a re-bridging exercise.
+Design our own grill prompt and glossary structure based on what the team already knows. No external dependency and full freedom to shape the report format, at the cost of re-inventing a form Pocock's repo has already iterated and forfeiting the reusable scaffolding for the future `improve-codebase-architecture` skill ([#233](https://github.com/khmelevartem/tether/issues/233)) that builds on the same Pocock family.
 
 ### Option 3 — Land the partial scaffolding from closed PR #221
 
-PR #221 wired vocabulary policing only into `github-issue-author` and shipped no central glossary or general grill mechanism. Adopting it as-is would mean one mount point instead of six, no glossary file, and a coupling between vocabulary rules and the issue-authoring prompt that has to be unwound the moment a second mount point appears.
-
-Rejected: a half-mechanism that turns into a re-write the first time the second mount point lands. The `domain.md` naming convention PR #221 used also conflicts with the cross-layer `docs/glossary.md` placement decided in #36.
+PR #221 wired vocabulary policing only into `github-issue-author` and shipped no central glossary or general grill mechanism. Adopting it as-is yields one mount point instead of six, no glossary file, and a coupling between vocabulary rules and the issue-authoring prompt that has to be unwound the moment a second mount point appears — turning into a re-write rather than an extension. The `domain.md` naming it used also conflicts with the cross-layer `docs/glossary.md` placement.
 
 ### Option 4 — Do nothing; rely on inline vocabulary instructions inside each writing agent's prompt
 
-Leave each sub-agent (`spec-writer`, `ux-expert`, etc.) responsible for naming consistency through its own prompt.
-
-Rejected: does not address the root cause — humans and AI agents do not share a single ubiquitous-language file. Inline instructions cannot enforce cross-agent consistency, and they are exactly the setup that produced incidents like PR #32 in the first place.
+Leave each sub-agent (`spec-writer`, `ux-expert`, etc.) responsible for naming consistency through its own prompt. Does not address the root cause — humans and AI agents do not share a single ubiquitous-language file, and inline instructions cannot enforce cross-agent consistency.
 
 ### Option 5 — Run `setup-matt-pocock-skills` and accept the full skill bundle
 
-Use Pocock's bootstrap script to pull the entire skill family.
-
-Rejected: the bundle includes skills Tether has no use for today and conventions that conflict with our existing prompt layout. Cost of pruning is higher than copying the two we actually use.
+Use Pocock's bootstrap script to pull the entire skill family. The bundle includes skills Tether has no use for today and conventions that conflict with our existing prompt layout; the cost of pruning is higher than copying the two we actually use.
 
 ## Decision
 
