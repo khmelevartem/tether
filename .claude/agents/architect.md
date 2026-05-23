@@ -77,14 +77,17 @@ If during convergence you realise the palette was incomplete or the answers reve
 
 ### Step 5 — Decide artifact scope
 
-**Layer-fit test, first.** Before picking an engineering-layer artifact, ask of every rule from your converged design: **does this rule belong on the engineering layer, or on the layer that already owns it?** Product framing belongs in the spec, interaction model in the ux brief, issue-specific scope in the issue body, code-level invariants in code. An engineering doc that restates any of those is misplaced — regardless of length. A short doc holding one genuinely engineering rule is fine; a long doc retelling spec / ux / issue is not.
+**Route each rule from your converged design to the layer that owns it:**
 
-Possible outcomes:
+- product framing → the spec
+- interaction model → the ux brief
+- issue-specific scope or follow-up → the issue body / PR description
+- code-level invariant → the code itself
+- engineering-layer rule (mechanism, library coordinate, lifecycle invariant, cross-platform contract) → a `docs/engineering/` artifact
 
-- **Some rule lives on the engineering layer and is not yet captured** — a new or extended artifact is warranted, even if the artifact ends up a single paragraph. Pick a layer below.
-- **Every rule already belongs on another layer** — no new engineering artifact. Either extend the right-layer artifact (spec / ux brief / sibling living doc) or surface the converged-decision summary in the issue body / PR description, and finish. Misrouted retelling in `docs/engineering/` wastes the reader's time and creates a drift surface — the next reader has to distinguish what's truly engineering-layer from what's retold from elsewhere.
+A new or extended `docs/engineering/` artifact is warranted only if at least one rule routes to the last category and is not already captured by a sibling. If every rule routes elsewhere, extend the right-layer artifact (or just record the decision in the issue / PR description) — no engineering artifact in this pass. Length is not the test; layer fit is. A single-paragraph engineering doc with one genuine rule is fine.
 
-If the test passes, pick the layer:
+When the engineering artifact is warranted, pick its flavor:
 
 - **just a living doc** — the mechanism is the new normal; no alternative-versus-alternative history worth recording (e.g. introducing a new module without a contested choice);
 - **a living doc + an ADR** — the choice was contested and the rejected branches have value for future readers («why didn't we use X?» will be asked);
