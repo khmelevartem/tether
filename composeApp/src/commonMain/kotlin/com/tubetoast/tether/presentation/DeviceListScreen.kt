@@ -27,7 +27,7 @@ fun DeviceListScreen(component: DeviceListComponent, modifier: Modifier = Modifi
     val state by component.state.subscribeAsState()
     DeviceListContent(
         devices = state.devices,
-        onDeviceClick = { /* TODO: navigate to file selection — #4b */ },
+        onDeviceClick = { /* TODO: navigate to file selection — #191 */ },
         modifier = modifier,
     )
 }
