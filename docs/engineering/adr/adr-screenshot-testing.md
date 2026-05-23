@@ -5,9 +5,12 @@
 
 ## Context
 
-The `/implement` skill runs a `spec → ux-brief → Compose code + @Preview → reviewer wave` cycle for UI features. UX-conformance is currently checked only textually by `review-ux` (copywriting, states, accessibility — `a11y` — read off the source). The visual side — what the screen actually renders — has no agent-readable artefact, so visual drift between code and UX brief can only be caught by a human.
+The `/implement` skill runs a `spec → ux-brief → Compose code + @Preview → reviewer wave` cycle for UI features. Two layers of UI conformance currently have no agent-readable visual artefact:
 
-[#127](https://github.com/khmelevartem/tether/issues/127) closes the loop with two halves that are useless apart: a headless preview-to-PNG renderer (subject of this ADR) and a vision-capable `review-visual` agent that compares the PNGs against the brief. This ADR scopes the renderer only.
+- **Visual identity** locked in [`adr-visual-identity.md`](adr-visual-identity.md) + [`ui-style-guide.md`](../ui-style-guide.md) + [`ui-brand-mark.md`](../ui-brand-mark.md) — palette, typography, iconography, brand mark, spacing, shapes. `review-ui` enforces these statically against code (token usage, M3 ban, Tabler-only icons), but cannot see whether the result on screen actually expresses them (wrong colour token chosen, density off by feel, `•—•` geometry drifted in render).
+- **Per-feature UX brief** — `review-ux` reads copy / states / accessibility off the source, but visual drift between code and brief is human-only to catch.
+
+[#127](https://github.com/khmelevartem/tether/issues/127) closes the loop with two halves that are useless apart: a headless preview-to-PNG renderer (subject of this ADR) and a vision-capable `review-visual` agent that compares the PNGs against both layers above. This ADR scopes the renderer only.
 
 Tether's KMP source-set layout puts Compose UI in `commonMain` ([modules.md](../modules.md)). Active targets: `androidTarget`, `jvm("desktop")`, `iosArm64`, `iosSimulatorArm64`, `macosArm64`. `@Preview` composables live in `commonMain` and import `androidx.compose.ui.tooling.preview.Preview` (the unified annotation, supported across common and desktop in Compose Multiplatform 1.10+). Previews call stateless `XxxContent(state, callbacks)` variants and consume fake state from a shared `PreviewFixtures`.
 
