@@ -99,6 +99,8 @@ All subsequent agent dispatches happen with this as cwd. Skipping this step mean
 
 **G1 handling.** If FEATURE and (no spec, or spec is `(stub)`, or spec has blocking open questions) → dispatch `spec-writer`. It will draft questions for the user or produce a scoped spec. Only escalate to user with `spec-writer`'s question list.
 
+**G1 vocabulary pass.** Independently of the spec gate, invoke [`grill-with-docs`](../grill-with-docs/SKILL.md) on the issue body and any linked spec before dispatching the planner. It flags terms that drift from [`docs/glossary.md`](../../../docs/glossary.md) and writes new terms to the glossary in the same pass, so downstream agents (`Plan`, `coder`, reviewers) share vocabulary from turn one. Surface drift flags or glossary additions to the user only if they change the scope of the work; mechanical naming alignment goes through silently. This is mount point #2 in [`grilling-and-glossary.md`](../../../docs/engineering/grilling-and-glossary.md).
+
 **G2 handling.** If BUGFIX → dispatch `bug-reproducer`. It reproduces locally, verifies each hypothesis, and returns a confirmed cause as structured paste-ready text. It does NOT post to GitHub. If reproduction failed or no hypothesis matched → escalate to user.
 
 **G2.5 handling.** After receiving a confirmed cause from `bug-reproducer`, show the paste-ready block to the user and ask: «Опубликовать как комментарий к issue #<N>?» Wait for explicit OK before `gh issue comment <N>`. Reason: a team-visible side effect must not happen without an explicit gate, even if the orchestrator is doing it instead of the agent — that just moves the problem one level up. If the user says no — keep the cause locally as a constraint for `coder`; do not publish.

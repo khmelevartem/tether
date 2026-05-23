@@ -21,6 +21,7 @@ Read these on demand, not all upfront:
 - Tests → [`testing.md`](docs/engineering/testing.md)
 - New product spec or update of existing → [`_template.md`](docs/product/features/_template.md). Готовая соседняя спека показывает структуру, но не правила про содержание — шаблон открой отдельно.
 - New UX brief or update of existing → [`_ux-brief-template.md`](docs/product/features/_ux-brief-template.md). Соседний готовый бриф показывает форму, но дисциплина (scope cohesion, cross-ref on move, без имён кода) — в шаблоне.
+- Любой долгоживущий артефакт (spec / ux brief / engineering doc / ADR / issue body / `.claude/` prompt) → прогон [`grill-with-docs`](.claude/skills/grill-with-docs/SKILL.md) по доменным терминам, обновление [`docs/glossary.md`](docs/glossary.md) inline для новых терминов. Механизм и mount points: [`grilling-and-glossary.md`](docs/engineering/grilling-and-glossary.md).
 
 ## Architecture invariants
 

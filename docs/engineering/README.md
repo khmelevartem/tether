@@ -16,6 +16,7 @@ Product-side docs (vision, audience, features) live in [`docs/product/`](../prod
 - [UI Brand Mark](ui-brand-mark.md) — `•—•` geometry, animation states, where the mark appears, and design rationale (why a line, not a knot or arrow).
 - [Testing](testing.md) — структура тестов по source sets, стиль (`runTest`/виртуальное время), особенности Apple-таргетов.
 - [Logging](logging.md) — KydraLog как единый KMP-фасад; именование `Tether.<Subsystem>`, уровни, DEBUG-гейтинг по платформам, тестовая тишина, политика sensitive-данных.
+- [Grilling and the Glossary](grilling-and-glossary.md) — `docs/glossary.md` как единый словарь product / technical / platform-mapping; `grill-with-docs` как механизм, который проверяет драфты против глоссария и обновляет его inline; шесть mount-point'ов; правило «ADR пишет только architect».
 
 ## Writing style for these guides
 
@@ -40,4 +41,5 @@ ADRs in [`adr/`](adr/) capture the *why* behind one-time architectural choices. 
 - [Hotspot-first Discovery](adr/adr-hotspot-discovery.md) — chose layered mDNS + `/hello` rendezvous + HTTP-subnet-scan + UDP-broadcast over raw-multicast-as-primary or Wi-Fi Direct / NAN. Motivated primarily by phone-hotspot transfer.
 - [Logging — KydraLog](adr/adr-logging-kydra.md) — chose KydraLog as the single KMP logging facade; SLF4J handled via `slf4j-simple` on JVM; per-platform DEBUG gates.
 - [Screenshot testing](adr/adr-screenshot-testing.md) — chose Roborazzi + ComposablePreviewScanner on the Android target via Robolectric for headless `@Preview`-to-PNG rendering in the agent loop.
+- [Pocock skills adoption](adr/adr-pocock-skills-adoption.md) — vendored `grill-with-docs` + `handoff` flat into `.claude/skills/` over writing from scratch / adopting partial PR #221 / accepting full Pocock bundle / inline vocabulary instructions. Living-doc сторона — [`grilling-and-glossary.md`](grilling-and-glossary.md).
 
