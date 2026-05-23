@@ -57,6 +57,7 @@ class RootComponent(
         navigation.pushNew(Config.TransferDetails(peer))
     }
 
+    // Real behaviour lands in #191 (UI feedback when user drops files during an active transfer).
     fun onDropRejectedDuringTransfer() {
     }
 

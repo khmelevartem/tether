@@ -114,12 +114,6 @@ On Android, the root Component is created via Decompose's `retainedComponent { .
 
 `retainedComponent` is an Android-only extension because retention is an Android-only concern. On Desktop and iOS the root Component is constructed once in the platform entry point against a `LifecycleRegistry` driven directly by that entry point (`main()` for Desktop, `MainViewController()` for iOS). Process lifetime equals lifecycle; there is nothing to retain across. Do not introduce a multiplatform indirection to "unify" this — it would solve no problem.
 
-### Activity-scoped resources — `ActivityProvider` (Android)
-
-Resources whose validity is tied to the current Android Activity (an `ActivityResultLauncher`, a `ContentResolver` reference) cannot be captured by a `retainedComponent` directly — after rotation the captured reference points to a destroyed Activity. The Android-side answer is `ActivityProvider`, a holder owned by `AndroidAppContainer` that registers `Application.ActivityLifecycleCallbacks` and exposes the current foreground activity via `current: Activity?` (null between `onPause`/`onResume` of any activity).
-
-No manual `bind`/`unbind` from `MainActivity` — the lifecycle callbacks track it. Consumers handle the null case explicitly. The provider is Android-only; the equivalent concern on Desktop and iOS is handled by the platform's own composition entry point and does not need a separate indirection.
-
 ### State restoration
 
 Process-death state restoration is **not a goal** for the navigation stack. The root `ChildStack` uses `serializer = null` (see the Navigation section). Session-local view state that lives inside a single Component can still go through `stateKeeper.consume(...)` / `register(...)`; the rule is that domain state belongs in `AppContainer` repositories, not in the Component or in the saved-state bundle.
