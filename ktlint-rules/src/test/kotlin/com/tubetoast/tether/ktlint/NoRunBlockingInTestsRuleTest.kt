@@ -40,6 +40,34 @@ class NoRunBlockingInTestsRuleTest {
     }
 
     @Test
+    fun `runBlocking in middle of function body produces error`() {
+        val errors = lint(
+            snippet = """
+                fun test() {
+                    val x = 1
+                    runBlocking { }
+                }
+            """.trimIndent(),
+            filePath = Path.of("composeApp/src/desktopTest/kotlin/Foo.kt"),
+        )
+        assertEquals(1, errors.size)
+    }
+
+    @Test
+    fun `two runBlocking calls in one function produce two errors`() {
+        val errors = lint(
+            snippet = """
+                fun test() {
+                    runBlocking { }
+                    runBlocking { }
+                }
+            """.trimIndent(),
+            filePath = Path.of("composeApp/src/desktopTest/kotlin/Foo.kt"),
+        )
+        assertEquals(2, errors.size)
+    }
+
+    @Test
     fun `suppressed runBlocking in test file produces no error`() {
         val errors = lint(
             snippet = """

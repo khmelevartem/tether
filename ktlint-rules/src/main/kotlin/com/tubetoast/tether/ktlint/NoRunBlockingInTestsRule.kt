@@ -17,8 +17,8 @@ class NoRunBlockingInTestsRule : Rule(RuleId("tether:no-run-blocking-in-tests"),
         if (node.elementType != CALL_EXPRESSION) return
         val filePath = node.psi.containingFile?.virtualFile?.path ?: return
         if (!testPathRegex.containsMatchIn(filePath)) return
-        val callee = node.firstChildNode?.text ?: return
-        if (callee == "runBlocking") {
+        val calleeName = node.firstChildNode?.text ?: return
+        if (calleeName == "runBlocking") {
             emit(
                 node.startOffset,
                 "runBlocking запрещён в тестах (testing.md§Стиль) — используй runTest + TestDispatcher. " +
