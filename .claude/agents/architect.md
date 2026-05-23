@@ -77,12 +77,12 @@ If during convergence you realise the palette was incomplete or the answers reve
 
 ### Step 5 — Decide artifact scope
 
-**Artifact-warrant test, first.** Before picking a layer, audit your converged design against existing siblings — the relevant spec, ux brief, neighbouring living docs, parent / sibling ADRs, the issue body itself. For each rule you'd put on paper ask: «is this already covered, in equivalent shape, somewhere a future coder will reach?». What survives the cut is the warrant for a new artifact.
+**Layer-fit test, first.** Before picking an engineering-layer artifact, ask of every rule from your converged design: **does this rule belong on the engineering layer, or on the layer that already owns it?** Product framing belongs in the spec, interaction model in the ux brief, issue-specific scope in the issue body, code-level invariants in code. An engineering doc that restates any of those is misplaced — regardless of length. A short doc holding one genuinely engineering rule is fine; a long doc retelling spec / ux / issue is not.
 
 Possible outcomes:
 
-- **≥ 2–3 paragraphs of net-new content survive** — a new or extended artifact is warranted; pick a layer below.
-- **< 2 paragraphs survive, or only single-sentence rules** — no new artifact. Either add the surviving rules as one-line additions to the relevant existing engineering doc, or surface the converged-decision summary in the issue body / PR description, and finish. **A document whose every section retells siblings is worse than no document** — the next reader has to distinguish new info from retelling, which is harder than reading the siblings directly. This applies even when the design work was non-trivial; the work lives in the converged decision and in the resulting code review, not in restating settled material.
+- **Some rule lives on the engineering layer and is not yet captured** — a new or extended artifact is warranted, even if the artifact ends up a single paragraph. Pick a layer below.
+- **Every rule already belongs on another layer** — no new engineering artifact. Either extend the right-layer artifact (spec / ux brief / sibling living doc) or surface the converged-decision summary in the issue body / PR description, and finish. Misrouted retelling in `docs/engineering/` wastes the reader's time and creates a drift surface — the next reader has to distinguish what's truly engineering-layer from what's retold from elsewhere.
 
 If the test passes, pick the layer:
 
