@@ -11,6 +11,7 @@ plugins {
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.composeHotReload)
     alias(libs.plugins.kotlinxSerialization)
+    alias(libs.plugins.roborazzi)
 }
 
 kotlin {
@@ -137,6 +138,10 @@ kotlin {
         androidUnitTest.dependencies {
             implementation(libs.robolectric)
             implementation(libs.kotlin.testJunit)
+            implementation(libs.roborazzi)
+            implementation(libs.roborazzi.compose)
+            implementation(libs.roborazzi.junit.rule)
+            implementation(libs.composable.preview.scanner.android)
         }
 
         val desktopMain by getting {

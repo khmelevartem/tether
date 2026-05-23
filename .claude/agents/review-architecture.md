@@ -107,7 +107,7 @@ If the decision contradicts `architecture-principles.md`, an ADR, a feature-spec
 - AC coverage, scope vs issue → `review-dod`
 - Tests presence/quality → `review-tests`
 - Platform-API quirks → `review-platform`
-- UI tokens / design system → `review-ui`
+- UI tokens / design system → `review-design-system`
 
 Architecture is the *shape* question. Leave the *content* questions to the others.
 

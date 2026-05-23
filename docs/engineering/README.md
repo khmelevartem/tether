@@ -39,4 +39,5 @@ ADRs in [`adr/`](adr/) capture the *why* behind one-time architectural choices. 
 - [Channel encryption](adr/adr-channel-encryption.md) — chose TLS-with-paired-key-pinning + SecureTransport on Apple. Includes 2026-05-16 Amendment with implementation-plan corrections.
 - [Hotspot-first Discovery](adr/adr-hotspot-discovery.md) — chose layered mDNS + `/hello` rendezvous + HTTP-subnet-scan + UDP-broadcast over raw-multicast-as-primary or Wi-Fi Direct / NAN. Motivated primarily by phone-hotspot transfer.
 - [Logging — KydraLog](adr/adr-logging-kydra.md) — chose KydraLog as the single KMP logging facade; SLF4J handled via `slf4j-simple` on JVM; per-platform DEBUG gates.
+- [Screenshot testing](adr/adr-screenshot-testing.md) — chose Roborazzi + ComposablePreviewScanner on the Android target via Robolectric for headless `@Preview`-to-PNG rendering in the agent loop.
 
