@@ -77,7 +77,18 @@ If during convergence you realise the palette was incomplete or the answers reve
 
 ### Step 5 — Decide artifact scope
 
-You now know whether you need:
+**Route each rule from your converged design to the layer that owns it:**
+
+- product framing → the spec
+- interaction model → the ux brief
+- issue-specific scope or follow-up → the issue body / PR description
+- code-level invariant → the code itself
+- engineering-layer rule (mechanism, library coordinate, lifecycle invariant, cross-platform contract) → a `docs/engineering/` artifact
+
+A new or extended `docs/engineering/` artifact is warranted only if at least one rule routes to the last category and is not already captured by a sibling. If every rule routes elsewhere, extend the right-layer artifact (or just record the decision in the issue / PR description) — no engineering artifact in this pass. Length is not the test; layer fit is. A single-paragraph engineering doc with one genuine rule is fine.
+
+When the engineering artifact is warranted, pick its flavor:
+
 - **just a living doc** — the mechanism is the new normal; no alternative-versus-alternative history worth recording (e.g. introducing a new module without a contested choice);
 - **a living doc + an ADR** — the choice was contested and the rejected branches have value for future readers («why didn't we use X?» will be asked);
 - **an ADR amending an existing one** — the original decision still holds but a new constraint forces an addendum (use `## Amendment YYYY-MM-DD` section, don't rewrite);

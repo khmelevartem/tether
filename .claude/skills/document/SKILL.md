@@ -22,7 +22,7 @@ Issue number `<N>`.
 Skill идемпотентен по issue. На каждом вызове первым делом проверь `gh pr list --search "issue:#<N>" --state open`:
 
 - **PR нет** → стартуй Step 1.
-- **PR есть и открыт** → ты в pull-request feedback итерации. Прочитай существующие human-комменты на PR (`gh api repos/<owner>/<repo>/pulls/<PR>/comments` + `gh pr view <PR> --comments`). Прогон **обязан** включать на свежем diff'е (`docs/` + `.claude/`): Step 4 (consistency pass) → Step 5 (review wave). Из дисциплины ничего пропускать нельзя.
+- **PR есть и открыт** → ты в pull-request feedback итерации. Прочитай **все** human-комменты на PR (`gh api repos/<owner>/<repo>/pulls/<PR>/comments` + `gh pr view <PR> --comments`) и для каждого определи статус: адресован в коммитах после него — или нет. **Дата создания не определяет актуальность** — фильтровать комменты по `created_at > <дата-прошлого-прогона>` запрещено, потому что неадресованный коммент остаётся актуальным независимо от того, насколько он старый. **Counted is not read** — выдача `length`/счётчика без выгрузки `body` каждого коммента не считается прочтением; пока неадресованные комменты не отработаны, consistency wave (Step 4) и review wave (Step 5) не запускаются, иначе обе пройдут впустую на diff'е, который надо переделать. Прогон **обязан** включать на свежем diff'е (`docs/` + `.claude/`): Step 4 (consistency pass) → Step 5 (review wave).
 
 Шаг 6 (commit + present + push) в re-entry упрощается: коммит идёт в существующую ветку, force-push не нужен, новый PR не создавать.
 
