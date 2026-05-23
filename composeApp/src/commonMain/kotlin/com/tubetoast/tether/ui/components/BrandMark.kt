@@ -177,50 +177,20 @@ private fun BrandMarkCanvas(
         val rightCenter = Offset(r + 4 * r, r)
         val strokeWeight = 1.2f * r
 
-        drawBrandMarkContent(
-            r = r,
-            leftCenter = leftCenter,
-            rightCenter = rightCenter,
-            strokeWeight = strokeWeight,
-            accentColor = accentColor,
-            peerColor = peerColor,
-            lineColor = lineColor,
-            errorColor = errorColor,
-            state = state,
-            rightDotAlpha = rightDotAlpha,
-            rightDotScale = rightDotScale,
-            rightDotColorOverride = rightDotColorOverride,
+        drawConnectingLine(state, leftCenter, rightCenter, strokeWeight, accentColor, lineColor)
+        drawCircle(color = accentColor, radius = r, center = leftCenter)
+        drawRightDot(
+            state,
+            errorColor,
+            peerColor,
+            rightDotColorOverride,
+            rightDotAlpha,
+            rightDotScale,
+            r,
+            rightCenter,
+            strokeWeight,
         )
     }
-}
-
-private fun DrawScope.drawBrandMarkContent(
-    r: Float,
-    leftCenter: Offset,
-    rightCenter: Offset,
-    strokeWeight: Float,
-    accentColor: Color,
-    peerColor: Color,
-    lineColor: Color,
-    errorColor: Color,
-    state: BrandMarkState,
-    rightDotAlpha: Float,
-    rightDotScale: Float,
-    rightDotColorOverride: Color?,
-) {
-    drawConnectingLine(state, leftCenter, rightCenter, strokeWeight, accentColor, lineColor)
-    drawLeftDot(accentColor, r, leftCenter)
-    drawRightDot(
-        state,
-        errorColor,
-        peerColor,
-        rightDotColorOverride,
-        rightDotAlpha,
-        rightDotScale,
-        r,
-        rightCenter,
-        strokeWeight,
-    )
 }
 
 private fun DrawScope.drawConnectingLine(
@@ -340,14 +310,6 @@ private fun DrawScope.drawErrorLine(
             cap = StrokeCap.Butt,
         )
     }
-}
-
-private fun DrawScope.drawLeftDot(accentColor: Color, r: Float, leftCenter: Offset) {
-    drawCircle(
-        color = accentColor,
-        radius = r,
-        center = leftCenter,
-    )
 }
 
 private fun DrawScope.drawRightDot(

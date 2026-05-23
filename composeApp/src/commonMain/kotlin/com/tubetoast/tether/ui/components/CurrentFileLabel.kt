@@ -11,8 +11,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.TextMeasurer
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -77,15 +75,6 @@ internal fun middleEllipsize(text: String, availableWidth: Int, fits: (String) -
         }
     }
     return result
-}
-
-internal fun middleEllipsize(
-    text: String,
-    measurer: TextMeasurer,
-    style: TextStyle,
-    availableWidth: Int,
-): String = middleEllipsize(text, availableWidth) { candidate ->
-    measurer.measure(candidate, style, maxLines = 1).size.width <= availableWidth
 }
 
 @Preview(name = "CurrentFileLabel — short name")

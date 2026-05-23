@@ -36,14 +36,11 @@ class MiddleEllipsizeTest {
     @Test
     fun `symmetric truncation preserves head and tail`() {
         val result = middleEllipsize("abcdefghij", availableWidth = 5, fits = fitsUpTo(5))
-        // "a…j" has length 3 which is <= 5; "ab…ij" has length 5 which is <= 5
         assertEquals("ab…ij", result)
     }
 
     @Test
     fun `max width of Int_MAX_VALUE returns text unchanged`() {
-        // fits always returns false — without the Int.MAX_VALUE early-return the binary search
-        // would run and return "…". The early-return is what makes this test pass.
         val text = "some-file-name.pdf"
         val result = middleEllipsize(text, availableWidth = Int.MAX_VALUE, fits = { false })
         assertEquals(text, result)
