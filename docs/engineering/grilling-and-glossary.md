@@ -7,8 +7,6 @@ Two artifacts work together:
 - The **glossary** — one file at [`docs/glossary.md`](../glossary.md) that holds every load-bearing term Tether uses across product, engineering, and platform layers.
 - The **grill-with-docs skill** — a sub-agent at [`.claude/skills/grill-with-docs/`](../../.claude/skills/grill-with-docs/SKILL.md) that interrogates a draft (spec, ux brief, ADR, issue body, review prompt) against the glossary, flags every term that drifts from its definition, and updates the glossary inline when a genuinely new term appears.
 
-The skill is adapted from Matt Pocock's [`mattpocock/skills`](https://github.com/mattpocock/skills) repo.
-
 ## Why this exists
 
 A cross-platform P2P file-transfer app produces a lot of near-synonyms: "device" vs "peer" vs "node", "pairing" vs "trust" vs "handshake", "discovery" vs "rendezvous" vs "announce". Without one shared definition file, every spec invents its own naming and every agent latches onto a different synonym. The artifact that pays the cost is the next reviewer — human or AI — who cannot tell whether two passages describe the same mechanism.

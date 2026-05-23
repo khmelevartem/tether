@@ -16,7 +16,7 @@ Product-side docs (vision, audience, features) live in [`docs/product/`](../prod
 - [UI Brand Mark](ui-brand-mark.md) — `•—•` geometry, animation states, where the mark appears, and design rationale (why a line, not a knot or arrow).
 - [Testing](testing.md) — структура тестов по source sets, стиль (`runTest`/виртуальное время), особенности Apple-таргетов.
 - [Logging](logging.md) — KydraLog как единый KMP-фасад; именование `Tether.<Subsystem>`, уровни, DEBUG-гейтинг по платформам, тестовая тишина, политика sensitive-данных.
-- [Grilling and the Glossary](grilling-and-glossary.md) — `docs/glossary.md` как единый словарь product / technical / platform-mapping; `grill-with-docs` как механизм, который проверяет драфты против глоссария и обновляет его inline.
+- [Grilling and the Glossary](grilling-and-glossary.md) — `docs/glossary.md` как единый словарь (product / technical); `grill-with-docs` как механизм, который проверяет драфты против глоссария и обновляет его inline.
 
 ## Writing style for these guides
 
