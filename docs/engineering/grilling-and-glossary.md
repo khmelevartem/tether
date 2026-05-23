@@ -35,8 +35,3 @@ A glossary entry is added by the writing agent (`spec-writer` / `ux-expert` / `a
 
 Pruning accidental additions is `review-glossary`'s role on later PRs — an entry whose term does not recur across the codebase is `[REQUIRED]` for removal.
 
-## ADR authorship: only the architect
-
-ADRs are written exclusively by the [architect](../../.claude/agents/architect.md) sub-agent. Other agents may surface that an ADR is *needed*, but they do not write the ADR themselves.
-
-`review-glossary` enforces vocabulary inside an ADR draft; it does not author the ADR.
