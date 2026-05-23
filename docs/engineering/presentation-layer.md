@@ -75,7 +75,7 @@ fun DeviceList(component: DeviceListComponent) {
 
 Events are plain method calls on the Component. No `LaunchedEffect` business logic, no event channels through the Composable.
 
-Nullable state is the exception. `Value<T>` has a non-null bound (`T : Any`), so a state that is genuinely nullable — an optional banner payload, a pending-files summary that may not exist — is exposed as `StateFlow<T?>` instead. Compose subscribes via `collectAsState`. Do not introduce a non-null sentinel wrapper just to fit `Value` — the `StateFlow` fallback is the documented convention.
+For states that are conceptually "empty or set", use an explicit empty sentinel on the state type (e.g. `PendingFilesSummary.NONE`) and keep `Value<T>` non-null. `Value<T>` has a non-null bound (`T : Any`); modelling absence as `null` and falling back to `StateFlow<T?>` is not the project convention.
 
 ## Long-lived state lives outside Components
 

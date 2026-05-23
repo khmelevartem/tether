@@ -13,8 +13,8 @@ import kotlinx.serialization.builtins.serializer
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
+import kotlin.test.assertNotSame
+import kotlin.test.assertSame
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class RootComponentTest {
@@ -66,18 +66,20 @@ class RootComponentTest {
     }
 
     @Test
-    fun `setPendingFiles stores summary and clearPendingFiles nulls it`() = runTest {
+    fun `setPendingFiles stores summary and clearPendingFiles restores NONE`() = runTest {
         val component = buildComponent(coroutineScope = backgroundScope)
 
-        assertNull(component.pendingFiles.value)
+        assertSame(PendingFilesSummary.NONE, component.pendingFiles.value)
 
-        component.setPendingFiles(PendingFilesSummary(), emptyList())
+        val summary = PendingFilesSummary()
+        component.setPendingFiles(summary, emptyList())
 
-        assertNotNull(component.pendingFiles.value)
+        assertSame(summary, component.pendingFiles.value)
+        assertNotSame(PendingFilesSummary.NONE, component.pendingFiles.value)
 
         component.clearPendingFiles()
 
-        assertNull(component.pendingFiles.value)
+        assertSame(PendingFilesSummary.NONE, component.pendingFiles.value)
     }
 
     private fun buildComponent(

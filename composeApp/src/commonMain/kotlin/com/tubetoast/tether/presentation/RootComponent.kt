@@ -5,11 +5,14 @@ import com.arkivanov.decompose.router.stack.ChildStack
 import com.arkivanov.decompose.router.stack.StackNavigation
 import com.arkivanov.decompose.router.stack.childStack
 import com.arkivanov.decompose.router.stack.pushNew
+import com.arkivanov.decompose.value.MutableValue
 import com.arkivanov.decompose.value.Value
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 
-class PendingFilesSummary
+class PendingFilesSummary {
+    companion object {
+        val NONE = PendingFilesSummary()
+    }
+}
 
 sealed interface FileSource
 
@@ -36,8 +39,8 @@ class RootComponent(
         childFactory = ::createChild,
     )
 
-    private val _pendingFiles = MutableStateFlow<PendingFilesSummary?>(null)
-    val pendingFiles: StateFlow<PendingFilesSummary?> = _pendingFiles
+    private val _pendingFiles = MutableValue(PendingFilesSummary.NONE)
+    val pendingFiles: Value<PendingFilesSummary> = _pendingFiles
 
     private fun createChild(config: Config, context: ComponentContext): Child =
         when (config) {
@@ -53,7 +56,7 @@ class RootComponent(
     }
 
     fun clearPendingFiles() {
-        _pendingFiles.value = null
+        _pendingFiles.value = PendingFilesSummary.NONE
     }
 
     fun showTransferDetails(peer: PeerIdentity) {
