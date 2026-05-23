@@ -26,8 +26,12 @@ Engineering concepts. The vocabulary [`architect`](../.claude/agents/architect.m
 - **FileServer** — the per-device HTTP server that accepts incoming transfers. _Avoid:_ receiver, listener.
 - **FileClient** — the per-device HTTP client that initiates outgoing transfers. _Avoid:_ sender, uploader.
 - **Source set** — a Kotlin Multiplatform compilation source set (`commonMain`, `jvmMain`, `androidMain`, `appleMain`, `desktopMain`, `iosMain`, `macosMain`). See [architecture-principles.md](engineering/architecture-principles.md) for the hierarchy.
-- **Composition root** — the single place per platform target where the DI container is built. See [dependency-injection.md](engineering/dependency-injection.md).
-- **Container** — the DI container that holds singletons for one process lifetime.
+- **Composition root** — the platform entry point that constructs the DI container; by extension, the `AppContainer` instance it constructs. See [dependency-injection.md](engineering/dependency-injection.md).
+- **Container** — the DI container that holds singletons for one process lifetime; the construct that lives at the composition root.
+- **Session** — the post-rendezvous logical connection between two peers, lasting from `/hello` until either side closes it.
+- **Mount point** — a place in the workflow where an agent invokes the grill on a draft before returning. The list is enumerated in [grilling-and-glossary.md](engineering/grilling-and-glossary.md) §Mount points.
+- **Drift** — a usage of a term that contradicts its glossary definition, or absence of a glossary entry for a term that recurs across two or more long-lived artifacts.
+- **Living doc** — a `docs/engineering/<name>.md` artifact that captures the present-tense rules for a subsystem; distinct from an ADR (one-time decision) and a knowledge entry (solved-problem note).
 
 ## Platform mapping
 

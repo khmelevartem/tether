@@ -89,7 +89,7 @@ Multiple layers per issue are normal (e.g. FEATURE with UI and a new mechanism �
 
 **Read-only result of this step:** an ordered list of layers to produce, and for each layer the target path and which sub-agent will write it. No artifacts created yet.
 
-**Vocabulary pass at draft time.** Each layer artifact passes through [`grill-with-docs`](../grill-with-docs/SKILL.md) as it is drafted in Step 3 — the sub-agent that owns the layer invokes the grill on its draft before returning to the orchestrator. For `.claude` prompt edits (no sub-agent), invoke the grill inline on the staged edit. This is mount point #3 in [`grilling-and-glossary.md`](../../../docs/engineering/grilling-and-glossary.md). The grill's drift flags and glossary additions flow into the Step 4 consistency pass automatically — same vocabulary, same source.
+**Vocabulary pass at draft time.** Each layer artifact passes through [`grill-with-docs`](../grill-with-docs/SKILL.md) as it is drafted in Step 3 — the sub-agent that owns the layer invokes the grill on its draft before returning to the orchestrator. For `.claude` prompt edits (no sub-agent), invoke the grill inline on the staged edit. This is mount point #4 in [`grilling-and-glossary.md`](../../../docs/engineering/grilling-and-glossary.md). The grill's drift flags and glossary additions flow into the Step 4 consistency pass automatically — same vocabulary, same source.
 
 ## Step 3 — Dispatch wave
 

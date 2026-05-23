@@ -4,7 +4,7 @@ description: Grilling session that challenges a draft (spec / ux brief / enginee
 ---
 
 <!--
-Adapted from Matt Pocock's `grill-with-docs` skill (https://github.com/mattpocock/skills, MIT-licensed, Copyright 2026 Matt Pocock).
+Adapted from Matt Pocock's `grill-with-docs` skill (https://github.com/mattpocock/skills, MIT-licensed). Full upstream license text: ../THIRD_PARTY_LICENSES.md.
 Tether-specific changes: single context, glossary at `docs/glossary.md`, ADRs use `docs/engineering/adr/_template.md`, the skill does not author ADRs (architect agent does).
 Mechanism overview: `docs/engineering/grilling-and-glossary.md`.
 -->

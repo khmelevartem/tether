@@ -48,16 +48,19 @@ The skill is read-mostly for the draft (it does not rewrite the caller's artifac
 
 ## Mount points
 
-Six places in the workflow invoke the grill. Each invocation has one job:
+Seven places in the workflow invoke the grill. Each invocation has one job:
 
 1. **`spec-writer`** — runs the grill on every spec draft before handing back to the orchestrator. Catches new product terms before they fossilise across features.
-2. **`/implement` Gate G1** — runs the grill on the chosen issue body and any linked spec so downstream agents share vocabulary from the first turn of the loop.
-3. **`/document` Step 2** — runs the grill on each layer artifact (spec / ux brief / engineering doc / ADR) as it's drafted, catching cross-layer term collisions early.
-4. **`github-issue-author`** — runs the grill on every issue body it composes, so issue text matches the canonical names of the components and platforms it references.
-5. **`review-guides`** — runs the grill on every review prompt template, so reviewers ask about the right concepts under the right names.
-6. **`architect`** — runs the grill on every ADR and living-doc draft before publishing. Catches terms that drift between sibling engineering docs and the ADR introducing a new mechanism.
+2. **`ux-expert`** — runs the grill on every UX brief before handing back. Catches product-layer drift in the brief that the spec did not pre-empt.
+3. **`/implement` Gate G1** — runs the grill on the chosen issue body and any linked spec so downstream agents share vocabulary from the first turn of the loop.
+4. **`/document` Step 2** — runs the grill on each layer artifact (spec / ux brief / engineering doc / ADR) as it's drafted, catching cross-layer term collisions early.
+5. **`github-issue-author`** — runs the grill on every issue body it composes, so issue text matches the canonical names of the components and platforms it references.
+6. **`review-guides`** — runs the grill on the prose parts of every PR diff (KDoc, docstrings, comments, every touched file under `docs/` and `.claude/`). Catches the long tail of vocabulary drift that other review agents do not check.
+7. **`architect`** — runs the grill on every ADR and living-doc draft before publishing. Catches terms that drift between sibling engineering docs and the ADR introducing a new mechanism.
 
 A mount point is a contract: that agent invokes the grill, surfaces its report, and either acts on the flags or escalates them. Skipping the grill at a mount point is a process violation, not a style preference.
+
+New writing agents inherit the same contract: any agent whose output is a long-lived artifact (spec, brief, living doc, ADR, knowledge entry, issue body, review prompt) carries a mount point.
 
 ## ADR authorship: only the architect
 

@@ -5,7 +5,7 @@ argument-hint: "What will the next session be used for?"
 ---
 
 <!--
-Adapted from Matt Pocock's `handoff` skill (https://github.com/mattpocock/skills, MIT-licensed, Copyright 2026 Matt Pocock).
+Adapted from Matt Pocock's `handoff` skill (https://github.com/mattpocock/skills, MIT-licensed). Full upstream license text: ../THIRD_PARTY_LICENSES.md.
 Tether-specific changes: explicit `$TMPDIR` resolution, link to git/PR for any artifact already on disk.
 -->
 
