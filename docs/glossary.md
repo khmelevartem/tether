@@ -20,7 +20,7 @@ User-facing concepts. The vocabulary [`spec-writer`](../.claude/agents/spec-writ
 Engineering concepts. The vocabulary [`architect`](../.claude/agents/architect.md), `coder`, and the review agents use.
 
 - **Discovery** — the layer that announces a device's presence and finds peers on the local network (see [discovery.md](engineering/discovery.md)). _Avoid:_ announce (verb only).
-- **Rendezvous** — a post-discovery `/hello` mechanism that resolves asymmetric discovery (one side saw the other but not vice versa), primarily needed for the hotspot scenario. Not yet implemented. Distinct from Discovery itself.
+- **Rendezvous** — a post-discovery `/hello` mechanism that resolves asymmetric discovery (one side saw the other but not vice versa), primarily for the hotspot scenario. Distinct from Discovery itself.
 - **Peer** — a device visible through discovery, regardless of pairing status. _Avoid:_ node, neighbour; device when pairing status matters (use **Trusted device** then).
 - **FileServer** — the per-device HTTP server that accepts incoming transfers. _Avoid:_ receiver, listener.
 - **FileClient** — the per-device HTTP client that initiates outgoing transfers. _Avoid:_ sender, uploader.

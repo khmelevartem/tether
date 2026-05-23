@@ -35,6 +35,4 @@ The grill is not optional at these surfaces — skipping it is a process violati
 
 ADRs are written exclusively by the [architect](../../.claude/agents/architect.md) sub-agent. Other agents — including grill-with-docs — may surface that an ADR is *needed*, but they do not write the ADR themselves.
 
-An ADR carries three load-bearing properties at once: a design palette with at least two rejected options reasoned through; a parent living doc that the ADR references for "what is" while it carries the "why"; and append-only history discipline (amendments as dated sections, no rewrites). The architect's procedure is built around producing all three; no other agent's procedure is.
-
 The grill enforces vocabulary inside an ADR draft; it does not author the ADR.

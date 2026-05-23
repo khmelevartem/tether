@@ -23,7 +23,7 @@ If a question can be answered by exploring the codebase or sibling docs, explore
 
 ## Domain awareness
 
-Tether is a single-context repo. The glossary lives at ONLY one path: `docs/glossary.md`. If the glossary file does not yet exist, create it lazily — only when the first new term is resolved.
+Tether is a single-context repo. The glossary lives at ONLY one path: `docs/glossary.md`.
 
 Each entry is one line: `**term** — one-sentence definition. _Avoid:_ near-synonyms.` Definitions are tight (1–2 sentences), in present tense, no history. See [grilling-and-glossary.md](../../../docs/engineering/grilling-and-glossary.md) for the full rule.
 

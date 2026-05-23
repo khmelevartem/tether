@@ -81,12 +81,11 @@ These conventions ensure `./gradlew :composeApp:recordRoborazziDebug -q` can ren
 
 ## After writing
 
-1. **Vocabulary pass.** If the diff touches prose surfaces — KDoc, comments, user-facing copy in composables, or any file under `docs/` or `.claude/` — invoke [`grill-with-docs`](../skills/grill-with-docs/SKILL.md) on the diff. The grill checks every load-bearing term (especially product-layer terms in user-visible copy) against [`docs/glossary.md`](../../docs/glossary.md), writes new terms inline, and returns drift flags. Fix any drift before reporting back. See [`grilling-and-glossary.md`](../../docs/engineering/grilling-and-glossary.md).
-2. **Self-check against `docs/engineering/presentation-layer.md`.** Read it, then check your diff: layering (no business logic in composables), state hoisting, recomposition discipline, platform placement. Fix violations before reporting.
-3. **Simplify pass.** Re-read your composables. Cut: nested `Box`/`Column` with one child, custom modifiers used once, `remember { mutableStateOf }` that could just be derived, `Spacer` chains where padding would do, parameters with default values nobody overrides. Compose code tends to bloat fast — prune aggressively.
-4. Build the affected target: `./gradlew :composeApp:assembleDebug` (Android) or `:composeApp:run` (Desktop).
-5. If a screen reachable in smoke changed — note which `/smoke-test` blocks to re-run.
-6. List user-visible changes: "new screen X with flow Y", not "added `FooScreen.kt`".
+1. **Self-check against `docs/engineering/presentation-layer.md`.** Read it, then check your diff: layering (no business logic in composables), state hoisting, recomposition discipline, platform placement. Fix violations before reporting.
+2. **Simplify pass.** Re-read your composables. Cut: nested `Box`/`Column` with one child, custom modifiers used once, `remember { mutableStateOf }` that could just be derived, `Spacer` chains where padding would do, parameters with default values nobody overrides. Compose code tends to bloat fast — prune aggressively.
+3. Build the affected target: `./gradlew :composeApp:assembleDebug` (Android) or `:composeApp:run` (Desktop).
+4. If a screen reachable in smoke changed — note which `/smoke-test` blocks to re-run.
+5. List user-visible changes: "new screen X with flow Y", not "added `FooScreen.kt`".
 
 ## What you do NOT do
 
