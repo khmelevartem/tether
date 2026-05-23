@@ -26,10 +26,10 @@ fun SkipCountBadge(
 
     Box(
         modifier = modifier
+            .semantics { contentDescription = "$count files skipped so far" }
             .clip(shapes.sm)
             .background(colors.surfaceRaised)
-            .padding(horizontal = spacing.sm, vertical = spacing.xs)
-            .semantics { contentDescription = "$count files skipped so far" },
+            .padding(horizontal = spacing.sm, vertical = spacing.xs),
     ) {
         BasicText(
             text = "$count files skipped",

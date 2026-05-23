@@ -8,6 +8,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.theme.TetherTheme
+import com.tubetoast.tether.util.formatBytes
 
 @Composable
 fun ByteProgressRow(
@@ -51,20 +52,6 @@ private fun buildProgressText(
             append(calculatingPlaceholder)
         }
     }
-}
-
-internal fun formatBytes(bytes: Long): String = when {
-    bytes >= 1_073_741_824L -> "${formatOneDecimal(bytes / 1_073_741_824.0)} GB"
-    bytes >= 1_048_576L -> "${formatOneDecimal(bytes / 1_048_576.0)} MB"
-    bytes >= 1_024L -> "${formatOneDecimal(bytes / 1_024.0)} KB"
-    else -> "$bytes B"
-}
-
-private fun formatOneDecimal(value: Double): String {
-    val rounded = kotlin.math.round(value * 10).toInt()
-    val whole = rounded / 10
-    val frac = rounded % 10
-    return "$whole.$frac"
 }
 
 @Preview(name = "ByteProgressRow — with total and rate")

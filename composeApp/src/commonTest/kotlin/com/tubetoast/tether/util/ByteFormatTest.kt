@@ -1,9 +1,9 @@
-package com.tubetoast.tether.ui.components
+package com.tubetoast.tether.util
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class ByteProgressRowTest {
+class ByteFormatTest {
     @Test
     fun `0 B formats as 0 B`() = assertEquals("0 B", formatBytes(0L))
 

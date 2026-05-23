@@ -13,11 +13,14 @@ import androidx.compose.ui.unit.dp
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.theme.TetherTheme
 
+/** Matches `TetherSpacing.xs` (4dp) for visual consistency with the spacing scale. */
+private val DefaultAccentWidth = 4.dp
+
 @Composable
 fun PeerIdentityAccent(
     identityColor: Color,
     modifier: Modifier = Modifier,
-    width: Dp = 4.dp,
+    width: Dp = DefaultAccentWidth,
 ) {
     Box(
         modifier = modifier
