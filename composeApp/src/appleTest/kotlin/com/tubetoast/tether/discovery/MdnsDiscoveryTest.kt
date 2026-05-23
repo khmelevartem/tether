@@ -52,6 +52,8 @@ class MdnsDiscoveryTest {
         }
     }
 
+    // NSNetService callbacks on real NSRunLoop thread
+    @Suppress("ktlint:tether:no-run-blocking-in-tests")
     @Test
     fun `stop emits empty list`() = runBlocking {
         val discovery = testDiscovery()

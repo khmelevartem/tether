@@ -11,16 +11,20 @@ plugins {
     alias(libs.plugins.ktlintGradle) apply false
 }
 
-// Typed catalog accessors are only available at root build script scope.
-val composeRulesCoordinates = libs.compose.rules.ktlint.get().let {
-    "${it.module.group}:${it.module.name}:${it.versionConstraint.requiredVersion}"
-}
+subprojects {
+    // :ktlint-rules provides the ruleset consumed by ktlintRuleset below — applying ktlint
+    // to it would create a circular dependency where the rule-engine tries to lint the rules
+    // before they are compiled.
+    if (name == "ktlint-rules") return@subprojects
 
-allprojects {
     apply(plugin = "org.jlleitschuh.gradle.ktlint")
 
+    val composeRulesCoordinates = rootProject.libs.compose.rules.ktlint.get().let {
+        "${it.module.group}:${it.module.name}:${it.versionConstraint.requiredVersion}"
+    }
     dependencies {
         "ktlintRuleset"(composeRulesCoordinates)
+        "ktlintRuleset"(project(":ktlint-rules"))
     }
 
     configure<org.jlleitschuh.gradle.ktlint.KtlintExtension> {

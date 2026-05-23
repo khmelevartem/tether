@@ -32,6 +32,8 @@ import kotlin.test.assertTrue
 import kotlin.test.fail
 import kotlin.time.Duration.Companion.milliseconds
 
+// real CIO server — CIOApplicationEngine hardcodes real-thread dispatchers
+@Suppress("ktlint:tether:no-run-blocking-in-tests")
 class FileServerTest {
     private val cleanupPaths = mutableListOf<File>()
     private var startedServer: FileServer? = null
