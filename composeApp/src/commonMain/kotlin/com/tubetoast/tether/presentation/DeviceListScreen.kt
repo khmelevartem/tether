@@ -26,8 +26,8 @@ import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.ui.components.BrandMark
 import com.tubetoast.tether.ui.components.BrandMarkState
+import com.tubetoast.tether.ui.preview.LightDarkPreview
 import com.tubetoast.tether.ui.preview.PreviewFixtures
-import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.theme.TetherTheme
 
 @Composable
@@ -102,44 +102,27 @@ private fun DeviceListContent(
 
 @Preview(name = "Discovering — empty")
 @Composable
-private fun PreviewDiscovering() {
-    PreviewSurface {
-        DeviceListContent(
-            devices = PreviewFixtures.emptyDevices,
-            onDeviceClick = {},
-        )
-    }
+private fun PreviewDiscovering() = LightDarkPreview {
+    DeviceListContent(
+        devices = PreviewFixtures.emptyDevices,
+        onDeviceClick = {},
+    )
 }
 
 @Preview(name = "Single device")
 @Composable
-private fun PreviewSingleDevice() {
-    PreviewSurface {
-        DeviceListContent(
-            devices = PreviewFixtures.singleDevice,
-            onDeviceClick = {},
-        )
-    }
+private fun PreviewSingleDevice() = LightDarkPreview {
+    DeviceListContent(
+        devices = PreviewFixtures.singleDevice,
+        onDeviceClick = {},
+    )
 }
 
 @Preview(name = "Multiple devices")
 @Composable
-private fun PreviewMultipleDevices() {
-    PreviewSurface {
-        DeviceListContent(
-            devices = PreviewFixtures.multipleDevices,
-            onDeviceClick = {},
-        )
-    }
-}
-
-@Preview(name = "Multiple devices — dark")
-@Composable
-private fun PreviewMultipleDevicesDark() {
-    PreviewSurface(darkTheme = true) {
-        DeviceListContent(
-            devices = PreviewFixtures.multipleDevices,
-            onDeviceClick = {},
-        )
-    }
+private fun PreviewMultipleDevices() = LightDarkPreview {
+    DeviceListContent(
+        devices = PreviewFixtures.multipleDevices,
+        onDeviceClick = {},
+    )
 }

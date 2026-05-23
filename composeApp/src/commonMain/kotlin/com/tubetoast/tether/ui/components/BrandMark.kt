@@ -27,7 +27,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.tubetoast.tether.ui.preview.PreviewSurface
+import com.tubetoast.tether.ui.preview.LightDarkPreview
 import com.tubetoast.tether.ui.theme.TetherTheme
 import kotlinx.coroutines.delay
 
@@ -343,79 +343,38 @@ private fun DrawScope.drawRightDot(
     }
 }
 
-@Preview(name = "BrandMark — Idle (Light)")
+@Preview(name = "BrandMark — Idle")
 @Composable
-private fun PreviewBrandMarkIdle() {
-    PreviewSurface { BrandMark(BrandMarkState.Idle) }
+private fun PreviewBrandMarkIdle() = LightDarkPreview {
+    BrandMark(BrandMarkState.Idle)
 }
 
-@Preview(name = "BrandMark — Searching (Light)")
+@Preview(name = "BrandMark — Searching")
 @Composable
-private fun PreviewBrandMarkSearching() {
-    PreviewSurface { BrandMark(BrandMarkState.Searching) }
+private fun PreviewBrandMarkSearching() = LightDarkPreview {
+    BrandMark(BrandMarkState.Searching)
 }
 
-@Preview(name = "BrandMark — Progress 60% (Light)")
+@Preview(name = "BrandMark — Progress 60%")
 @Composable
-private fun PreviewBrandMarkProgress() {
-    PreviewSurface { BrandMark(BrandMarkState.TransferProgress(progress = 0.6f)) }
+private fun PreviewBrandMarkProgress() = LightDarkPreview {
+    BrandMark(BrandMarkState.TransferProgress(progress = 0.6f))
 }
 
-@Preview(name = "BrandMark — Success (Light)")
+@Preview(name = "BrandMark — Success")
 @Composable
-private fun PreviewBrandMarkSuccess() {
-    PreviewSurface { BrandMark(BrandMarkState.Success) }
+private fun PreviewBrandMarkSuccess() = LightDarkPreview {
+    BrandMark(BrandMarkState.Success)
 }
 
-@Preview(name = "BrandMark — Error 40% (Light)")
+@Preview(name = "BrandMark — Error 40%")
 @Composable
-private fun PreviewBrandMarkError() {
-    PreviewSurface { BrandMark(BrandMarkState.Error(progress = 0.4f)) }
+private fun PreviewBrandMarkError() = LightDarkPreview {
+    BrandMark(BrandMarkState.Error(progress = 0.4f))
 }
 
-@Preview(name = "BrandMark — Disconnected (Light)")
+@Preview(name = "BrandMark — Disconnected")
 @Composable
-private fun PreviewBrandMarkDisconnected() {
-    PreviewSurface { BrandMark(BrandMarkState.Disconnected) }
-}
-
-@Preview(name = "BrandMark — Idle (Dark)")
-@Composable
-private fun PreviewBrandMarkIdleDark() {
-    PreviewSurface(darkTheme = true) { BrandMark(BrandMarkState.Idle) }
-}
-
-@Preview(name = "BrandMark — Searching (Dark)")
-@Composable
-private fun PreviewBrandMarkSearchingDark() {
-    PreviewSurface(darkTheme = true) { BrandMark(BrandMarkState.Searching) }
-}
-
-@Preview(name = "BrandMark — Progress 60% (Dark)")
-@Composable
-private fun PreviewBrandMarkProgressDark() {
-    PreviewSurface(darkTheme = true) { BrandMark(BrandMarkState.TransferProgress(progress = 0.6f)) }
-}
-
-@Preview(name = "BrandMark — Success (Dark)")
-@Composable
-private fun PreviewBrandMarkSuccessDark() {
-    PreviewSurface(darkTheme = true) { BrandMark(BrandMarkState.Success) }
-}
-
-@Preview(name = "BrandMark — Error 40% (Dark)")
-@Composable
-private fun PreviewBrandMarkErrorDark() {
-    PreviewSurface(darkTheme = true) {
-        BrandMark(
-            state = BrandMarkState.Error(progress = 0.4f),
-            modifier = Modifier.size(192.dp, 48.dp),
-        )
-    }
-}
-
-@Preview(name = "BrandMark — Disconnected (Dark)")
-@Composable
-private fun PreviewBrandMarkDisconnectedDark() {
-    PreviewSurface(darkTheme = true) { BrandMark(BrandMarkState.Disconnected) }
+private fun PreviewBrandMarkDisconnected() = LightDarkPreview {
+    BrandMark(BrandMarkState.Disconnected)
 }

@@ -146,7 +146,9 @@ For each new screen or component:
 
 ## Previews
 
-Every screen composable requires a `@Preview` (or platform equivalent) for each state listed in the UX brief. Minimum set: populated, empty/searching, loading, error. Light + dark variants where they differ.
+Every screen composable requires a `@Preview` (or platform equivalent) for each state listed in the UX brief. Minimum set: populated, empty/searching, loading, error.
+
+Use `LightDarkPreview` (in `com.tubetoast.tether.ui.preview`) as the body of every `@Preview` function. It renders the content twice — once in light theme, once in dark — stacked vertically in a single PNG. Pairing is guaranteed structurally: a single function cannot produce a light render without also producing a dark render. Do not use bare `PreviewSurface` with an explicit `darkTheme` argument for theme-sensitive composables.
 
 Previews must be self-contained: build fake state inline and pass it to a stateless variant of the screen. Do not instantiate Decompose components in previews. Previews live in `commonMain` unless the preview itself is platform-bound.
 

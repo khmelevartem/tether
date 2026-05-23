@@ -12,7 +12,7 @@ import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
-import com.tubetoast.tether.ui.preview.PreviewSurface
+import com.tubetoast.tether.ui.preview.LightDarkPreview
 import com.tubetoast.tether.ui.theme.TetherTheme
 import com.tubetoast.tether.ui.theme.tetherMinTouchTarget
 
@@ -96,28 +96,14 @@ fun ShowDetailsButton(
     }
 }
 
-@Preview(name = "Text buttons — light")
+@Preview(name = "Text buttons")
 @Composable
-private fun PreviewTextButtonsLight() {
-    PreviewSurface {
-        androidx.compose.foundation.layout.Row {
-            CancelTextButton(onClick = {}, contentDescription = "Cancel transfer")
-            CancelTextButton(onClick = {}, contentDescription = "Cancel transfer", enabled = false)
-            RetryTextButton(onClick = {}, contentDescription = "Retry sending")
-            RetryTextButton(onClick = {}, contentDescription = "Retry sending", enabled = false)
-            ShowDetailsButton(onClick = {}, contentDescription = "Show transfer details")
-        }
-    }
-}
-
-@Preview(name = "Text buttons — dark")
-@Composable
-private fun PreviewTextButtonsDark() {
-    PreviewSurface(darkTheme = true) {
-        androidx.compose.foundation.layout.Row {
-            CancelTextButton(onClick = {}, contentDescription = "Cancel transfer")
-            RetryTextButton(onClick = {}, contentDescription = "Retry sending")
-            ShowDetailsButton(onClick = {}, contentDescription = "Show transfer details")
-        }
+private fun PreviewTextButtons() = LightDarkPreview {
+    androidx.compose.foundation.layout.Row {
+        CancelTextButton(onClick = {}, contentDescription = "Cancel transfer")
+        CancelTextButton(onClick = {}, contentDescription = "Cancel transfer", enabled = false)
+        RetryTextButton(onClick = {}, contentDescription = "Retry sending")
+        RetryTextButton(onClick = {}, contentDescription = "Retry sending", enabled = false)
+        ShowDetailsButton(onClick = {}, contentDescription = "Show transfer details")
     }
 }

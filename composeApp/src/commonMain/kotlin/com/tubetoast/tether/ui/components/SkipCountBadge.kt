@@ -10,6 +10,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
+import com.tubetoast.tether.ui.preview.LightDarkPreview
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.theme.TetherTheme
 
@@ -41,18 +42,14 @@ fun SkipCountBadge(
 
 @Preview(name = "SkipCountBadge — count = 1 (singular)")
 @Composable
-private fun PreviewSkipCountBadgeSingular() {
-    PreviewSurface {
-        SkipCountBadge(count = 1)
-    }
+private fun PreviewSkipCountBadgeSingular() = LightDarkPreview {
+    SkipCountBadge(count = 1)
 }
 
-@Preview(name = "SkipCountBadge — count > 0 (light)")
+@Preview(name = "SkipCountBadge — count > 0")
 @Composable
-private fun PreviewSkipCountBadgeNonZero() {
-    PreviewSurface {
-        SkipCountBadge(count = 3)
-    }
+private fun PreviewSkipCountBadgeNonZero() = LightDarkPreview {
+    SkipCountBadge(count = 3)
 }
 
 @Preview(name = "SkipCountBadge — count = 0 (emits nothing)")
@@ -60,13 +57,5 @@ private fun PreviewSkipCountBadgeNonZero() {
 private fun PreviewSkipCountBadgeZero() {
     PreviewSurface {
         SkipCountBadge(count = 0)
-    }
-}
-
-@Preview(name = "SkipCountBadge — dark")
-@Composable
-private fun PreviewSkipCountBadgeDark() {
-    PreviewSurface(darkTheme = true) {
-        SkipCountBadge(count = 7)
     }
 }

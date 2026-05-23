@@ -1,6 +1,7 @@
 package com.tubetoast.tether.ui.preview
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -24,7 +25,7 @@ object PreviewFixtures {
 @Composable
 fun PreviewSurface(
     modifier: Modifier = Modifier,
-    darkTheme: Boolean = false,
+    darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {
     TetherTheme(darkTheme = darkTheme) {
