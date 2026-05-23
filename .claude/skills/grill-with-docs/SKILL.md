@@ -57,6 +57,5 @@ A short report with these sections, in order:
 - **Drift flags** — terms used with a meaning that contradicts the glossary; each line names the canonical alternative.
 - **Glossary additions** — new entries written to `docs/glossary.md` in this pass; one line per term.
 - **Ambiguities** — terms the glossary is silent or contradictory on; escalated to the caller for resolution.
-- **ADR candidates** — decisions that surfaced during the grill and look ADR-worthy; handed to the orchestrator for `architect` dispatch (the architect decides whether the decision actually warrants an ADR, per its own procedure).
 
 </supporting-info>

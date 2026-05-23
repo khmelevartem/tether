@@ -23,7 +23,7 @@ Each entry is one line: bold term — one-sentence definition — optional `_Avo
 
 The glossary is owned collectively but written through one mechanism: the grill skill. When the grill is invoked on a draft and finds a term that is either new or used with a meaning that contradicts the existing entry, it updates the glossary in the same pass and references the update in its grill report. No agent edits the glossary outside a grill pass — this keeps drift visible.
 
-A term enters the glossary when it appears in two or more long-lived artifacts, or when two writers (human or agent) use it with conflicting meanings in the same artifact surface. One-off task-local terms stay out.
+The grill writes a term on first sighting if it judges the term as Tether-domain-specific (the «is this unique to Tether or general programming?» filter inside the skill). One-off task-local terms stay out by that judgement, not by waiting for a second artifact to confirm. Pruning of accidental additions is `review-guides`' role on later PRs.
 
 ## Who invokes the grill
 
