@@ -122,6 +122,8 @@ If a component is supposed to be a singleton, it is created exactly once in the 
 
 The composition root is the only place that knows lifecycles. Everywhere else, you receive what's already alive.
 
+The logging façade ([`KydraLog`](logging.md)) is the documented exception: a process-global cross-cutting infra singleton initialised once per platform entry point, accessed directly (`KydraLog.withTag(...)`) without passing through the graph. Rationale and trade-offs in [`adr/adr-logging-kydra.md`](adr/adr-logging-kydra.md).
+
 ### 4. Don't instantiate dependencies inside composables
 
 ❌
