@@ -25,8 +25,16 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import ru.pocketbyte.kydra.log.KydraLog
+import ru.pocketbyte.kydra.log.debug
+import ru.pocketbyte.kydra.log.error
+import ru.pocketbyte.kydra.log.info
+import ru.pocketbyte.kydra.log.withMessage
+import ru.pocketbyte.kydra.log.wrapper.withTag
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
+
+private val log = KydraLog.withTag(default = "Tether.FileClient")
 
 class FileClient(
     private val client: HttpClient,
@@ -60,6 +68,7 @@ class FileClient(
         totalBytes: Long? = null,
         onProgress: ((bytesTransferred: Long, totalBytes: Long?) -> Unit)? = null,
     ): SendResult = tracker.withActiveTransfer {
+        log.info { "sending '$fileName'${totalBytes?.let { " ($it bytes)" } ?: ""} → ${device.host}:${device.port}" }
         try {
             sendInternal(device, channel, fileName, totalBytes, onProgress)
         } catch (e: CancellationException) {
@@ -125,6 +134,7 @@ class FileClient(
             parameter("name", fileName)
             setBody(channel.asOctetStreamContent(totalBytes))
         }
+        log.debug { "response status ${response.status} for '$fileName' → ${device.host}:${device.port}" }
         if (response.status == HttpStatusCode.OK) {
             val body = response.body<Map<String, String>>()
             SendResult.Success(body["savedPath"] ?: "")
@@ -135,6 +145,7 @@ class FileClient(
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
+        log.error { e withMessage "doSend failed for '$fileName' → ${device.host}:${device.port}" }
         SendResult.Failure(e.message ?: "unknown error")
     }
 }

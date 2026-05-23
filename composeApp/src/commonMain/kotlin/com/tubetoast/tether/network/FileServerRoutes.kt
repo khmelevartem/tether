@@ -18,8 +18,14 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.readAvailable
+import ru.pocketbyte.kydra.log.KydraLog
+import ru.pocketbyte.kydra.log.error
+import ru.pocketbyte.kydra.log.info
+import ru.pocketbyte.kydra.log.wrapper.withTag
 
 internal const val UPLOAD_BUFFER_SIZE = 64 * 1024
+
+private val log = KydraLog.withTag(default = "Tether.FileServerRoutes")
 
 internal interface UploadStorage {
     fun ensureRoot()
@@ -29,10 +35,6 @@ internal interface UploadStorage {
     suspend fun writeBody(body: ByteReadChannel, destination: String): Long
 
     fun deleteIfExists(destination: String)
-
-    fun logInfo(message: String)
-
-    fun logError(message: String)
 }
 
 internal fun Application.installFileServerRoutes(
@@ -85,11 +87,11 @@ internal fun Application.installFileServerRoutes(
                         error("FileServer: incomplete upload — got $bytesWritten of $expected bytes")
                     }
                     uploadComplete = true
-                    storage.logInfo("received '$fileName' — $bytesWritten bytes → $destination")
+                    log.info { "received '$fileName' — $bytesWritten bytes → $destination" }
                     call.respond(HttpStatusCode.OK, mapOf("savedPath" to destination))
                 }
             } catch (e: Exception) {
-                storage.logError("upload failed for '$fileName' — ${e.message ?: "unknown error"}")
+                log.error { "upload failed for '$fileName' — ${e.message ?: "unknown error"}" }
                 try {
                     call.respond(
                         HttpStatusCode.InternalServerError,

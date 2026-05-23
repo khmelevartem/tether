@@ -1,5 +1,6 @@
 package com.tubetoast.tether.network
 
+import com.tubetoast.tether.logging.suppressTestLogs
 import com.tubetoast.tether.security.DeviceKeyPair
 import com.tubetoast.tether.security.TrustedDeviceStore
 import io.ktor.client.HttpClient
@@ -24,6 +25,7 @@ import kotlinx.coroutines.withTimeout
 import java.io.File
 import java.nio.file.Files
 import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -37,6 +39,11 @@ import kotlin.time.Duration.Companion.milliseconds
 class FileServerTest {
     private val cleanupPaths = mutableListOf<File>()
     private var startedServer: FileServer? = null
+
+    @BeforeTest
+    fun setup() {
+        suppressTestLogs()
+    }
 
     @AfterTest
     fun teardown() {

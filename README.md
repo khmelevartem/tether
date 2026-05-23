@@ -41,6 +41,8 @@ tether --name MyMac --port 8080
 
 Проверка, что сервер живой: `curl http://localhost:<port>/health` → `Tether OK`.
 
+Подробные логи (DEBUG): `TETHER_LOG_DEBUG=true tether` или `-Dtether.log.debug=true`. Полные правила и платформенные гейты — [`docs/engineering/logging.md`](docs/engineering/logging.md).
+
 Пример сессии:
 ```
 > send Phone /tmp/photo.jpg

@@ -11,7 +11,6 @@ import kotlinx.cinterop.usePinned
 import platform.Foundation.NSData
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
-import platform.Foundation.NSLog
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSUserDomainMask
 import platform.Foundation.dataWithBytes
@@ -20,11 +19,15 @@ import platform.Foundation.writeToFile
 import platform.Security.SecRandomCopyBytes
 import platform.Security.kSecRandomDefault
 import platform.posix.memcpy
+import ru.pocketbyte.kydra.log.KydraLog
+import ru.pocketbyte.kydra.log.warn
+import ru.pocketbyte.kydra.log.wrapper.withTag
 
 // Placeholder until a real EC P-256 keypair lands via Keychain (#9 defers signature verification).
 // Until then the protocol treats these bytes as an opaque per-install identifier.
 private const val PUBLIC_KEY_BYTES = 32
 private const val FILE_PUBLIC = "device_public.key"
+private val log = KydraLog.withTag(default = "Tether.DeviceKeyPair")
 
 actual class DeviceKeyPair(
     configDir: String? = null,
@@ -43,7 +46,7 @@ actual class DeviceKeyPair(
         if (fileManager.fileExistsAtPath(publicPath)) {
             val existing = readFile(publicPath)
             if (existing != null && existing.size == PUBLIC_KEY_BYTES) return existing
-            NSLog("WARN: device key corrupted (size=%lu), regenerating", (existing?.size ?: 0).toULong())
+            log.warn { "device key corrupted (size=${existing?.size ?: 0}), regenerating" }
             fileManager.removeItemAtPath(publicPath, error = null)
         }
         val fresh = randomBytes(PUBLIC_KEY_BYTES)

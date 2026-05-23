@@ -6,6 +6,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
+import ru.pocketbyte.kydra.log.KydraLog
+import ru.pocketbyte.kydra.log.warn
+import ru.pocketbyte.kydra.log.wrapper.withTag
+
+private val log = KydraLog.withTag(default = "Tether.DesktopBackend")
 
 internal sealed class BackendStartException(
     message: String,
@@ -46,17 +51,17 @@ internal suspend fun DesktopAppContainer.startBackendOrFail(): BackendHandle {
     nameRepublisher.start(backendScope)
     return BackendHandle(port) {
         runCatching { nameRepublisher.stop() }.onFailure {
-            System.err.println("WARN: nameRepublisher stop failed — ${it.message}")
+            log.warn { "nameRepublisher stop failed — ${it.message}" }
         }
         runCatching { backendScope.cancel() }
         runCatching { mdnsDiscovery.stop() }.onFailure {
-            System.err.println("WARN: mDNS stop failed — ${it.message}")
+            log.warn { "mDNS stop failed — ${it.message}" }
         }
         runCatching { server.stop() }.onFailure {
-            System.err.println("WARN: FileServer stop failed — ${it.message}")
+            log.warn { "FileServer stop failed — ${it.message}" }
         }
         runCatching { fileClient.close() }.onFailure {
-            System.err.println("WARN: FileClient close failed — ${it.message}")
+            log.warn { "FileClient close failed — ${it.message}" }
         }
     }
 }
@@ -66,7 +71,7 @@ internal fun registerShutdownHook(handle: BackendHandle) {
         Thread {
             val cleanup = Thread {
                 runCatching { handle.close() }.onFailure {
-                    System.err.println("WARN: backend cleanup failed — ${it.message}")
+                    log.warn { "backend cleanup failed — ${it.message}" }
                 }
             }
             cleanup.isDaemon = true

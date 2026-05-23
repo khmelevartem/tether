@@ -4,13 +4,16 @@ import android.content.Context
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.os.Build
-import android.util.Log
 import com.tubetoast.tether.protocol.Device
 import kotlinx.coroutines.flow.StateFlow
+import ru.pocketbyte.kydra.log.KydraLog
+import ru.pocketbyte.kydra.log.debug
+import ru.pocketbyte.kydra.log.warn
+import ru.pocketbyte.kydra.log.wrapper.withTag
 import java.util.concurrent.ConcurrentLinkedQueue
 
 private const val SERVICE_TYPE = "_tether._tcp."
-private const val TAG = "MdnsDiscovery"
+private val log = KydraLog.withTag(default = "Tether.MdnsDiscovery.Android")
 
 actual class MdnsDiscovery(
     private val context: Context,
@@ -36,55 +39,55 @@ actual class MdnsDiscovery(
     private fun makeRegistrationListener(): NsdManager.RegistrationListener =
         object : NsdManager.RegistrationListener {
             override fun onRegistrationFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
-                Log.w(TAG, "NSD registration failed, errorCode=$errorCode")
+                log.warn { "NSD registration failed, errorCode=$errorCode" }
             }
 
             override fun onUnregistrationFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
-                Log.w(TAG, "NSD unregistration failed, errorCode=$errorCode")
+                log.warn { "NSD unregistration failed, errorCode=$errorCode" }
             }
 
             override fun onServiceRegistered(serviceInfo: NsdServiceInfo) {
                 if (nsdManager == null) return
                 if (this !== registrationListener) return
-                Log.d(TAG, "NSD service registered: ${serviceInfo.serviceName}")
+                log.debug { "NSD service registered: ${serviceInfo.serviceName}" }
                 // NsdManager may modify the requested name (e.g. strip special chars or resolve conflicts).
                 // Track the actual registered name so self-filter in onServiceFound stays accurate.
                 ownName = serviceInfo.serviceName
             }
 
             override fun onServiceUnregistered(serviceInfo: NsdServiceInfo) {
-                Log.d(TAG, "NSD service unregistered: ${serviceInfo.serviceName}")
+                log.debug { "NSD service unregistered: ${serviceInfo.serviceName}" }
             }
         }
 
     private val discoveryListener = object : NsdManager.DiscoveryListener {
         override fun onStartDiscoveryFailed(serviceType: String, errorCode: Int) {
-            Log.w(TAG, "NSD discovery start failed, errorCode=$errorCode")
+            log.warn { "NSD discovery start failed, errorCode=$errorCode" }
         }
 
         override fun onStopDiscoveryFailed(serviceType: String, errorCode: Int) {
-            Log.w(TAG, "NSD discovery stop failed, errorCode=$errorCode")
+            log.warn { "NSD discovery stop failed, errorCode=$errorCode" }
         }
 
         override fun onDiscoveryStarted(serviceType: String) {
-            Log.d(TAG, "NSD discovery started for $serviceType")
+            log.debug { "NSD discovery started for $serviceType" }
         }
 
         override fun onDiscoveryStopped(serviceType: String) {
-            Log.d(TAG, "NSD discovery stopped for $serviceType")
+            log.debug { "NSD discovery stopped for $serviceType" }
         }
 
         override fun onServiceFound(serviceInfo: NsdServiceInfo) {
             if (nsdManager == null) return
             if (serviceInfo.serviceName == ownName) return
-            Log.d(TAG, "NSD service found: ${serviceInfo.serviceName}")
+            log.debug { "NSD service found: ${serviceInfo.serviceName}" }
             resolveQueue.add(serviceInfo)
             startNextResolve()
         }
 
         override fun onServiceLost(serviceInfo: NsdServiceInfo) {
             if (nsdManager == null) return
-            Log.d(TAG, "NSD service lost: ${serviceInfo.serviceName}")
+            log.debug { "NSD service lost: ${serviceInfo.serviceName}" }
             // NsdManager only populates serviceName here; host/port are null/0 — can't rebuild id.
             store.removeByName(serviceInfo.serviceName)
         }
@@ -92,7 +95,7 @@ actual class MdnsDiscovery(
 
     private fun makeResolveListener() = object : NsdManager.ResolveListener {
         override fun onResolveFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
-            Log.w(TAG, "NSD resolve failed for '${serviceInfo.serviceName}', errorCode=$errorCode")
+            log.warn { "NSD resolve failed for '${serviceInfo.serviceName}', errorCode=$errorCode" }
             onResolveComplete()
         }
 
@@ -109,13 +112,13 @@ actual class MdnsDiscovery(
             }
             val host = inetAddress?.hostAddress
             if (host == null) {
-                Log.w(TAG, "NSD resolved '${serviceInfo.serviceName}' but host is null, skipping")
+                log.warn { "NSD resolved '${serviceInfo.serviceName}' but host is null, skipping" }
                 onResolveComplete()
                 return
             }
             val port = serviceInfo.port
             if (port !in 1..65535) {
-                Log.w(TAG, "NSD invalid port $port for '${serviceInfo.serviceName}', skipping")
+                log.warn { "NSD invalid port $port for '${serviceInfo.serviceName}', skipping" }
                 onResolveComplete()
                 return
             }
@@ -124,7 +127,7 @@ actual class MdnsDiscovery(
                 host = host,
                 port = port,
             )
-            Log.d(TAG, "NSD peer discovered: $device")
+            log.debug { "NSD peer discovered: $device" }
             store.upsert(device)
             onResolveComplete()
         }
@@ -164,7 +167,7 @@ actual class MdnsDiscovery(
             serviceType = SERVICE_TYPE
             this.port = port
         }
-        Log.d(TAG, "Starting NSD: name=$deviceName, port=$port")
+        log.debug { "Starting NSD: name=$deviceName, port=$port" }
         makeRegistrationListener().also { fresh ->
             registrationListener = fresh
             nm.registerService(serviceInfo, NsdManager.PROTOCOL_DNS_SD, fresh)
@@ -178,7 +181,7 @@ actual class MdnsDiscovery(
             try {
                 nm.unregisterService(old)
             } catch (e: Exception) {
-                Log.w(TAG, "NSD unregisterService ($label) failed: ${e.message}")
+                log.warn { "NSD unregisterService ($label) failed: ${e.message}" }
             }
         }
     }
@@ -186,7 +189,7 @@ actual class MdnsDiscovery(
     @Synchronized
     actual override fun republish(name: String) {
         val nm = nsdManager ?: return
-        Log.d(TAG, "Republishing NSD as name=$name")
+        log.debug { "Republishing NSD as name=$name" }
         unregisterPreviousListener(nm, "republish")
         ownName = name
         val serviceInfo = NsdServiceInfo().apply {
@@ -203,13 +206,13 @@ actual class MdnsDiscovery(
     @Synchronized
     actual override fun stop() {
         val nm = nsdManager ?: return
-        Log.d(TAG, "Stopping NSD")
+        log.debug { "Stopping NSD" }
         unregisterPreviousListener(nm, "stop")
         registrationListener = null
         try {
             nm.stopServiceDiscovery(discoveryListener)
         } catch (e: Exception) {
-            Log.w(TAG, "NSD stopServiceDiscovery failed: ${e.message}")
+            log.warn { "NSD stopServiceDiscovery failed: ${e.message}" }
         }
         nsdManager = null
         ownName = null

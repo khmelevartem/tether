@@ -1,8 +1,12 @@
 package com.tubetoast.tether.security
 
 import com.tubetoast.tether.foundation.writeOrThrow
-import platform.Foundation.NSLog
 import platform.Foundation.NSUserDefaults
+import ru.pocketbyte.kydra.log.KydraLog
+import ru.pocketbyte.kydra.log.error
+import ru.pocketbyte.kydra.log.wrapper.withTag
+
+private val log = KydraLog.withTag(default = "Tether.TrustedDeviceStore")
 
 actual open class TrustedDeviceStore {
     private val defaults = NSUserDefaults.standardUserDefaults
@@ -20,7 +24,7 @@ actual open class TrustedDeviceStore {
         return try {
             value.split(",").map { it.trim().toByte() }.toByteArray()
         } catch (e: Exception) {
-            NSLog("ERROR: corrupted trusted key for '%s' — %s", deviceId, e.message ?: "unknown error")
+            log.error { "corrupted trusted key for '$deviceId' — ${e.message ?: "unknown error"}" }
             null
         }
     }

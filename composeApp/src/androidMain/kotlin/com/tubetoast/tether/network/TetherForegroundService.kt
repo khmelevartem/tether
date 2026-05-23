@@ -9,7 +9,6 @@ import android.content.pm.ServiceInfo
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
-import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
@@ -20,9 +19,15 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import ru.pocketbyte.kydra.log.KydraLog
+import ru.pocketbyte.kydra.log.error
+import ru.pocketbyte.kydra.log.info
+import ru.pocketbyte.kydra.log.warn
+import ru.pocketbyte.kydra.log.withMessage
+import ru.pocketbyte.kydra.log.wrapper.withTag
 
-private const val TAG = "TetherFGService"
 private const val NOTIFICATION_ID = 1001
+private val log = KydraLog.withTag(default = "Tether.FGService")
 private const val CHANNEL_ID = "tether_foreground"
 internal const val ACTION_STOP = "com.tubetoast.tether.action.STOP"
 
@@ -60,21 +65,21 @@ class TetherForegroundService : LifecycleService() {
                 runCatching { fileServer.stop() }
                 throw e
             } catch (e: Exception) {
-                Log.e(TAG, "FileServer failed to start: ${e.message}", e)
+                log.error { e withMessage "FileServer failed to start" }
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
                 return@launch
             }
             runningFileServer = fileServer
-            Log.i(TAG, "FileServer started on port $port, downloads → ${downloadsDir.absolutePath}")
+            log.info { "FileServer started on port $port, downloads → ${downloadsDir.absolutePath}" }
 
             try {
                 mdnsDiscovery.start(deviceName, port)
                 container.nameRepublisher.start(lifecycleScope)
                 runningMdnsDiscovery = mdnsDiscovery
-                Log.i(TAG, "mDNS started: name=$deviceName port=$port")
+                log.info { "mDNS started: name=$deviceName port=$port" }
             } catch (e: Exception) {
-                Log.e(TAG, "mDNS failed to start: ${e.message}", e)
+                log.error { e withMessage "mDNS failed to start" }
                 fileServer.stop()
                 runningFileServer = null
                 stopForeground(STOP_FOREGROUND_REMOVE)
@@ -86,7 +91,7 @@ class TetherForegroundService : LifecycleService() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
         if (intent?.action == ACTION_STOP) {
-            Log.i(TAG, "Stop requested via notification action")
+            log.info { "Stop requested via notification action" }
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
             return START_NOT_STICKY
@@ -106,17 +111,17 @@ class TetherForegroundService : LifecycleService() {
         runningMdnsDiscovery?.let { mdnsDiscovery ->
             try {
                 mdnsDiscovery.stop()
-                Log.i(TAG, "mDNS stopped")
+                log.info { "mDNS stopped" }
             } catch (e: Exception) {
-                Log.w(TAG, "mDNS stop failed: ${e.message}")
+                log.warn { "mDNS stop failed: ${e.message}" }
             }
         }
         runningFileServer?.let { fileServer ->
             try {
                 fileServer.stop()
-                Log.i(TAG, "FileServer stopped")
+                log.info { "FileServer stopped" }
             } catch (e: Exception) {
-                Log.w(TAG, "FileServer stop failed: ${e.message}")
+                log.warn { "FileServer stop failed: ${e.message}" }
             }
         }
         runningMdnsDiscovery = null

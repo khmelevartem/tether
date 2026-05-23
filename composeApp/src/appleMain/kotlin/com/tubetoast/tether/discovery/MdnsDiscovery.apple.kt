@@ -3,14 +3,19 @@ package com.tubetoast.tether.discovery
 import com.tubetoast.tether.protocol.Device
 import kotlinx.cinterop.ObjCSignatureOverride
 import kotlinx.coroutines.flow.StateFlow
-import platform.Foundation.NSLog
 import platform.Foundation.NSNetService
 import platform.Foundation.NSNetServiceBrowser
 import platform.Foundation.NSNetServiceBrowserDelegateProtocol
 import platform.Foundation.NSNetServiceDelegateProtocol
 import platform.darwin.NSObject
+import ru.pocketbyte.kydra.log.KydraLog
+import ru.pocketbyte.kydra.log.debug
+import ru.pocketbyte.kydra.log.info
+import ru.pocketbyte.kydra.log.warn
+import ru.pocketbyte.kydra.log.wrapper.withTag
 
 private const val SERVICE_TYPE = "_tether._tcp."
+private val log = KydraLog.withTag(default = "Tether.MdnsDiscovery.Apple")
 
 // Thread-safety note: NSNetService and NSNetServiceBrowser must be created and used on
 // the thread that owns their run loop. All callbacks (didPublish, didFind, didResolve)
@@ -55,7 +60,7 @@ actual class MdnsDiscovery(
         service.publish()
         netService = service
 
-        NSLog("mDNS: publishing service %s on port %d", deviceName, port)
+        log.info { "publishing service $deviceName on port $port" }
 
         val browserDelegate = BrowserDelegate(this)
         this.browserDelegate = browserDelegate
@@ -65,20 +70,20 @@ actual class MdnsDiscovery(
         browser.searchForServicesOfType(SERVICE_TYPE, inDomain = "")
         this.browser = browser
 
-        NSLog("mDNS: started discovery for %s", SERVICE_TYPE)
+        log.info { "started discovery for $SERVICE_TYPE" }
     }
 
     actual override fun stop() {
         try {
             netService?.stop()
         } catch (e: Exception) {
-            NSLog("mDNS: failed to stop service — %s", e.message ?: "unknown error")
+            log.warn { "failed to stop service — ${e.message ?: "unknown error"}" }
         }
 
         try {
             browser?.stop()
         } catch (e: Exception) {
-            NSLog("mDNS: failed to stop browser — %s", e.message ?: "unknown error")
+            log.warn { "failed to stop browser — ${e.message ?: "unknown error"}" }
         }
 
         netService = null
@@ -90,7 +95,7 @@ actual class MdnsDiscovery(
         resolutionDelegates.clear()
         store.clear()
 
-        NSLog("mDNS: stopped")
+        log.info { "stopped" }
     }
 
     /**
@@ -100,11 +105,11 @@ actual class MdnsDiscovery(
      */
     actual override fun republish(name: String) {
         if (netService == null && browser == null) return
-        NSLog("mDNS: republishing as %s", name)
+        log.info { "republishing as $name" }
         try {
             netService?.stop()
         } catch (e: Exception) {
-            NSLog("mDNS: failed to stop service for republish — %s", e.message ?: "unknown error")
+            log.warn { "failed to stop service for republish — ${e.message ?: "unknown error"}" }
         }
         ownServiceName = name
 
@@ -120,17 +125,17 @@ actual class MdnsDiscovery(
         service.publish()
         netService = service
 
-        NSLog("mDNS: republished service %s on port %d", name, currentPort)
+        log.info { "republished service $name on port $currentPort" }
     }
 
     private fun onServiceFound(service: NSNetService) {
         val serviceName = service.name
         if (serviceName == ownServiceName) {
-            NSLog("mDNS: ignoring self-discovery for %s", serviceName)
+            log.debug { "ignoring self-discovery for $serviceName" }
             return
         }
 
-        NSLog("mDNS: found service %s, resolving...", serviceName)
+        log.debug { "found service $serviceName, resolving..." }
         val delegate = ResolutionDelegate(this, serviceName)
         resolutionDelegates.add(delegate)
         service.delegate = delegate
@@ -139,23 +144,23 @@ actual class MdnsDiscovery(
 
     private fun onServiceRemoved(service: NSNetService) {
         val serviceName = service.name
-        NSLog("mDNS: service removed %s", serviceName)
+        log.info { "service removed $serviceName" }
         store.removeByName(serviceName)
     }
 
     private fun onServiceResolved(service: NSNetService) {
         val serviceName = service.name
-        NSLog("mDNS: resolved service %s", serviceName)
+        log.debug { "resolved service $serviceName" }
 
         val port = service.port.toInt()
         if (port !in 1..65535) {
-            NSLog("mDNS: invalid port %d for %s, skipping", port, serviceName)
+            log.warn { "invalid port $port for $serviceName, skipping" }
             return
         }
 
         val host = service.hostName
         if (host.isNullOrEmpty()) {
-            NSLog("mDNS: could not get hostname for %s, skipping", serviceName)
+            log.warn { "could not get hostname for $serviceName, skipping" }
             return
         }
 
@@ -165,12 +170,12 @@ actual class MdnsDiscovery(
             port = port,
         )
 
-        NSLog("mDNS: peer discovered: %s@%s:%d", device.name, device.host, device.port)
+        log.info { "peer discovered: ${device.name}@${device.host}:${device.port}" }
         store.upsert(device)
     }
 
     private fun onServiceResolutionFailed(serviceName: String) {
-        NSLog("mDNS: failed to resolve service %s", serviceName)
+        log.warn { "failed to resolve service $serviceName" }
     }
 
     // Kotlin/Native maps ObjC "method:arg1:arg2:" to fun method(arg1, arg2).
@@ -179,18 +184,18 @@ actual class MdnsDiscovery(
     ) : NSObject(),
         NSNetServiceDelegateProtocol {
         override fun netServiceDidPublish(sender: NSNetService) {
-            NSLog("mDNS: service published: %s", sender.name)
+            log.info { "service published: ${sender.name}" }
             discovery.ownServiceName = sender.name
         }
 
         @ObjCSignatureOverride
         @Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE")
         override fun netService(sender: NSNetService, didNotPublish: Map<Any?, *>) {
-            NSLog("mDNS: service publication failed: %s", sender.name)
+            log.warn { "service publication failed: ${sender.name}" }
         }
 
         override fun netServiceDidStop(sender: NSNetService) {
-            NSLog("mDNS: service stopped: %s", sender.name)
+            log.info { "service stopped: ${sender.name}" }
         }
 
         override fun netServiceDidResolveAddress(sender: NSNetService) {
@@ -234,11 +239,11 @@ actual class MdnsDiscovery(
             aNetServiceBrowser: NSNetServiceBrowser,
             didNotSearch: Map<Any?, *>,
         ) {
-            NSLog("mDNS: browser search failed")
+            log.warn { "browser search failed" }
         }
 
         override fun netServiceBrowserDidStopSearch(browser: NSNetServiceBrowser) {
-            NSLog("mDNS: browser stopped")
+            log.info { "browser stopped" }
         }
     }
 

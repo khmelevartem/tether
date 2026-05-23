@@ -1,5 +1,8 @@
 package com.tubetoast.tether.security
 
+import ru.pocketbyte.kydra.log.KydraLog
+import ru.pocketbyte.kydra.log.warn
+import ru.pocketbyte.kydra.log.wrapper.withTag
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
@@ -8,6 +11,8 @@ import java.security.KeyFactory
 import java.security.KeyPairGenerator
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
+
+private val log = KydraLog.withTag(default = "Tether.DeviceKeyPair")
 
 actual class DeviceKeyPair(
     private val configDir: File = File(System.getProperty("user.home"), ".config/tether"),
@@ -41,7 +46,7 @@ actual class DeviceKeyPair(
         return when {
             publicValid && privateValid -> publicKeyFile.readBytes()
             !publicValid && !privateValid -> {
-                System.err.println("WARN: device key pair corrupted, regenerating in $configDir")
+                log.warn { "device key pair corrupted, regenerating in $configDir" }
                 publicKeyFile.delete()
                 privateKeyFile.delete()
                 generateAndPersist(publicKeyFile, privateKeyFile)
