@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.StateFlow
 
 class PendingFilesSummary
 
+sealed interface FileSource
+
 class RootComponent(
     componentContext: ComponentContext,
     private val deviceListFactory: (ComponentContext) -> DeviceListComponent,
@@ -45,7 +47,8 @@ class RootComponent(
             )
         }
 
-    fun setPendingFiles(summary: PendingFilesSummary) {
+    @Suppress("UNUSED_PARAMETER") // TODO(#191): sources will be consumed when the UI reader lands.
+    fun setPendingFiles(summary: PendingFilesSummary, sources: List<FileSource>) {
         _pendingFiles.value = summary
     }
 
@@ -57,7 +60,7 @@ class RootComponent(
         navigation.pushNew(Config.TransferDetails(peer))
     }
 
-    // Real behaviour lands in #191 (UI feedback when user drops files during an active transfer).
+    // TODO(#191): UI feedback when user drops files during an active transfer.
     fun onDropRejectedDuringTransfer() {
     }
 

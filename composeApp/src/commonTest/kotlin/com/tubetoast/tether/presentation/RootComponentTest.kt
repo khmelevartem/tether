@@ -9,6 +9,7 @@ import com.tubetoast.tether.discovery.FakeDeviceDiscovery
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.builtins.serializer
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -46,25 +47,22 @@ class RootComponentTest {
     }
 
     @Test
-    fun `process recreation drops pushed TransferDetailsChild and resets to DeviceListChild`() = runTest {
+    fun `childStack initialises to DeviceListChild even when supplied StateKeeper bundle is non-empty`() = runTest {
+        // serializer = null means childStack writes nothing to StateKeeper and reads nothing back.
+        // This pins the contract: a non-empty bundle from a prior process is ignored — even one
+        // carrying entries under the very key Decompose would use if a real serializer were wired.
         val priorDispatcher = StateKeeperDispatcher()
-        val priorContext = DefaultComponentContext(
-            lifecycle = LifecycleRegistry().also { it.resume() },
-            stateKeeper = priorDispatcher,
-        )
-        val priorComponent = buildComponent(context = priorContext, coroutineScope = backgroundScope)
-        priorComponent.showTransferDetails(PeerIdentity("peer-restored"))
-        assertEquals(2, priorComponent.stack.value.items.size)
+        priorDispatcher.register("sentinel", String.serializer()) { "saved" }
+        val nonEmptySavedState = priorDispatcher.save()
 
-        val savedState = priorDispatcher.save()
         val restoredContext = DefaultComponentContext(
             lifecycle = LifecycleRegistry().also { it.resume() },
-            stateKeeper = StateKeeperDispatcher(savedState),
+            stateKeeper = StateKeeperDispatcher(nonEmptySavedState),
         )
-        val restoredComponent = buildComponent(context = restoredContext, coroutineScope = backgroundScope)
+        val component = buildComponent(context = restoredContext, coroutineScope = backgroundScope)
 
-        assertEquals(1, restoredComponent.stack.value.items.size)
-        assertIs<RootComponent.Child.DeviceListChild>(restoredComponent.stack.value.active.instance)
+        assertEquals(1, component.stack.value.items.size)
+        assertIs<RootComponent.Child.DeviceListChild>(component.stack.value.active.instance)
     }
 
     @Test
@@ -73,7 +71,7 @@ class RootComponentTest {
 
         assertNull(component.pendingFiles.value)
 
-        component.setPendingFiles(PendingFilesSummary())
+        component.setPendingFiles(PendingFilesSummary(), emptyList())
 
         assertNotNull(component.pendingFiles.value)
 

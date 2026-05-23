@@ -75,6 +75,8 @@ fun DeviceList(component: DeviceListComponent) {
 
 Events are plain method calls on the Component. No `LaunchedEffect` business logic, no event channels through the Composable.
 
+Nullable state is the exception. `Value<T>` has a non-null bound (`T : Any`), so a state that is genuinely nullable — an optional banner payload, a pending-files summary that may not exist — is exposed as `StateFlow<T?>` instead. Compose subscribes via `collectAsState`. Do not introduce a non-null sentinel wrapper just to fit `Value` — the `StateFlow` fallback is the documented convention.
+
 ## Long-lived state lives outside Components
 
 A Component's lifetime is bound to the screen (or flow) it represents. Anything that must outlive a screen — active file transfers, peer state, long-running connections — lives in repositories owned by `AppContainer`. Components observe these repositories via injected dependencies and never duplicate the state internally.
@@ -85,10 +87,10 @@ In particular: **we do not use `InstanceKeeper` to retain domain state across co
 
 The presentation tree is rooted in a single `RootComponent` (a concrete class) that owns a Decompose `ChildStack`. Composables render it via a single entry point — `RootContent(component)` — which carries the app theme and the `Children { ... }` switch. There is no separate theme wrapper above it.
 
-Two Decompose primitives are in use:
+Decompose navigation primitives are introduced one at a time as flows require them:
 
-- **`ChildStack`** — back stack with push / pop / replace. Used for full-screen navigation. The root stack starts at a single initial child (the device list); pushed children are introduced as flows require them.
-- **`ChildSlot`** — modal overlays (dialogs, confirmations) that sit on top of a screen without changing the back stack semantics. Wired in the owning parent Component, not at the root.
+- **`ChildStack`** — back stack with push / pop / replace. In use. The root stack starts at a single initial child (the device list); pushed children are introduced as flows require them.
+- **`ChildSlot`** — modal overlays (dialogs, confirmations) that sit on top of a screen without changing the back stack semantics. Not wired yet; added when the first dialog lands. Wired in the owning parent Component, not at the root.
 
 Inline state on a screen (active transfer surfaces, banners, expansions inside a card) is *not* navigation — it lives in the screen's Component as plain state. Push-navigation is reserved for surfaces the user reaches via an explicit forward action and leaves with back.
 
