@@ -20,12 +20,11 @@ User-facing concepts. The vocabulary [`spec-writer`](../.claude/agents/spec-writ
 Engineering concepts. The vocabulary [`architect`](../.claude/agents/architect.md), `coder`, and the review agents use.
 
 - **Discovery** — the layer that announces a device's presence and finds peers on the local network (see [discovery.md](engineering/discovery.md)). _Avoid:_ announce (verb only).
-- **Rendezvous** — the post-discovery `/hello` exchange that establishes a session between two peers that have already found each other through Discovery. Distinct from Discovery itself (see [discovery.md](engineering/discovery.md) §Layer 2).
-- **grill-with-docs** — the sub-agent at [`.claude/skills/grill-with-docs/`](../.claude/skills/grill-with-docs/SKILL.md) that interrogates a draft against this glossary, flags drift, and writes new terms in the same pass. The only writer to this file (see [grilling-and-glossary.md](engineering/grilling-and-glossary.md)).
-- **Peer** — a device visible through discovery, regardless of pairing status. _Avoid:_ node, neighbour.
+- **Rendezvous** — a post-discovery `/hello` mechanism that resolves asymmetric discovery (one side saw the other but not vice versa), primarily needed for the hotspot scenario. Not yet implemented. Distinct from Discovery itself.
+- **Peer** — a device visible through discovery, regardless of pairing status. _Avoid:_ node, neighbour; device when pairing status matters (use **Trusted device** then).
 - **FileServer** — the per-device HTTP server that accepts incoming transfers. _Avoid:_ receiver, listener.
 - **FileClient** — the per-device HTTP client that initiates outgoing transfers. _Avoid:_ sender, uploader.
-- **Source set** — a Kotlin Multiplatform compilation source set (`commonMain`, `jvmMain`, `androidMain`, `appleMain`, `desktopMain`, `iosMain`, `macosMain`). See [architecture-principles.md](engineering/architecture-principles.md) for the hierarchy.
+- **Source set** — a Kotlin Multiplatform compilation source set. Platform-to-target mapping: *Android* → `androidTarget`, *Desktop* → `jvm("desktop")`, *iOS* → `iosArm64` / `iosSimulatorArm64`, *macOS* → `macosArm64`. Hierarchy in [architecture-principles.md](engineering/architecture-principles.md). _Avoid:_ saying «JVM» when the audience is end-users — say *Desktop* instead.
 - **Composition root** — the platform entry point that constructs the DI container; by extension, the `AppContainer` instance it constructs. See [dependency-injection.md](engineering/dependency-injection.md).
 - **Container** — the DI container that holds singletons for one process lifetime; the construct that lives at the composition root.
 - **Session** — the post-rendezvous logical connection between two peers, lasting from `/hello` until either side closes it.
@@ -33,15 +32,3 @@ Engineering concepts. The vocabulary [`architect`](../.claude/agents/architect.m
 - **Drift** — a usage of a term that contradicts its glossary definition, or absence of a glossary entry for a term that recurs across two or more long-lived artifacts.
 - **Living doc** — a `docs/engineering/<name>.md` artifact that captures the present-tense rules for a subsystem; distinct from an ADR (one-time decision) and a knowledge entry (solved-problem note).
 
-## Platform mapping
-
-Canonical names for platforms and their Kotlin Multiplatform targets. Use the canonical name in product docs, issues, commits, and user-facing copy; use the target name in build files, source-set paths, and code.
-
-| Canonical name | KMP target(s) | Use canonical name when | Use target name when |
-|---|---|---|---|
-| Android | `androidTarget` | speaking about user-visible behaviour or product scope | referring to Kotlin source-set placement or Gradle tasks |
-| Desktop | `jvm("desktop")` | speaking about user-visible behaviour; covers Windows / Linux / macOS desktop | referring to source-set placement or Gradle tasks |
-| iOS | `iosArm64`, `iosSimulatorArm64` | speaking about user-visible behaviour | referring to source-set placement or Gradle tasks |
-| macOS | `macosArm64` | speaking about user-visible behaviour | referring to source-set placement or Gradle tasks |
-
-_Avoid:_ saying «JVM» when the audience is end-users; mixing canonical and target names within one sentence.

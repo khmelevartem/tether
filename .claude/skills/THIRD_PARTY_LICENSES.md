@@ -2,10 +2,10 @@
 
 Skills vendored from outside this repository, with their upstream licenses reproduced in full as required by each license.
 
-## `grill-with-docs` and `handoff`
+## `grill-with-docs`
 
-Source: [`mattpocock/skills`](https://github.com/mattpocock/skills) (`skills/engineering/grill-with-docs`, `skills/productivity/handoff`).
-Vendored locations: `.claude/skills/grill-with-docs/`, `.claude/skills/handoff/`.
+Source: [`mattpocock/skills`](https://github.com/mattpocock/skills) (`skills/engineering/grill-with-docs`).
+Vendored location: `.claude/skills/grill-with-docs/`.
 License: MIT, reproduced below.
 
 ```

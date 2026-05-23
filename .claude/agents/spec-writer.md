@@ -54,13 +54,11 @@ Create `docs/product/features/<slug>/spec.md` from the template (creating the pe
 - **Link the issue** in `GitHub Issues:` line.
 - **Update `docs/product/features/README.md`** — add a row in the table with the new file, status, and issue.
 
-### Step 3.5 — Grill the draft against the glossary
+### Step 4 — Grill the draft against the glossary
 
-Invoke [`grill-with-docs`](../skills/grill-with-docs/SKILL.md) on the just-written spec. It checks every load-bearing noun against [`docs/glossary.md`](../../docs/glossary.md), updates the glossary inline for any genuinely new term, and returns a report. Surface drift flags and ambiguities to the caller; do not silently rewrite the spec to suppress them.
+Invoke [`grill-with-docs`](../skills/grill-with-docs/SKILL.md) on the just-written spec. It checks every load-bearing noun against [`docs/glossary.md`](../../docs/glossary.md), updates the glossary inline for any genuinely new term, and returns a report. Surface drift flags and ambiguities to the caller; do not silently rewrite the spec to suppress them. See [`grilling-and-glossary.md`](../../docs/engineering/grilling-and-glossary.md) for the contract — skipping it is a process violation.
 
-This is mount point #1 in [`grilling-and-glossary.md`](../../docs/engineering/grilling-and-glossary.md). Skipping it is a process violation.
-
-### Step 4 — Show diff and confirm
+### Step 5 — Show diff and confirm
 
 Run `git diff docs/product/features/` and present the result to the user. Ask: «Спека готова. Замечания или коммитим?»
 

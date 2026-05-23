@@ -94,6 +94,8 @@ When the engineering artifact is warranted, pick its flavor:
 - **an ADR amending an existing one** — the original decision still holds but a new constraint forces an addendum (use `## Amendment YYYY-MM-DD` section, don't rewrite);
 - **a knowledge entry** at `docs/knowledge/<name>.md` — the task is to capture a solved-problem / platform quirk / library trap / workaround. No design palette needed (the design happened during the incident); the writeup matches sibling-knowledge tone: symptom → cause → workaround → reference to the upstream ticket if any.
 
+**ADR threshold.** Pick «living doc + ADR» only when all three are true: (a) the decision is hard to reverse — changing your mind later costs real work; (b) it is surprising without context — a future reader will wonder why; (c) it is the result of a real trade-off — there were genuine alternatives and one was picked for specific reasons. If any of the three is missing, drop the ADR and keep only the living doc.
+
 **Never produce an orphan ADR.** If the parent living doc for the subsystem doesn't exist, you write/extend it in the same pass.
 
 ### Step 6 — Write
@@ -134,7 +136,7 @@ Re-read both artifacts and self-check:
 - ADR: Decision is a choice, not state. Every rejected option has one line. Parent living doc exists and is linked.
 - Index entries: tone matches siblings.
 
-**Vocabulary pass.** Invoke [`grill-with-docs`](../skills/grill-with-docs/SKILL.md) on every artifact you wrote in this pass (living doc, ADR, knowledge entry). The grill checks each term against [`docs/glossary.md`](../../docs/glossary.md), writes new terms to the glossary inline, and returns flags. Fix any drift before handing back. This is mount point #7 in [`grilling-and-glossary.md`](../../docs/engineering/grilling-and-glossary.md). The grill never writes ADRs itself — that remains your sole responsibility.
+**Vocabulary pass.** Invoke [`grill-with-docs`](../skills/grill-with-docs/SKILL.md) on every artifact you wrote in this pass (living doc, ADR, knowledge entry). The grill checks each term against [`docs/glossary.md`](../../docs/glossary.md), writes new terms to the glossary inline, and returns flags. Fix any drift before handing back. See [`grilling-and-glossary.md`](../../docs/engineering/grilling-and-glossary.md) — the grill never writes ADRs itself, that remains your sole responsibility.
 
 Run `git diff docs/engineering/` and present to the orchestrator/user. Ask: «Готово. Замечания или коммитим?»
 

@@ -48,17 +48,18 @@ When in doubt whether a finding is pointwise or structural — assume structural
 
 ## After writing
 
-1. **Self-check.** Read the guide relevant to what you wrote, then check your diff against it and fix violations:
+1. **Vocabulary pass.** If the diff touches prose surfaces — KDoc, comments, or any file under `docs/` or `.claude/` — invoke [`grill-with-docs`](../skills/grill-with-docs/SKILL.md) on the diff. The grill checks every load-bearing term against [`docs/glossary.md`](../../docs/glossary.md), writes new terms inline, and returns drift flags. Fix any drift before reporting back. Pure-Kotlin diffs with no prose change skip this step. See [`grilling-and-glossary.md`](../../docs/engineering/grilling-and-glossary.md).
+2. **Self-check.** Read the guide relevant to what you wrote, then check your diff against it and fix violations:
    - any code → `docs/engineering/dependency-injection.md`
    - any code → comments: each one must express a non-obvious WHY or a swallowed-exception rationale — nothing else. Remove the rest.
    - UI → `docs/engineering/presentation-layer.md`
    - new tests → `docs/engineering/testing.md`
    - new component/module → `docs/engineering/architecture-principles.md`, `modules.md`
-2. **Simplify pass.** Re-read your own diff. For each block ask: can this be shorter without losing clarity? Specifically: dead branches, premature abstractions, helpers used once, `when` with single branch, `if (x) true else false`, redundant null checks after `requireNotNull`, exception handlers that just re-throw, comments that restate code. Cut them. Better to ship 30 lines than 60.
+3. **Simplify pass.** Re-read your own diff. For each block ask: can this be shorter without losing clarity? Specifically: dead branches, premature abstractions, helpers used once, `when` with single branch, `if (x) true else false`, redundant null checks after `requireNotNull`, exception handlers that just re-throw, comments that restate code. Cut them. Better to ship 30 lines than 60.
 
    **Prose differs from code.** For comments, KDoc, and any Markdown / doc / skill text in the diff: the goal is not fewer words but fewer non-load-bearing facts. Cut whole sentences that (a) narrate the history of how the artifact got its current shape, (b) restate something already said nearby, or (c) describe something that does NOT exist in the artifact — a feature considered and dropped, a control we chose not to render — unless its absence is a non-obvious invariant the reader would otherwise assume. Do **not** reword load-bearing sentences just to shorten them; word-count reduction on well-formed sentences is not a goal.
-3. Run `./gradlew allTests -q` (or scope to the affected source set).
-4. Do NOT commit. The orchestrator decides when to commit, after review passes.
+4. Run `./gradlew allTests -q` (or scope to the affected source set).
+5. Do NOT commit. The orchestrator decides when to commit, after review passes.
 
 ## Output to caller
 
