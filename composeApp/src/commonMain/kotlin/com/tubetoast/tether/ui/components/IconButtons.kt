@@ -18,8 +18,10 @@ import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
-import com.tubetoast.tether.ui.preview.LightDarkPreview
+import com.tubetoast.tether.ui.preview.PreviewSurface
+import com.tubetoast.tether.ui.preview.Themes
 import com.tubetoast.tether.ui.theme.TetherTheme
 import com.tubetoast.tether.ui.theme.tetherMinTouchTarget
 import compose.icons.TablerIcons
@@ -139,13 +141,14 @@ fun RowCancelButton(
 
 @Preview(name = "Icon buttons")
 @Composable
-private fun PreviewIconButtons() = LightDarkPreview {
-    Row {
-        ChevronToggleIcon(expanded = false, onClick = {}, contentDescription = "Expand")
-        ChevronToggleIcon(expanded = true, onClick = {}, contentDescription = "Collapse")
-        InfoIconButton(onClick = {}, contentDescription = "Info")
-        DismissCloseButton(onClick = {}, contentDescription = "Dismiss")
-        RowCancelButton(onClick = {}, contentDescription = "Cancel")
-        RowCancelButton(onClick = {}, contentDescription = "Cancel", enabled = false)
+private fun PreviewIconButtons(@PreviewParameter(Themes::class) dark: Boolean) =
+    PreviewSurface(darkTheme = dark) {
+        Row {
+            ChevronToggleIcon(expanded = false, onClick = {}, contentDescription = "Expand")
+            ChevronToggleIcon(expanded = true, onClick = {}, contentDescription = "Collapse")
+            InfoIconButton(onClick = {}, contentDescription = "Info")
+            DismissCloseButton(onClick = {}, contentDescription = "Dismiss")
+            RowCancelButton(onClick = {}, contentDescription = "Cancel")
+            RowCancelButton(onClick = {}, contentDescription = "Cancel", enabled = false)
+        }
     }
-}

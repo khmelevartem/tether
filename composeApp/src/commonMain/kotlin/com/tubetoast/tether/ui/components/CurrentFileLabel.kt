@@ -14,7 +14,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import com.tubetoast.tether.ui.preview.LightDarkPreview
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import com.tubetoast.tether.ui.preview.PreviewSurface
+import com.tubetoast.tether.ui.preview.Themes
 import com.tubetoast.tether.ui.theme.TetherTheme
 
 @Composable
@@ -79,15 +81,17 @@ internal fun middleEllipsize(text: String, availableWidth: Int, fits: (String) -
 
 @Preview(name = "CurrentFileLabel — short name")
 @Composable
-private fun PreviewCurrentFileLabelShort() = LightDarkPreview {
-    CurrentFileLabel(
-        fileName = "photo.jpg",
-        contentDescription = "Currently sending: photo.jpg",
-    )
-}
+private fun PreviewCurrentFileLabelShort(@PreviewParameter(Themes::class) dark: Boolean) =
+    PreviewSurface(darkTheme = dark) {
+        CurrentFileLabel(
+            fileName = "photo.jpg",
+            contentDescription = "Currently sending: photo.jpg",
+        )
+    }
 
 @Preview(name = "CurrentFileLabel — long name")
 @Composable
-private fun PreviewCurrentFileLabelLong() = LightDarkPreview {
-    CurrentFileLabel(fileName = "very_long_document_name_that_might_overflow_the_available_width.pdf")
-}
+private fun PreviewCurrentFileLabelLong(@PreviewParameter(Themes::class) dark: Boolean) =
+    PreviewSurface(darkTheme = dark) {
+        CurrentFileLabel(fileName = "very_long_document_name_that_might_overflow_the_available_width.pdf")
+    }

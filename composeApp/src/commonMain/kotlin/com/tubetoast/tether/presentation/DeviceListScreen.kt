@@ -22,12 +22,14 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.ui.components.BrandMark
 import com.tubetoast.tether.ui.components.BrandMarkState
-import com.tubetoast.tether.ui.preview.LightDarkPreview
 import com.tubetoast.tether.ui.preview.PreviewFixtures
+import com.tubetoast.tether.ui.preview.PreviewSurface
+import com.tubetoast.tether.ui.preview.Themes
 import com.tubetoast.tether.ui.theme.TetherTheme
 
 @Composable
@@ -102,27 +104,30 @@ private fun DeviceListContent(
 
 @Preview(name = "Discovering — empty")
 @Composable
-private fun PreviewDiscovering() = LightDarkPreview {
-    DeviceListContent(
-        devices = PreviewFixtures.emptyDevices,
-        onDeviceClick = {},
-    )
-}
+private fun PreviewDiscovering(@PreviewParameter(Themes::class) dark: Boolean) =
+    PreviewSurface(darkTheme = dark) {
+        DeviceListContent(
+            devices = PreviewFixtures.emptyDevices,
+            onDeviceClick = {},
+        )
+    }
 
 @Preview(name = "Single device")
 @Composable
-private fun PreviewSingleDevice() = LightDarkPreview {
-    DeviceListContent(
-        devices = PreviewFixtures.singleDevice,
-        onDeviceClick = {},
-    )
-}
+private fun PreviewSingleDevice(@PreviewParameter(Themes::class) dark: Boolean) =
+    PreviewSurface(darkTheme = dark) {
+        DeviceListContent(
+            devices = PreviewFixtures.singleDevice,
+            onDeviceClick = {},
+        )
+    }
 
 @Preview(name = "Multiple devices")
 @Composable
-private fun PreviewMultipleDevices() = LightDarkPreview {
-    DeviceListContent(
-        devices = PreviewFixtures.multipleDevices,
-        onDeviceClick = {},
-    )
-}
+private fun PreviewMultipleDevices(@PreviewParameter(Themes::class) dark: Boolean) =
+    PreviewSurface(darkTheme = dark) {
+        DeviceListContent(
+            devices = PreviewFixtures.multipleDevices,
+            onDeviceClick = {},
+        )
+    }

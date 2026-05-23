@@ -6,7 +6,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
-import com.tubetoast.tether.ui.preview.LightDarkPreview
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import com.tubetoast.tether.ui.preview.PreviewSurface
+import com.tubetoast.tether.ui.preview.Themes
 import com.tubetoast.tether.ui.theme.TetherTheme
 import com.tubetoast.tether.util.formatBytes
 
@@ -56,31 +58,34 @@ private fun buildProgressText(
 
 @Preview(name = "ByteProgressRow — with total and rate")
 @Composable
-private fun PreviewByteProgressRowFull() = LightDarkPreview {
-    ByteProgressRow(
-        sentBytes = 52_428_800L,
-        totalBytes = 104_857_600L,
-        bytesPerSecond = 5_242_880L,
-        contentDescription = "Transfer speed: 5 MB/s",
-    )
-}
+private fun PreviewByteProgressRowFull(@PreviewParameter(Themes::class) dark: Boolean) =
+    PreviewSurface(darkTheme = dark) {
+        ByteProgressRow(
+            sentBytes = 52_428_800L,
+            totalBytes = 104_857_600L,
+            bytesPerSecond = 5_242_880L,
+            contentDescription = "Transfer speed: 5 MB/s",
+        )
+    }
 
 @Preview(name = "ByteProgressRow — no total, calculating")
 @Composable
-private fun PreviewByteProgressRowCalculating() = LightDarkPreview {
-    ByteProgressRow(
-        sentBytes = 52_428_800L,
-        totalBytes = null,
-        bytesPerSecond = null,
-    )
-}
+private fun PreviewByteProgressRowCalculating(@PreviewParameter(Themes::class) dark: Boolean) =
+    PreviewSurface(darkTheme = dark) {
+        ByteProgressRow(
+            sentBytes = 52_428_800L,
+            totalBytes = null,
+            bytesPerSecond = null,
+        )
+    }
 
 @Preview(name = "ByteProgressRow — with total, calculating speed")
 @Composable
-private fun PreviewByteProgressRowNoRate() = LightDarkPreview {
-    ByteProgressRow(
-        sentBytes = 52_428_800L,
-        totalBytes = 104_857_600L,
-        bytesPerSecond = null,
-    )
-}
+private fun PreviewByteProgressRowNoRate(@PreviewParameter(Themes::class) dark: Boolean) =
+    PreviewSurface(darkTheme = dark) {
+        ByteProgressRow(
+            sentBytes = 52_428_800L,
+            totalBytes = 104_857_600L,
+            bytesPerSecond = null,
+        )
+    }

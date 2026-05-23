@@ -8,9 +8,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.tubetoast.tether.ui.preview.LightDarkPreview
+import com.tubetoast.tether.ui.preview.PreviewSurface
+import com.tubetoast.tether.ui.preview.Themes
 import com.tubetoast.tether.ui.theme.TetherTheme
 
 /** Matches `TetherSpacing.xs` (4dp) for visual consistency with the spacing scale. */
@@ -32,6 +34,5 @@ fun PeerIdentityAccent(
 
 @Preview(name = "PeerIdentityAccent")
 @Composable
-private fun PreviewPeerIdentityAccent() = LightDarkPreview {
-    PeerIdentityAccent(identityColor = TetherTheme.colors.peerIdentity)
-}
+private fun PreviewPeerIdentityAccent(@PreviewParameter(Themes::class) dark: Boolean) =
+    PreviewSurface(darkTheme = dark) { PeerIdentityAccent(identityColor = TetherTheme.colors.peerIdentity) }

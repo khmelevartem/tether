@@ -12,7 +12,9 @@ import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
-import com.tubetoast.tether.ui.preview.LightDarkPreview
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import com.tubetoast.tether.ui.preview.PreviewSurface
+import com.tubetoast.tether.ui.preview.Themes
 import com.tubetoast.tether.ui.theme.TetherTheme
 import com.tubetoast.tether.ui.theme.tetherMinTouchTarget
 
@@ -98,12 +100,13 @@ fun ShowDetailsButton(
 
 @Preview(name = "Text buttons")
 @Composable
-private fun PreviewTextButtons() = LightDarkPreview {
-    androidx.compose.foundation.layout.Row {
-        CancelTextButton(onClick = {}, contentDescription = "Cancel transfer")
-        CancelTextButton(onClick = {}, contentDescription = "Cancel transfer", enabled = false)
-        RetryTextButton(onClick = {}, contentDescription = "Retry sending")
-        RetryTextButton(onClick = {}, contentDescription = "Retry sending", enabled = false)
-        ShowDetailsButton(onClick = {}, contentDescription = "Show transfer details")
+private fun PreviewTextButtons(@PreviewParameter(Themes::class) dark: Boolean) =
+    PreviewSurface(darkTheme = dark) {
+        androidx.compose.foundation.layout.Row {
+            CancelTextButton(onClick = {}, contentDescription = "Cancel transfer")
+            CancelTextButton(onClick = {}, contentDescription = "Cancel transfer", enabled = false)
+            RetryTextButton(onClick = {}, contentDescription = "Retry sending")
+            RetryTextButton(onClick = {}, contentDescription = "Retry sending", enabled = false)
+            ShowDetailsButton(onClick = {}, contentDescription = "Show transfer details")
+        }
     }
-}

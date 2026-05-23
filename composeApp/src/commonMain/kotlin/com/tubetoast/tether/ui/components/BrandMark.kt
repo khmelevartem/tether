@@ -26,8 +26,10 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
-import com.tubetoast.tether.ui.preview.LightDarkPreview
+import com.tubetoast.tether.ui.preview.PreviewSurface
+import com.tubetoast.tether.ui.preview.Themes
 import com.tubetoast.tether.ui.theme.TetherTheme
 import kotlinx.coroutines.delay
 
@@ -345,36 +347,30 @@ private fun DrawScope.drawRightDot(
 
 @Preview(name = "BrandMark — Idle")
 @Composable
-private fun PreviewBrandMarkIdle() = LightDarkPreview {
-    BrandMark(BrandMarkState.Idle)
-}
+private fun PreviewBrandMarkIdle(@PreviewParameter(Themes::class) dark: Boolean) =
+    PreviewSurface(darkTheme = dark) { BrandMark(BrandMarkState.Idle) }
 
 @Preview(name = "BrandMark — Searching")
 @Composable
-private fun PreviewBrandMarkSearching() = LightDarkPreview {
-    BrandMark(BrandMarkState.Searching)
-}
+private fun PreviewBrandMarkSearching(@PreviewParameter(Themes::class) dark: Boolean) =
+    PreviewSurface(darkTheme = dark) { BrandMark(BrandMarkState.Searching) }
 
 @Preview(name = "BrandMark — Progress 60%")
 @Composable
-private fun PreviewBrandMarkProgress() = LightDarkPreview {
-    BrandMark(BrandMarkState.TransferProgress(progress = 0.6f))
-}
+private fun PreviewBrandMarkProgress(@PreviewParameter(Themes::class) dark: Boolean) =
+    PreviewSurface(darkTheme = dark) { BrandMark(BrandMarkState.TransferProgress(progress = 0.6f)) }
 
 @Preview(name = "BrandMark — Success")
 @Composable
-private fun PreviewBrandMarkSuccess() = LightDarkPreview {
-    BrandMark(BrandMarkState.Success)
-}
+private fun PreviewBrandMarkSuccess(@PreviewParameter(Themes::class) dark: Boolean) =
+    PreviewSurface(darkTheme = dark) { BrandMark(BrandMarkState.Success) }
 
 @Preview(name = "BrandMark — Error 40%")
 @Composable
-private fun PreviewBrandMarkError() = LightDarkPreview {
-    BrandMark(BrandMarkState.Error(progress = 0.4f))
-}
+private fun PreviewBrandMarkError(@PreviewParameter(Themes::class) dark: Boolean) =
+    PreviewSurface(darkTheme = dark) { BrandMark(BrandMarkState.Error(progress = 0.4f)) }
 
 @Preview(name = "BrandMark — Disconnected")
 @Composable
-private fun PreviewBrandMarkDisconnected() = LightDarkPreview {
-    BrandMark(BrandMarkState.Disconnected)
-}
+private fun PreviewBrandMarkDisconnected(@PreviewParameter(Themes::class) dark: Boolean) =
+    PreviewSurface(darkTheme = dark) { BrandMark(BrandMarkState.Disconnected) }
