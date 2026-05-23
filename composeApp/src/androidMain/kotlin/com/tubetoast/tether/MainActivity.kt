@@ -13,7 +13,7 @@ import androidx.core.content.ContextCompat
 import com.arkivanov.decompose.retainedComponent
 import com.tubetoast.tether.di.AppContainerProvider
 import com.tubetoast.tether.network.TetherForegroundService
-import com.tubetoast.tether.presentation.DeviceListComponent
+import com.tubetoast.tether.presentation.RootContent
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.warn
 import ru.pocketbyte.kydra.log.wrapper.withTag
@@ -46,14 +46,9 @@ class MainActivity : ComponentActivity() {
         startService()
 
         val container = (application as AppContainerProvider).container
-        val component = retainedComponent { componentContext ->
-            DeviceListComponent(
-                componentContext = componentContext,
-                discovery = container.mdnsDiscovery,
-            )
-        }
+        val component = retainedComponent { container.rootComponentFactory.create(it) }
         setContent {
-            App(component)
+            RootContent(component)
         }
     }
 

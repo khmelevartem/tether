@@ -10,7 +10,7 @@ import com.arkivanov.essenty.lifecycle.stop
 import com.tubetoast.tether.di.DefaultIosAppConfig
 import com.tubetoast.tether.di.IosAppContainer
 import com.tubetoast.tether.logging.initLogging
-import com.tubetoast.tether.presentation.DeviceListComponent
+import com.tubetoast.tether.presentation.RootContent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -23,11 +23,7 @@ fun MainViewController() = run {
     initLogging()
     val container = IosAppContainer(DefaultIosAppConfig())
     val lifecycle = LifecycleRegistry()
-    val context = DefaultComponentContext(lifecycle)
-    val component = DeviceListComponent(
-        componentContext = context,
-        discovery = container.mdnsDiscovery,
-    )
+    val component = container.rootComponentFactory.create(DefaultComponentContext(lifecycle))
     ComposeUIViewController {
         DisposableEffect(Unit) {
             lifecycle.resume()
@@ -48,6 +44,6 @@ fun MainViewController() = run {
                 lifecycle.destroy()
             }
         }
-        App(component)
+        RootContent(component)
     }
 }

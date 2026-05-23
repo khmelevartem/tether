@@ -10,7 +10,7 @@ import com.tubetoast.tether.di.DefaultDesktopAppConfig
 import com.tubetoast.tether.di.DesktopAppContainer
 import com.tubetoast.tether.logging.initTetherLogging
 import com.tubetoast.tether.logging.isDebugEnabled
-import com.tubetoast.tether.presentation.DeviceListComponent
+import com.tubetoast.tether.presentation.RootContent
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.compose.resources.painterResource
 import tether.composeapp.generated.resources.Res
@@ -26,10 +26,7 @@ fun main() = runBlocking {
     registerShutdownHook(handle)
 
     val lifecycle = LifecycleRegistry()
-    val component = DeviceListComponent(
-        componentContext = DefaultComponentContext(lifecycle),
-        discovery = container.mdnsDiscovery,
-    )
+    val component = container.rootComponentFactory.create(DefaultComponentContext(lifecycle))
     lifecycle.resume()
 
     application {
@@ -41,7 +38,7 @@ fun main() = runBlocking {
             title = "Tether",
             icon = painterResource(Res.drawable.icon),
         ) {
-            App(component)
+            RootContent(component)
         }
     }
 }
