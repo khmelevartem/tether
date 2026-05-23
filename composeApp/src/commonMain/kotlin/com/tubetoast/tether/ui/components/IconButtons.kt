@@ -1,5 +1,6 @@
 package com.tubetoast.tether.ui.components
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -36,7 +37,7 @@ private fun TetherIcon(
     alpha: Float = 1f,
 ) {
     val painter = rememberVectorPainter(imageVector)
-    androidx.compose.foundation.Image(
+    Image(
         painter = painter,
         contentDescription = null,
         colorFilter = ColorFilter.tint(tint),

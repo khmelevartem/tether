@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -21,10 +22,15 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.theme.TetherTheme
+import kotlinx.coroutines.delay
 
 sealed interface BrandMarkState {
     data object Idle : BrandMarkState
@@ -45,15 +51,31 @@ sealed interface BrandMarkState {
 }
 
 object BrandMark {
-    val DefaultWidth = 64.dp
+    val DefaultWidth = 96.dp
     val DefaultHeight = 24.dp
+}
+
+private fun BrandMarkState.defaultContentDescription(): String? = when (this) {
+    is BrandMarkState.TransferProgress -> "Transfer in progress"
+    is BrandMarkState.Success -> "Transfer complete"
+    is BrandMarkState.Error -> "Transfer failed"
+    is BrandMarkState.Searching -> "Searching for peer"
+    else -> null
 }
 
 @Composable
 fun BrandMark(
     state: BrandMarkState,
     modifier: Modifier = Modifier,
+    contentDescription: String? = null,
 ) {
+    val effectiveContentDescription = contentDescription ?: state.defaultContentDescription()
+    val semanticsModifier = if (effectiveContentDescription != null) {
+        modifier.semantics { this.contentDescription = effectiveContentDescription }
+    } else {
+        modifier
+    }
+
     val accentColor = TetherTheme.colors.accent
     val peerColor = TetherTheme.colors.peerIdentity
     val lineColor = TetherTheme.colors.textPrimary
@@ -72,7 +94,7 @@ fun BrandMark(
                 label = "rightDotAlpha",
             )
             BrandMarkCanvas(
-                modifier = modifier,
+                modifier = semanticsModifier,
                 accentColor = accentColor,
                 peerColor = peerColor,
                 lineColor = lineColor,
@@ -85,8 +107,9 @@ fun BrandMark(
         }
 
         is BrandMarkState.Success -> {
-            var rightDotColorFraction by remember { mutableFloatStateOf(0f) }
-            var rightDotScale by remember { mutableFloatStateOf(1f) }
+            var generation by remember { mutableIntStateOf(0) }
+            var rightDotColorFraction by remember(generation) { mutableFloatStateOf(0f) }
+            var rightDotScale by remember(generation) { mutableFloatStateOf(1f) }
             val animatedColorFraction by animateFloatAsState(
                 targetValue = rightDotColorFraction,
                 animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
@@ -97,17 +120,18 @@ fun BrandMark(
                 animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
                 label = "successScale",
             )
-            LaunchedEffect(Unit) {
+            LaunchedEffect(state) {
+                generation++
                 rightDotColorFraction = 1f
                 rightDotScale = 1.05f
-                kotlinx.coroutines.delay(200)
-                kotlinx.coroutines.delay(300)
+                delay(200)
+                delay(300)
                 rightDotColorFraction = 0f
                 rightDotScale = 1f
             }
             val rightDotColorOverride = lerp(peerColor, accentColor, animatedColorFraction)
             BrandMarkCanvas(
-                modifier = modifier,
+                modifier = semanticsModifier,
                 accentColor = accentColor,
                 peerColor = peerColor,
                 lineColor = lineColor,
@@ -121,7 +145,7 @@ fun BrandMark(
 
         else -> {
             BrandMarkCanvas(
-                modifier = modifier,
+                modifier = semanticsModifier,
                 accentColor = accentColor,
                 peerColor = peerColor,
                 lineColor = lineColor,
@@ -184,147 +208,182 @@ private fun DrawScope.drawBrandMarkContent(
     rightDotScale: Float,
     rightDotColorOverride: Color?,
 ) {
-    // Draw connecting line or dashed segments
+    drawConnectingLine(state, leftCenter, rightCenter, strokeWeight, accentColor, lineColor)
+    drawLeftDot(accentColor, r, leftCenter)
+    drawRightDot(
+        state,
+        errorColor,
+        peerColor,
+        rightDotColorOverride,
+        rightDotAlpha,
+        rightDotScale,
+        r,
+        rightCenter,
+        strokeWeight,
+    )
+}
+
+private fun DrawScope.drawConnectingLine(
+    state: BrandMarkState,
+    leftCenter: Offset,
+    rightCenter: Offset,
+    strokeWeight: Float,
+    accentColor: Color,
+    lineColor: Color,
+) {
     when (state) {
-        is BrandMarkState.Disconnected -> {
-            // Two dashed segments: each length R, gap 2R between them
-            val segmentLength = r
-            val gapLength = 2 * r
-            val lineY = leftCenter.y
-            val startX = leftCenter.x
-            // Segment 1: startX to startX + R
-            drawLine(
-                color = lineColor,
-                start = Offset(startX, lineY),
-                end = Offset(startX + segmentLength, lineY),
-                strokeWidth = strokeWeight,
-                cap = StrokeCap.Butt,
-            )
-            // Segment 2: startX + R + 2R to rightCenter.x
-            drawLine(
-                color = lineColor,
-                start = Offset(startX + segmentLength + gapLength, lineY),
-                end = Offset(rightCenter.x, lineY),
-                strokeWidth = strokeWeight,
-                cap = StrokeCap.Butt,
-            )
-        }
-
-        is BrandMarkState.TransferProgress -> {
-            val progress = state.progress.coerceIn(0f, 1f)
-            val lineStart = leftCenter.x
-            val lineEnd = rightCenter.x
-            val lineLength = lineEnd - lineStart
-            val filledEnd = lineStart + lineLength * progress
-            if (progress > 0f) {
-                drawLine(
-                    color = accentColor,
-                    start = Offset(lineStart, leftCenter.y),
-                    end = Offset(filledEnd, leftCenter.y),
-                    strokeWidth = strokeWeight,
-                    cap = StrokeCap.Butt,
-                )
-            }
-            if (progress < 1f) {
-                drawLine(
-                    color = lineColor,
-                    start = Offset(filledEnd, leftCenter.y),
-                    end = Offset(lineEnd, leftCenter.y),
-                    strokeWidth = strokeWeight,
-                    cap = StrokeCap.Butt,
-                )
-            }
-        }
-
-        is BrandMarkState.Error -> {
-            val progress = state.progress.coerceIn(0f, 1f)
-            val lineStart = leftCenter.x
-            val lineEnd = rightCenter.x
-            val lineLength = lineEnd - lineStart
-            val filledEnd = lineStart + lineLength * progress
-            if (progress > 0f) {
-                drawLine(
-                    color = accentColor,
-                    start = Offset(lineStart, leftCenter.y),
-                    end = Offset(filledEnd, leftCenter.y),
-                    strokeWidth = strokeWeight,
-                    cap = StrokeCap.Butt,
-                )
-            }
-            // No line drawn beyond the failure point
-        }
-
-        is BrandMarkState.Success -> {
-            drawLine(
-                color = accentColor,
-                start = Offset(leftCenter.x, leftCenter.y),
-                end = Offset(rightCenter.x, rightCenter.y),
-                strokeWidth = strokeWeight,
-                cap = StrokeCap.Butt,
-            )
-        }
-
-        else -> {
-            drawLine(
-                color = lineColor,
-                start = Offset(leftCenter.x, leftCenter.y),
-                end = Offset(rightCenter.x, rightCenter.y),
-                strokeWidth = strokeWeight,
-                cap = StrokeCap.Butt,
-            )
-        }
+        is BrandMarkState.Disconnected -> drawDisconnectedLine(leftCenter, rightCenter, strokeWeight, lineColor)
+        is BrandMarkState.TransferProgress -> drawProgressLine(
+            state.progress,
+            leftCenter,
+            rightCenter,
+            strokeWeight,
+            accentColor,
+            lineColor,
+        )
+        is BrandMarkState.Error -> drawErrorLine(state.progress, leftCenter, rightCenter, strokeWeight, accentColor)
+        is BrandMarkState.Success -> drawLine(
+            color = accentColor,
+            start = Offset(leftCenter.x, leftCenter.y),
+            end = Offset(rightCenter.x, rightCenter.y),
+            strokeWidth = strokeWeight,
+            cap = StrokeCap.Butt,
+        )
+        else -> drawLine(
+            color = lineColor,
+            start = Offset(leftCenter.x, leftCenter.y),
+            end = Offset(rightCenter.x, rightCenter.y),
+            strokeWidth = strokeWeight,
+            cap = StrokeCap.Butt,
+        )
     }
+}
 
-    // Draw left dot (always solid accent)
+private fun DrawScope.drawDisconnectedLine(
+    leftCenter: Offset,
+    rightCenter: Offset,
+    strokeWeight: Float,
+    lineColor: Color,
+) {
+    val r = leftCenter.x
+    val segmentLength = r
+    val gapLength = 2 * r
+    val lineY = leftCenter.y
+    val startX = leftCenter.x
+    drawLine(
+        color = lineColor,
+        start = Offset(startX, lineY),
+        end = Offset(startX + segmentLength, lineY),
+        strokeWidth = strokeWeight,
+        cap = StrokeCap.Butt,
+    )
+    drawLine(
+        color = lineColor,
+        start = Offset(startX + segmentLength + gapLength, lineY),
+        end = Offset(rightCenter.x, lineY),
+        strokeWidth = strokeWeight,
+        cap = StrokeCap.Butt,
+    )
+}
+
+private fun DrawScope.drawProgressLine(
+    progress: Float,
+    leftCenter: Offset,
+    rightCenter: Offset,
+    strokeWeight: Float,
+    accentColor: Color,
+    lineColor: Color,
+) {
+    val clamped = progress.coerceIn(0f, 1f)
+    val lineStart = leftCenter.x
+    val lineEnd = rightCenter.x
+    val lineLength = lineEnd - lineStart
+    val filledEnd = lineStart + lineLength * clamped
+    if (clamped > 0f) {
+        drawLine(
+            color = accentColor,
+            start = Offset(lineStart, leftCenter.y),
+            end = Offset(filledEnd, leftCenter.y),
+            strokeWidth = strokeWeight,
+            cap = StrokeCap.Butt,
+        )
+    }
+    if (clamped < 1f) {
+        drawLine(
+            color = lineColor,
+            start = Offset(filledEnd, leftCenter.y),
+            end = Offset(lineEnd, leftCenter.y),
+            strokeWidth = strokeWeight,
+            cap = StrokeCap.Butt,
+        )
+    }
+}
+
+private fun DrawScope.drawErrorLine(
+    progress: Float,
+    leftCenter: Offset,
+    rightCenter: Offset,
+    strokeWeight: Float,
+    accentColor: Color,
+) {
+    val clamped = progress.coerceIn(0f, 1f)
+    val lineStart = leftCenter.x
+    val lineEnd = rightCenter.x
+    val lineLength = lineEnd - lineStart
+    val filledEnd = lineStart + lineLength * clamped
+    if (clamped > 0f) {
+        drawLine(
+            color = accentColor,
+            start = Offset(lineStart, leftCenter.y),
+            end = Offset(filledEnd, leftCenter.y),
+            strokeWidth = strokeWeight,
+            cap = StrokeCap.Butt,
+        )
+    }
+}
+
+private fun DrawScope.drawLeftDot(accentColor: Color, r: Float, leftCenter: Offset) {
     drawCircle(
         color = accentColor,
         radius = r,
         center = leftCenter,
     )
+}
 
-    // Draw right dot
+private fun DrawScope.drawRightDot(
+    state: BrandMarkState,
+    errorColor: Color,
+    peerColor: Color,
+    rightDotColorOverride: Color?,
+    rightDotAlpha: Float,
+    rightDotScale: Float,
+    r: Float,
+    rightCenter: Offset,
+    strokeWeight: Float,
+) {
     val effectivePeerColor = rightDotColorOverride ?: peerColor
     val scaledR = r * rightDotScale
 
     when (state) {
-        is BrandMarkState.Searching -> {
-            // Hollow right dot: stroke only
-            drawCircle(
-                color = effectivePeerColor.copy(alpha = rightDotAlpha),
-                radius = scaledR - strokeWeight / 2f,
-                center = rightCenter,
-                style = androidx.compose.ui.graphics.drawscope
-                    .Stroke(strokeWeight),
-            )
-        }
-
-        is BrandMarkState.Error -> {
-            // Hollow right dot in error color
-            drawCircle(
-                color = errorColor,
-                radius = scaledR - strokeWeight / 2f,
-                center = rightCenter,
-                style = androidx.compose.ui.graphics.drawscope
-                    .Stroke(strokeWeight),
-            )
-        }
-
-        else -> {
-            drawCircle(
-                color = effectivePeerColor.copy(alpha = rightDotAlpha),
-                radius = scaledR,
-                center = rightCenter,
-            )
-        }
+        is BrandMarkState.Searching -> drawCircle(
+            color = effectivePeerColor.copy(alpha = rightDotAlpha),
+            radius = scaledR - strokeWeight / 2f,
+            center = rightCenter,
+            style = Stroke(strokeWeight),
+        )
+        is BrandMarkState.Error -> drawCircle(
+            color = errorColor,
+            radius = scaledR - strokeWeight / 2f,
+            center = rightCenter,
+            style = Stroke(strokeWeight),
+        )
+        else -> drawCircle(
+            color = effectivePeerColor.copy(alpha = rightDotAlpha),
+            radius = scaledR,
+            center = rightCenter,
+        )
     }
 }
-
-private fun lerp(a: Color, b: Color, fraction: Float): Color = Color(
-    red = a.red + (b.red - a.red) * fraction,
-    green = a.green + (b.green - a.green) * fraction,
-    blue = a.blue + (b.blue - a.blue) * fraction,
-    alpha = a.alpha + (b.alpha - a.alpha) * fraction,
-)
 
 @Preview(name = "BrandMark — Idle (Light)")
 @Composable
@@ -366,6 +425,35 @@ private fun PreviewBrandMarkDisconnected() {
 @Composable
 private fun PreviewBrandMarkIdleDark() {
     PreviewSurface(darkTheme = true) { BrandMark(BrandMarkState.Idle) }
+}
+
+@Preview(name = "BrandMark — Searching (Dark)")
+@Composable
+private fun PreviewBrandMarkSearchingDark() {
+    PreviewSurface(darkTheme = true) { BrandMark(BrandMarkState.Searching) }
+}
+
+@Preview(name = "BrandMark — Progress 60% (Dark)")
+@Composable
+private fun PreviewBrandMarkProgressDark() {
+    PreviewSurface(darkTheme = true) { BrandMark(BrandMarkState.TransferProgress(progress = 0.6f)) }
+}
+
+@Preview(name = "BrandMark — Success (Dark)")
+@Composable
+private fun PreviewBrandMarkSuccessDark() {
+    PreviewSurface(darkTheme = true) { BrandMark(BrandMarkState.Success) }
+}
+
+@Preview(name = "BrandMark — Error 40% (Dark)")
+@Composable
+private fun PreviewBrandMarkErrorDark() {
+    PreviewSurface(darkTheme = true) {
+        BrandMark(
+            state = BrandMarkState.Error(progress = 0.4f),
+            modifier = Modifier.size(192.dp, 48.dp),
+        )
+    }
 }
 
 @Preview(name = "BrandMark — Disconnected (Dark)")

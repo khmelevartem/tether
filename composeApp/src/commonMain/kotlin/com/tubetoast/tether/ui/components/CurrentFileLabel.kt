@@ -1,5 +1,6 @@
 package com.tubetoast.tether.ui.components
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -7,6 +8,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
@@ -28,33 +31,30 @@ fun CurrentFileLabel(
     var availableWidth by remember { mutableStateOf(Int.MAX_VALUE) }
 
     val displayText = remember(fileName, availableWidth, style) {
-        middleEllipsize(fileName, textMeasurer, style, availableWidth)
+        middleEllipsize(fileName, availableWidth) { candidate ->
+            val result = textMeasurer.measure(candidate, style, maxLines = 1)
+            result.size.width <= availableWidth
+        }
     }
 
-    BasicText(
-        text = displayText,
-        style = style,
-        maxLines = 1,
-        overflow = TextOverflow.Clip,
-        modifier = modifier,
-        onTextLayout = { result ->
-            availableWidth = result.size.width
-        },
-    )
+    Box(
+        modifier = modifier.onSizeChanged { availableWidth = it.width },
+    ) {
+        BasicText(
+            text = displayText,
+            style = style,
+            maxLines = 1,
+            overflow = TextOverflow.Clip,
+        )
+    }
 }
 
-private fun middleEllipsize(
-    text: String,
-    measurer: androidx.compose.ui.text.TextMeasurer,
-    style: TextStyle,
-    availableWidth: Int,
-): String {
+internal fun middleEllipsize(text: String, availableWidth: Int, fits: (String) -> Boolean): String {
+    if (text.isEmpty()) return "…"
     if (availableWidth == Int.MAX_VALUE) return text
-    val measured = measurer.measure(text, style, maxLines = 1)
-    if (!measured.hasVisualOverflow) return text
+    if (fits(text)) return text
 
     val ellipsis = "…"
-    // Binary search on head length, keeping equal tail
     var lo = 0
     var hi = text.length / 2
     var result = ellipsis
@@ -63,8 +63,7 @@ private fun middleEllipsize(
         val head = text.take(mid)
         val tail = text.takeLast(mid)
         val candidate = "$head$ellipsis$tail"
-        val candidateMeasured = measurer.measure(candidate, style, maxLines = 1)
-        if (candidateMeasured.size.width <= availableWidth) {
+        if (fits(candidate)) {
             result = candidate
             lo = mid + 1
         } else {
@@ -72,6 +71,15 @@ private fun middleEllipsize(
         }
     }
     return result
+}
+
+internal fun middleEllipsize(
+    text: String,
+    measurer: TextMeasurer,
+    style: TextStyle,
+    availableWidth: Int,
+): String = middleEllipsize(text, availableWidth) { candidate ->
+    measurer.measure(candidate, style, maxLines = 1).size.width <= availableWidth
 }
 
 @Preview(name = "CurrentFileLabel — short name")

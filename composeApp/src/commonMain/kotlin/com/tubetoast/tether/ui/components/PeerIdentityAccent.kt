@@ -11,6 +11,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.tubetoast.tether.ui.preview.PreviewSurface
+import com.tubetoast.tether.ui.theme.TetherTheme
 
 /**
  * A narrow vertical strip rendered as a standalone composable on the leading edge of a row.
@@ -36,7 +37,7 @@ fun PeerIdentityAccent(
 @Composable
 private fun PreviewPeerIdentityAccentLight() {
     PreviewSurface {
-        PeerIdentityAccent(identityColor = Color(0xFFC77E47))
+        PeerIdentityAccent(identityColor = TetherTheme.colors.peerIdentity)
     }
 }
 
@@ -44,6 +45,6 @@ private fun PreviewPeerIdentityAccentLight() {
 @Composable
 private fun PreviewPeerIdentityAccentDark() {
     PreviewSurface(darkTheme = true) {
-        PeerIdentityAccent(identityColor = Color(0xFFD89968))
+        PeerIdentityAccent(identityColor = TetherTheme.colors.peerIdentity)
     }
 }

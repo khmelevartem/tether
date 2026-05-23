@@ -13,8 +13,9 @@ fun ByteProgressRow(
     totalBytes: Long?,
     bytesPerSecond: Long?,
     modifier: Modifier = Modifier,
+    calculatingPlaceholder: String = "Calculating…",
 ) {
-    val text = buildProgressText(sentBytes, totalBytes, bytesPerSecond)
+    val text = buildProgressText(sentBytes, totalBytes, bytesPerSecond, calculatingPlaceholder)
     BasicText(
         text = text,
         style = TetherTheme.typography.numeric.copy(color = TetherTheme.colors.textPrimary),
@@ -22,7 +23,12 @@ fun ByteProgressRow(
     )
 }
 
-private fun buildProgressText(sentBytes: Long, totalBytes: Long?, bytesPerSecond: Long?): String {
+private fun buildProgressText(
+    sentBytes: Long,
+    totalBytes: Long?,
+    bytesPerSecond: Long?,
+    calculatingPlaceholder: String,
+): String {
     val sent = formatBytes(sentBytes)
     return buildString {
         if (totalBytes != null) {
@@ -30,17 +36,27 @@ private fun buildProgressText(sentBytes: Long, totalBytes: Long?, bytesPerSecond
         } else {
             append(sent)
         }
+        append(" · ")
         if (bytesPerSecond != null) {
-            append(" · ${formatBytes(bytesPerSecond)}/s")
+            append("${formatBytes(bytesPerSecond)}/s")
+        } else {
+            append(calculatingPlaceholder)
         }
     }
 }
 
-private fun formatBytes(bytes: Long): String = when {
-    bytes >= 1_073_741_824L -> "%.1f GB".format(bytes / 1_073_741_824.0)
-    bytes >= 1_048_576L -> "%.1f MB".format(bytes / 1_048_576.0)
-    bytes >= 1_024L -> "%.1f KB".format(bytes / 1_024.0)
+internal fun formatBytes(bytes: Long): String = when {
+    bytes >= 1_073_741_824L -> "${formatOneDecimal(bytes / 1_073_741_824.0)} GB"
+    bytes >= 1_048_576L -> "${formatOneDecimal(bytes / 1_048_576.0)} MB"
+    bytes >= 1_024L -> "${formatOneDecimal(bytes / 1_024.0)} KB"
     else -> "$bytes B"
+}
+
+private fun formatOneDecimal(value: Double): String {
+    val rounded = kotlin.math.round(value * 10).toInt()
+    val whole = rounded / 10
+    val frac = rounded % 10
+    return "$whole.$frac"
 }
 
 @Preview(name = "ByteProgressRow — with total and rate")
@@ -55,9 +71,9 @@ private fun PreviewByteProgressRowFull() {
     }
 }
 
-@Preview(name = "ByteProgressRow — no total")
+@Preview(name = "ByteProgressRow — no total, calculating")
 @Composable
-private fun PreviewByteProgressRowNoTotal() {
+private fun PreviewByteProgressRowCalculating() {
     PreviewSurface {
         ByteProgressRow(
             sentBytes = 52_428_800L,
@@ -67,7 +83,7 @@ private fun PreviewByteProgressRowNoTotal() {
     }
 }
 
-@Preview(name = "ByteProgressRow — with total, no rate")
+@Preview(name = "ByteProgressRow — with total, calculating speed")
 @Composable
 private fun PreviewByteProgressRowNoRate() {
     PreviewSurface {

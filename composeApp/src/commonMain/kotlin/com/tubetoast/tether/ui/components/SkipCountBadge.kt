@@ -7,6 +7,8 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.theme.TetherTheme
@@ -26,10 +28,11 @@ fun SkipCountBadge(
         modifier = modifier
             .clip(shapes.sm)
             .background(colors.surfaceRaised)
-            .padding(horizontal = spacing.sm, vertical = spacing.xs),
+            .padding(horizontal = spacing.sm, vertical = spacing.xs)
+            .semantics { contentDescription = "$count files skipped so far" },
     ) {
         BasicText(
-            text = "$count skipped",
+            text = "$count files skipped",
             style = TetherTheme.typography.labelSmall.copy(color = colors.textMuted),
         )
     }

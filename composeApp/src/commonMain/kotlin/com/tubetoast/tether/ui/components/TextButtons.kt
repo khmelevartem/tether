@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
@@ -17,6 +18,7 @@ import com.tubetoast.tether.ui.theme.tetherMinTouchTarget
 @Composable
 fun CancelTextButton(
     onClick: () -> Unit,
+    contentDescription: String,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
@@ -25,7 +27,10 @@ fun CancelTextButton(
         modifier = modifier
             .tetherMinTouchTarget()
             .clickable(enabled = enabled, onClick = onClick)
-            .semantics { role = Role.Button },
+            .semantics {
+                this.contentDescription = contentDescription
+                role = Role.Button
+            },
         contentAlignment = Alignment.Center,
     ) {
         BasicText(
@@ -40,6 +45,7 @@ fun CancelTextButton(
 @Composable
 fun RetryTextButton(
     onClick: () -> Unit,
+    contentDescription: String,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
@@ -48,7 +54,10 @@ fun RetryTextButton(
         modifier = modifier
             .tetherMinTouchTarget()
             .clickable(enabled = enabled, onClick = onClick)
-            .semantics { role = Role.Button },
+            .semantics {
+                this.contentDescription = contentDescription
+                role = Role.Button
+            },
         contentAlignment = Alignment.Center,
     ) {
         BasicText(
@@ -63,6 +72,7 @@ fun RetryTextButton(
 @Composable
 fun ShowDetailsButton(
     onClick: () -> Unit,
+    contentDescription: String,
     modifier: Modifier = Modifier,
 ) {
     val colors = TetherTheme.colors
@@ -70,7 +80,10 @@ fun ShowDetailsButton(
         modifier = modifier
             .tetherMinTouchTarget()
             .clickable(onClick = onClick)
-            .semantics { role = Role.Button },
+            .semantics {
+                this.contentDescription = contentDescription
+                role = Role.Button
+            },
         contentAlignment = Alignment.Center,
     ) {
         BasicText(
@@ -85,11 +98,11 @@ fun ShowDetailsButton(
 private fun PreviewTextButtonsLight() {
     PreviewSurface {
         androidx.compose.foundation.layout.Row {
-            CancelTextButton(onClick = {})
-            CancelTextButton(onClick = {}, enabled = false)
-            RetryTextButton(onClick = {})
-            RetryTextButton(onClick = {}, enabled = false)
-            ShowDetailsButton(onClick = {})
+            CancelTextButton(onClick = {}, contentDescription = "Cancel transfer")
+            CancelTextButton(onClick = {}, contentDescription = "Cancel transfer", enabled = false)
+            RetryTextButton(onClick = {}, contentDescription = "Retry sending")
+            RetryTextButton(onClick = {}, contentDescription = "Retry sending", enabled = false)
+            ShowDetailsButton(onClick = {}, contentDescription = "Show transfer details")
         }
     }
 }
@@ -99,9 +112,9 @@ private fun PreviewTextButtonsLight() {
 private fun PreviewTextButtonsDark() {
     PreviewSurface(darkTheme = true) {
         androidx.compose.foundation.layout.Row {
-            CancelTextButton(onClick = {})
-            RetryTextButton(onClick = {})
-            ShowDetailsButton(onClick = {})
+            CancelTextButton(onClick = {}, contentDescription = "Cancel transfer")
+            RetryTextButton(onClick = {}, contentDescription = "Retry sending")
+            ShowDetailsButton(onClick = {}, contentDescription = "Show transfer details")
         }
     }
 }
