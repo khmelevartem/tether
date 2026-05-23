@@ -15,14 +15,30 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
+import com.tubetoast.tether.protocol.Device
+import com.tubetoast.tether.ui.preview.PreviewFixtures
+import com.tubetoast.tether.ui.preview.PreviewSurface
 
 @Composable
 fun DeviceListScreen(component: DeviceListComponent, modifier: Modifier = Modifier) {
     val state by component.state.subscribeAsState()
+    DeviceListContent(
+        devices = state.devices,
+        onDeviceClick = { /* TODO: navigate to file selection — #4b */ },
+        modifier = modifier,
+    )
+}
 
-    if (state.devices.isEmpty()) {
+@Composable
+fun DeviceListContent(
+    devices: List<Device>,
+    onDeviceClick: (Device) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (devices.isEmpty()) {
         Column(
             modifier = modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -38,9 +54,9 @@ fun DeviceListScreen(component: DeviceListComponent, modifier: Modifier = Modifi
         }
     } else {
         LazyColumn(modifier = modifier.fillMaxSize()) {
-            items(state.devices, key = { it.id }) { device ->
+            items(devices, key = { it.id }) { device ->
                 Card(
-                    onClick = { /* TODO: navigate to file selection — #4b */ },
+                    onClick = { onDeviceClick(device) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -58,5 +74,38 @@ fun DeviceListScreen(component: DeviceListComponent, modifier: Modifier = Modifi
                 }
             }
         }
+    }
+}
+
+@Preview(name = "Discovering — empty")
+@Composable
+private fun PreviewDiscovering() {
+    PreviewSurface {
+        DeviceListContent(
+            devices = PreviewFixtures.emptyDevices,
+            onDeviceClick = {},
+        )
+    }
+}
+
+@Preview(name = "Single device")
+@Composable
+private fun PreviewSingleDevice() {
+    PreviewSurface {
+        DeviceListContent(
+            devices = PreviewFixtures.singleDevice,
+            onDeviceClick = {},
+        )
+    }
+}
+
+@Preview(name = "Multiple devices")
+@Composable
+private fun PreviewMultipleDevices() {
+    PreviewSurface {
+        DeviceListContent(
+            devices = PreviewFixtures.multipleDevices,
+            onDeviceClick = {},
+        )
     }
 }

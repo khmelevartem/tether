@@ -21,19 +21,29 @@ gh pr diff <PR>
 
 Note the PR number `<PR>` and issue number `<N>` — pass both to every agent.
 
-## Step 2 — Pre-classify PR type
+## Step 2 — Render screenshots if needed
+
+If the PR diff touches `composeApp/src/**` AND PR type is not `DOCS` AND `composeApp/build/outputs/roborazzi/` is empty or missing, run:
+
+```bash
+./gradlew :composeApp:recordRoborazziDebug -q
+```
+
+This matches the same trigger in `/implement` Step 5. `review-visual` reads the resulting PNGs; without them it has nothing to compare.
+
+## Step 3 — Pre-classify PR type
 
 Read PR body and diff. Classify once: `FEATURE | BUGFIX | REFACTOR | INFRA | DOCS | DEPENDENCY`. Some agents skip based on type (see their frontmatter). Note which agents to skip; do not launch skipped ones.
 
 Skip matrix:
-- `DOCS` → skip `review-correctness`, `review-platform`, `review-tests`, `review-ux`, `review-architecture`
+- `DOCS` → skip `review-correctness`, `review-platform`, `review-tests`, `review-ux`, `review-visual`, `review-architecture`
 - `INFRA` → skip `review-tests`
 - pure `REFACTOR` → skip `review-correctness` (only behavior-preserving)
 - trivial one-call-site `BUGFIX` or cosmetic refactor (rename / extract method) with no new types / modules / seams → skip `review-architecture`
 - diff doesn't touch any platform source set → skip `review-platform`
-- diff doesn't touch `composeApp/src/**` → skip `review-ux` (when Compose is touched always dispatch; the agent itself decides skip vs. block on missing brief)
+- diff doesn't touch `composeApp/src/**` → skip `review-ux` and `review-visual` (when Compose is touched always dispatch both; each agent decides skip vs. block on missing brief / PNGs)
 
-## Step 3 — Wave 1: launch all applicable reviewers in parallel
+## Step 4 — Wave 1: launch all applicable reviewers in parallel
 
 Send a SINGLE message with multiple Agent tool calls (one per agent). Each prompt is identical structure:
 
@@ -48,10 +58,11 @@ Agents to launch (subject to skip matrix):
 - `review-correctness`
 - `review-tests`
 - `review-ux`
+- `review-visual` (reads PNGs from the record step in Step 2 above, or from `/implement` if already rendered)
 
 Each runs in its own context; their token usage does not pollute yours. Collect each `PHASE` block verbatim.
 
-## Step 4 — Wave 2: adversarial agent
+## Step 5 — Wave 2: adversarial agent
 
 After Wave 1 returns, launch `review-adversarial` with the combined findings:
 
@@ -59,7 +70,7 @@ After Wave 1 returns, launch `review-adversarial` with the combined findings:
 >
 > <paste each PHASE block from Wave 1>
 
-## Step 5 — Aggregate
+## Step 6 — Aggregate
 
 Compose the final review: `## Code Review` header, `PR_TYPE: <type>`, each agent's PHASE block in order (use `N/A — <reason>` for skipped agents), then:
 
@@ -71,7 +82,7 @@ REQUIRED_BEFORE_MERGE:
 
 `DECISION: APPROVE` only if every agent's decision is APPROVE AND there are zero `[REQUIRED]` items.
 
-## Step 6 — Post to GitHub (idempotent)
+## Step 7 — Post to GitHub (idempotent)
 
 Before posting, check whether this skill already left a review on this PR:
 

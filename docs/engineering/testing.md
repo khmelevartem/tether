@@ -63,6 +63,23 @@ Real-CIO server (`embeddedServer(CIO)`) под virtual time **не привод�
 
 Альтернативы удалению: `@Ignore` со ссылкой на tracking issue (тест поломан временно), упрощение теста (слишком тяжёлый), вынос в отдельный source set (платформ-специфичен).
 
+## Screenshot tests
+
+Roborazzi renders every `@Preview` composable to a PNG via Robolectric — no emulator required. ComposablePreviewScanner discovers all `@Preview` functions in `com.tubetoast.tether` via bytecode reflection; one generic parameterised test in `composeApp/src/androidUnitTest/` covers all of them without per-preview boilerplate.
+
+**Record PNGs** (initial capture or after intentional visual change):
+
+```bash
+./gradlew :composeApp:recordRoborazziDebug -q
+```
+
+PNGs land in `composeApp/build/outputs/roborazzi/`. Filenames encode the composable's FQN and the `@Preview` `name` parameter. `review-visual` reads these PNGs and compares them against the UX brief; baseline-diffing in CI is out of scope.
+
+**Rules for new `@Preview`s:**
+- Always target the stateless `XxxContent(state, callbacks)` variant of a composable, never the `XxxScreen(component)` wrapper. The wrapper depends on Decompose and cannot render under Robolectric.
+- Wrap every preview in `PreviewSurface { }` from `com.tubetoast.tether.ui.preview` for consistent theme + background.
+- Use fake state from `PreviewFixtures` in the same package — no inline data fabrication.
+
 ## Запуск
 
 ```bash

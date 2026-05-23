@@ -134,9 +134,10 @@ Per track (or sequentially if single track):
    - `review-platform` (if diff touches platform source sets)
    - `review-ux` (if diff touches `composeApp/src/**` — the agent itself decides skip vs. block on missing brief)
    - `review-ui` (if diff touches `composeApp/src/**`)
+   - `review-visual` (if diff touches `composeApp/src/**` — the agent itself decides skip vs. block on missing brief / PNGs)
    Skip `review-reuse` and `review-adversarial` here — they run in the simplify wave (Step 6) and the full review (Step 7).
 4. If every reviewer says `APPROVE` and zero `[REQUIRED]` → track done.
-5. Else → aggregate `[REQUIRED]` findings, dispatch the implementing agent again with the findings as input:
+5. Else → aggregate `[REQUIRED]` findings, dispatch the implementing agent again with the findings as input. Apply the same commit-before-review discipline as step 2:
 
 > Previous review found these issues that block the PR. Address each. For each finding, classify as pointwise or structural; for structural findings, do a symmetry pass per your agent definition — check sibling files, sibling methods, sibling platforms, sibling source sets for the same anti-pattern, and fix in this same pass. Do not change anything outside the PR's scope.
 >
@@ -161,14 +162,14 @@ Dispatch the implementing agent once more:
 > **Do not rephrase prose for brevity.** If a sentence is load-bearing and free of the issues above, leave its wording alone. Cut whole sentences when they fail the rule above; otherwise keep them as written. Word-count reduction on well-formed sentences is not a goal.
 > Do not change behavior; do not touch anything outside the diff. Run `./gradlew allTests -q` after.
 
-If anything was simplified — **закоммить simplification** (см. дисциплину Step 5 — reviewer'ы читают только committed diff), затем re-run **the same set of agents that ran in Step 5 for this PR type** (i.e. dod + guides + correctness + tests + platform-if-touched + ux-if-touched + ui-if-touched) **plus `review-reuse`** on the simplified diff. `review-reuse` is critical here because duplication is what most likely accumulated across iterations and tracks. `review-platform`, `review-ux`, and `review-ui` follow the same skip rules as Step 5 (platform set touched / `composeApp/src/**` touched). If clean, proceed.
+If anything was simplified — **закоммить simplification** (см. дисциплину Step 5 — reviewer'ы читают только committed diff), затем re-run **the same set of agents that ran in Step 5 for this PR type** (i.e. dod + guides + correctness + tests + platform-if-touched + ux-if-touched + ui-if-touched + visual-if-touched) **plus `review-reuse`** on the simplified diff. `review-reuse` is critical here because duplication is what most likely accumulated across iterations and tracks. `review-platform`, `review-ux`, `review-ui`, and `review-visual` follow the same skip rules as Step 5 (platform set touched / `composeApp/src/**` touched). If clean, proceed.
 
 ## Step 7 — Full pre-PR review (inline, not via /code-review skill)
 
 `/code-review` skill requires an existing PR (it posts via `gh pr review`). At this step the PR does not exist yet — Step 9 creates it. So instead of calling the skill, **orchestrate the same agent fan-out inline, without GitHub publication**:
 
 1. Перед Wave A — working tree должно быть чистым (committed). Если после Step 6 остались uncommitted правки — закоммить. Reviewer'ы читают `git diff main...HEAD`; uncommitted состояние вызывает stale-view findings.
-2. Wave A in parallel: `review-dod`, `review-guides`, `review-reuse`, plus (if applicable to PR type / diff) `review-architecture`, `review-correctness`, `review-tests`, `review-platform`, `review-ux`, `review-ui`. Each agent receives the issue number and is told to review the local working tree (`git diff main...HEAD`) instead of a PR. `review-ux` and `review-ui` both run whenever the diff touches `composeApp/src/**`; each agent decides skip vs. block.
+2. Wave A in parallel: `review-dod`, `review-guides`, `review-reuse`, plus (if applicable to PR type / diff) `review-architecture`, `review-correctness`, `review-tests`, `review-platform`, `review-ux`, `review-ui`, `review-visual`. Each agent receives the issue number and is told to review the local working tree (`git diff main...HEAD`) instead of a PR. `review-ux`, `review-ui`, and `review-visual` all run whenever the diff touches `composeApp/src/**`; each agent decides skip vs. block.
 3. Wave B: `review-adversarial` with the combined Wave A findings as input.
 4. Aggregate. Apply any `[REQUIRED]` via the implementing agent (with the symmetry-pass instruction). Re-run until approved or 2 iterations.
 
