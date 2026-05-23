@@ -24,7 +24,7 @@ Lives at [`docs/glossary.md`](../glossary.md), at the root of `docs/` rather tha
 The glossary has three sections, each holding terms native to one concern:
 
 - **Product** — user-facing concepts: *transfer*, *pairing*, *device list*, *trusted device*, *hotspot transfer*. The vocabulary spec-writer and ux-expert use.
-- **Technical** — engineering concepts: *discovery layer*, *rendezvous*, *composition root*, *container*, *expect/actual*, *source set*. The vocabulary the architect, coder, and reviewers use.
+- **Technical** — engineering concepts: *discovery*, *rendezvous*, *composition root*, *container*, *source set*. The vocabulary the architect, coder, and reviewers use.
 - **Platform mapping** — the canonical names of platforms and their Kotlin Multiplatform targets: *Android* → `androidTarget`, *Desktop* → `jvm("desktop")`, *iOS* → `iosArm64` / `iosSimulatorArm64`, *macOS* → `macosArm64`. Platform names and target names are not interchangeable: "JVM" covers both Android and Desktop, "Apple" covers both iOS and macOS, and a draft that uses one where the other is meant points at a different subset of code than its author intends.
 
 Each entry is one line: term — one-sentence definition — optional `(see <link>)` to the living doc that owns the deeper rule. Definitions in present tense, no history.

@@ -13,6 +13,7 @@ User-facing concepts. The vocabulary [`spec-writer`](../.claude/agents/spec-writ
 - **Trusted device** — a device that completed pairing and may initiate or accept transfers without re-confirmation. _Avoid:_ known device, friend, contact.
 - **Device list** — the user-visible list of trusted devices on a given device.
 - **Device name** — the user-chosen display label for a device, shown to peers (see [device-name-bootstrapping](product/features/device-name-bootstrapping/)).
+- **Hotspot transfer** — a transfer that runs over an ad-hoc Wi-Fi hotspot hosted by one of the devices, used when the peers have no shared Wi-Fi network (see [hotspot-transfer](product/features/hotspot-transfer/)).
 
 ## Technical
 

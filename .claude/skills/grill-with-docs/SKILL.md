@@ -28,7 +28,7 @@ Tether is a single-context repo. The glossary lives at one path: `docs/glossary.
 The glossary has three sections, in fixed order:
 
 - **Product** — user-facing concepts (`transfer`, `pairing`, `device list`, `trusted device`, `hotspot transfer`).
-- **Technical** — engineering concepts (`discovery layer`, `rendezvous`, `composition root`, `container`, `expect/actual`, `source set`).
+- **Technical** — engineering concepts (`discovery`, `rendezvous`, `composition root`, `container`, `source set`).
 - **Platform mapping** — canonical names for platforms and their Kotlin Multiplatform targets (`Android` → `androidTarget`, `Desktop` → `jvm("desktop")`, `iOS` → `iosArm64` / `iosSimulatorArm64`, `macOS` → `macosArm64`).
 
 Each entry is one line: `**term** — one-sentence definition. _Avoid:_ near-synonyms.` Definitions are tight (1–2 sentences), in present tense, no history. See [grilling-and-glossary.md](../../../docs/engineering/grilling-and-glossary.md) for the full rule.
