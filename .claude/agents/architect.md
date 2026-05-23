@@ -77,7 +77,15 @@ If during convergence you realise the palette was incomplete or the answers reve
 
 ### Step 5 — Decide artifact scope
 
-You now know whether you need:
+**Artifact-warrant test, first.** Before picking a layer, audit your converged design against existing siblings — the relevant spec, ux brief, neighbouring living docs, parent / sibling ADRs, the issue body itself. For each rule you'd put on paper ask: «is this already covered, in equivalent shape, somewhere a future coder will reach?». What survives the cut is the warrant for a new artifact.
+
+Possible outcomes:
+
+- **≥ 2–3 paragraphs of net-new content survive** — a new or extended artifact is warranted; pick a layer below.
+- **< 2 paragraphs survive, or only single-sentence rules** — no new artifact. Either add the surviving rules as one-line additions to the relevant existing engineering doc, or surface the converged-decision summary in the issue body / PR description, and finish. **A document whose every section retells siblings is worse than no document** — the next reader has to distinguish new info from retelling, which is harder than reading the siblings directly. This applies even when the design work was non-trivial; the work lives in the converged decision and in the resulting code review, not in restating settled material.
+
+If the test passes, pick the layer:
+
 - **just a living doc** — the mechanism is the new normal; no alternative-versus-alternative history worth recording (e.g. introducing a new module without a contested choice);
 - **a living doc + an ADR** — the choice was contested and the rejected branches have value for future readers («why didn't we use X?» will be asked);
 - **an ADR amending an existing one** — the original decision still holds but a new constraint forces an addendum (use `## Amendment YYYY-MM-DD` section, don't rewrite);
