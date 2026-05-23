@@ -134,7 +134,7 @@ Per track (or sequentially if single track):
    - `review-platform` (if diff touches platform source sets)
    - `review-ux` (if diff touches `composeApp/src/**` — the agent itself decides skip vs. block on missing brief)
    - `review-ui` (if diff touches `composeApp/src/**`)
-   - `review-visual` (if diff touches `composeApp/src/**` — the agent itself decides skip vs. block on missing brief / PNGs)
+   - `review-visual` (if diff touches `composeApp/src/**` — the agent itself renders PNGs via Roborazzi and decides skip vs. block on missing brief)
    Skip `review-reuse` and `review-adversarial` here — they run in the simplify wave (Step 6) and the full review (Step 7).
 4. If every reviewer says `APPROVE` and zero `[REQUIRED]` → track done.
 5. Else → aggregate `[REQUIRED]` findings, dispatch the implementing agent again with the findings as input. Apply the same commit-before-review discipline as step 2:

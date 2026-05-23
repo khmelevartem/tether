@@ -5,7 +5,7 @@
 
 ## Context
 
-The `/implement` skill runs a `spec → ux-brief → Compose code + @Preview → reviewer wave` cycle for UI features. UX-conformance is currently checked only textually by `review-ux` (copywriting, states, a11y read off the source). The visual side — what the screen actually renders — has no agent-readable artefact, so visual drift between code and UX brief can only be caught by a human.
+The `/implement` skill runs a `spec → ux-brief → Compose code + @Preview → reviewer wave` cycle for UI features. UX-conformance is currently checked only textually by `review-ux` (copywriting, states, accessibility — `a11y` — read off the source). The visual side — what the screen actually renders — has no agent-readable artefact, so visual drift between code and UX brief can only be caught by a human.
 
 [#127](https://github.com/khmelevartem/tether/issues/127) closes the loop with two halves that are useless apart: a headless preview-to-PNG renderer (subject of this ADR) and a vision-capable `review-visual` agent that compares the PNGs against the brief. This ADR scopes the renderer only.
 
