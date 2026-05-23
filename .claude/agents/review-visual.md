@@ -108,7 +108,7 @@ ls composeApp/build/outputs/roborazzi/
 - `docs/engineering/ui-style-guide.md` — token tables, spacing scale, shape scale, typography ladder, iconography rule (Tabler stroke-only), shadow ban, accessibility minimums.
 - `docs/engineering/ui-brand-mark.md` — геометрия и состояния `•—•`.
 
-**Прочитай их полностью до анализа PNG'ей** (Read tool) — список правил живёт там, не здесь. Дублирование здесь означало бы рассинхрон при первом же изменении канона + сужение твоей оценки до формального чеклиста вместо целостного «соответствует ли экран канону».
+**Прочитай их полностью до анализа PNG'ей** (Read tool) — список правил живёт там, не здесь. 
 
 Затем по каждому PNG сверь увиденное с тем, что зафиксировано в источниках. Любое расхождение с явным правилом канона → `[REQUIRED]` со ссылкой на конкретное правило (`<doc> §<heading>`). Сомнительное (нет однозначной формулировки, но визуально настораживает) → `[ATTENTION]`.
 
