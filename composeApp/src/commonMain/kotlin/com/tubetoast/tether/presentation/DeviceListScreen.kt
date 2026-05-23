@@ -33,7 +33,7 @@ fun DeviceListScreen(component: DeviceListComponent, modifier: Modifier = Modifi
 }
 
 @Composable
-fun DeviceListContent(
+private fun DeviceListContent(
     devices: List<Device>,
     onDeviceClick: (Device) -> Unit,
     modifier: Modifier = Modifier,
