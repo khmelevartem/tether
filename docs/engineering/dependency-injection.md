@@ -33,7 +33,7 @@ Each platform builds its container in its entry point and passes components down
   - [`MainUi.kt`](../../composeApp/src/desktopMain/kotlin/com/tubetoast/tether/MainUi.kt) — Compose UI runner (`desktopMain` source set, default for `nativeDistributions` packaging), launched via `./gradlew :composeApp:run`.
 - **Android** ([`TetherApp`](../../composeApp/src/androidMain/kotlin/com/tubetoast/tether/TetherApp.kt)): builds `AndroidAppContainer` lazily in the `Application` subclass and exposes it via the [`AppContainerProvider`](../../composeApp/src/androidMain/kotlin/com/tubetoast/tether/di/AppContainerProvider.kt) interface. [`TetherForegroundService`](../../composeApp/src/androidMain/kotlin/com/tubetoast/tether/network/TetherForegroundService.kt) reads it via `(application as AppContainerProvider).container`.
 - **iOS** ([`MainViewController`](../../composeApp/src/iosMain/kotlin/com/tubetoast/tether/MainViewController.kt)): builds `IosAppContainer` outside the `ComposeUIViewController { ... }` lambda so the composable does not act as a composition root (see rule 5 below).
-- **macOS** ([`Main.macos.kt`](../../composeApp/src/macosMain/kotlin/com/tubetoast/tether/Main.macos.kt)): builds `MacosAppContainer`, launches startup in a coroutine scope with a `CoroutineExceptionHandler`, installs POSIX signal handlers for graceful shutdown, then blocks on `CFRunLoopRun()`; cleanup runs after the loop returns.
+- **macOS** ([`Main.macos.kt`](../../composeApp/src/macosMain/kotlin/com/tubetoast/tether/Main.macos.kt)): builds `MacosAppContainer` and launches startup in a coroutine scope; blocks on `CFRunLoopRun()` for mDNS callbacks.
 
 ### The Provider pattern (Android)
 
