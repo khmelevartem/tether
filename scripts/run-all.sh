@@ -16,8 +16,28 @@
 
 set -u
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# Resolve project root from current working directory (not script location), so
+# the script operates on the worktree it was invoked from — including when the
+# script itself lives in the main checkout and is launched from a worktree.
+# Marker = `gradlew` (Gradle wrapper sits at project root).
+find_project_root() {
+  local dir="$PWD"
+  while [ "$dir" != "/" ]; do
+    if [ -x "$dir/gradlew" ]; then
+      echo "$dir"
+      return 0
+    fi
+    dir="$(dirname "$dir")"
+  done
+  return 1
+}
+
+ROOT="$(find_project_root)" || {
+  echo "run-all.sh: no gradlew found walking up from $PWD" >&2
+  exit 2
+}
 cd "$ROOT"
+echo "▶ project root: $ROOT"
 
 LOG_DIR="$ROOT/scripts/.run-all"
 mkdir -p "$LOG_DIR"
