@@ -211,7 +211,7 @@ class FileServerTest {
     }
 
     @Test
-    fun upload_strips_path_traversal() {
+    fun upload_with_dotdot_traversal_returns_400() {
         val dir = newTempDir()
         val server = newTestServer(dir)
         val port = server.start()
@@ -222,12 +222,7 @@ class FileServerTest {
                     contentType(ContentType.Application.OctetStream)
                     setBody("malicious".encodeToByteArray())
                 }
-                assertEquals(HttpStatusCode.OK, response.status)
-                val savedPath = (response.body() as Map<String, String>)["savedPath"]!!
-                assertTrue(
-                    savedPath.startsWith("$dir/"),
-                    "saved path must be inside downloads dir: $savedPath",
-                )
+                assertEquals(HttpStatusCode.BadRequest, response.status)
                 val parentEvil = "${dir.substringBeforeLast('/')}/evil.txt"
                 assertFalse(
                     NSFileManager.defaultManager.fileExistsAtPath(parentEvil),

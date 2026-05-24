@@ -30,7 +30,7 @@ private val log = KydraLog.withTag(default = "Tether.FileServerRoutes")
 internal interface UploadStorage {
     fun ensureRoot()
 
-    fun resolveDestination(fileName: String): String
+    fun resolveDestination(relativePath: String): String
 
     suspend fun writeBody(body: ByteReadChannel, destination: String): Long
 
@@ -64,20 +64,23 @@ internal fun Application.installFileServerRoutes(
         }
         post("/upload") {
             val rawName = call.request.queryParameters["name"]
-            if (rawName.isNullOrBlank()) {
+            val relativePath = rawName?.let { PathSanitization.sanitizeRelativePath(it) }
+            if (relativePath == null) {
+                log.info { "rejected upload — invalid_relative_path" }
                 call.respond(
                     HttpStatusCode.BadRequest,
-                    mapOf("error" to "missing 'name' query parameter"),
+                    mapOf("error" to "invalid_relative_path"),
                 )
                 return@post
             }
-            val fileName = stripPathComponents(rawName)
-            val destination = storage.resolveDestination(fileName)
+            var destination: String? = null
             var uploadComplete = false
             try {
+                val resolvedDestination = storage.resolveDestination(relativePath)
+                destination = resolvedDestination
                 tracker.withActiveTransfer {
                     val body = call.receiveChannel()
-                    val bytesWritten = storage.writeBody(body, destination)
+                    val bytesWritten = storage.writeBody(body, resolvedDestination)
                     // Ktor closes the body channel silently when the client disconnects
                     // mid-stream. closedCause covers exceptional close; the Content-Length
                     // comparison covers clean close on incomplete bodies.
@@ -87,11 +90,11 @@ internal fun Application.installFileServerRoutes(
                         error("FileServer: incomplete upload — got $bytesWritten of $expected bytes")
                     }
                     uploadComplete = true
-                    log.info { "received '$fileName' — $bytesWritten bytes → $destination" }
-                    call.respond(HttpStatusCode.OK, mapOf("savedPath" to destination))
+                    log.info { "received '$relativePath' — $bytesWritten bytes → $resolvedDestination" }
+                    call.respond(HttpStatusCode.OK, mapOf("savedPath" to resolvedDestination))
                 }
             } catch (e: Exception) {
-                log.error { "upload failed for '$fileName' — ${e.message ?: "unknown error"}" }
+                log.error { "upload failed for '$relativePath' — ${e.message ?: "unknown error"}" }
                 try {
                     call.respond(
                         HttpStatusCode.InternalServerError,
@@ -100,7 +103,7 @@ internal fun Application.installFileServerRoutes(
                 } catch (_: Exception) {
                 }
             } finally {
-                if (!uploadComplete) storage.deleteIfExists(destination)
+                if (!uploadComplete) destination?.let { storage.deleteIfExists(it) }
             }
         }
     }
@@ -117,6 +120,3 @@ internal suspend fun streamUploadBody(
         write(buffer, n)
     }
 }
-
-private fun stripPathComponents(raw: String): String =
-    raw.substringAfterLast('/').substringAfterLast('\\')

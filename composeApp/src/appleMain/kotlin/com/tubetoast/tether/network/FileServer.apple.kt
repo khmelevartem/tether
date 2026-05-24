@@ -79,21 +79,37 @@ private class AppleUploadStorage(
         }
     }
 
-    override fun resolveDestination(fileName: String): String {
+    override fun resolveDestination(relativePath: String): String {
         val fm = NSFileManager.defaultManager
-        val firstTry = "$root/$fileName"
+        val firstTry = "$root/$relativePath"
         if (!fm.fileExistsAtPath(firstTry)) return firstTry
-        val ext = fileName.substringAfterLast('.', "")
-        val base = if (ext.isEmpty()) fileName else fileName.removeSuffix(".$ext")
+        val leafName = relativePath.substringAfterLast('/')
+        val parentPath = if (relativePath.contains('/')) {
+            "$root/${relativePath.substringBeforeLast('/')}"
+        } else {
+            root
+        }
+        val ext = leafName.substringAfterLast('.', "")
+        val base = if (ext.isEmpty()) leafName else leafName.removeSuffix(".$ext")
         var i = 1
         while (true) {
-            val candidate = if (ext.isEmpty()) "$root/${base}_$i" else "$root/${base}_$i.$ext"
+            val candidate = if (ext.isEmpty()) "$parentPath/${base}_$i" else "$parentPath/${base}_$i.$ext"
             if (!fm.fileExistsAtPath(candidate)) return candidate
             i++
         }
     }
 
     override suspend fun writeBody(body: ByteReadChannel, destination: String): Long {
+        val fm = NSFileManager.defaultManager
+        val parentDir = destination.substringBeforeLast('/')
+        if (!fm.fileExistsAtPath(parentDir)) {
+            fm.createDirectoryAtPath(
+                path = parentDir,
+                withIntermediateDirectories = true,
+                attributes = null,
+                error = null,
+            )
+        }
         val file = fopen(destination, "wb")
             ?: error("FileServer: could not open '$destination' for writing")
         var total = 0L

@@ -15,6 +15,7 @@ import ru.pocketbyte.kydra.log.info
 import ru.pocketbyte.kydra.log.withMessage
 import ru.pocketbyte.kydra.log.wrapper.withTag
 import java.io.File
+import java.io.IOException
 
 private val log = KydraLog.withTag(default = "Tether.FileServer")
 
@@ -57,12 +58,28 @@ actual class FileServer(
 private class JvmUploadStorage(
     private val root: File,
 ) : UploadStorage {
+    private val rootReal by lazy { root.toPath().toRealPath() }
+
     override fun ensureRoot() {
         root.mkdirs()
     }
 
-    override fun resolveDestination(fileName: String): String =
-        resolveDestinationFile(root, fileName).absolutePath
+    override fun resolveDestination(relativePath: String): String =
+        resolveDestinationFile(root, relativePath)
+            .also { dest ->
+                dest.parentFile?.mkdirs()
+                val destReal = if (dest.exists()) {
+                    dest.toPath().toRealPath()
+                } else {
+                    dest.parentFile
+                        .toPath()
+                        .toRealPath()
+                        .resolve(dest.name)
+                }
+                if (!destReal.startsWith(rootReal)) {
+                    throw IOException("destination escapes downloads root: $dest")
+                }
+            }.absolutePath
 
     override suspend fun writeBody(body: ByteReadChannel, destination: String): Long =
         body.toInputStream().use { input ->
@@ -79,14 +96,16 @@ private class JvmUploadStorage(
     }
 }
 
-private fun resolveDestinationFile(dir: File, fileName: String): File {
-    var dest = File(dir, fileName)
+private fun resolveDestinationFile(dir: File, relativePath: String): File {
+    var dest = File(dir, relativePath)
     if (!dest.exists()) return dest
-    val ext = fileName.substringAfterLast('.', "")
-    val base = if (ext.isEmpty()) fileName else fileName.removeSuffix(".$ext")
+    val leafName = dest.name
+    val ext = leafName.substringAfterLast('.', "")
+    val base = if (ext.isEmpty()) leafName else leafName.removeSuffix(".$ext")
     var i = 1
     do {
-        dest = File(dir, if (ext.isEmpty()) "${base}_$i" else "${base}_$i.$ext")
+        val candidate = if (ext.isEmpty()) "${base}_$i" else "${base}_$i.$ext"
+        dest = File(dest.parentFile, candidate)
         i++
     } while (dest.exists())
     return dest
