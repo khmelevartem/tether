@@ -55,7 +55,7 @@ Desktop исходники разделены на два source set: `desktopMa
 
 **KtLint — никогда не запускай вручную.** Git hook делает это сам при коммите. Стилевые ошибки не правь руками — просто коммить.
 
-Подробные команды запуска по платформам — в [README.md](README.md). Тестовые команды — в [`docs/engineering/testing.md`](docs/engineering/testing.md).
+Подробные команды запуска по платформам — в [README.md](README.md). Тестовые команды — в [`docs/engineering/testing.md`](docs/engineering/testing.md). Параллельный запуск всех таргетов разом — `scripts/run-all.sh` (см. [README.md](README.md) → Все таргеты разом).
 
 ## Slash commands и скиллы
 
