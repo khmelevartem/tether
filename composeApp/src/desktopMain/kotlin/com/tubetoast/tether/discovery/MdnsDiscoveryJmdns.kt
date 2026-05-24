@@ -23,8 +23,6 @@ import kotlin.coroutines.CoroutineContext
 private const val SERVICE_TYPE = "_tether._tcp.local."
 private val IPV4_REGEX = Regex("""\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}""")
 
-// Must be non-empty: Android NSD throws on a TXT record with an empty-string key.
-private val TXT_PROPS = mapOf("v" to "1")
 internal const val REQUERY_INITIAL_INTERVAL_MS = 5_000L
 private const val REQUERY_MAX_INTERVAL_MS = 60_000L
 private val log = KydraLog.withTag(default = "Tether.MdnsDiscovery.JmDNS")

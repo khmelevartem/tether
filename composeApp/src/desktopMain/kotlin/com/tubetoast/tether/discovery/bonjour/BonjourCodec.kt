@@ -4,6 +4,22 @@ import com.sun.jna.Pointer
 
 /** Pure helpers; extracted to allow unit tests without loading libSystem. */
 internal object BonjourCodec {
+    /**
+     * Encodes a property map as DNS TXT RDATA: a sequence of length-prefixed `key=value` strings.
+     * Each entry is encoded as `[len][key=value]` where `len` is the byte length of `key=value`.
+     */
+    fun encodeTxt(props: Map<String, String>): ByteArray {
+        val entries = props.entries.map { (k, v) -> "$k=$v".encodeToByteArray() }
+        val result = ByteArray(entries.sumOf { 1 + it.size })
+        var pos = 0
+        for (entry in entries) {
+            result[pos++] = entry.size.toByte()
+            entry.copyInto(result, pos)
+            pos += entry.size
+        }
+        return result
+    }
+
     fun hostOrderToNetwork(port: Int): Short =
         ((((port and 0xFF) shl 8) or ((port ushr 8) and 0xFF))).toShort()
 

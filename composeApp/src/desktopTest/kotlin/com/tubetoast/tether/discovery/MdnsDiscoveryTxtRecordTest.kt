@@ -6,10 +6,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 private const val SERVICE_TYPE = "_tether._tcp.local."
-private val TXT_PROPS = mapOf("v" to "1")
 
-// Regression for #91: JmDNS must publish a valid non-empty TXT record so Android NSD does not
-// throw IllegalArgumentException("Key cannot be empty") in NsdServiceInfo.setAttribute.
 class MdnsDiscoveryTxtRecordTest {
     @Test
     fun `ServiceInfo has at least one TXT property and no empty-string keys`() {

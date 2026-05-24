@@ -2,10 +2,26 @@ package com.tubetoast.tether.discovery.bonjour
 
 import com.sun.jna.Memory
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 class BonjourCodecTest {
+    @Test
+    fun `encodeTxt encodes v=1 as DNS TXT RDATA`() {
+        // Expected wire format: [0x03, 'v', '=', '1'] — one length-prefixed entry
+        val expected = byteArrayOf(0x03, 0x76, 0x3d, 0x31)
+        assertContentEquals(expected, BonjourCodec.encodeTxt(mapOf("v" to "1")))
+    }
+
+    @Test
+    fun `encodeTxt encodes multiple entries`() {
+        val bytes = BonjourCodec.encodeTxt(mapOf("a" to "1", "b" to "2"))
+        // [0x03, 'a', '=', '1', 0x03, 'b', '=', '2']
+        val expected = byteArrayOf(0x03, 0x61, 0x3d, 0x31, 0x03, 0x62, 0x3d, 0x32)
+        assertContentEquals(expected, bytes)
+    }
+
     @Test
     fun `port byte order round-trips`() {
         // 8080 → 0x901F (network) → 8080 (host)
