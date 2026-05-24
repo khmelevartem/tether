@@ -31,6 +31,13 @@ class PathSanitizationTest {
     }
 
     @Test
+    fun `single dot segment rejects`() {
+        assertNull(sanitize("."))
+        assertNull(sanitize("./file.txt"))
+        assertNull(sanitize("a/./b.txt"))
+    }
+
+    @Test
     fun `triple dot is a literal name and allowed`() {
         assertNotNull(sanitize("..."))
         assertNotNull(sanitize("a/.../b.txt"))

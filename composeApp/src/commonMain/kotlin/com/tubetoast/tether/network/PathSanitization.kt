@@ -22,7 +22,7 @@ internal object PathSanitization {
         val segments = normalised.split('/')
         for (segment in segments) {
             if (segment.isEmpty()) return null
-            if (segment == "..") return null
+            if (segment == "." || segment == "..") return null
         }
 
         return segments.joinToString("/")

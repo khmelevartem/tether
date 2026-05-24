@@ -34,7 +34,7 @@ Rules the sanitizer enforces:
 
 - **Empty input** rejects.
 - **Absolute paths** reject — leading `/`, leading `\`, or Windows drive-letter prefix (`C:`, `C:/foo`, `C:foo`).
-- **Traversal segments** reject — any segment equal to `..` after URL-decoding and after splitting on both `/` and `\`. A segment of `...` or `....` is a literal name, allowed.
+- **Traversal segments** reject — any segment equal to `.` or `..` after URL-decoding and after splitting on both `/` and `\`. A segment of `...` or `....` is a literal name, allowed.
 - **URL-encoded traversal** rejects after a single explicit decode pass — `%2e%2e`, `..%2f`, `%2e%2e%2f` all collapse to forms the previous rules catch.
 - **Embedded separators after decode** are part of the structure, not part of a segment — `\` is normalised to `/`, then empty segments (produced by runs of `/`, a leading `/`, or a trailing `/`) reject. The rejection is not a recovery step: the sender supplied an ambiguous or absolute-looking path and must fix it.
 - **NUL byte** in any segment rejects.
