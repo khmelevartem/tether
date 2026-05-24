@@ -11,12 +11,18 @@ import com.tubetoast.tether.di.DefaultIosAppConfig
 import com.tubetoast.tether.di.IosAppContainer
 import com.tubetoast.tether.logging.initLogging
 import com.tubetoast.tether.presentation.RootContent
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import ru.pocketbyte.kydra.log.KydraLog
+import ru.pocketbyte.kydra.log.error
+import ru.pocketbyte.kydra.log.wrapper.withTag
+
+private val log = KydraLog.withTag(default = "Tether.Main.iOS")
 
 @Suppress("ktlint:standard:function-naming")
 fun MainViewController() = run {
@@ -27,7 +33,12 @@ fun MainViewController() = run {
     ComposeUIViewController {
         DisposableEffect(Unit) {
             lifecycle.resume()
-            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+            lateinit var scope: CoroutineScope
+            val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
+                log.error { "startup failed: ${throwable.message ?: throwable}" }
+                scope.cancel()
+            }
+            scope = CoroutineScope(SupervisorJob() + Dispatchers.Main + exceptionHandler)
             scope.launch {
                 container.nameStore.init()
                 val name = container.nameStore.name.first()
