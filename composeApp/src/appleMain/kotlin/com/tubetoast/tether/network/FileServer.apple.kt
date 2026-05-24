@@ -92,15 +92,13 @@ private class AppleUploadStorage(
 
     override fun resolveDestination(relativePath: String): String {
         val leafName = relativePath.substringAfterLast('/')
-        val parentRel = if (relativePath.contains('/')) relativePath.substringBeforeLast('/') else null
-        val parentDir = if (parentRel != null) "$root/$parentRel" else root
+        val parentDir = if (relativePath.contains('/')) "$root/${relativePath.substringBeforeLast('/')}" else root
         var created: List<String> = emptyList()
         try {
             created = mkdirsTracked(parentDir)
             val resolvedParent = realpathOf(parentDir)
                 ?: throw IOException("destination escapes downloads root: realpath failed for $parentDir")
-            val resolvedRoot = rootReal
-            if (!resolvedParent.startsWith(resolvedRoot + "/") && resolvedParent != resolvedRoot) {
+            if (!resolvedParent.startsWith(rootReal + "/") && resolvedParent != rootReal) {
                 throw IOException("destination escapes downloads root: $resolvedParent")
             }
 
