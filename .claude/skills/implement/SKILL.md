@@ -95,6 +95,10 @@ cd .claude/worktrees/feature-<N>-<short-slug>
 
 All subsequent agent dispatches happen with this as cwd. Skipping this step means `spec-writer` would edit main checkout.
 
+### Briefing back to the user
+
+После прочтения issue и разведки, **перед** любым вопросом пользователю (gate-вопросы, Open questions от sub-agent'ов, classification-неоднозначности) выдай в чат короткий бриф 3–6 строк: что делаем, зачем (мотивация / контекст из issue), классификация (track + затрагиваемые слои/платформы). Если в этом же сообщении задаёшь вопросы — к каждому приложи 1–2 строки контекста (что говорит issue, какие варианты на столе), чтобы пользователь отвечал, не уходя на GitHub перечитывать тело. Бриф один на прогон; в re-entry не повторяй.
+
 ## Step 2 — Resolve early gates
 
 ### Spec / UX brief / AC ambiguity

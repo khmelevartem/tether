@@ -70,6 +70,10 @@ cd .claude/worktrees/docs-<N>-<short-slug>
 
 All subsequent agent dispatches happen with this as cwd.
 
+### Briefing back to the user
+
+После прочтения issue и разведки, **перед** любым вопросом пользователю (D1, Open questions от sub-agent'ов, classification-неоднозначности) выдай в чат короткий бриф 3–6 строк: что делаем, зачем (мотивация / контекст из issue), предварительный набор слоёв (spec / ux-brief / tech-doc / ADR / knowledge / .claude prompt). Если в этом же сообщении задаёшь вопросы — к каждому приложи 1–2 строки контекста (что говорит issue, какие варианты на столе), чтобы пользователь отвечал, не уходя на GitHub перечитывать тело. Бриф один на прогон; в re-entry не повторяй.
+
 ## Step 2 — Layer classification
 
 Decide which artifact layers this issue needs. Read the issue body, comments, linked spec/feature (if any), and `docs/product/features/README.md` / `docs/engineering/README.md` to see what already exists.
