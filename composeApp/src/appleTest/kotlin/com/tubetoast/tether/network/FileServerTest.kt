@@ -27,6 +27,7 @@ import kotlinx.cinterop.usePinned
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import platform.Foundation.NSData
 import platform.Foundation.NSFileManager
@@ -338,7 +339,7 @@ class FileServerTest {
     }
 
     @Test
-    fun streamUploadBody_propagates_writer_exception() = runBlocking {
+    fun streamUploadBody_propagates_writer_exception() = runTest {
         val input = ByteReadChannel("hello tether".encodeToByteArray())
         val ex = assertFailsWith<IllegalStateException> {
             streamUploadBody(input) { _, _ ->

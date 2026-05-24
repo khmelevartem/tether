@@ -38,6 +38,10 @@ import ru.pocketbyte.kydra.log.info
 import ru.pocketbyte.kydra.log.withMessage
 import ru.pocketbyte.kydra.log.wrapper.withTag
 
+internal class IOException(
+    message: String,
+) : Exception(message)
+
 private val log = KydraLog.withTag(default = "Tether.FileServer")
 
 actual class FileServer(
@@ -78,7 +82,9 @@ actual class FileServer(
 private class AppleUploadStorage(
     private val root: String,
 ) : UploadStorage {
-    private val rootReal: String by lazy { realpathOf(root) ?: root }
+    private val rootReal: String by lazy {
+        realpathOf(root) ?: throw IOException("FileServer: realpath failed for downloads root: $root")
+    }
 
     override fun ensureRoot() {
         mkdirsChecked(root)
@@ -88,14 +94,14 @@ private class AppleUploadStorage(
         val leafName = relativePath.substringAfterLast('/')
         val parentRel = if (relativePath.contains('/')) relativePath.substringBeforeLast('/') else null
         val parentDir = if (parentRel != null) "$root/$parentRel" else root
-
-        val created = mkdirsTracked(parentDir)
+        var created: List<String> = emptyList()
         try {
+            created = mkdirsTracked(parentDir)
             val resolvedParent = realpathOf(parentDir)
-                ?: error("destination escapes downloads root: realpath failed for $parentDir")
+                ?: throw IOException("destination escapes downloads root: realpath failed for $parentDir")
             val resolvedRoot = rootReal
             if (!resolvedParent.startsWith(resolvedRoot + "/") && resolvedParent != resolvedRoot) {
-                error("destination escapes downloads root: $resolvedParent")
+                throw IOException("destination escapes downloads root: $resolvedParent")
             }
 
             val firstTry = "$resolvedParent/$leafName"
@@ -110,15 +116,14 @@ private class AppleUploadStorage(
                 i++
             }
         } catch (e: Throwable) {
-            val fm = NSFileManager.defaultManager
-            created.asReversed().forEach { fm.removeItemAtPath(it, error = null) }
+            created.asReversed().forEach { deleteIfEmpty(it) }
             throw e
         }
     }
 
     override suspend fun writeBody(body: ByteReadChannel, destination: String): Long {
         val file = fopen(destination, "wb")
-            ?: error("FileServer: could not open '$destination' for writing")
+            ?: throw IOException("FileServer: could not open '$destination' for writing")
         var total = 0L
         try {
             streamUploadBody(body) { buffer, n ->
@@ -128,7 +133,7 @@ private class AppleUploadStorage(
                     // truncate while the route responded 200 OK.
                     val written = fwrite(pinned.addressOf(0), 1u, n.toULong(), file).toLong()
                     if (written < n.toLong()) {
-                        error("FileServer: short write to '$destination' — wrote $written of $n bytes")
+                        throw IOException("FileServer: short write to '$destination' — wrote $written of $n bytes")
                     }
                 }
                 total += n.toLong()
@@ -137,7 +142,7 @@ private class AppleUploadStorage(
             // fclose still runs in finally; its error is ignored because fflush
             // already validated the data reached the OS.
             if (fflush(file) != 0) {
-                error("FileServer: fflush failed for '$destination'")
+                throw IOException("FileServer: fflush failed for '$destination'")
             }
         } finally {
             fclose(file)
@@ -145,11 +150,22 @@ private class AppleUploadStorage(
         return total
     }
 
-    override fun deleteIfExists(destination: String) {
-        val fm = NSFileManager.defaultManager
-        if (fm.fileExistsAtPath(destination)) {
-            fm.removeItemAtPath(destination, error = null)
+    override fun abort(relativePath: String) {
+        val dest = "$root/$relativePath"
+        NSFileManager.defaultManager.removeItemAtPath(dest, error = null)
+        var dir = dest.substringBeforeLast('/', missingDelimiterValue = "")
+        while (dir.isNotEmpty() && dir != root) {
+            if (!deleteIfEmpty(dir)) break
+            dir = dir.substringBeforeLast('/', missingDelimiterValue = "")
         }
+    }
+
+    private fun deleteIfEmpty(path: String): Boolean {
+        val fm = NSFileManager.defaultManager
+        val contents = fm.contentsOfDirectoryAtPath(path, null) ?: return false
+        if (contents.isNotEmpty()) return false
+        fm.removeItemAtPath(path, error = null)
+        return true
     }
 }
 
@@ -166,7 +182,7 @@ private fun mkdirsChecked(path: String) {
         )
         if (!ok) {
             val msg = errorPtr.value?.localizedDescription ?: "unknown error"
-            error("FileServer: createDirectory failed for $path: $msg")
+            throw IOException("FileServer: createDirectory failed for $path: $msg")
         }
     }
 }

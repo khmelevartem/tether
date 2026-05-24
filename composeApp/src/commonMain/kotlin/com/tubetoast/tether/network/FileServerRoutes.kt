@@ -34,7 +34,8 @@ internal interface UploadStorage {
 
     suspend fun writeBody(body: ByteReadChannel, destination: String): Long
 
-    fun deleteIfExists(destination: String)
+    /** Deletes the partial destination file (if any) and removes any empty parent dirs up to root. */
+    fun abort(relativePath: String)
 }
 
 internal fun Application.installFileServerRoutes(
@@ -73,11 +74,9 @@ internal fun Application.installFileServerRoutes(
                 )
                 return@post
             }
-            var destination: String? = null
             var uploadComplete = false
             try {
                 val resolvedDestination = storage.resolveDestination(relativePath)
-                destination = resolvedDestination
                 tracker.withActiveTransfer {
                     val body = call.receiveChannel()
                     val bytesWritten = storage.writeBody(body, resolvedDestination)
@@ -103,7 +102,7 @@ internal fun Application.installFileServerRoutes(
                 } catch (_: Exception) {
                 }
             } finally {
-                if (!uploadComplete) destination?.let { storage.deleteIfExists(it) }
+                if (!uploadComplete) storage.abort(relativePath)
             }
         }
     }

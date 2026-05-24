@@ -80,7 +80,6 @@ private class JvmUploadStorage(
                 throw IOException("destination escapes downloads root: $dest")
             }
         } catch (e: Throwable) {
-            // bottom-up: each freshly created dir is empty unless a sibling raced in
             created.asReversed().forEach { it.delete() }
             throw e
         }
@@ -94,10 +93,13 @@ private class JvmUploadStorage(
             }
         }
 
-    override fun deleteIfExists(destination: String) {
-        try {
-            File(destination).delete()
-        } catch (_: Exception) {
+    override fun abort(relativePath: String) {
+        val dest = File(root, relativePath)
+        dest.delete()
+        var dir = dest.parentFile
+        while (dir != null && dir != root && dir.exists() && dir.list()?.isEmpty() == true) {
+            if (!dir.delete()) break
+            dir = dir.parentFile
         }
     }
 }
