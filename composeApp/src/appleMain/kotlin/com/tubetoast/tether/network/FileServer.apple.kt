@@ -150,11 +150,10 @@ private class AppleUploadStorage(
         return total
     }
 
-    override fun abort(relativePath: String) {
-        val dest = "$root/$relativePath"
-        NSFileManager.defaultManager.removeItemAtPath(dest, error = null)
-        var dir = dest.substringBeforeLast('/', missingDelimiterValue = "")
-        while (dir.isNotEmpty() && dir != root) {
+    override fun abort(destination: String) {
+        NSFileManager.defaultManager.removeItemAtPath(destination, error = null)
+        var dir = destination.substringBeforeLast('/', missingDelimiterValue = "")
+        while (dir.isNotEmpty() && dir != rootReal) {
             if (!deleteIfEmpty(dir)) break
             dir = dir.substringBeforeLast('/', missingDelimiterValue = "")
         }
@@ -164,8 +163,7 @@ private class AppleUploadStorage(
         val fm = NSFileManager.defaultManager
         val contents = fm.contentsOfDirectoryAtPath(path, null) ?: return false
         if (contents.isNotEmpty()) return false
-        fm.removeItemAtPath(path, error = null)
-        return true
+        return fm.removeItemAtPath(path, error = null)
     }
 }
 

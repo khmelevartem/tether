@@ -93,8 +93,8 @@ private class JvmUploadStorage(
             }
         }
 
-    override fun abort(relativePath: String) {
-        val dest = File(root, relativePath)
+    override fun abort(destination: String) {
+        val dest = File(destination)
         dest.delete()
         var dir = dest.parentFile
         while (dir != null && dir != root && dir.exists() && dir.list()?.isEmpty() == true) {

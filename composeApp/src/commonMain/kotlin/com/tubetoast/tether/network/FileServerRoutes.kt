@@ -35,7 +35,7 @@ internal interface UploadStorage {
     suspend fun writeBody(body: ByteReadChannel, destination: String): Long
 
     /** Deletes the partial destination file (if any) and removes any empty parent dirs up to root. */
-    fun abort(relativePath: String)
+    fun abort(destination: String)
 }
 
 internal fun Application.installFileServerRoutes(
@@ -75,11 +75,13 @@ internal fun Application.installFileServerRoutes(
                 return@post
             }
             var uploadComplete = false
+            var destination: String? = null
             try {
-                val resolvedDestination = storage.resolveDestination(relativePath)
+                val resolved = storage.resolveDestination(relativePath)
+                destination = resolved
                 tracker.withActiveTransfer {
                     val body = call.receiveChannel()
-                    val bytesWritten = storage.writeBody(body, resolvedDestination)
+                    val bytesWritten = storage.writeBody(body, resolved)
                     // Ktor closes the body channel silently when the client disconnects
                     // mid-stream. closedCause covers exceptional close; the Content-Length
                     // comparison covers clean close on incomplete bodies.
@@ -89,8 +91,8 @@ internal fun Application.installFileServerRoutes(
                         error("FileServer: incomplete upload — got $bytesWritten of $expected bytes")
                     }
                     uploadComplete = true
-                    log.info { "received '$relativePath' — $bytesWritten bytes → $resolvedDestination" }
-                    call.respond(HttpStatusCode.OK, mapOf("savedPath" to resolvedDestination))
+                    log.info { "received '$relativePath' — $bytesWritten bytes → $resolved" }
+                    call.respond(HttpStatusCode.OK, mapOf("savedPath" to resolved))
                 }
             } catch (e: Exception) {
                 log.error { "upload failed for '$relativePath' — ${e.message ?: "unknown error"}" }
@@ -102,7 +104,7 @@ internal fun Application.installFileServerRoutes(
                 } catch (_: Exception) {
                 }
             } finally {
-                if (!uploadComplete) storage.abort(relativePath)
+                if (!uploadComplete) destination?.let { storage.abort(it) }
             }
         }
     }
