@@ -27,8 +27,7 @@ import org.jetbrains.skiko.SystemTheme as SkikoSystemTheme
 
 @OptIn(InternalComposeUiApi::class)
 fun main() = runBlocking {
-    // macOS: tell the JVM/AWT to follow system appearance so the native title bar tracks
-    // light/dark mode. Must be set before any Swing/AWT class loads.
+    // see docs/knowledge/desktop-system-theme.md — must be set before any Swing/AWT class loads
     System.setProperty("apple.awt.application.appearance", "system")
     initTetherLogging(debugEnabled = isDebugEnabled())
     val container = DesktopAppContainer(
@@ -43,8 +42,7 @@ fun main() = runBlocking {
     lifecycle.resume()
 
     application {
-        // Compose Multiplatform 1.10.3: LocalSystemTheme on Desktop is a staticCompositionLocal
-        // captured at startup and never updated. Poll skiko so dark-mode toggles propagate live.
+        // see docs/knowledge/desktop-system-theme.md
         val systemTheme by produceState(currentSystemTheme.asComposeSystemTheme()) {
             while (true) {
                 delay(SYSTEM_THEME_POLL_INTERVAL_MS)
