@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalForeignApi::class)
+@file:OptIn(ExperimentalForeignApi::class, kotlinx.cinterop.BetaInteropApi::class)
 
 package com.tubetoast.tether.network
 
@@ -9,18 +9,29 @@ import io.ktor.server.cio.CIOApplicationEngine
 import io.ktor.server.engine.EmbeddedServer
 import io.ktor.server.engine.embeddedServer
 import io.ktor.utils.io.ByteReadChannel
+import kotlinx.cinterop.ByteVar
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.ObjCObjectVar
 import kotlinx.cinterop.addressOf
+import kotlinx.cinterop.alloc
+import kotlinx.cinterop.allocArray
+import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.ptr
+import kotlinx.cinterop.toKString
 import kotlinx.cinterop.usePinned
+import kotlinx.cinterop.value
 import kotlinx.coroutines.runBlocking
 import platform.Foundation.NSDocumentDirectory
+import platform.Foundation.NSError
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSUserDomainMask
+import platform.posix.PATH_MAX
 import platform.posix.fclose
 import platform.posix.fflush
 import platform.posix.fopen
 import platform.posix.fwrite
+import platform.posix.realpath
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.error
 import ru.pocketbyte.kydra.log.info
@@ -67,49 +78,45 @@ actual class FileServer(
 private class AppleUploadStorage(
     private val root: String,
 ) : UploadStorage {
+    private val rootReal: String by lazy { realpathOf(root) ?: root }
+
     override fun ensureRoot() {
-        val fm = NSFileManager.defaultManager
-        if (!fm.fileExistsAtPath(root)) {
-            fm.createDirectoryAtPath(
-                path = root,
-                withIntermediateDirectories = true,
-                attributes = null,
-                error = null,
-            )
-        }
+        mkdirsChecked(root)
     }
 
     override fun resolveDestination(relativePath: String): String {
-        val fm = NSFileManager.defaultManager
-        val firstTry = "$root/$relativePath"
-        if (!fm.fileExistsAtPath(firstTry)) return firstTry
         val leafName = relativePath.substringAfterLast('/')
-        val parentPath = if (relativePath.contains('/')) {
-            "$root/${relativePath.substringBeforeLast('/')}"
-        } else {
-            root
-        }
-        val ext = leafName.substringAfterLast('.', "")
-        val base = if (ext.isEmpty()) leafName else leafName.removeSuffix(".$ext")
-        var i = 1
-        while (true) {
-            val candidate = if (ext.isEmpty()) "$parentPath/${base}_$i" else "$parentPath/${base}_$i.$ext"
-            if (!fm.fileExistsAtPath(candidate)) return candidate
-            i++
+        val parentRel = if (relativePath.contains('/')) relativePath.substringBeforeLast('/') else null
+        val parentDir = if (parentRel != null) "$root/$parentRel" else root
+
+        val created = mkdirsTracked(parentDir)
+        try {
+            val resolvedParent = realpathOf(parentDir)
+                ?: error("destination escapes downloads root: realpath failed for $parentDir")
+            val resolvedRoot = rootReal
+            if (!resolvedParent.startsWith(resolvedRoot + "/") && resolvedParent != resolvedRoot) {
+                error("destination escapes downloads root: $resolvedParent")
+            }
+
+            val firstTry = "$resolvedParent/$leafName"
+            if (!NSFileManager.defaultManager.fileExistsAtPath(firstTry)) return firstTry
+
+            val ext = leafName.substringAfterLast('.', "")
+            val base = if (ext.isEmpty()) leafName else leafName.removeSuffix(".$ext")
+            var i = 1
+            while (true) {
+                val candidate = if (ext.isEmpty()) "$resolvedParent/${base}_$i" else "$resolvedParent/${base}_$i.$ext"
+                if (!NSFileManager.defaultManager.fileExistsAtPath(candidate)) return candidate
+                i++
+            }
+        } catch (e: Throwable) {
+            val fm = NSFileManager.defaultManager
+            created.asReversed().forEach { fm.removeItemAtPath(it, error = null) }
+            throw e
         }
     }
 
     override suspend fun writeBody(body: ByteReadChannel, destination: String): Long {
-        val fm = NSFileManager.defaultManager
-        val parentDir = destination.substringBeforeLast('/')
-        if (!fm.fileExistsAtPath(parentDir)) {
-            fm.createDirectoryAtPath(
-                path = parentDir,
-                withIntermediateDirectories = true,
-                attributes = null,
-                error = null,
-            )
-        }
         val file = fopen(destination, "wb")
             ?: error("FileServer: could not open '$destination' for writing")
         var total = 0L
@@ -144,6 +151,44 @@ private class AppleUploadStorage(
             fm.removeItemAtPath(destination, error = null)
         }
     }
+}
+
+private fun mkdirsChecked(path: String) {
+    val fm = NSFileManager.defaultManager
+    if (fm.fileExistsAtPath(path)) return
+    memScoped {
+        val errorPtr = alloc<ObjCObjectVar<NSError?>>()
+        val ok = fm.createDirectoryAtPath(
+            path = path,
+            withIntermediateDirectories = true,
+            attributes = null,
+            error = errorPtr.ptr,
+        )
+        if (!ok) {
+            val msg = errorPtr.value?.localizedDescription ?: "unknown error"
+            error("FileServer: createDirectory failed for $path: $msg")
+        }
+    }
+}
+
+private fun mkdirsTracked(dir: String): List<String> {
+    val fm = NSFileManager.defaultManager
+    if (fm.fileExistsAtPath(dir)) return emptyList()
+    val toCreate = mutableListOf<String>()
+    var cur: String? = dir
+    while (cur != null && cur.isNotEmpty() && cur != "/" && !fm.fileExistsAtPath(cur)) {
+        toCreate += cur
+        val parent = cur.substringBeforeLast('/', missingDelimiterValue = "")
+        cur = if (parent.isEmpty() || parent == cur) null else parent
+    }
+    mkdirsChecked(dir)
+    return toCreate.asReversed()
+}
+
+private fun realpathOf(path: String): String? = memScoped {
+    val buf = allocArray<ByteVar>(PATH_MAX)
+    val result = realpath(path, buf) ?: return null
+    result.toKString()
 }
 
 private fun defaultDownloadsDir(): String {

@@ -236,6 +236,81 @@ class FileServerTest {
     }
 
     @Test
+    fun upload_nested_path_lands_at_correct_subdirectory() {
+        val dir = newTempDir()
+        val server = newTestServer(dir)
+        val port = server.start()
+        val client = makeClient()
+        try {
+            runBlocking {
+                val response = client.post("http://localhost:$port/upload?name=foo/bar.txt") {
+                    contentType(ContentType.Application.OctetStream)
+                    setBody("nested".encodeToByteArray())
+                }
+                assertEquals(HttpStatusCode.OK, response.status)
+                val savedPath = (response.body() as Map<String, String>)["savedPath"]!!
+                assertTrue(savedPath.endsWith("/foo/bar.txt"), "saved path must preserve subdir: $savedPath")
+                assertTrue(NSFileManager.defaultManager.fileExistsAtPath(savedPath))
+                assertEquals("nested", readFileAsString(savedPath))
+            }
+        } finally {
+            client.close()
+            server.stop()
+        }
+    }
+
+    @Test
+    fun upload_with_url_encoded_traversal_returns_400() {
+        val dir = newTempDir()
+        val server = newTestServer(dir)
+        val port = server.start()
+        val client = makeClient()
+        try {
+            runBlocking {
+                val response = client.post("http://localhost:$port/upload?name=%2e%2e%2fescape.txt") {
+                    contentType(ContentType.Application.OctetStream)
+                    setBody("malicious".encodeToByteArray())
+                }
+                assertEquals(HttpStatusCode.BadRequest, response.status)
+                val parentEscape = "${dir.substringBeforeLast('/')}/escape.txt"
+                assertFalse(
+                    NSFileManager.defaultManager.fileExistsAtPath(parentEscape),
+                    "file must not escape downloads dir",
+                )
+            }
+        } finally {
+            client.close()
+            server.stop()
+        }
+    }
+
+    @Test
+    fun upload_through_symlink_pointing_outside_root_returns_500() {
+        val dir = newTempDir()
+        val outside = newTempDir()
+        platform.posix.symlink(outside, "$dir/link-dir")
+        val server = newTestServer(dir)
+        val port = server.start()
+        val client = makeClient()
+        try {
+            runBlocking {
+                val response = client.post("http://localhost:$port/upload?name=link-dir/secret.txt") {
+                    contentType(ContentType.Application.OctetStream)
+                    setBody("malicious".encodeToByteArray())
+                }
+                assertEquals(HttpStatusCode.InternalServerError, response.status)
+                assertFalse(
+                    NSFileManager.defaultManager.fileExistsAtPath("$outside/secret.txt"),
+                    "file must not be written through symlink to outside root",
+                )
+            }
+        } finally {
+            client.close()
+            server.stop()
+        }
+    }
+
+    @Test
     fun upload_to_unwritable_destination_returns_error_and_no_partial_file() {
         val parent = newTempDir()
         val regularFile = "$parent/not-a-dir.txt"

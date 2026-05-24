@@ -64,22 +64,28 @@ private class JvmUploadStorage(
         root.mkdirs()
     }
 
-    override fun resolveDestination(relativePath: String): String =
-        resolveDestinationFile(root, relativePath)
-            .also { dest ->
-                dest.parentFile?.mkdirs()
-                val destReal = if (dest.exists()) {
-                    dest.toPath().toRealPath()
-                } else {
-                    dest.parentFile
-                        .toPath()
-                        .toRealPath()
-                        .resolve(dest.name)
-                }
-                if (!destReal.startsWith(rootReal)) {
-                    throw IOException("destination escapes downloads root: $dest")
-                }
-            }.absolutePath
+    override fun resolveDestination(relativePath: String): String {
+        val dest = resolveDestinationFile(root, relativePath)
+        val created = mkdirsTracked(dest.parentFile)
+        try {
+            val destReal = if (dest.exists()) {
+                dest.toPath().toRealPath()
+            } else {
+                dest.parentFile
+                    .toPath()
+                    .toRealPath()
+                    .resolve(dest.name)
+            }
+            if (!destReal.startsWith(rootReal)) {
+                throw IOException("destination escapes downloads root: $dest")
+            }
+        } catch (e: Throwable) {
+            // bottom-up: each freshly created dir is empty unless a sibling raced in
+            created.asReversed().forEach { it.delete() }
+            throw e
+        }
+        return dest.absolutePath
+    }
 
     override suspend fun writeBody(body: ByteReadChannel, destination: String): Long =
         body.toInputStream().use { input ->
@@ -94,6 +100,18 @@ private class JvmUploadStorage(
         } catch (_: Exception) {
         }
     }
+}
+
+private fun mkdirsTracked(dir: File?): List<File> {
+    if (dir == null || dir.exists()) return emptyList()
+    val toCreate = mutableListOf<File>()
+    var cur: File? = dir
+    while (cur != null && !cur.exists()) {
+        toCreate += cur
+        cur = cur.parentFile
+    }
+    dir.mkdirs()
+    return toCreate.asReversed()
 }
 
 private fun resolveDestinationFile(dir: File, relativePath: String): File {

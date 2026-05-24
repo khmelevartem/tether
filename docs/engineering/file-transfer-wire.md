@@ -36,7 +36,7 @@ Rules the sanitizer enforces:
 - **Absolute paths** reject — leading `/`, leading `\`, or Windows drive-letter prefix (`C:`, `C:/foo`, `C:foo`).
 - **Traversal segments** reject — any segment equal to `..` after URL-decoding and after splitting on both `/` and `\`. A segment of `...` or `....` is a literal name, allowed.
 - **URL-encoded traversal** rejects after a single explicit decode pass — `%2e%2e`, `..%2f`, `%2e%2e%2f` all collapse to forms the previous rules catch.
-- **Embedded separators after decode** are part of the structure, not part of a segment — `\` is normalised to `/`, runs of `/` collapse to one, leading and trailing `/` are stripped, empty segments after the collapse (`a//b`) reject because they indicate sender confusion, not a recoverable case.
+- **Embedded separators after decode** are part of the structure, not part of a segment — `\` is normalised to `/`, then empty segments (produced by runs of `/`, a leading `/`, or a trailing `/`) reject. The rejection is not a recovery step: the sender supplied an ambiguous or absolute-looking path and must fix it.
 - **NUL byte** in any segment rejects.
 - **Unicode and emoji** in segment names are allowed. Tether protects against traversal, not against expressive filenames.
 
@@ -50,7 +50,7 @@ After sanitization passes, the relative path is resolved against the platform's 
 - **Case-folding collisions** on case-insensitive volumes (macOS HFS+/APFS default, Windows). Whether two strings name the same entry is a filesystem property, not a string property.
 - **Platform-specific path normalisation** that turns a string into a different entry than the lexical reading would suggest.
 
-A failure here throws `IOException` from `UploadStorage.openOutput`, surfaces as `500` to the sender, and the partial file is removed in the route handler's `finally` block. The check runs **before** the first byte hits the destination — opening for write after realisation, not before.
+A failure here throws `IOException` from `UploadStorage.resolveDestination`, surfaces as `500` to the sender, and the partial file is removed in the route handler's `finally` block. The check runs **before** the first byte hits the destination — opening for write after realisation, not before.
 
 ## Storage seam
 
