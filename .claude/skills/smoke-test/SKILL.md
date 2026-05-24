@@ -241,8 +241,10 @@ adb devices | awk '/device$/ && !/List/ {print $1}'
    В отчёт: `Android | cross-discovery | ✓ PASS | 250 ms` — network-propagation + JmDNS resolve.
 8. **Send Desktop → Android (через CLI):**
    ```bash
-   if [ -z "$ANDROID_NAME" ]; then
-     echo "SKIP: cross-discovery did not surface Android peer (likely emulator NAT)"
+   if echo "$ANDROID_IP" | grep -q "^10\.0\.2\."; then
+     echo "SKIP: Android emulator detected — QEMU user-mode NAT drops host→guest TCP payload; see docs/knowledge/android-emulator-networking.md"
+   elif [ -z "$ANDROID_NAME" ]; then
+     echo "SKIP: cross-discovery did not surface Android peer"
    else
      echo "send-to-android-$(date +%s)" > /tmp/smoke-android.txt
      echo "send $ANDROID_NAME /tmp/smoke-android.txt" > /tmp/smoke-cliA-in &
@@ -256,7 +258,7 @@ adb devices | awk '/device$/ && !/List/ {print $1}'
      adb shell cat "$SAVED_PATH" 2>/dev/null | diff - /tmp/smoke-android.txt && echo PASS || echo FAIL
    fi
    ```
-   PASS если в логе Desktop CLI `[send] OK` И файл на Android по распарсенному savedPath идентичен. Если ANDROID_NAME пустой — это **SKIP, не FAIL** (явная причина: cross-discovery недоступен).
+   PASS если в логе Desktop CLI `[send] OK` И файл на Android по распарсенному savedPath идентичен. SKIP если `10.0.2.x` (QEMU NAT) или ANDROID_NAME пустой — не FAIL.
 9. **Stop service:** `adb shell am force-stop com.tubetoast.tether`. PASS если приложение умерло. (Тап Notification «Stop» — manual.)
 
 Помечай каждый под-сценарий отдельно: install, FGS+mDNS up (с NSD probing latency), /health sanity, cross-discovery (с ms), send-desktop-to-android, stop.
@@ -368,7 +370,7 @@ PASS если exit=0. FAIL — приложить последние ~30 стр�
 - **`dns-sd` не на macOS** — Linux нет; secondary mDNS check SKIP с причиной «dns-sd not available». Primary check (grep CLI лога на `mDNS started`) всё равно работает.
 - **`timeout` на macOS отсутствует** — pattern `( cmd & PID=$!; sleep N; kill $PID )` вместо `timeout`.
 - **FIFO writer keeper умер раньше времени** — readLine() вернёт null, CLI выйдет; проверяй `ps -p $KEEPER`.
-- **Эмулятор Android в NAT (10.0.2.x)** — cross-discovery не работает (multicast в NAT блокируется), `ANDROID_NAME` пустой → send-блок SKIP с понятной причиной, не FAIL. Health доступен через `adb forward`.
+- **Эмулятор Android в NAT (10.0.2.x)** — cross-discovery работает в обе стороны (multicast проходит). Host→guest TCP payload QEMU user-mode NAT не проксирует: handshake проходит, данные не доходят. Send-блок (шаг 8) — SKIP при `10.0.2.x`, не FAIL. Health доступен через `adb forward`. См. `docs/knowledge/android-emulator-networking.md`.
 - **`ip route` ненадёжен на части вендоров** (ColorOS, MIUI отдают подсеть вместо src) — используй `ip addr show wlan0`.
 - **Несколько adb-устройств** — выбирай первое или fail с уточнением. Не вешай скилл на специфичный serial.
 - **`savedPath` всегда парсить из лога**, не угадывать `$HOME/Downloads/Tether/...` — директория загрузок настраивается пользователем.

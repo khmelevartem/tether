@@ -110,7 +110,7 @@ internal class MdnsDiscoveryJmdns(
 
         try {
             instance.registerService(
-                ServiceInfo.create(SERVICE_TYPE, deviceName, port, ""),
+                ServiceInfo.create(SERVICE_TYPE, deviceName, port, 0, 0, byteArrayOf()),
             )
         } catch (e: Exception) {
             requeryJob?.cancel()
@@ -135,7 +135,7 @@ internal class MdnsDiscoveryJmdns(
             log.warn { "unregisterAllServices (republish) failed — ${e.message}" }
         }
         try {
-            instance.registerService(ServiceInfo.create(SERVICE_TYPE, name, ownPort, ""))
+            instance.registerService(ServiceInfo.create(SERVICE_TYPE, name, ownPort, 0, 0, byteArrayOf()))
         } catch (e: Exception) {
             log.warn { "registerService (republish) failed — ${e.message}" }
         }
