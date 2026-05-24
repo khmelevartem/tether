@@ -27,11 +27,14 @@ internal const val UPLOAD_BUFFER_SIZE = 64 * 1024
 
 internal fun dedupFilename(leafName: String, exists: (candidate: String) -> Boolean): String {
     if (!exists(leafName)) return leafName
-    val ext = leafName.substringAfterLast('.', "")
-    val base = if (ext.isEmpty()) leafName else leafName.removeSuffix(".$ext")
+    // A leading dot marks a hidden file, not an extension separator.
+    val dotIndex = leafName.lastIndexOf('.')
+    val hasExt = dotIndex > 0
+    val ext = if (hasExt) leafName.substring(dotIndex + 1) else ""
+    val base = if (hasExt) leafName.substring(0, dotIndex) else leafName
     var i = 1
     while (true) {
-        val candidate = if (ext.isEmpty()) "${base}_$i" else "${base}_$i.$ext"
+        val candidate = if (hasExt) "${base}_$i.$ext" else "${base}_$i"
         if (!exists(candidate)) return candidate
         i++
     }
