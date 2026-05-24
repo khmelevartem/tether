@@ -21,6 +21,7 @@ Read these on demand, not all upfront:
 - Tests → [`testing.md`](docs/engineering/testing.md)
 - New product spec or update of existing → [`_template.md`](docs/product/features/_template.md). Готовая соседняя спека показывает структуру, но не правила про содержание — шаблон открой отдельно.
 - New UX brief or update of existing → [`_ux-brief-template.md`](docs/product/features/_ux-brief-template.md). Соседний готовый бриф показывает форму, но дисциплина (scope cohesion, cross-ref on move, без имён кода) — в шаблоне.
+- Новый доменный термин в долгоживущем артефакте → `review-glossary` поймает в PR-волне и попросит обновить [`docs/glossary.md`](docs/glossary.md). Механизм: [`glossary-discipline.md`](docs/engineering/glossary-discipline.md).
 
 ## Architecture invariants
 
@@ -54,12 +55,12 @@ Desktop исходники разделены на два source set: `desktopMa
 
 **KtLint — никогда не запускай вручную.** Git hook делает это сам при коммите. Стилевые ошибки не правь руками — просто коммить.
 
-Подробные команды запуска по платформам — в [README.md](README.md). Тестовые команды — в [`docs/engineering/testing.md`](docs/engineering/testing.md).
+Подробные команды запуска по платформам — в [README.md](README.md). Тестовые команды — в [`docs/engineering/testing.md`](docs/engineering/testing.md). Параллельный запуск всех таргетов разом — `scripts/run-all.sh` (см. [README.md](README.md) → Все таргеты разом).
 
 ## Slash commands и скиллы
 
 **Скиллы** (`.claude/skills/`) — основной путь, multi-agent оркестрация:
-- `/implement <N>` — end-to-end оркестратор задачи. Планирует, гоняет coder↔reviewers цикл, smoke, доводит до PR. Пользователь только в гейтах G1-G5 (см. SKILL.md). Идемпотентен: повторный вызов по issue с открытым PR — re-entry в inner loop + simplify + full review + smoke на свежем diff'е. Этот же вход используется для отработки ручного ревью на PR. На входе детектит docs-only задачи (Тип DOCS, INFRA на `.claude/`, FEATURE с маркером docs-only, ADR-as-deliverable) и делегирует в `/document`.
+- `/implement <N>` — end-to-end оркестратор задачи. Планирует, гоняет coder↔reviewers цикл, smoke, доводит до PR. Пользователь только в human-required гейтах (см. SKILL.md §Gate semantics). Идемпотентен: повторный вызов по issue с открытым PR — re-entry в inner loop + simplify + full review + smoke на свежем diff'е. Этот же вход используется для отработки ручного ревью на PR. На входе детектит docs-only задачи (Тип DOCS, INFRA на `.claude/`, FEATURE с маркером docs-only, ADR-as-deliverable) и делегирует в `/document`.
 - `/document <N>` — docs-only оркестратор. Планирует слои артефактов (spec / ux-brief / tech-doc / ADR / `.claude` prompt), гоняет spec-writer / ux-expert / architect, делает consistency pass, docs-scoped ревью, PR. Гейты D1/D2/D5. Используй напрямую для DOCS/INFRA задач или жди делегации из `/implement`.
 - `/code-review <PR>` — параллельный multi-agent review с постингом в GitHub.
 - `/grooming` — закрывает текущий спринт по факту, делает gap-analysis, собирает компактный план следующего (Цель / Состав / Следствия + опциональный merge order). Формат фиксирован в SKILL.md Шаг 6.
