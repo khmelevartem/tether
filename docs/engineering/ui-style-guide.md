@@ -4,13 +4,13 @@ Practical reference for Tether's visual identity. Audience: contributors writing
 
 ## Theme architecture
 
-Tether uses Compose Foundation + [Compose Unstyled](https://composeunstyled.com/) (`com.composables:core`). There is no Material 3 dependency.
+Tether uses Compose Foundation. There is no Material 3 dependency.
 
 A custom `TetherTheme` composable wraps the content tree and exposes four theme objects to the composition: `TetherColors`, `TetherTypography`, `TetherSpacing`, and `TetherShapes`. Each is provided via a `CompositionLocal` so any composable in the tree can read current tokens without threading parameters.
 
 Theme selection follows the platform's current appearance (light or dark) as reported by the OS. The theme updates live when the user toggles dark mode at the system level — no app restart required.
 
-**Material 3 is not the base.** Use Compose Foundation primitives directly, or unstyled component libraries (e.g. Compose Unstyled, `com.composables:core`). `MaterialTheme` is not a dependency — any attempt to access it at runtime is an error.
+**Material 3 is not the base.** Use Compose Foundation primitives directly. `MaterialTheme` is not a dependency — any attempt to access it at runtime is an error.
 
 ## Color tokens
 
@@ -139,14 +139,16 @@ For each new screen or component:
 - [ ] Every icon with semantic meaning has a non-null content description.
 - [ ] Every interactive element has a human-readable semantic label if the visual label is not text.
 - [ ] Color is never the sole signal of a state — always pair color with an icon or text label.
-- [ ] Touch targets are ≥ 48dp on Android/iOS. Use `Modifier.minimumInteractiveComponentSize()` (Compose Foundation) if a visual element is smaller.
+- [ ] Touch targets are ≥ 48dp on Android/iOS. Use `Modifier.tetherMinTouchTarget()` (defined in `com.tubetoast.tether.ui.theme`) if a visual element is smaller.
 - [ ] On Desktop, interactive elements are reachable via Tab / Enter / Space. Verify focus order is logical (top-to-bottom, left-to-right in LTR layouts).
 - [ ] `numeric` text style is used for file sizes, ETAs, and percentages — not `bodyMedium`.
 - [ ] Text scales with system font size. No font size set outside the `TetherTypography` scale.
 
 ## Previews
 
-Every screen composable requires a `@Preview` (or platform equivalent) for each state listed in the UX brief. Minimum set: populated, empty/searching, loading, error. Light + dark variants where they differ.
+Every screen composable requires a `@Preview` (or platform equivalent) for each state listed in the UX brief. Minimum set: populated, empty/searching, loading, error.
+
+Every `@Preview` function accepts a `@PreviewParameter(Themes::class) dark: Boolean` parameter and passes it to `PreviewSurface(darkTheme = dark) { … }`. The `Themes` provider (in `com.tubetoast.tether.ui.preview`) hard-codes `sequenceOf(false, true)` — both themes are generated structurally; you cannot ship a one-theme preview by mistake. Roborazzi produces two PNGs per `@Preview` (one per value), each at the full device viewport. No carve-outs — black text on white is still theme-sensitive, and an early-return component (e.g. `count = 0` badge) still renders the surrounding `PreviewSurface` background, which is itself a theme-bearing artifact worth snapshotting.
 
 Previews must be self-contained: build fake state inline and pass it to a stateless variant of the screen. Do not instantiate Decompose components in previews. Previews live in `commonMain` unless the preview itself is platform-bound.
 
@@ -158,4 +160,3 @@ Previews must be self-contained: build fake state inline and pass it to a statel
 - [presentation-layer.md](presentation-layer.md) — Decompose component conventions
 - [Inter typeface](https://rsms.me/inter/)
 - [Tabler Icons](https://tabler.io/icons)
-- [Compose Unstyled](https://composeunstyled.com/)

@@ -14,6 +14,7 @@ User-facing concepts. The vocabulary [`spec-writer`](../.claude/agents/spec-writ
 - **Device list** — the user-visible list of trusted devices on a given device.
 - **Device name** — the user-chosen display label for a device, shown to peers (see [device-name-bootstrapping](product/features/device-name-bootstrapping/)).
 - **Hotspot transfer** — a transfer that runs over an ad-hoc Wi-Fi hotspot hosted by one of the devices, used when the peers have no shared Wi-Fi network (see [hotspot-transfer](product/features/hotspot-transfer/)).
+- **Peer identity** — the stable visual signal (currently a warm copper hue) bound to a specific peer's device identity, so the same peer is recognisable across screens. _Avoid:_ peer color, device color, identity hue. (see [ui-style-guide.md](engineering/ui-style-guide.md))
 
 ## Technical
 
@@ -30,4 +31,5 @@ Engineering concepts. The vocabulary [`architect`](../.claude/agents/architect.m
 - **Session** — the post-rendezvous logical connection between two peers, lasting from `/hello` until either side closes it.
 - **Drift** — a usage of a term that contradicts its glossary definition, or absence of a glossary entry for a term that recurs across long-lived artifacts.
 - **Living doc** — a `docs/engineering/<name>.md` artifact that captures the present-tense rules for a subsystem; distinct from an ADR (one-time decision) and a knowledge entry (solved-problem note).
+- **Token** — a named value in `TetherTheme` (color, typography, spacing, shape) read via `TetherTheme.<scale>` from the composition rather than hardcoded. _Avoid:_ constant, raw value, magic number, theme value. (see [ui-style-guide.md](engineering/ui-style-guide.md))
 
