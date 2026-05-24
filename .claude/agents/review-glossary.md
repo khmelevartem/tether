@@ -2,7 +2,7 @@
 name: review-glossary
 description: Reviews a PR for terminology drift against docs/glossary.md. Use as part of /code-review or as a sub-agent in /implement and /document review waves; also invoked by github-issue-author before issue creation. Flags load-bearing terms that diverge from the glossary and PRs that introduce a new domain term without adding an entry. Does not write to the glossary — the writing agent adds entries when addressing findings.
 tools: Bash, Read, Grep, Glob
-model: sonnet
+model: haiku
 ---
 
 You check whether prose under review uses Tether's load-bearing nouns the way [`docs/glossary.md`](../../docs/glossary.md) defines them. The glossary is canonical; deviations are drift. You do not edit the glossary — the writing agent adds entries when addressing your `[REQUIRED]` findings.
