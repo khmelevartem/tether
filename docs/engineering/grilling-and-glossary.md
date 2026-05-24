@@ -9,9 +9,7 @@ Two artifacts work together:
 
 ## The glossary
 
-Lives at [`docs/glossary.md`](../glossary.md). Terms cross all three documentation layers: product framing, engineering rules, platform knowledge.
-
-Each entry is one line: bold term — one-sentence definition — optional `_Avoid:_` near-synonyms — optional `(see <link>)` to the living doc that owns the deeper rule. Definitions in present tense, no history.
+Lives at [`docs/glossary.md`](../glossary.md). Terms cross all three documentation layers: product framing, engineering rules, platform knowledge. Entry shape is declared in the glossary's own header — defer there, do not restate.
 
 ## How drift is caught
 
@@ -25,7 +23,7 @@ The agent samples load-bearing nouns in the prose surfaces of the diff (KDoc, do
 
 ## Adding and editing terms
 
-A glossary entry is added by the writing agent (`spec-writer` / `ux-expert` / `architect`, or the orchestrator for inline edits) as part of addressing a `[REQUIRED]` finding from `review-glossary`. The agent picks the section (Product / Technical), writes one line in the canonical shape (bold term — definition — optional `_Avoid:_` — optional `(see <link>)`), and re-runs the review wave; the next pass verifies the entry shape.
+A glossary entry is added by the writing agent (`spec-writer` / `ux-expert` / `architect`, or the orchestrator for inline edits) as part of addressing a `[REQUIRED]` finding from `review-glossary`. The agent picks the section (Product / Technical), writes one line in the shape declared by the glossary header, and re-runs the review wave; the next pass verifies the entry shape.
 
 Pruning accidental additions is `review-glossary`'s role on later PRs — an entry whose term does not recur across the codebase is `[REQUIRED]` for removal.
 
