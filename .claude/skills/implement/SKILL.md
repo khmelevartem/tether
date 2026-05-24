@@ -80,7 +80,7 @@ gh pr list --search "issue:#<N>" --state open --json number,isDraft,headRefName
 | `**Тип:** FEATURE` + явный маркер docs-only (фраза «docs-only» / «only docs» / «scope: docs» в body/DoD, либо label `docs-only`) | docs-only | то же |
 | Issue без `**Тип:**` AND deliverable **ограничен исключительно** правкой `.claude/` или `docs/` (никакого кода в исходниках) | docs-only | то же |
 | `**Тип:** INFRA` AND deliverable **ограничен исключительно** правкой `.claude/` файлов (skill prompts, agent definitions, hooks) | docs-only | то же |
-| `**Тип:** FEATURE` / `BUGFIX` / `REFACTOR` / `INFRA` с deliverable в исходниках или build/CI/scripts (даже если попутно нужен ADR) | code-track | продолжай Step 2-10 |
+| `**Тип:** FEATURE` / `BUGFIX` / `REFACTOR` / `INFRA` с deliverable в исходниках или build/CI/scripts (даже если попутно нужен ADR) | code-track | продолжай Step 2–8 |
 
 При делегации в /document: «Эта задача — docs-only. Запускаю `/document <N>` и завершаюсь.» `/document` сам обработает выбор слоёв, консистентность, ревью и PR. **НЕ делегируй** код-FEATURE с попутным ADR — для таких задач Step 4 диспатчит `architect` mid-flight, и ADR пишется в той же PR что и код.
 

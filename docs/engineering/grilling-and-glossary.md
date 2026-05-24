@@ -7,12 +7,6 @@ Two artifacts work together:
 - The **glossary** — one file at [`docs/glossary.md`](../glossary.md) that holds every load-bearing term Tether uses across product, engineering, and platform layers.
 - The **`review-glossary` agent** at [`.claude/agents/review-glossary.md`](../../.claude/agents/review-glossary.md) — a sub-agent that samples load-bearing nouns in a diff against the glossary, flags drift, and flags terms used without an entry. It does not edit the glossary itself.
 
-## Why this exists
-
-A cross-platform P2P file-transfer app produces a lot of near-synonyms: "device" vs "peer" vs "node", "pairing" vs "trust" vs "handshake", "discovery" vs "rendezvous" vs "announce". Without one shared definition file, every spec invents its own naming and every agent latches onto a different synonym. The artifact that pays the cost is the next reviewer — human or AI — who cannot tell whether two passages describe the same mechanism.
-
-The glossary is the rule `review-glossary` enforces on every PR diff.
-
 ## The glossary
 
 Lives at [`docs/glossary.md`](../glossary.md). Terms cross all three documentation layers: product framing, engineering rules, platform knowledge.

@@ -19,13 +19,13 @@ User-facing concepts. The vocabulary [`spec-writer`](../.claude/agents/spec-writ
 
 Engineering concepts. The vocabulary [`architect`](../.claude/agents/architect.md), `coder`, and the review agents use.
 
-- **Discovery** — the layer that announces a device's presence and finds peers on the local network (see [discovery.md](engineering/discovery.md)). _Avoid:_ announce (verb only).
+- **Discovery** — the layer that announces a device's presence and finds peers on the local network. _Avoid:_ announce (verb only). (see [discovery.md](engineering/discovery.md))
 - **Rendezvous** — a post-discovery `/hello` mechanism that resolves asymmetric discovery (one side saw the other but not vice versa), primarily for the hotspot scenario. Distinct from Discovery itself.
 - **Peer** — a device visible through discovery, regardless of pairing status. _Avoid:_ node, neighbour; device when pairing status matters (use **Trusted device** then).
 - **FileServer** — the per-device HTTP server that accepts incoming transfers. _Avoid:_ receiver, listener.
 - **FileClient** — the per-device HTTP client that initiates outgoing transfers. _Avoid:_ sender, uploader.
 - **Source set** — a Kotlin Multiplatform compilation source set; platform-to-target mapping and hierarchy live in [architecture-principles.md](engineering/architecture-principles.md). _Avoid:_ saying «JVM» when the audience is end-users — say *Desktop* instead.
-- **Composition root** — the platform entry point that constructs the DI container; by extension, the `AppContainer` instance it constructs. See [dependency-injection.md](engineering/dependency-injection.md).
+- **Composition root** — the platform entry point that constructs the DI container; by extension, the `AppContainer` instance it constructs. (see [dependency-injection.md](engineering/dependency-injection.md))
 - **Container** — the DI container that holds singletons for one process lifetime; the construct that lives at the composition root.
 - **Session** — the post-rendezvous logical connection between two peers, lasting from `/hello` until either side closes it.
 - **Drift** — a usage of a term that contradicts its glossary definition, or absence of a glossary entry for a term that recurs across long-lived artifacts.
