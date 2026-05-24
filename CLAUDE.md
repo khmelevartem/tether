@@ -21,7 +21,7 @@ Read these on demand, not all upfront:
 - Tests → [`testing.md`](docs/engineering/testing.md)
 - New product spec or update of existing → [`_template.md`](docs/product/features/_template.md). Готовая соседняя спека показывает структуру, но не правила про содержание — шаблон открой отдельно.
 - New UX brief or update of existing → [`_ux-brief-template.md`](docs/product/features/_ux-brief-template.md). Соседний готовый бриф показывает форму, но дисциплина (scope cohesion, cross-ref on move, без имён кода) — в шаблоне.
-- Новый доменный термин в долгоживущем артефакте → `review-glossary` поймает в PR-волне и попросит обновить [`docs/glossary.md`](docs/glossary.md). Механизм: [`grilling-and-glossary.md`](docs/engineering/grilling-and-glossary.md).
+- Новый доменный термин в долгоживущем артефакте → `review-glossary` поймает в PR-волне и попросит обновить [`docs/glossary.md`](docs/glossary.md). Механизм: [`glossary-discipline.md`](docs/engineering/glossary-discipline.md).
 
 ## Architecture invariants
 

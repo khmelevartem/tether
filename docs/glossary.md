@@ -1,6 +1,6 @@
 # Glossary
 
-Single source of vocabulary for Tether. New entries land when [`review-glossary`](../.claude/agents/review-glossary.md) flags an undocumented term in a PR diff and the writing agent adds the entry as part of addressing the finding. Mechanism: [`grilling-and-glossary.md`](engineering/grilling-and-glossary.md).
+Single source of vocabulary for Tether. New entries land when [`review-glossary`](../.claude/agents/review-glossary.md) flags an undocumented term in a PR diff and the writing agent adds the entry as part of addressing the finding. Mechanism: [`glossary-discipline.md`](engineering/glossary-discipline.md).
 
 Sections are in fixed order. Each entry is one line: bold term, 1–2 sentence definition, optional `_Avoid:_` list of near-synonyms, optional `(see <link>)` to the living doc that owns the deeper rule.
 
