@@ -1,0 +1,6 @@
+Installed on 1 device.
+Starting: Intent { cmp=com.tubetoast.tether/.MainActivity }
+--------- beginning of main
+05-24 11:24:36.834 W/System.err( 2650): [DefaultDispatcher-worker-3] INFO io.ktor.server.Application - Autoreload is disabled because the development mode is off.
+05-24 11:24:36.847 W/System.err( 2650): [DefaultDispatcher-worker-3] INFO io.ktor.server.Application - Application started in 0.036 seconds.
+05-24 11:24:36.852 W/System.err( 2650): [DefaultDispatcher-worker-2] INFO io.ktor.server.Application - Responding at http://0.0.0.0:38575
