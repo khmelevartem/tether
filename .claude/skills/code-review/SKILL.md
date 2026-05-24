@@ -42,6 +42,7 @@ Send a SINGLE message with multiple Agent tool calls (one per agent). Each promp
 Agents to launch (subject to skip matrix):
 - `review-dod`
 - `review-guides`
+- `review-glossary`
 - `review-architecture`
 - `review-platform`
 - `review-reuse`
