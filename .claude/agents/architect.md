@@ -94,6 +94,8 @@ When the engineering artifact is warranted, pick its flavor:
 - **an ADR amending an existing one** — the original decision still holds but a new constraint forces an addendum (use `## Amendment YYYY-MM-DD` section, don't rewrite);
 - **a knowledge entry** at `docs/knowledge/<name>.md` — the task is to capture a solved-problem / platform quirk / library trap / workaround. No design palette needed (the design happened during the incident); the writeup matches sibling-knowledge tone: symptom → cause → workaround → reference to the upstream ticket if any.
 
+**ADR threshold.** Pick «living doc + ADR» only when all three are true: (a) the decision is hard to reverse — changing your mind later costs real work; (b) it is surprising without context — a future reader will wonder why; (c) it is the result of a real trade-off — there were genuine alternatives and one was picked for specific reasons. If any of the three is missing, drop the ADR and keep only the living doc.
+
 **Never produce an orphan ADR.** If the parent living doc for the subsystem doesn't exist, you write/extend it in the same pass.
 
 ### Step 6 — Write
