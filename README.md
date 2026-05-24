@@ -72,11 +72,13 @@ APK — в `composeApp/build/outputs/apk/debug/`. Или запускай run-к
 
 ### macOS (Apple Silicon)
 
-`macosArm64` компилируется в native binary. Запуск — через IDE run-конфигурацию или Xcode. Чтобы проверить mDNS без UI:
+`macosArm64` компилируется в native binary. Стартует `FileServer` + mDNS-дискавери без Compose UI.
 
 ```bash
-dns-sd -B _tether._tcp.    # должно появиться _tether._tcp.
+./gradlew :composeApp:runDebugExecutableMacosArm64 -q
 ```
+
+Проверка дискавери: `dns-sd -B _tether._tcp.` — должен появиться `_tether._tcp.`
 
 ### Все таргеты разом
 

@@ -70,7 +70,13 @@ kotlin {
 
     // macosArm64 covers all Apple Silicon Macs (2020+).
     // macosX64 is deprecated in Kotlin 2.3 — add it back if Intel Mac support is needed.
-    macosArm64()
+    macosArm64 {
+        binaries {
+            executable {
+                entryPoint = "com.tubetoast.tether.main"
+            }
+        }
+    }
 
     // jvm("desktop") creates desktopMain as the leaf source set for the Desktop JVM target.
     // Combined with the custom hierarchy above, jvmMain becomes the intermediate parent

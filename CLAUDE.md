@@ -49,6 +49,7 @@ All git naming in English. **Все commit messages обязаны начина�
 ./gradlew :composeApp:runDesktopCli -q           # Desktop CLI (dev runner)
 ./gradlew :composeApp:run -q                     # Desktop Compose UI (Compose plugin default)
 ./gradlew :composeApp:assembleDebug              # Android APK
+./gradlew :composeApp:runDebugExecutableMacosArm64 -q   # macOS native (Apple mDNS)
 ```
 
 Desktop исходники разделены на два source set: `desktopMain` — shared backend + Compose UI (Clikt недоступен), `desktopCli` — CLI точка входа (видит `desktopMain` через `associateWith`, Clikt только здесь). Desktop distribution (`packageReleaseDistributionForCurrentOS`) пакует UI. CLI устанавливается через `installCli`.
