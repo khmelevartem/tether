@@ -51,11 +51,7 @@ private fun PreviewSkipCountBadgeSingular(@PreviewParameter(Themes::class) dark:
 private fun PreviewSkipCountBadgeNonZero(@PreviewParameter(Themes::class) dark: Boolean) =
     PreviewSurface(darkTheme = dark) { SkipCountBadge(count = 3) }
 
-// emits nothing
 @Preview(name = "SkipCountBadge — count = 0")
 @Composable
-private fun PreviewSkipCountBadgeZero() {
-    PreviewSurface {
-        SkipCountBadge(count = 0)
-    }
-}
+private fun PreviewSkipCountBadgeZero(@PreviewParameter(Themes::class) dark: Boolean) =
+    PreviewSurface(darkTheme = dark) { SkipCountBadge(count = 0) }

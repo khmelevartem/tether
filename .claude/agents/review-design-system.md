@@ -66,12 +66,12 @@ Run the suggested grep for each rule (paths relative to repo root); read flagged
 
 10. **Dark mode wiring.** If the PR introduces theme switching, `isSystemInDarkTheme()` is read at the theme root and live-updates are wired — no `remember { mutableStateOf(isDark) }` capturing a snapshot. A user-override surface in settings is out of scope (see `ui-style-guide.md § Dark mode`).
 
-11. **Previews paired light + dark.** Every `@Preview`-annotated function for a theme-sensitive composable accepts `@PreviewParameter(Themes::class) dark: Boolean` and passes it to `PreviewSurface(darkTheme = dark) { … }`. A `@Preview` body that hardcodes `darkTheme = …` or omits the parameter ships only one theme — violation. Single exception: `@Preview` marked with `// emits nothing` above the annotation. Source: `ui-style-guide.md § Previews`.
+11. **Previews paired light + dark.** Every `@Preview`-annotated function accepts `@PreviewParameter(Themes::class) dark: Boolean` and passes it to `PreviewSurface(darkTheme = dark) { … }`. A `@Preview` body that hardcodes `darkTheme = …` or omits the parameter ships only one theme — violation. No carve-outs. Source: `ui-style-guide.md § Previews`.
     ```bash
-    # list every @Preview function in commonMain — check each has the Themes parameter, or carries `// emits nothing`
+    # list every @Preview function in commonMain — each must take the Themes parameter
     rg -n -B 1 -A 4 '@Preview\b' composeApp/src/commonMain/
     # quick filter: @Preview occurrences whose next 5 lines never mention Themes::class
-    rg -nU '@Preview\b[^\n]*\n(?:[^\n]*\n){0,5}' composeApp/src/commonMain/ | rg -v 'Themes::class|emits nothing'
+    rg -nU '@Preview\b[^\n]*\n(?:[^\n]*\n){0,5}' composeApp/src/commonMain/ | rg -v 'Themes::class'
     ```
 
 ## What you do NOT check
