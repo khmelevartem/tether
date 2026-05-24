@@ -11,9 +11,15 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.OutgoingContent
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
+import io.ktor.utils.io.ByteWriteChannel
+import io.ktor.utils.io.writeFully
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import java.io.File
 import java.nio.file.Files
 import kotlin.test.AfterTest
@@ -22,6 +28,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.test.fail
+import kotlin.time.Duration.Companion.milliseconds
 
 // real CIO server — CIOApplicationEngine hardcodes real-thread dispatchers
 @Suppress("ktlint:tether:no-run-blocking-in-tests")
@@ -191,6 +199,51 @@ class FileServerPathTest {
             }
         } finally {
             client.close()
+        }
+    }
+
+    @Test
+    fun `abort after failed nested upload removes empty subdirs`() {
+        val root = Files.createTempDirectory("tether-path-abort-nested").toFile().also(cleanupPaths::add)
+        val server = newServer(root)
+        val port = server.start()
+        // SlowNestedContent paces writes so withTimeout fires mid-transfer, causing
+        // a client disconnect that triggers abort() on the server side.
+        val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
+        try {
+            runBlocking {
+                try {
+                    withTimeout(150.milliseconds) {
+                        client.post("http://localhost:$port/upload?name=foo/bar/file.bin") {
+                            setBody(SlowNestedContent())
+                        }
+                    }
+                    fail("expected cancellation, request unexpectedly completed")
+                } catch (_: TimeoutCancellationException) {
+                } catch (_: Exception) {
+                }
+                delay(200.milliseconds) // let server-side catch/finally settle
+            }
+        } finally {
+            client.close()
+        }
+        assertFalse(File(root, "foo/bar").exists(), "subdir foo/bar must be removed by abort()")
+        assertFalse(File(root, "foo").exists(), "subdir foo must be removed by abort()")
+    }
+}
+
+private class SlowNestedContent : OutgoingContent.WriteChannelContent() {
+    override val contentLength: Long = 8L * 1024 * 1024
+    override val contentType: ContentType = ContentType.Application.OctetStream
+
+    override suspend fun writeTo(channel: ByteWriteChannel) {
+        val chunk = ByteArray(64 * 1024)
+        var sent = 0L
+        while (sent < contentLength) {
+            val n = minOf(chunk.size.toLong(), contentLength - sent).toInt()
+            channel.writeFully(chunk, 0, n)
+            sent += n
+            delay(20.milliseconds)
         }
     }
 }

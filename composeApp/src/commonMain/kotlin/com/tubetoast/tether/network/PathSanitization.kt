@@ -1,9 +1,8 @@
 package com.tubetoast.tether.network
 
 internal object PathSanitization {
-    // Single-pass URL decode covers %2e%2e, %2f, and mixed encodings.
-    // We decode exactly once — repeated decodes are unnecessary and would
-    // normalise double-encoded inputs the sender has no legitimate use for.
+    // Decode exactly once — repeated decodes would normalise double-encoded
+    // inputs the sender has no legitimate use for.
     fun sanitizeRelativePath(raw: String): String? {
         if (raw.isEmpty()) return null
 
@@ -16,9 +15,8 @@ internal object PathSanitization {
         if (normalised.startsWith('/')) return null
         if (driveLetterPrefix.containsMatchIn(normalised)) return null
 
-        // Split on '/' and validate each segment. Empty segments (from runs of '/'
-        // or leading/trailing '/') are rejected rather than silently collapsed,
-        // because they indicate sender confusion, not a recoverable case.
+        // Empty segments are rejected rather than silently collapsed —
+        // they indicate sender confusion, not a recoverable case.
         val segments = normalised.split('/')
         for (segment in segments) {
             if (segment.isEmpty()) return null

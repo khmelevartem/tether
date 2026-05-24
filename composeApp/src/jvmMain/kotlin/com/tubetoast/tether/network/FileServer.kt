@@ -117,16 +117,7 @@ private fun mkdirsTracked(dir: File?): List<File> {
 }
 
 private fun resolveDestinationFile(dir: File, relativePath: String): File {
-    var dest = File(dir, relativePath)
-    if (!dest.exists()) return dest
-    val leafName = dest.name
-    val ext = leafName.substringAfterLast('.', "")
-    val base = if (ext.isEmpty()) leafName else leafName.removeSuffix(".$ext")
-    var i = 1
-    do {
-        val candidate = if (ext.isEmpty()) "${base}_$i" else "${base}_$i.$ext"
-        dest = File(dest.parentFile, candidate)
-        i++
-    } while (dest.exists())
-    return dest
+    val initial = File(dir, relativePath)
+    val leaf = dedupFilename(initial.name) { candidate -> File(initial.parentFile, candidate).exists() }
+    return File(initial.parentFile, leaf)
 }

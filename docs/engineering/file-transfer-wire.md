@@ -72,7 +72,7 @@ Responsibilities owned by the route handler, not the seam:
 
 Per-platform actuals differ along expected axes:
 
-- **JVM / Desktop / Android-app-private** — filesystem under a chosen root, `Files.createDirectories`, `Path.toRealPath()` for the canonical check.
+- **JVM / Desktop / Android-app-private** — filesystem under a chosen root, `File.mkdirs()`, `Path.toRealPath()` for the canonical check.
 - **Android — MediaStore** (out of scope of this doc; tracked by its own issue) — directory creation is implicit in the URI, the canonical-check shape becomes "the resolved `Uri` is under the chosen collection".
 - **Apple** — `NSFileManager` for directory creation, `realpath(3)` for canonicalisation, raw `fopen`/`fwrite` for streaming (current Apple actual).
 

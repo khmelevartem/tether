@@ -25,6 +25,18 @@ import ru.pocketbyte.kydra.log.wrapper.withTag
 
 internal const val UPLOAD_BUFFER_SIZE = 64 * 1024
 
+internal fun dedupFilename(leafName: String, exists: (candidate: String) -> Boolean): String {
+    if (!exists(leafName)) return leafName
+    val ext = leafName.substringAfterLast('.', "")
+    val base = if (ext.isEmpty()) leafName else leafName.removeSuffix(".$ext")
+    var i = 1
+    while (true) {
+        val candidate = if (ext.isEmpty()) "${base}_$i" else "${base}_$i.$ext"
+        if (!exists(candidate)) return candidate
+        i++
+    }
+}
+
 private val log = KydraLog.withTag(default = "Tether.FileServerRoutes")
 
 internal interface UploadStorage {
@@ -64,7 +76,7 @@ internal fun Application.installFileServerRoutes(
             call.respond(HttpStatusCode.OK, PairResponse(publicKey = serverPublicKey))
         }
         post("/upload") {
-            val rawName = call.request.queryParameters["name"]
+            val rawName = call.request.rawQueryParameters["name"]
             val relativePath = rawName?.let { PathSanitization.sanitizeRelativePath(it) }
             if (relativePath == null) {
                 log.info { "rejected upload — invalid_relative_path" }

@@ -102,17 +102,10 @@ private class AppleUploadStorage(
                 throw IOException("destination escapes downloads root: $resolvedParent")
             }
 
-            val firstTry = "$resolvedParent/$leafName"
-            if (!NSFileManager.defaultManager.fileExistsAtPath(firstTry)) return firstTry
-
-            val ext = leafName.substringAfterLast('.', "")
-            val base = if (ext.isEmpty()) leafName else leafName.removeSuffix(".$ext")
-            var i = 1
-            while (true) {
-                val candidate = if (ext.isEmpty()) "$resolvedParent/${base}_$i" else "$resolvedParent/${base}_$i.$ext"
-                if (!NSFileManager.defaultManager.fileExistsAtPath(candidate)) return candidate
-                i++
+            val leaf = dedupFilename(leafName) { candidate ->
+                NSFileManager.defaultManager.fileExistsAtPath("$resolvedParent/$candidate")
             }
+            return "$resolvedParent/$leaf"
         } catch (e: Throwable) {
             created.asReversed().forEach { deleteIfEmpty(it) }
             throw e
