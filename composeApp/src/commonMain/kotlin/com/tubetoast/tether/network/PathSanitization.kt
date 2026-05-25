@@ -1,5 +1,7 @@
 package com.tubetoast.tether.network
 
+import kotlin.text.CharacterCodingException
+
 internal object PathSanitization {
     // Decode exactly once — repeated decodes would normalise double-encoded
     // inputs the sender has no legitimate use for.
@@ -37,9 +39,19 @@ internal object PathSanitization {
         val out = StringBuilder(input.length)
         val pendingBytes = mutableListOf<Byte>()
 
+        // Strict UTF-8: malformed sequences (lone continuation byte, truncated
+        // multi-byte, overlong encodings like %C0%80 for NUL or %C0%AE for '.')
+        // are rejected outright rather than silently replaced with U+FFFD,
+        // which would let an attacker hide bytes from the segment checks.
+        var malformed = false
+
         fun flushBytes() {
             if (pendingBytes.isNotEmpty()) {
-                out.append(pendingBytes.toByteArray().decodeToString())
+                try {
+                    out.append(pendingBytes.toByteArray().decodeToString(throwOnInvalidSequence = true))
+                } catch (_: CharacterCodingException) {
+                    malformed = true
+                }
                 pendingBytes.clear()
             }
         }
@@ -59,6 +71,7 @@ internal object PathSanitization {
             }
         }
         flushBytes()
+        if (malformed) return null
         return out.toString()
     }
 }

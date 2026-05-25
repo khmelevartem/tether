@@ -109,6 +109,18 @@ class PathSanitizationTest {
     }
 
     @Test
+    fun `malformed UTF-8 percent-encoded bytes reject`() {
+        // lone continuation byte (0x80 has no preceding start byte)
+        assertNull(sanitize("%80"))
+        // truncated 2-byte sequence (C3 expects a continuation, not literal char)
+        assertNull(sanitize("%C3and-then-ascii"))
+        // overlong encoding of '.' (%C0%AE) — must not slip through as literal dot
+        assertNull(sanitize("%C0%AE"))
+        // overlong encoding of NUL (%C0%80) — must not bypass the NUL-byte guard
+        assertNull(sanitize("foo%C0%80bar.txt"))
+    }
+
+    @Test
     fun `url-encoded UTF-8 multi-byte decodes to original codepoints`() {
         // %D0%9E%D1%82%D0%BF%D1%83%D1%81%D0%BA → "Отпуск"
         assertEquals("Отпуск", sanitize("%D0%9E%D1%82%D0%BF%D1%83%D1%81%D0%BA"))

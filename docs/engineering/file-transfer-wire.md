@@ -46,7 +46,7 @@ The sanitizer lives in `commonMain` so the sender can pre-validate before hittin
 
 After sanitization passes, the relative path is resolved against the platform's downloads root. The storage layer guarantees that the **realised** absolute path stays inside the root — not the lexical path, the path the operating system would actually open. This catches:
 
-- **Symlinks inside the root pointing outside** it. Lexical sanitization sees only the string; only `Path.toRealPath()` / `realpath(3)` resolves the symlink.
+- **Symlinks inside the root pointing outside** it. Lexical sanitization sees only the string; only OS-level path realisation resolves the symlink.
 - **Case-folding collisions** on case-insensitive volumes (macOS HFS+/APFS default, Windows). Whether two strings name the same entry is a filesystem property, not a string property.
 - **Platform-specific path normalisation** that turns a string into a different entry than the lexical reading would suggest.
 
