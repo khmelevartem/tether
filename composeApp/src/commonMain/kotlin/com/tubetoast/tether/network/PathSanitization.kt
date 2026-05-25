@@ -17,8 +17,6 @@ internal object PathSanitization {
         if (normalised.startsWith('/')) return null
         if (driveLetterPrefix.containsMatchIn(normalised)) return null
 
-        // Empty segments are rejected rather than silently collapsed —
-        // they indicate sender confusion, not a recoverable case.
         val segments = normalised.split('/')
         for (segment in segments) {
             if (segment.isEmpty()) return null
@@ -30,19 +28,18 @@ internal object PathSanitization {
 
     private val driveLetterPrefix = Regex("^[A-Za-z]:")
 
-    // Decodes percent-escapes as UTF-8 byte sequences. Non-ASCII codepoints
-    // arrive percent-encoded over HTTP as multiple `%XX` bytes (one per UTF-8
-    // octet); we collect consecutive escape bytes and decode them as a batch
-    // so multi-byte codepoints reassemble correctly. Literal characters in
-    // the input are appended as-is, preserving any surrogate pairs.
+    // Non-ASCII codepoints arrive percent-encoded over HTTP as multiple `%XX`
+    // bytes (one per UTF-8 octet); consecutive escape bytes are collected and
+    // decoded as a batch so multi-byte codepoints reassemble correctly.
+    // Literal characters are appended as-is, preserving any surrogate pairs.
     private fun urlDecode(input: String): String? {
         val out = StringBuilder(input.length)
         val pendingBytes = mutableListOf<Byte>()
 
         // Strict UTF-8: malformed sequences (lone continuation byte, truncated
-        // multi-byte, overlong encodings like %C0%80 for NUL or %C0%AE for '.')
-        // are rejected outright rather than silently replaced with U+FFFD,
-        // which would let an attacker hide bytes from the segment checks.
+        // multi-byte, overlong encodings) are rejected outright rather than
+        // silently replaced with U+FFFD, which would let an attacker hide
+        // bytes from the segment checks.
         var malformed = false
 
         fun flushBytes() {

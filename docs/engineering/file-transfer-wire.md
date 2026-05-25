@@ -74,7 +74,7 @@ Per-platform actuals differ along expected axes:
 
 - **JVM / Desktop / Android-app-private** — filesystem under a chosen root, JDK NIO for directory creation and canonicalisation.
 - **Android — MediaStore** (out of scope of this doc; tracked by its own issue) — directory creation is implicit in the URI, the canonical-check shape becomes "the resolved URI is under the chosen collection".
-- **Apple** — Foundation for directory creation, POSIX `realpath` for canonicalisation, low-level file I/O for streaming. K/N has no `java.nio` equivalent, so canonicalisation calls the same POSIX primitive the JVM does under the hood.
+- **Apple** — Foundation for directory creation, POSIX `realpath` for canonicalisation, low-level file I/O for streaming.
 
 ## Cross-cutting concerns
 

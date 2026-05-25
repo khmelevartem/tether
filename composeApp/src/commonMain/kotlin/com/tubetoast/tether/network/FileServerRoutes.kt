@@ -49,7 +49,7 @@ internal interface UploadStorage {
 
     suspend fun writeBody(body: ByteReadChannel, destination: String): Long
 
-    /** Deletes the partial destination file (if any) and removes any empty parent dirs up to root. */
+    /** Deletes any partial destination file and removes empty parent directories up to root. */
     fun abort(destination: String)
 }
 
