@@ -14,6 +14,10 @@ QEMU user-mode (SLIRP) networking applies when running the Android emulator with
 
 This is a documented architectural constraint of QEMU user-mode networking (SLIRP), not a Tether bug.
 
+## Spurious NSD lost/found cycles
+
+Android NSD on the emulator emits periodic `onServiceLost` + `onServiceFound` events for stably-published peers (Bonjour mDNSResponder re-announcements read as removal). Real Android devices do not exhibit this. No fix in this codebase — environment artefact.
+
 ## Workarounds for dev work
 
 - **Endpoint sanity checks (e.g. `/health`):** `adb forward tcp:<host-port> tcp:<guest-port>` then `curl http://localhost:<host-port>/health`.
