@@ -1,6 +1,5 @@
 package com.tubetoast.tether.network
 
-import com.tubetoast.tether.logging.suppressTestLogs
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.protocol.SendResult
 import io.ktor.client.HttpClient
@@ -30,7 +29,6 @@ import java.io.IOException
 import java.nio.file.Files
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.io.path.writeBytes
-import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
@@ -40,11 +38,6 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 class FileClientTest {
-    @BeforeTest
-    fun setup() {
-        suppressTestLogs()
-    }
-
     private val device = Device(name = "test", host = "127.0.0.1", port = 8080)
 
     private fun TestScope.mockClient(

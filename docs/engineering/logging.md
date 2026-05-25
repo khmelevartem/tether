@@ -6,7 +6,7 @@ The rest of this doc is the contract any new logging call site must respect.
 
 ## Goal
 
-A reader debugging a cross-platform issue sees the same logger names and the same level semantics in Logcat, Console.app / Xcode, and Desktop stderr. The CLI starts without spurious framework warnings. Release builds do not leak DEBUG. Tests do not leak any log noise into CI output.
+A reader debugging a cross-platform issue sees the same logger names and the same level semantics in Logcat, Console.app / Xcode, and Desktop stderr. The CLI starts without spurious framework warnings. Release builds do not leak DEBUG.
 
 ## Logger names
 
@@ -75,7 +75,11 @@ All three should return no production hits. Test source sets may print freely.
 
 ## Test logging
 
-Test source sets (`commonTest`, `jvmTest`, `androidUnitTest`, `desktopTest`, `appleTest`) must not produce log output during `./gradlew allTests`. The writer initialised in test setup is a no-op writer or a WARNING-threshold writer — chosen at test-helper level, not per test. A test that needs to assert against logged content uses an in-memory writer it installs itself in `@BeforeTest`.
+Test source sets initialise no logger of their own; production code paths exercised by tests log at their production level (INFO unless DEBUG gate is on). KydraLog auto-init kicks in on first call with the platform default writer, output lands in JUnit's `system-out` of the test report. Gradle's `-q` mode hides it in the terminal; opening the HTML/XML report shows it as background context.
+
+This was a preventive-hygiene rule before, enforced via a `suppressTestLogs()` helper. The helper was removed because (a) we never had a noise-driven incident, (b) it was a no-op in Android Robolectric where `TetherApp.onCreate()` initialises KydraLog before `@BeforeTest` runs, and (c) production-level emissions in test reports are useful context when a test fails, not noise to suppress.
+
+A test that needs to assert against logged content installs its own in-memory writer in `@BeforeTest` via `KydraLog.init(...)` (not `initOrIgnore` — the test owns the lifecycle).
 
 ## Sensitive data
 
