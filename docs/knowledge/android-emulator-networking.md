@@ -10,13 +10,13 @@ QEMU user-mode (SLIRP) networking applies when running the Android emulator with
 
 ## What does not work
 
-**Host→emulator TCP payload.** TCP handshake (SYN/SYN-ACK) completes via QEMU's static NAT entry. Payload bytes from host to guest are silently dropped by QEMU user-mode networking — Ktor on the emulator never receives the request. Effect: `send` from Desktop CLI to the emulator-advertised IP (`10.0.2.x`) hangs and times out.
+**Host→emulator TCP from advertised IP.** QEMU user-mode (SLIRP) networking blocks all unsolicited inbound connections to the guest by default; only ports exposed via `hostfwd` or `adb forward` are reachable. The emulator's `wlan0` IP (`10.0.2.x`) is therefore unreachable from the host without an explicit forward, even though it appears in mDNS announcements. Effect: `send` from Desktop CLI to a discovered emulator peer hangs (the connection cannot be established or terminates with no payload received, depending on environment).
 
 This is a documented architectural constraint of QEMU user-mode networking (SLIRP), not a Tether bug.
 
 ## Spurious NSD lost/found cycles
 
-Android NSD on the emulator emits periodic `onServiceLost` + `onServiceFound` events for stably-published peers (Bonjour mDNSResponder re-announcements read as removal). Real Android devices do not exhibit this. No fix in this codebase — environment artefact.
+Android NSD on the emulator emits periodic `onServiceLost` + `onServiceFound` events for stably-published peers (Bonjour mDNSResponder re-announcements read as removal). No fix in this codebase — environment artefact.
 
 ## Workarounds for dev work
 
