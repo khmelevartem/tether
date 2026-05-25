@@ -1,12 +1,19 @@
+@file:OptIn(ExperimentalForeignApi::class)
+
 package com.tubetoast.tether.discovery
 
 import com.tubetoast.tether.protocol.Device
+import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.ObjCSignatureOverride
+import kotlinx.cinterop.addressOf
+import kotlinx.cinterop.usePinned
 import kotlinx.coroutines.flow.StateFlow
+import platform.Foundation.NSData
 import platform.Foundation.NSNetService
 import platform.Foundation.NSNetServiceBrowser
 import platform.Foundation.NSNetServiceBrowserDelegateProtocol
 import platform.Foundation.NSNetServiceDelegateProtocol
+import platform.Foundation.dataWithBytes
 import platform.darwin.NSObject
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.debug
@@ -57,6 +64,7 @@ actual class MdnsDiscovery(
         val delegate = ServiceDelegate(this)
         serviceDelegate = delegate
         service.delegate = delegate
+        service.setTXTRecordData(txtRecordData())
         service.publish()
         netService = service
 
@@ -122,10 +130,25 @@ actual class MdnsDiscovery(
         val delegate = ServiceDelegate(this)
         serviceDelegate = delegate
         service.delegate = delegate
+        service.setTXTRecordData(txtRecordData())
         service.publish()
         netService = service
 
         log.info { "republished service $name on port $currentPort" }
+    }
+
+    private fun txtRecordData(): NSData? {
+        val dict: Map<String, NSData> = TXT_PROPS.entries.associate { (k, v) ->
+            val bytes = v.encodeToByteArray()
+            val nsData: NSData = bytes.usePinned { pinned ->
+                NSData.dataWithBytes(pinned.addressOf(0), bytes.size.toULong())
+            }
+            k to nsData
+        }
+        // Safe: Kotlin/Native ObjC bridge maps NSDictionary* parameters to Map<Any?, *>;
+        // our keys (String) and values (NSData) are accepted by the bridge at runtime.
+        @Suppress("UNCHECKED_CAST")
+        return NSNetService.dataFromTXTRecordDictionary(dict as Map<Any?, *>)
     }
 
     private fun onServiceFound(service: NSNetService) {

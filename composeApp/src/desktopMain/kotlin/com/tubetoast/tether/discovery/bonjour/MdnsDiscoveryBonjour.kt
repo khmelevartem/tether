@@ -5,6 +5,7 @@ import com.sun.jna.Pointer
 import com.sun.jna.ptr.PointerByReference
 import com.tubetoast.tether.discovery.DeviceDiscovery
 import com.tubetoast.tether.discovery.DiscoveredDevicesStore
+import com.tubetoast.tether.discovery.TXT_PROPS
 import com.tubetoast.tether.protocol.Device
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -397,6 +398,8 @@ internal class MdnsDiscoveryBonjour(
                     }
                 }
                 anchor(callback)
+                val txtBytes = BonjourCodec.encodeTxt(TXT_PROPS)
+                val txtMem = Memory(txtBytes.size.toLong()).also { it.write(0, txtBytes, 0, txtBytes.size) }
                 val error = DnsSd.INSTANCE.DNSServiceRegister(
                     outRef,
                     0,
@@ -406,8 +409,8 @@ internal class MdnsDiscoveryBonjour(
                     null,
                     null,
                     BonjourCodec.hostOrderToNetwork(port),
-                    0,
-                    null,
+                    txtBytes.size.toShort(),
+                    txtMem,
                     callback,
                     null,
                 )

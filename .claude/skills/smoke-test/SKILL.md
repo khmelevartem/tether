@@ -1,6 +1,6 @@
 ---
 name: smoke-test
-description: Прогон базового smoke-теста (happy-path) по платформам Tether — Desktop CLI (cli jar + /health + mDNS + stdin commands), Desktop↔Desktop send через CLI, Android (если adb-устройство подключено) с send-from-Desktop, нативная компиляция iosSimulatorArm64. Используй этот скилл, когда пользователь просит «прогони smoke», «прогони smoke-тест», «basic smoke», «basic regression», «проверь сборку по платформам перед merge», «дымовой тест». Не путать с unit-тестами (`./gradlew allTests`) — smoke это рантайм-проверка стартует ли всё и видят ли друг друга, не корректность логики.
+description: Прогон базового smoke-теста (happy-path) по платформам Tether — Desktop CLI (cli jar + /health + mDNS + stdin commands), Desktop↔Desktop send через CLI, Android (если adb-устройство подключено) с send-from-Desktop, iOS simulator (xcodebuild + simctl) с mDNS publish + cross-discovery. Используй этот скилл, когда пользователь просит «прогони smoke», «прогони smoke-тест», «basic smoke», «basic regression», «проверь сборку по платформам перед merge», «дымовой тест». Не путать с unit-тестами (`./gradlew allTests`) — smoke это рантайм-проверка стартует ли всё и видят ли друг друга, не корректность логики.
 ---
 
 # Smoke-test skill
@@ -15,8 +15,7 @@ description: Прогон базового smoke-теста (happy-path) по п
 
 - **Физический iPhone** — нет, требует ручной подписи и доверия сертификата.
 - **macOS** — ship'ится через Desktop JVM-таргет; smoke покрывается Desktop-блоком (этот же jar пакуется в `.app`/`.dmg` через `packageReleaseDistributionForCurrentOS`).
-- **iOS receive/send** — `FileServer.apple` это stub, на `start()` бросает `error()`. Только sanity-компиляция `iosSimulatorArm64`.
-- **iOS simulator runtime** — только compile-sanity, запуск не автоматизируется (требует Xcode-проекта).
+- **iOS Local Network Privacy prompt** — на первом запуске приложения на симуляторе iOS может показать «Allow Local Network access». Без Allow `NSNetService.publish()` молча не публикуется. Если iOS-блок упал на publish — проверить prompt вручную, дать Allow, перезапустить смоук.
 - **Android-инициированный send (Android → Desktop)** — на Android нет программного триггера отправки (intent / UI-кнопка / broadcast). Скилл проверяет обратное направление: Desktop → Android через CLI `send`.
 - **Тап по Notification «Stop»** — заменяется на `am force-stop` или broadcast. Что *кнопка нарисована и работает* — проверить вручную.
 - **Sleep/wake реального девайса** — `adb shell input keyevent SLEEP/WAKEUP` это аппроксимация, не настоящий power state.
@@ -241,8 +240,10 @@ adb devices | awk '/device$/ && !/List/ {print $1}'
    В отчёт: `Android | cross-discovery | ✓ PASS | 250 ms` — network-propagation + JmDNS resolve.
 8. **Send Desktop → Android (через CLI):**
    ```bash
-   if [ -z "$ANDROID_NAME" ]; then
-     echo "SKIP: cross-discovery did not surface Android peer (likely emulator NAT)"
+   if echo "$ANDROID_IP" | grep -q "^10\.0\.2\."; then
+     echo "SKIP: Android emulator detected — QEMU user-mode NAT drops host→guest TCP payload; see docs/knowledge/android-emulator-networking.md"
+   elif [ -z "$ANDROID_NAME" ]; then
+     echo "SKIP: cross-discovery did not surface Android peer"
    else
      echo "send-to-android-$(date +%s)" > /tmp/smoke-android.txt
      echo "send $ANDROID_NAME /tmp/smoke-android.txt" > /tmp/smoke-cliA-in &
@@ -256,18 +257,61 @@ adb devices | awk '/device$/ && !/List/ {print $1}'
      adb shell cat "$SAVED_PATH" 2>/dev/null | diff - /tmp/smoke-android.txt && echo PASS || echo FAIL
    fi
    ```
-   PASS если в логе Desktop CLI `[send] OK` И файл на Android по распарсенному savedPath идентичен. Если ANDROID_NAME пустой — это **SKIP, не FAIL** (явная причина: cross-discovery недоступен).
+   PASS если в логе Desktop CLI `[send] OK` И файл на Android по распарсенному savedPath идентичен. SKIP если `10.0.2.x` (QEMU NAT) или ANDROID_NAME пустой — не FAIL.
 9. **Stop service:** `adb shell am force-stop com.tubetoast.tether`. PASS если приложение умерло. (Тап Notification «Stop» — manual.)
 
 Помечай каждый под-сценарий отдельно: install, FGS+mDNS up (с NSD probing latency), /health sanity, cross-discovery (с ms), send-desktop-to-android, stop.
 
-### Блок 6: Native compile sanity
+### Блок 5.5: iOS simulator runtime (условно)
 
-```bash
-./gradlew -q :composeApp:compileKotlinIosSimulatorArm64
-```
+Pre-checks (любой fail → весь блок SKIP с причиной):
+- `xcrun simctl help >/dev/null 2>&1` — Xcode CLI tools установлены.
+- `[ -d iosApp/iosApp.xcodeproj ]` — проект есть.
 
-PASS если exit=0. FAIL — приложить последние ~30 строк stderr.
+Иначе:
+
+1. **Resolve+boot симулятора.** Дефолт `iPhone 17` (как в `scripts/run-all.sh`). Если другой нужен — переменная `IOS_DEVICE`.
+   ```bash
+   IOS_DEVICE="${IOS_DEVICE:-iPhone 17}"
+   UDID=$(xcrun simctl list devices available \
+     | awk -F '[()]' -v n="$IOS_DEVICE" '$0 ~ n && $0 !~ /unavailable/ { print $2; exit }')
+   [ -z "$UDID" ] && { echo "SKIP: no available simulator matching '$IOS_DEVICE'"; }
+   xcrun simctl boot "$UDID" 2>/dev/null || true
+   open -a Simulator
+   ```
+2. **Build + install + launch.** Используем `build/ios` под derivedDataPath, чтобы переиспользовать кеш между прогонами.
+   ```bash
+   IOS_DERIVED=build/ios
+   IOS_APP="$IOS_DERIVED/Build/Products/Debug-iphonesimulator/Tether.app"
+   IOS_BUNDLE_ID=com.tubetoast.tether.Tether
+   xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp \
+     -configuration Debug \
+     -destination "platform=iOS Simulator,id=$UDID" \
+     -derivedDataPath "$IOS_DERIVED" \
+     build > /tmp/smoke-ios-build.log 2>&1
+   xcrun simctl install "$UDID" "$IOS_APP"
+   xcrun simctl launch "$UDID" "$IOS_BUNDLE_ID" > /tmp/smoke-ios-launch.log 2>&1
+   ```
+   PASS если build exit=0, install exit=0, launch exit=0. FAIL — tail `/tmp/smoke-ios-build.log`.
+3. **mDNS publish.** До 30 сек поллим `dns-sd`:
+   ```bash
+   IOS_NAME=""
+   for i in $(seq 1 30); do
+     IOS_NAME=$( ( dns-sd -B _tether._tcp local. & DNSSD=$!; sleep 2; kill $DNSSD 2>/dev/null ) \
+       | grep -oE '[A-Za-z0-9 .-]*iPhone[A-Za-z0-9 .-]*' | head -1 | tr -d '\r')
+     [ -n "$IOS_NAME" ] && break
+     sleep 1
+   done
+   ```
+   PASS если `IOS_NAME` непуст. FAIL причина — скорее всего Local Network Privacy prompt (см. «Чего скилл НЕ проверяет»).
+4. **TXT publish.** `dns-sd -q "${IOS_NAME}._tether._tcp.local." TXT` за ~3 сек, должно вернуть `4 bytes: 03 76 3D 31` (`v=1`). PASS если бинарный паттерн совпал.
+5. **Cross-discovery.** До 30 сек ждать появления iOS-peer'a в логе Desktop CLI A:
+   ```bash
+   for i in $(seq 1 30); do grep -q "$IOS_NAME" "$LOG_A" && break; sleep 1; done
+   ```
+   PASS если в логе A появилась строка с `IOS_NAME`.
+
+Cleanup iOS — в Блоке 7.
 
 ### Блок 7: Cleanup
 
@@ -278,6 +322,8 @@ PASS если exit=0. FAIL — приложить последние ~30 стр�
 - Файлы в `~/Downloads/Tether/`, которые сами создали — убираем по `savedPath` из лога A.
 - `adb shell rm -f /sdcard/Android/data/com.tubetoast.tether/files/Tether/smoke-android.txt` (или по `SAVED_PATH` если парсили)
 - `adb shell am force-stop com.tubetoast.tether`
+- `xcrun simctl terminate "$UDID" com.tubetoast.tether.Tether 2>/dev/null || true` (если `UDID` был резолвлен в Блоке 5.5)
+- `rm -f /tmp/smoke-ios-build.log /tmp/smoke-ios-launch.log`
 
 ## Формат отчёта
 
@@ -324,7 +370,10 @@ PASS если exit=0. FAIL — приложить последние ~30 стр�
 | Android | cross-discovery | ✓ PASS | 2154ms (launch→peer-on-Desktop) |
 | Android | send Desktop→Android | ✓ PASS | savedPath parsed, diff empty |
 | Android | force-stop | ✓ PASS | process killed |
-| Native | compileKotlinIosSimulatorArm64 | ✓ PASS | 2s |
+| iOS | xcodebuild + install | ✓ PASS | UDID=<...>, 28s |
+| iOS | launch | ✓ PASS | pid=<...> |
+| iOS | mDNS publish | ✓ PASS | service=<IOS_NAME>, TXT=03 76 3D 31 |
+| iOS | cross-discovery | ✓ PASS | seen on Desktop A in 4s |
 
 ## Failures
 
@@ -332,7 +381,6 @@ PASS если exit=0. FAIL — приложить последние ~30 стр�
 
 ## Manual verification required (не покрыто smoke)
 
-- iOS simulator runtime — запустить `iosApp/iosApp.xcodeproj` в Xcode, проверить mDNS publish.
 - Физический iPhone — установить через Xcode, проверить кросс-обнаружение с Desktop.
 - iOS receive (FileServer.apple — stub) — пропускаем по дизайну.
 - **Android-инициированный send (Android → Desktop)** — нет CLI на Android, скилл проверяет обратное направление.
@@ -368,7 +416,7 @@ PASS если exit=0. FAIL — приложить последние ~30 стр�
 - **`dns-sd` не на macOS** — Linux нет; secondary mDNS check SKIP с причиной «dns-sd not available». Primary check (grep CLI лога на `mDNS started`) всё равно работает.
 - **`timeout` на macOS отсутствует** — pattern `( cmd & PID=$!; sleep N; kill $PID )` вместо `timeout`.
 - **FIFO writer keeper умер раньше времени** — readLine() вернёт null, CLI выйдет; проверяй `ps -p $KEEPER`.
-- **Эмулятор Android в NAT (10.0.2.x)** — cross-discovery не работает (multicast в NAT блокируется), `ANDROID_NAME` пустой → send-блок SKIP с понятной причиной, не FAIL. Health доступен через `adb forward`.
+- **Эмулятор Android в NAT (10.0.2.x)** — cross-discovery работает в обе стороны (multicast проходит). Host→guest TCP payload QEMU user-mode NAT не проксирует: handshake проходит, данные не доходят. Send-блок (шаг 8) — SKIP при `10.0.2.x`, не FAIL. Health доступен через `adb forward`. См. `docs/knowledge/android-emulator-networking.md`.
 - **`ip route` ненадёжен на части вендоров** (ColorOS, MIUI отдают подсеть вместо src) — используй `ip addr show wlan0`.
 - **Несколько adb-устройств** — выбирай первое или fail с уточнением. Не вешай скилл на специфичный serial.
 - **`savedPath` всегда парсить из лога**, не угадывать `$HOME/Downloads/Tether/...` — директория загрузок настраивается пользователем.

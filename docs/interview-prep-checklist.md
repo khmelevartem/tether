@@ -181,7 +181,7 @@
 ## Блок 6 — KMP
 
 ### Механизм
-- [ ] `expect` / `actual` — как работает, ограничения
+- [x] `expect` / `actual` — как работает, ограничения
 - [ ] Alternatives to expect/actual — interfaces + DI, когда что
 - [ ] Структура модулей: `commonMain` / `androidMain` / `iosMain` / `desktopMain`
 
