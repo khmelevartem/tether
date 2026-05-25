@@ -71,7 +71,8 @@ private class JvmUploadStorage(
             val destReal = if (dest.exists()) {
                 dest.toPath().toRealPath()
             } else {
-                dest.parentFile
+                // resolveDestinationFile always returns a File under root, so parentFile is non-null.
+                dest.parentFile!!
                     .toPath()
                     .toRealPath()
                     .resolve(dest.name)
