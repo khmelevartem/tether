@@ -90,7 +90,7 @@ Before planning and any dispatch — scan the doc corpus and pull up topically-m
 
 - **Product features** — `ls docs/product/features/` (+ `docs/product/features/README.md` as the index). If a slug matches our scope — read its `spec.md` (and `ux-brief.md` if present).
 - **Product context** — `docs/product/*.md` covers broad product framing (vision, audience, roadmap, tech stack, security, …). Read lazily, only when you have conceptual doubt about scope, audience or timing relative to that framing.
-- **Engineering living docs** — `ls docs/engineering/*.md`. These are **what is currently true** — comply with the ones whose topic matches the task.
+- **Engineering living docs** — `ls docs/engineering/*.md`. These are **present-tense rules** for their subsystems — comply with the ones whose topic matches the task.
 - **ADR** — `ls docs/engineering/adr/adr-*.md`. These are **why it was chosen**. For every ADR matching the task's topic, also read its **Revisit if** section and explicitly assess whether your work has tripped a trigger. If it has — the plan either confirms the ADR (false trigger) or includes a reversal with its own sub-plan (see `docs/engineering/adr/README.md` §Reversing an ADR).
 - **Knowledge** — `ls docs/knowledge/*.md`. Solved-problem write-ups (platform quirks, library traps, workarounds) — check before starting so you don't debug from scratch something already recorded.
 - **Glossary** — `docs/glossary.md`. Read up front; it's short and load-bearing for terminology — `review-glossary` blocks PRs that drift from it.
