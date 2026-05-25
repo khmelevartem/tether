@@ -13,7 +13,7 @@ import ru.pocketbyte.kydra.log.wrapper.withTag
 import java.util.concurrent.ConcurrentLinkedQueue
 
 private const val SERVICE_TYPE = "_tether._tcp."
-private val log = KydraLog.withTag(default = "Tether.MdnsDiscovery.Android")
+private val log = KydraLog.withTag(default = "MdnsDiscovery.Android")
 
 actual class MdnsDiscovery(
     private val context: Context,

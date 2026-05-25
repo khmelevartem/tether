@@ -11,7 +11,7 @@ import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.error
 import ru.pocketbyte.kydra.log.wrapper.withTag
 
-private val log = KydraLog.withTag(default = "Tether.TrustedDeviceStore")
+private val log = KydraLog.withTag(default = "TrustedDeviceStore")
 
 // Stored values are public keys, so confidentiality at rest is intentionally not provided.
 private val Context.trustedDevicesDataStore: androidx.datastore.core.DataStore<Preferences> by

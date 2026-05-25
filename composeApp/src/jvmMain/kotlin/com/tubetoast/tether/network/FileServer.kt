@@ -17,7 +17,7 @@ import ru.pocketbyte.kydra.log.wrapper.withTag
 import java.io.File
 import java.io.IOException
 
-private val log = KydraLog.withTag(default = "Tether.FileServer")
+private val log = KydraLog.withTag(default = "FileServer")
 
 actual class FileServer(
     private val port: Int,

@@ -6,7 +6,7 @@ import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.error
 import ru.pocketbyte.kydra.log.wrapper.withTag
 
-private val log = KydraLog.withTag(default = "Tether.TrustedDeviceStore")
+private val log = KydraLog.withTag(default = "TrustedDeviceStore")
 
 actual open class TrustedDeviceStore {
     private val defaults = NSUserDefaults.standardUserDefaults

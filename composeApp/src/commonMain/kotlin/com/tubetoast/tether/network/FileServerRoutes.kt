@@ -40,7 +40,7 @@ internal fun dedupFilename(leafName: String, exists: (candidate: String) -> Bool
     }
 }
 
-private val log = KydraLog.withTag(default = "Tether.FileServerRoutes")
+private val log = KydraLog.withTag(default = "FileServerRoutes")
 
 internal interface UploadStorage {
     fun ensureRoot()

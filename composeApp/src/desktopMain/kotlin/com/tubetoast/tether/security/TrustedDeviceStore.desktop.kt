@@ -16,7 +16,7 @@ import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 
 private val defaultConfigDir = File(System.getProperty("user.home"), ".config/tether")
-private val log = KydraLog.withTag(default = "Tether.TrustedDeviceStore")
+private val log = KydraLog.withTag(default = "TrustedDeviceStore")
 
 actual open class TrustedDeviceStore(
     private val configDir: File = defaultConfigDir,
