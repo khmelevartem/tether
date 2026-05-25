@@ -63,11 +63,11 @@ gh pr list --search "issue:#<N>" --state open --json number,isDraft,headRefName
 
 ### Doc discovery
 
-Before layer-classification and any dispatch — scan the doc corpus and pull up topically-matching artifacts. Writing a new doc on top of a stale or contradictory neighbour is the standard way to introduce drift, not close it. Recon is cheap: filenames are designed for topic-match.
+Before layer-classification and any dispatch — scan the doc corpus and pull up topically-matching artifacts. Recon is cheap: filenames are designed for topic-match.
 
 - **Product features** — `ls docs/product/features/` (+ `docs/product/features/README.md` as the index). If the task targets a specific feature — read its `spec.md` (and `ux-brief.md` if present).
-- **Product context** — `ls docs/product/*.md`: vision, audience, roadmap, tech-stack, security, design, monetization, competitors. Pull the ones whose topic overlaps.
-- **Engineering living docs** — `ls docs/engineering/*.md`: architecture-principles, dependency-injection, modules, presentation-layer, testing, discovery, file-transfer-wire, logging, ui-style-guide, ui-brand-mark, wifi-availability, glossary-discipline. These are **what is currently true**.
+- **Product context** — `docs/product/*.md` covers broad product framing (vision, audience, roadmap, tech stack, security, …). Read lazily, only when you have conceptual doubt about scope, audience or timing relative to that framing.
+- **Engineering living docs** — `ls docs/engineering/*.md`. These are **what is currently true** — comply with the ones whose topic matches the task.
 - **ADR** — `ls docs/engineering/adr/adr-*.md`. These are **why it was chosen**. For every ADR matching the task's topic, also read its **Revisit if** section and explicitly assess whether your work has tripped a trigger. If it has — the artifact layer for this task must include a reversal-update of the ADR (see `docs/engineering/adr/README.md` §Reversing an ADR).
 - **Knowledge** — `ls docs/knowledge/*.md`. Solved-problem write-ups; pull relevant overlaps so you don't duplicate formulations.
 
