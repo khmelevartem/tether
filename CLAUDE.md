@@ -35,7 +35,7 @@ All git naming in English. **Все commit messages обязаны начина�
 
 ## Slash commands и скиллы
 
-`.claude/skills/` — multi-agent оркестрация (`/implement`, `/document`, `/code-review`, `/grooming`, `/smoke-test`). `.claude/commands/` — простые промпт-шаблоны (`/close-issue`, `/check-review`, `/sprint-pick`, `/retro`, `/quick-issue`). Когда новый артефакт — скилл, а когда команда — см. [`.claude/skills/_authoring.md`](.claude/skills/_authoring.md).
+`.claude/skills/` — multi-agent оркестрация (`/implement`, `/document`, `/code-review`, `/grooming`, `/smoke-test`). `.claude/commands/` — простые промпт-шаблоны (`/close-issue`, `/check-review`, `/sprint-pick`, `/retro`, `/quick-issue`). Когда новый артефакт — скилл, а когда команда — см. [`.claude/AUTHORING.md`](.claude/AUTHORING.md).
 
 ## Code style
 

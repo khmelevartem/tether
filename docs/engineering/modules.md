@@ -25,12 +25,11 @@ composeApp/src/
 
 Hierarchy: `jvmMain` is the intermediate parent for both `androidMain` and `desktopMain`,
 enabling shared JVM code (Ktor server stack) to be visible to both without leaking
-desktop-only dependencies (JmDNS, Compose Desktop) into Android. Clikt is scoped one
-level further — only the `desktopCli` custom compilation depends on it, isolating CLI
-parsing from the UI/backend classpath. Ktor server
+desktop-only dependencies (JmDNS, Compose Desktop) into Android. Ktor server
 itself is now also published for Kotlin/Native (Ktor 3.0+), so `FileServer`'s shared
 routing lives in `commonMain` with platform-specific I/O via the `UploadStorage` seam;
-see [adr/adr-apple-fileserver-engine.md](adr/adr-apple-fileserver-engine.md).
+see [adr/adr-apple-fileserver-engine.md](adr/adr-apple-fileserver-engine.md). Desktop further
+splits into UI and CLI compilations — see §Desktop split below.
 
 This is fine *for now*. Layers are visually distinguishable (protocol / discovery / network / UI / platform / cli). The cost is also real: nothing prevents UI code from importing `FileServer` directly, and a change in any layer rebuilds everything.
 

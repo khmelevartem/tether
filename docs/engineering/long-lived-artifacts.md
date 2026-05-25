@@ -10,15 +10,11 @@ A long-lived artifact states what is / what to do / what equals — in present t
 
 If a rule is unreadable without referring to an incident, that's a weak formulation. Rewrite the rule; do not append the incident.
 
-## Inline example = history in disguise (when incident-rooted)
+## Inline examples must be synthetic, not incident-rooted
 
-The temptation «I'll add an example so it's clearer» almost always means lifting a string from the task that birthed the rule. The next agent matches the example literally and skips structurally identical neighbouring cases.
+Either generalise the *shape* of the error (contrast «principle catches this, but not this other thing that looks similar») so the example is synthetic and covers the class — or leave the example out entirely.
 
-Either:
-- generalise the *shape* of the error (contrast «principle catches this, but not this other thing that looks similar») so the example is synthetic and covers the class; or
-- leave the example out entirely.
-
-If the rule isn't readable without an example, rewrite the formulation; do not prop it up with a quote from the incident.
+An incident-rooted example (a string lifted from the task that birthed the rule) is matched literally by the next agent, which then skips structurally identical neighbouring cases. If the rule isn't readable without an example, rewrite the formulation; do not prop it up with a quote from the incident.
 
 ## Runtime claims are snapshots, not rules
 
@@ -32,6 +28,4 @@ When writing: prefer the product invariant («pairing keyed by stable device ide
 
 A long-lived artifact references rules / tokens / tables from another artifact — link (`see docs/engineering/X.md §Y`), do not embed.
 
-Any copy desynchronises at the source's first change; the reader / agent then acts on a stale version and gets boxed into a frozen-checklist mindset instead of holistically applying the canon.
-
-If an artifact is unreadable without an inline copy, the referencing side's formulation is weak — rewrite it; do not prop it up with a copy.
+Any copy desynchronises at the source's first change; the reader acts on a stale version and gets boxed into a frozen-checklist mindset instead of holistically applying the canon. If an artifact is unreadable without an inline copy, the referencing side's formulation is weak — rewrite it; do not prop it up with a copy.
