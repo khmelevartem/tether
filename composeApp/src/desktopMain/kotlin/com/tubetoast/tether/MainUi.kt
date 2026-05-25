@@ -17,6 +17,8 @@ import tether.composeapp.generated.resources.Res
 import tether.composeapp.generated.resources.icon
 
 fun main() = runBlocking {
+    // see docs/knowledge/desktop-system-theme.md — must be set before any Swing/AWT class loads
+    System.setProperty("apple.awt.application.appearance", "system")
     initTetherLogging(debugEnabled = isDebugEnabled())
     val container = DesktopAppContainer(
         DefaultDesktopAppConfig(port = 0),
@@ -30,15 +32,17 @@ fun main() = runBlocking {
     lifecycle.resume()
 
     application {
-        Window(
-            onCloseRequest = {
-                lifecycle.destroy()
-                exitApplication()
-            },
-            title = "Tether",
-            icon = painterResource(Res.drawable.icon),
-        ) {
-            RootContent(component)
+        ObservedSystemTheme {
+            Window(
+                onCloseRequest = {
+                    lifecycle.destroy()
+                    exitApplication()
+                },
+                title = "Tether",
+                icon = painterResource(Res.drawable.icon),
+            ) {
+                RootContent(component)
+            }
         }
     }
 }

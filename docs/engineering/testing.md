@@ -2,6 +2,8 @@
 
 Тесты обязательны. При реализации любой функциональности пиши unit и/или интеграционные тесты — ориентируйся на краевые случаи из issue.
 
+**Behavior fix — regression test в том же коммите.** Если коммит чинит наблюдаемое поведение (баг, регрессия, не-feature), в том же коммите должен быть тест, который падал бы без фикса. Это применимо одинаково к BUGFIX-issue и к багам, найденным mid-flight у FEATURE-задачи (ручной тест пользователя, ревью, smoke). Если регрессионный тест дороже самого фикса — это сигнал, что seam для тестируемости нужно доработать в том же change (выделить функцию, вынести зависимость в параметр), а не отложить.
+
 ## Где что лежит
 
 - `commonTest/` — протокол и shared-логика.
@@ -74,6 +76,8 @@ Roborazzi renders every `@Preview` composable to a PNG via Robolectric — no em
 ```
 
 PNGs land in `composeApp/build/outputs/roborazzi/`. Filenames encode the composable's FQN and the `@Preview` `name` parameter. `review-visual` reads these PNGs and compares them against the UX brief; baseline-diffing in CI is out of scope.
+
+`captureRoboImage` is a no-op outside the `record*` / `verify*` / `compare*` Roborazzi tasks (which set `-Proborazzi.test.record=true` etc.), so `./gradlew allTests` and pre-commit hooks do not pay the Robolectric cold-start cost for screenshot rendering.
 
 **Rules for new `@Preview`s:**
 - Always target the stateless `XxxContent(state, callbacks)` variant of a composable, never the `XxxScreen(component)` wrapper. The wrapper depends on Decompose and cannot render under Robolectric.

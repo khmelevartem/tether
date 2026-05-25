@@ -1,21 +1,23 @@
 package com.tubetoast.tether.presentation
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeContentPadding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import com.arkivanov.decompose.extensions.compose.stack.Children
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
+import com.tubetoast.tether.ui.theme.TetherTheme
 
 @Composable
 fun RootContent(component: RootComponent, modifier: Modifier = Modifier) {
-    MaterialTheme {
-        Surface(
+    TetherTheme {
+        Box(
             modifier = modifier
                 .fillMaxSize()
+                .background(TetherTheme.colors.surface)
                 .safeContentPadding(),
         ) {
             val stack by component.stack.subscribeAsState()

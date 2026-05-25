@@ -70,6 +70,10 @@ cd .claude/worktrees/docs-<N>-<short-slug>
 
 All subsequent agent dispatches happen with this as cwd.
 
+### Briefing back to the user
+
+После прочтения issue и разведки, **перед** любым вопросом пользователю (D1, Open questions от sub-agent'ов, classification-неоднозначности) выдай в чат короткий бриф 3–6 строк: что делаем, зачем (мотивация / контекст из issue), предварительный набор слоёв (spec / ux-brief / tech-doc / ADR / knowledge / .claude prompt). Если в этом же сообщении задаёшь вопросы — к каждому приложи 1–2 строки контекста (что говорит issue, какие варианты на столе), чтобы пользователь отвечал, не уходя на GitHub перечитывать тело. Бриф один на прогон; в re-entry не повторяй.
+
 ## Step 2 — Layer classification
 
 Decide which artifact layers this issue needs. Read the issue body, comments, linked spec/feature (if any), and `docs/product/features/README.md` / `docs/engineering/README.md` to see what already exists.
@@ -128,9 +132,10 @@ Dispatch in parallel on the staged diff (no PR yet — agents review the local w
 - `review-dod` — DoD criteria from the issue are covered by produced artifacts.
 - `review-guides` — conformance to CLAUDE.md §Code style for all touched prose. For `docs/engineering/` artifacts additionally apply `docs/engineering/README.md` writing-style rules (rule-first, code examples on abstract types, no restating code). For `docs/product/features/<slug>/spec.md` apply `docs/product/features/_template.md`. For ADRs apply `docs/engineering/adr/_template.md` shape. For `.claude/` prompt edits apply sibling-skill/agent/command tone consistency.
 - `review-reuse` — no duplication of existing specs / briefs / living docs / knowledge, no contradictions with neighbours, no doc-vs-code drift.
+- `review-glossary` — load-bearing terms in the produced artifacts match [`docs/glossary.md`](../../../docs/glossary.md); new domain terms get an entry.
 - `review-adversarial` — runs after the above with their combined findings as input; probes what was missed, what factual claims were not verified.
 
-The other reviewers (`review-correctness`, `review-tests`, `review-platform`, `review-design-system`, `review-ux`, `review-architecture`) **do not run** — there is no code, no UI implementation to check against the brief. UX-brief structural completeness is covered by `review-guides` (it knows the routing `ux-brief.md → ux-expert.md §Output`).
+The other reviewers (`review-correctness`, `review-tests`, `review-platform`, `review-design-system`, `review-ux`, `review-visual`, `review-architecture`) **do not run** — there is no code, no UI implementation to check against the brief. UX-brief structural completeness is covered by `review-guides` (it knows the routing `ux-brief.md → ux-expert.md §Output`).
 
 Iteration: aggregate `[REQUIRED]` findings, re-dispatch the responsible sub-agent (which produced the artifact the finding targets) with the findings as input — for `.claude` prompt edits, apply the fixes inline since there is no sub-agent. Pass findings close to the reviewer's wording; do not soften or narrow.
 

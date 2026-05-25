@@ -78,6 +78,18 @@ APK — в `composeApp/build/outputs/apk/debug/`. Или запускай run-к
 dns-sd -B _tether._tcp.    # должно появиться _tether._tcp.
 ```
 
+### Все таргеты разом
+
+`scripts/run-all.sh` параллельно поднимает CLI (в отдельном окне Terminal — нужен интерактивный stdin), Desktop UI, iOS-симулятор и Android-эмулятор. Логи каждого таргета — в `scripts/.run-all/<target>.log`, агрегированный `tail -F` в основном окне. Ctrl-C глушит всех.
+
+```bash
+./scripts/run-all.sh                          # всё
+./scripts/run-all.sh --no-android             # без эмулятора
+./scripts/run-all.sh --ios-device "iPhone 17 Pro"
+```
+
+Требует: `tether` в `PATH` (см. Desktop CLI выше), хотя бы один AVD (создать в Android Studio один раз — сам Studio при запуске скрипта не нужен), установленный Xcode с симуляторами. Это dev-удобство для параллельной проверки руками; не заменяет `./gradlew allTests` и `/smoke-test`.
+
 ## Для контрибьюторов
 
 - [CLAUDE.md](CLAUDE.md) — что обязан знать AI-агент или новый контрибьютор: архитектурные инварианты, git conventions, worktree-дисциплина.

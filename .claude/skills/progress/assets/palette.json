@@ -30,6 +30,19 @@
     "parent": { "stroke": "#8a7028", "style": "solid",  "comment": "sub-issue parent→child" },
     "block":  { "stroke": "#c9302c", "style": "dashed", "comment": "blocks" }
   },
+  "valor_size": {
+    "_doc": "Базовая доблесть квеста по issue size-лейблу. Используется в формуле дневной скорости. S=~4h, M=~1d, L=~3d работы; коэффициенты ~ пропорциональны времени, но сжаты, чтобы не доминировать над комментами/диффой/циклом.",
+    "S": 1,
+    "M": 3,
+    "L": 8,
+    "unlabeled": 2,
+    "retro": 1
+  },
+  "valor_day": {
+    "feature": "#d4af37",
+    "infra":   "#8a6820",
+    "line":    "#8a7d5e"
+  },
   "artifact_rarity": {
     "legendary": { "border": "#d4af37", "glow": "rgba(212,175,55,.45)" },
     "epic":      { "border": "#9b4dca" },
@@ -38,8 +51,11 @@
     "common":    { "border": "#6a5a40" }
   },
   "fonts": {
+    "_doc": "body — Lora: засечный, тёплый, читаемый при 15-16px (IM Fell English SC слишком декоративен — сливается в стенку при body-сайзах). headings — Cinzel, заголовочный антик. numbers — JetBrains Mono.",
     "headings": "Cinzel",
-    "body":     "IM Fell English SC",
-    "numbers":  "JetBrains Mono"
+    "body":     "Lora",
+    "numbers":  "JetBrains Mono",
+    "base_size_px": 16,
+    "small_size_px": 13
   }
 }

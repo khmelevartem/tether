@@ -1,6 +1,6 @@
 ---
 name: review-design-system
-description: Reviews a PR's Compose UI code for conformance to the locked Tether design system — token usage, Material 3 ban, peer-identity color usage, Tabler-only icons, brand-mark geometry. Skip entirely if diff touches no `composeApp/src/**` files. Does not judge product decisions or UX brief conformance.
+description: Reviews a PR's Compose UI code for conformance to the locked Tether design system — token usage, Material 3 ban, peer-identity color usage, Tabler-only icons, brand-mark geometry, previews paired light + dark via Themes PreviewParameter. Skip entirely if diff touches no `composeApp/src/**` files. Does not judge product decisions or UX brief conformance.
 tools: Bash, Read, Grep, Glob
 model: haiku
 ---
@@ -65,6 +65,14 @@ Run the suggested grep for each rule (paths relative to repo root); read flagged
 9. **Brand mark.** If the diff adds or modifies a `•—•` renderer, the geometry and state machine must match `docs/engineering/ui-brand-mark.md` § Geometry and § States exactly. Any deviation → `[REQUIRED]`.
 
 10. **Dark mode wiring.** If the PR introduces theme switching, `isSystemInDarkTheme()` is read at the theme root and live-updates are wired — no `remember { mutableStateOf(isDark) }` capturing a snapshot. A user-override surface in settings is out of scope (see `ui-style-guide.md § Dark mode`).
+
+11. **Previews paired light + dark.** Every `@Preview`-annotated function accepts `@PreviewParameter(Themes::class) dark: Boolean` and passes it to `PreviewSurface(darkTheme = dark) { … }`. A `@Preview` body that hardcodes `darkTheme = …` or omits the parameter ships only one theme — violation. No carve-outs. Source: `ui-style-guide.md § Previews`.
+    ```bash
+    # list every @Preview function in commonMain — each must take the Themes parameter
+    rg -n -B 1 -A 4 '@Preview\b' composeApp/src/commonMain/
+    # quick filter: @Preview occurrences whose next 5 lines never mention Themes::class
+    rg -nU '@Preview\b[^\n]*\n(?:[^\n]*\n){0,5}' composeApp/src/commonMain/ | rg -v 'Themes::class'
+    ```
 
 ## What you do NOT check
 
