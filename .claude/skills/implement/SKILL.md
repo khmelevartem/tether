@@ -54,7 +54,7 @@ You MUST stop and ask the user in these cases (and only these):
 
 Everything else — implementation details, reviewer findings, fix iterations — you handle internally without the user.
 
-## Step 1 — Read issue + worktree setup
+## Step 1 — Разведка и подготовка
 
 ```bash
 gh issue view <N> --json title,body,labels,comments
@@ -84,7 +84,19 @@ gh pr list --search "issue:#<N>" --state open --json number,isDraft,headRefName
 
 При делегации в /document: «Эта задача — docs-only. Запускаю `/document <N>` и завершаюсь.» `/document` сам обработает выбор слоёв, консистентность, ревью и PR. **НЕ делегируй** код-FEATURE с попутным ADR — для таких задач Step 4 диспатчит `architect` mid-flight, и ADR пишется в той же PR что и код.
 
-Для code-track FEATURE: подними `docs/product/features/README.md` — спека лежит в `docs/product/features/<slug>/spec.md`.
+### Doc discovery
+
+До planning и любого dispatch'а — пройдись по корпусу документов и подними топically матчащие. Имплементировать против устаревшей канон-формулировки дороже, чем потратить минуту на разведку. Разведка дешёвая: имена файлов проектируются под topic-match.
+
+- **Product features** — `ls docs/product/features/` (+ `docs/product/features/README.md` как индекс). Если есть слаг под наш scope — читать `spec.md` (и `ux-brief.md` если присутствует).
+- **Product context** — `ls docs/product/*.md`: vision, audience, roadmap, tech-stack, security, design, monetization, competitors. Подними те, чей topic пересекается с задачей.
+- **Engineering living docs** — `ls docs/engineering/*.md`: architecture-principles, dependency-injection, modules, presentation-layer, testing, discovery, file-transfer-wire, logging, ui-style-guide, ui-brand-mark, wifi-availability, glossary-discipline. Это **что сейчас есть**, agent'ы обязаны соблюдать.
+- **ADR** — `ls docs/engineering/adr/adr-*.md`. Это **почему так выбрано**. Для каждой матчащей по topic'у ADR дополнительно прочитай раздел **Revisit if** и явно оцени, не сработал ли trigger по факту твоей задачи. Если сработал — план либо подтверждает ADR (триггер ложный), либо включает reversal с собственным под-планом (см. `docs/engineering/adr/README.md` §Reversing an ADR).
+- **Knowledge** — `ls docs/knowledge/*.md`. Solved-problem write-ups (platform quirks, library traps, workarounds) — проверь до начала работы, чтобы не дебажить с нуля то, что уже зафиксировано.
+
+`CLAUDE.md` и `docs/glossary.md` всегда в контексте, разведки не требуют.
+
+Найденные релевантные документы упомяни в briefing'е пользователю (см. ниже).
 
 **Worktree setup — do this BEFORE dispatching any agent that edits files.** If you are not already in `.claude/worktrees/<branch>/`:
 
@@ -122,8 +134,6 @@ The confirmed root cause becomes a hard constraint for the `coder` in Step 4 reg
 ## Step 3 — Plan
 
 Use the built-in `Plan` agent (or `general-purpose` if plan unavailable) to produce a short implementation plan: phases, files to touch, validation strategy.
-
-**Сверка с ADR.** До составления плана: `ls docs/engineering/adr/*.md` — дешёвая проверка по списку названий. Имена ADR описывают topic (например, `adr-macos-native-vs-jvm.md`, `adr-apple-fileserver-engine.md`). Если один пересекается с задачей по теме — прочитай его раздел **Revisit if** и явно оцени, не сработал ли какой-то trigger по факту работы над задачей. Если сработал — план задачи теперь либо подтверждает ADR (триггер ложный), либо включает reversal с собственным под-планом (см. `docs/engineering/adr/README.md` §Reversing an ADR).
 
 **Выбор уровня фикса.** Issue указывает место бага, но не обязательно место фикса. Когда root cause описывает класс багов (а не один экземпляр) или когда параллельные реализации содержат тот же дефект — рассмотри фикс на уровень выше: изменение типа / контейнера / контракта, делающее класс багов невозможным. Сравни стоимость: N point-фиксов vs 1 структурный. Если выбираешь point — явно перечисли в плане параллельные места, остающиеся с дефектом, и заведи follow-up issue до начала кодинга.
 
