@@ -50,7 +50,7 @@ After sanitization passes, the relative path is resolved against the platform's 
 - **Case-folding collisions** on case-insensitive volumes (macOS HFS+/APFS default, Windows). Whether two strings name the same entry is a filesystem property, not a string property.
 - **Platform-specific path normalisation** that turns a string into a different entry than the lexical reading would suggest.
 
-A failure here throws `IOException` from `UploadStorage.resolveDestination`, surfaces as `500` to the sender, and the partial file is removed in the route handler's `finally` block. The check runs **before** the first byte hits the destination — opening for write after realisation, not before.
+A failure here surfaces as `IOException` from the storage seam, mapped to `500` by the route handler, and the partial file is removed on the failure path. The check runs **before** the first byte hits the destination — opening for write after realisation, not before.
 
 ## Storage seam
 
@@ -68,17 +68,17 @@ Responsibilities owned by the route handler, not the seam:
 
 - HTTP status mapping.
 - Lexical sanitization (Layer 1 above).
-- Tracking the active-transfer scope (see [`TransferActivityTracker`](../../composeApp/src/commonMain/kotlin/com/tubetoast/tether/network/TransferActivityTracker.kt)).
+- Tracking the active-transfer scope through the transfer-activity tracker.
 
 Per-platform actuals differ along expected axes:
 
-- **JVM / Desktop / Android-app-private** — filesystem under a chosen root, `File.mkdirs()`, `Path.toRealPath()` for the canonical check.
-- **Android — MediaStore** (out of scope of this doc; tracked by its own issue) — directory creation is implicit in the URI, the canonical-check shape becomes "the resolved `Uri` is under the chosen collection".
-- **Apple** — `NSFileManager` for directory creation, `realpath(3)` for canonicalisation, raw `fopen`/`fwrite` for streaming (current Apple actual).
+- **JVM / Desktop / Android-app-private** — filesystem under a chosen root, JDK NIO for directory creation and canonicalisation.
+- **Android — MediaStore** (out of scope of this doc; tracked by its own issue) — directory creation is implicit in the URI, the canonical-check shape becomes "the resolved URI is under the chosen collection".
+- **Apple** — Foundation for directory creation, POSIX `realpath` for canonicalisation, low-level file I/O for streaming. K/N has no `java.nio` equivalent, so canonicalisation calls the same POSIX primitive the JVM does under the hood.
 
 ## Cross-cutting concerns
 
-- **Streaming, not buffering.** A sender that pipes a 50 GiB file streams it through. The route handler holds one `UPLOAD_BUFFER_SIZE` buffer and the storage layer holds whatever its sink requires. No multipart framing, no JSON header frame in the body — the wire is `?name=` plus raw octet-stream specifically so the streaming property is preserved across both Ktor CIO JVM and whatever engine ends up on Apple post-TLS ([`adr-network-stack.md`](adr/adr-network-stack.md)).
+- **Streaming, not buffering.** A sender that pipes a 50 GiB file streams it through. The route handler holds one fixed-size copy buffer and the storage layer holds whatever its sink requires. No multipart framing, no JSON header frame in the body — the wire is `?name=` plus raw octet-stream specifically so the streaming property is preserved across both Ktor CIO JVM and whatever engine ends up on Apple post-TLS ([`adr-network-stack.md`](adr/adr-network-stack.md)).
 - **Authority and trust.** The receiver assumes nothing about the sender: a paired peer is no more trusted with the filesystem than an unpaired one. Path safety is a property of the receiver, not of the pairing protocol.
 - **Failure visibility.** `400` and `500` both carry a JSON body with a stable `error` key. The sender surfaces the message to the user verbatim only on `500`; `invalid_relative_path` is a programmer error and surfaces as a generic "couldn't send <file>" — a user dragging a folder shouldn't read about path traversal.
 - **Observability.** The route logs the sanitised relative path on success and the rejection reason on `400`; the raw pre-sanitisation string is not logged (avoids logging hostile input verbatim).
