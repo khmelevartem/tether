@@ -54,7 +54,7 @@ You MUST stop and ask the user in these cases (and only these):
 
 Everything else — implementation details, reviewer findings, fix iterations — you handle internally without the user.
 
-## Step 1 — Разведка и подготовка
+## Step 1 — Reconnaissance and setup
 
 ```bash
 gh issue view <N> --json title,body,labels,comments
@@ -86,17 +86,17 @@ gh pr list --search "issue:#<N>" --state open --json number,isDraft,headRefName
 
 ### Doc discovery
 
-До planning и любого dispatch'а — пройдись по корпусу документов и подними топically матчащие. Имплементировать против устаревшей канон-формулировки дороже, чем потратить минуту на разведку. Разведка дешёвая: имена файлов проектируются под topic-match.
+Before planning and any dispatch — scan the doc corpus and pull up topically-matching artifacts. Implementing against a stale canonical formulation costs more than the minute spent on recon. Recon is cheap: filenames are designed for topic-match.
 
-- **Product features** — `ls docs/product/features/` (+ `docs/product/features/README.md` как индекс). Если есть слаг под наш scope — читать `spec.md` (и `ux-brief.md` если присутствует).
-- **Product context** — `ls docs/product/*.md`: vision, audience, roadmap, tech-stack, security, design, monetization, competitors. Подними те, чей topic пересекается с задачей.
-- **Engineering living docs** — `ls docs/engineering/*.md`: architecture-principles, dependency-injection, modules, presentation-layer, testing, discovery, file-transfer-wire, logging, ui-style-guide, ui-brand-mark, wifi-availability, glossary-discipline. Это **что сейчас есть**, agent'ы обязаны соблюдать.
-- **ADR** — `ls docs/engineering/adr/adr-*.md`. Это **почему так выбрано**. Для каждой матчащей по topic'у ADR дополнительно прочитай раздел **Revisit if** и явно оцени, не сработал ли trigger по факту твоей задачи. Если сработал — план либо подтверждает ADR (триггер ложный), либо включает reversal с собственным под-планом (см. `docs/engineering/adr/README.md` §Reversing an ADR).
-- **Knowledge** — `ls docs/knowledge/*.md`. Solved-problem write-ups (platform quirks, library traps, workarounds) — проверь до начала работы, чтобы не дебажить с нуля то, что уже зафиксировано.
+- **Product features** — `ls docs/product/features/` (+ `docs/product/features/README.md` as the index). If a slug matches our scope — read its `spec.md` (and `ux-brief.md` if present).
+- **Product context** — `ls docs/product/*.md`: vision, audience, roadmap, tech-stack, security, design, monetization, competitors. Pull the ones whose topic overlaps with the task.
+- **Engineering living docs** — `ls docs/engineering/*.md`: architecture-principles, dependency-injection, modules, presentation-layer, testing, discovery, file-transfer-wire, logging, ui-style-guide, ui-brand-mark, wifi-availability, glossary-discipline. These are **what is currently true** — agents must comply.
+- **ADR** — `ls docs/engineering/adr/adr-*.md`. These are **why it was chosen**. For every ADR matching the task's topic, also read its **Revisit if** section and explicitly assess whether your work has tripped a trigger. If it has — the plan either confirms the ADR (false trigger) or includes a reversal with its own sub-plan (see `docs/engineering/adr/README.md` §Reversing an ADR).
+- **Knowledge** — `ls docs/knowledge/*.md`. Solved-problem write-ups (platform quirks, library traps, workarounds) — check before starting so you don't debug from scratch something already recorded.
 
-`CLAUDE.md` и `docs/glossary.md` всегда в контексте, разведки не требуют.
+`CLAUDE.md` and `docs/glossary.md` are always in context — no separate recon needed.
 
-Найденные релевантные документы упомяни в briefing'е пользователю (см. ниже).
+Mention the relevant documents you found in the briefing to the user (see below).
 
 **Worktree setup — do this BEFORE dispatching any agent that edits files.** If you are not already in `.claude/worktrees/<branch>/`:
 

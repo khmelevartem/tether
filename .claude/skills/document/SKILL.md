@@ -47,7 +47,7 @@ You MUST stop and ask the user in these cases (and only these):
 
 Everything else — sub-agent dispatch, mechanical fixes, aggregation of reviewer findings — you handle internally without the user. You do not perform reviews yourself; reviewers are dispatched as sub-agents.
 
-## Step 1 — Разведка и подготовка
+## Step 1 — Reconnaissance and setup
 
 ```bash
 gh issue view <N> --json title,body,labels,comments
@@ -63,17 +63,17 @@ gh pr list --search "issue:#<N>" --state open --json number,isDraft,headRefName
 
 ### Doc discovery
 
-До layer-classification и любого dispatch'а — пройдись по корпусу документов и подними топically матчащие. Писать новую доку поверх устаревшей или противоречивой соседней — типовой способ ввести drift, а не закрыть его. Разведка дешёвая: имена файлов проектируются под topic-match.
+Before layer-classification and any dispatch — scan the doc corpus and pull up topically-matching artifacts. Writing a new doc on top of a stale or contradictory neighbour is the standard way to introduce drift, not close it. Recon is cheap: filenames are designed for topic-match.
 
-- **Product features** — `ls docs/product/features/` (+ `docs/product/features/README.md` как индекс). Если задача про конкретную фичу — читать `spec.md` (и `ux-brief.md` если есть).
-- **Product context** — `ls docs/product/*.md`: vision, audience, roadmap, tech-stack, security, design, monetization, competitors. Подними те, чей topic пересекается.
-- **Engineering living docs** — `ls docs/engineering/*.md`: architecture-principles, dependency-injection, modules, presentation-layer, testing, discovery, file-transfer-wire, logging, ui-style-guide, ui-brand-mark, wifi-availability, glossary-discipline. Это **что сейчас есть**.
-- **ADR** — `ls docs/engineering/adr/adr-*.md`. Это **почему так выбрано**. Для каждой матчащей по topic'у ADR дополнительно прочитай раздел **Revisit if** и явно оцени, не сработал ли trigger по факту задачи. Если сработал — слой artifact'ов в этой задаче должен включать reversal-update ADR'а (см. `docs/engineering/adr/README.md` §Reversing an ADR).
-- **Knowledge** — `ls docs/knowledge/*.md`. Solved-problem write-ups; relevant пересечения подними, чтобы не дублировать формулировки.
+- **Product features** — `ls docs/product/features/` (+ `docs/product/features/README.md` as the index). If the task targets a specific feature — read its `spec.md` (and `ux-brief.md` if present).
+- **Product context** — `ls docs/product/*.md`: vision, audience, roadmap, tech-stack, security, design, monetization, competitors. Pull the ones whose topic overlaps.
+- **Engineering living docs** — `ls docs/engineering/*.md`: architecture-principles, dependency-injection, modules, presentation-layer, testing, discovery, file-transfer-wire, logging, ui-style-guide, ui-brand-mark, wifi-availability, glossary-discipline. These are **what is currently true**.
+- **ADR** — `ls docs/engineering/adr/adr-*.md`. These are **why it was chosen**. For every ADR matching the task's topic, also read its **Revisit if** section and explicitly assess whether your work has tripped a trigger. If it has — the artifact layer for this task must include a reversal-update of the ADR (see `docs/engineering/adr/README.md` §Reversing an ADR).
+- **Knowledge** — `ls docs/knowledge/*.md`. Solved-problem write-ups; pull relevant overlaps so you don't duplicate formulations.
 
-`CLAUDE.md` и `docs/glossary.md` всегда в контексте, разведки не требуют.
+`CLAUDE.md` and `docs/glossary.md` are always in context — no separate recon needed.
 
-Найденные релевантные документы упомяни в briefing'е пользователю (см. ниже) — они формируют контекст того, какие слои artifact'ов имеет смысл выбирать в Step 2.
+Mention the relevant documents you found in the briefing to the user (see below) — they form the context for which artifact layers make sense in Step 2.
 
 **Worktree setup — do this BEFORE dispatching any agent that edits files.** If you are not already in `.claude/worktrees/<branch>/`:
 
