@@ -3,6 +3,7 @@
 **Status:** Accepted — 2026-05-07
 **Issue:** #51
 **Blocks:** #7, #8, #11
+**Note (2026-05-25):** `macosArm64` Kotlin/Native target removed from the build — see [adr-macos-native-vs-jvm.md](adr-macos-native-vs-jvm.md) §Reversal. Decompose's macOS-native support row in the table below is informational; not exercised in this codebase.
 
 This ADR fixes how presentation logic and navigation are structured in Tether across Android, iOS, Desktop JVM, and macOS native. It supersedes the "Decompose is deferred" note in [architecture-principles.md](../architecture-principles.md).
 

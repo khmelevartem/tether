@@ -27,11 +27,10 @@ kotlin {
     //   commonMain
     //   ├── jvmMain          ← shared JVM code (FileServer, FileClientJvm, future shared logic)
     //   │   ├── androidMain  ← Android-specific code
-    //   │   └── desktopMain  ← Desktop JVM code (mDNS, Clikt CLI, Compose Desktop)
+    //   │   └── desktopMain  ← Desktop JVM code (mDNS, Clikt CLI, Compose Desktop; ships on macOS too)
     //   └── nativeMain
     //       └── appleMain    ← Apple-specific code (NSNetService mDNS)
-    //           ├── iosMain
-    //           └── macosMain
+    //           └── iosMain
     applyHierarchyTemplate {
         common {
             group("jvm") {
@@ -40,9 +39,6 @@ kotlin {
             }
             group("native") {
                 group("apple") {
-                    group("macos") {
-                        withMacosArm64()
-                    }
                     group("ios") {
                         withIosArm64()
                         withIosSimulatorArm64()
@@ -68,10 +64,6 @@ kotlin {
         }
     }
 
-    // macosArm64 covers all Apple Silicon Macs (2020+).
-    // macosX64 is deprecated in Kotlin 2.3 — add it back if Intel Mac support is needed.
-    macosArm64()
-
     // jvm("desktop") creates desktopMain as the leaf source set for the Desktop JVM target.
     // Combined with the custom hierarchy above, jvmMain becomes the intermediate parent
     // for both androidMain and desktopMain.
@@ -88,7 +80,7 @@ kotlin {
 
     sourceSets {
         // The custom hierarchy above creates:
-        //   appleMain (iosMain + macosMain) → nativeMain → commonMain
+        //   appleMain (iosMain) → nativeMain → commonMain
         //   jvmMain (androidMain + desktopMain) → commonMain
         // src/appleMain/ and src/jvmMain/ are picked up by their respective source sets.
 
@@ -107,8 +99,8 @@ kotlin {
             implementation(libs.ktor.client.cio)
             implementation(libs.ktor.client.content.negotiation)
             implementation(libs.ktor.serialization.kotlinx.json)
-            // Ktor 3.0+ publishes ktor-server-cio for Kotlin/Native (iosArm64, iosSimulatorArm64,
-            // macosArm64) in addition to JVM. Keeping the server stack in commonMain lets the
+            // Ktor 3.0+ publishes ktor-server-cio for Kotlin/Native (iosArm64, iosSimulatorArm64)
+            // in addition to JVM. Keeping the server stack in commonMain lets the
             // Apple FileServer share routing/streaming code with the JVM actual instead of
             // hand-rolling an HTTP listener. See docs/engineering/adr/adr-apple-fileserver-engine.md.
             implementation(libs.ktor.server.core)

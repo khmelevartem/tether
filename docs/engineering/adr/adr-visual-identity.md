@@ -2,6 +2,7 @@
 
 **Status:** Accepted — 2026-05-14
 **Issue:** #145
+**Note (2026-05-25):** `macosArm64` Kotlin/Native target removed from the build — see [adr-macos-native-vs-jvm.md](adr-macos-native-vs-jvm.md) §Reversal. macOS UI now ships through the Desktop JVM tree; the rendering-layer argument below still holds.
 
 ## Context
 

@@ -4,7 +4,7 @@ Guidance for Claude Code working in this repo. **Short by design — load deeper
 
 ## What is Tether
 
-KMP file transfer app: Android, iOS, macOS, Desktop (JVM). P2P via mDNS discovery + Ktor file server. Human overview — [README.md](README.md).
+KMP file transfer app: Android, iOS, Desktop (JVM — Windows / Linux / macOS). P2P via mDNS discovery + Ktor file server. Human overview — [README.md](README.md).
 
 ## Documentation map
 
@@ -25,9 +25,8 @@ Read these on demand, not all upfront:
 
 ## Architecture invariants
 
-- **Common-first.** Всё, что может жить в `commonMain` — там и лежит. Платформенные source sets (`androidMain`, `appleMain`, `jvmMain`, `desktopMain`, `iosMain`, `macosMain`) — только для кода, требующего platform API. При выборе между `expect/actual` в `commonMain` и копированием в `platformMain` — `expect/actual`.
-- **Source set hierarchy:** `jvmMain` — общий родитель для `androidMain` и `desktopMain` (через `applyHierarchyTemplate` в `build.gradle.kts`). `appleMain` — общий для `iosMain` и `macosMain`.
-- **macOS:** Apple Silicon (`macosArm64`) only.
+- **Common-first.** Всё, что может жить в `commonMain` — там и лежит. Платформенные source sets (`androidMain`, `appleMain`, `jvmMain`, `desktopMain`, `iosMain`) — только для кода, требующего platform API. При выборе между `expect/actual` в `commonMain` и копированием в `platformMain` — `expect/actual`.
+- **Source set hierarchy:** `jvmMain` — общий родитель для `androidMain` и `desktopMain` (через `applyHierarchyTemplate` в `build.gradle.kts`). `appleMain` — родитель для `iosMain` (iOS — единственный native-таргет; macOS ships как Desktop JVM .app, см. [`adr-macos-native-vs-jvm.md`](docs/engineering/adr/adr-macos-native-vs-jvm.md)).
 
 ## Git conventions
 
@@ -70,7 +69,7 @@ Desktop исходники разделены на два source set: `desktopMa
 
 **Когда новый артефакт — скилл, а не команда.** Уноси в `.claude/skills/<name>/SKILL.md` (плюс `assets/*.json` для словарей и палитры) если выполняется хотя бы одно: инструкция включает фиксированные словари / цветовую палитру / конфигурацию, которые хочется править отдельно от prose; артефакт >~150 строк; в инструкции зашиты «магические» имена, ради сравнимости результатов между запусками; полезен skill discovery по описанию (`name` + `description` в YAML frontmatter). Простой prompt-шаблон без assets и discovery — `.claude/commands/<name>.md`.
 
-`/smoke-test` — runtime happy-path по платформам (Desktop CLI, Desktop↔Desktop send, Android если adb подключён, native compile macosArm64/iosSimulatorArm64). Прогоняй когда сомневаешься в рантайме после нетривиальных правок в сетевой части / FileServer / mDNS / FGS, перед merge runtime-changing PR, и в `/close-issue`. Skip для DOCS-only / `.claude/`-only / comment-only изменений. Smoke не заменяет `allTests`.
+`/smoke-test` — runtime happy-path по платформам (Desktop CLI, Desktop↔Desktop send, Android если adb подключён, native compile iosSimulatorArm64). Прогоняй когда сомневаешься в рантайме после нетривиальных правок в сетевой части / FileServer / mDNS / FGS, перед merge runtime-changing PR, и в `/close-issue`. Skip для DOCS-only / `.claude/`-only / comment-only изменений. Smoke не заменяет `allTests`.
 
 ## Code style
 

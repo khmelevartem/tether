@@ -41,7 +41,7 @@ If Content-Length is *not* set (the client used chunked transfer encoding withou
 
 ## `ktor-server-cio` runs on Kotlin/Native since 3.0
 
-Older docs (and our own [adr-macos-native-vs-jvm.md](../engineering/adr/adr-macos-native-vs-jvm.md), pre-update) state that Ktor server is JVM-only. Since Ktor 3.0 (October 2024) the CIO engine is published for `iosArm64`, `iosSimulatorArm64`, `macosArm64`, and other Native targets.
+Older docs (and our own [adr-macos-native-vs-jvm.md](../engineering/adr/adr-macos-native-vs-jvm.md), pre-update) state that Ktor server is JVM-only. Since Ktor 3.0 (October 2024) the CIO engine is published for `iosArm64`, `iosSimulatorArm64`, and other Native targets.
 
 If you see "Ktor server is JVM-only" in a doc, treat it as historical context. The current architecture decision is recorded in [adr-apple-fileserver-engine.md](../engineering/adr/adr-apple-fileserver-engine.md).
 

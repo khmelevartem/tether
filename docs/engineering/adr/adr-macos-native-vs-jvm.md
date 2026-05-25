@@ -1,7 +1,23 @@
-# macOS Target — Native (`macosArm64`) over Desktop JVM
+# macOS Target — Desktop JVM (reversed from Native)
 
-**Status:** Accepted — 2026-05-07 (de facto since project init; this ADR records the rationale)
-**Issue:** #63
+**Status:** Reversed — 2026-05-25. Originally accepted 2026-05-07.
+**Issue:** #63, #41
+
+**Reversal (2026-05-25).** macOS ships via the **Desktop JVM** target — same `.app` bundle path as Windows/Linux, packaged through `compose.desktop.application.nativeDistributions`. The `macosArm64` Kotlin/Native target is removed from the build. Revisit-trigger #1 below (Compose-MP macOS native materially breaks UX) fired the moment we tried to actually render UI: research turned up an explicit JetBrains contributor statement in [compose-multiplatform#4580](https://github.com/JetBrains/compose-multiplatform/issues/4580) — "experimental target that we don't mention, don't give any guarantees about and it's constantly breaking… internal sandbox" — with YouTrack CMP-4580 carrying no public commitment. Window resize and text input are reported broken; zero shipping real-world examples; macOS-native UI does not appear on the [JetBrains supported-platforms matrix](https://kotlinlang.org/docs/multiplatform/supported-platforms.html). Path to Compose UI on macOS-native is open-ended R&D with no upstream support.
+
+What changes structurally:
+- `appleMain` source set continues to exist — `iosMain` is its only leaf. Apple-side `NSNetService` mDNS + Ktor-CIO `FileServer` are validated through iOS sim + device, not through a separate macOS-native build.
+- macOS-on-JVM uses `MdnsDiscovery.jvm.kt` (JNA-Bonjour after #84) and the JVM `FileServer`. JVM-mDNS on macOS works correctly via Bonjour; see [`docs/knowledge/macos-mdns-bonjour.md`](../../knowledge/macos-mdns-bonjour.md).
+- Distribution: `./gradlew :composeApp:packageReleaseDmg` produces `Tether.app` + `.dmg` with bundled JRE. Footprint regression accepted (~50–80 MB) — see Costs accepted below; for a once-or-twice-installed file-transfer utility this is tolerable.
+
+Re-revisit trigger: JetBrains promotes macOS-native UI to ≥Alpha tier on the supported-platforms matrix, or YouTrack CMP-4580 moves to "In Progress" with public commitment. Until then the `appleMain`-sharing benefit (driver below) does not outweigh the UI cost.
+
+---
+
+## Original decision (superseded)
+
+The remainder of this ADR records the original Native-over-JVM rationale that held from project init through 2026-05-25. Kept as-is for context — do not edit, the active position is the reversal above.
+
 **Update (2026-05-10):** the "Ktor server doesn't run on Kotlin/Native" cost listed below was true at the time of writing but no longer holds — Ktor 3.0+ publishes `ktor-server-cio` for Native targets. The Apple-side `FileServer.actual` now uses CIO on Native; see [adr-apple-fileserver-engine.md](adr-apple-fileserver-engine.md). The macOS-native-over-JVM decision is unchanged — the `appleMain`-sharing argument is now stronger, not weaker.
 
 ## Context

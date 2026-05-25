@@ -6,7 +6,7 @@
 |----------|--------|-------|
 | Android | In progress | mDNS via Android NSD; Ktor CIO server hosted in foreground Service; Compose UI in `androidMain` |
 | iOS | Stub | KMP target wired (`iosArm64`, `iosSimulatorArm64`); discovery via NSNetService — see issue [#6](https://github.com/) |
-| macOS | Basic | `macosArm64` only (Apple Silicon). Discovery shares `appleMain` with iOS |
+| macOS | In progress | Ships through the Desktop JVM target (`packageReleaseDistributionForCurrentOS` → `.app`/`.dmg`). Discovery on macOS uses JNA-Bonjour, not JmDNS — see [`macos-mdns-bonjour.md`](../knowledge/macos-mdns-bonjour.md). Why not Kotlin/Native: [`adr-macos-native-vs-jvm.md`](../engineering/adr/adr-macos-native-vs-jvm.md) |
 | Windows | In progress | JVM-based via Gradle desktop target. Reference implementation. Hosts `FileServer` and the CLI debug runner |
 | Linux | Post-MVP | Will ship via JVM target after MVP. Not a maybe — a deferred yes |
 
@@ -15,10 +15,10 @@
 | Component | Technology | Why |
 |-----------|-----------|-----|
 | Shared code | Kotlin Multiplatform | One codebase across Android, iOS, macOS, Windows, Linux. Cross-platform parity is part of the product (see [vision.md](vision.md)) |
-| UI | Compose Multiplatform | Single UI tree across all targets; matches the "single visual language" choice in [design.md](design.md). Experimental on macOS but viable for our scope |
-| HTTP server | Ktor (CIO engine) | Single engine across JVM (Android + Desktop) and Native (iOS + macOS Native) since Ktor 3.0 published `ktor-server-cio` for K/N. Rationale in [adr-network-stack.md](../engineering/adr/adr-network-stack.md) |
+| UI | Compose Multiplatform | Single UI tree across all supported KMP UI targets (Android, iOS, Desktop JVM). macOS UI is delivered through the Desktop JVM tree — see [adr-macos-native-vs-jvm.md](../engineering/adr/adr-macos-native-vs-jvm.md) |
+| HTTP server | Ktor (CIO engine) | Single engine across JVM (Android + Desktop) and Native (iOS) since Ktor 3.0 published `ktor-server-cio` for K/N. Rationale in [adr-network-stack.md](../engineering/adr/adr-network-stack.md) |
 | HTTP client | Ktor (CIO) | Shared client across all targets; common API, no per-platform glue. See [adr-network-stack.md](../engineering/adr/adr-network-stack.md) |
-| Service discovery | mDNS, per-platform | Android NSD (`androidMain`), JmDNS (`desktopMain` for Windows + Linux), NSNetService via `appleMain` for iOS + macOS. mDNS is the only cross-platform option that's installed and reachable on all OSes by default |
+| Service discovery | mDNS, per-platform | Android NSD (`androidMain`), JmDNS (`desktopMain` on Windows + Linux) / JNA-Bonjour (`desktopMain` on macOS), NSNetService via `appleMain` for iOS. mDNS is the only cross-platform option that's installed and reachable on all OSes by default |
 | Serialization | kotlinx.serialization (JSON) | Multiplatform, compile-time, no reflection. Used for protocol messages in `protocol/Device.kt` |
 | CLI | Clikt (JVM only) | Argument parsing for the desktop debug runner (`--name`, `--port`) |
 | Build | Gradle 8 + Kotlin 2.x, Java 21 (Temurin) | Configuration cache and build cache enabled |
@@ -33,7 +33,7 @@ For implementation-side guidance — module layout, layering principles, and DI 
 
 **Why:** The product is symmetric — any device can send to any device. A client/server split would require a designated host, which contradicts the discovery model and the home-network use case.
 
-**Tradeoff:** historically Ktor's server modules were JVM-only. Since Ktor 3.0 (October 2024) `ktor-server-cio` is also published for Kotlin/Native (`iosArm64`, `iosSimulatorArm64`, `macosArm64`), and the project moved the server stack into `commonMain` accordingly — see [adr-network-stack.md](../engineering/adr/adr-network-stack.md) and [adr-apple-fileserver-engine.md](../engineering/adr/adr-apple-fileserver-engine.md). The "every node is server and client" symmetry now holds on every supported target.
+**Tradeoff:** historically Ktor's server modules were JVM-only. Since Ktor 3.0 (October 2024) `ktor-server-cio` is also published for Kotlin/Native (`iosArm64`, `iosSimulatorArm64`), and the project moved the server stack into `commonMain` accordingly — see [adr-network-stack.md](../engineering/adr/adr-network-stack.md) and [adr-apple-fileserver-engine.md](../engineering/adr/adr-apple-fileserver-engine.md). The "every node is server and client" symmetry now holds on every supported target.
 
 #### Source set layout
 
@@ -41,13 +41,12 @@ For implementation-side guidance — module layout, layering principles, and DI 
 commonMain                      ← Ktor server dependencies (CIO, core, content-negotiation)
 ├── jvmMain                     ← Ktor CIO server actual (Android + Desktop)
 │   ├── androidMain             ← NSD discovery
-│   └── desktopMain             ← JmDNS discovery, CLI (Windows + Linux)
-└── appleMain                   ← Ktor CIO Native server actual, NSNetService discovery (iOS + macOS)
-    ├── iosMain
-    └── macosMain
+│   └── desktopMain             ← JmDNS (Windows + Linux) / JNA-Bonjour (macOS) discovery, CLI; ships on Windows / Linux / macOS
+└── appleMain                   ← Ktor CIO Native server actual, NSNetService discovery
+    └── iosMain
 ```
 
-Linux ships in `desktopMain` alongside Windows — same JVM target, same APIs. No separate Native target for Linux.
+Linux and macOS both ship in `desktopMain` alongside Windows — same JVM target, same APIs. No separate Native target for Linux or macOS — see [adr-macos-native-vs-jvm.md](../engineering/adr/adr-macos-native-vs-jvm.md) for why macOS-native was reversed.
 
 ### Discovery — hotspot-first, layered around mDNS
 

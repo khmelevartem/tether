@@ -2,6 +2,7 @@
 
 **Status:** Accepted — 2026-05-10
 **Issue:** [#81](https://github.com/khmelevartem/tether/issues/81)
+**Note (2026-05-25):** `macosArm64` Kotlin/Native target removed from the build — see [adr-macos-native-vs-jvm.md](adr-macos-native-vs-jvm.md) §Reversal. The Apple `FileServer` now runs on iOS only; the engine choice and CIO-on-Native rationale below still apply.
 
 ## Context
 
