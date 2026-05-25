@@ -27,6 +27,7 @@ import kotlinx.cinterop.usePinned
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import platform.Foundation.NSData
 import platform.Foundation.NSFileManager
@@ -211,7 +212,7 @@ class FileServerTest {
     }
 
     @Test
-    fun upload_strips_path_traversal() {
+    fun upload_with_dotdot_traversal_returns_400() {
         val dir = newTempDir()
         val server = newTestServer(dir)
         val port = server.start()
@@ -222,16 +223,86 @@ class FileServerTest {
                     contentType(ContentType.Application.OctetStream)
                     setBody("malicious".encodeToByteArray())
                 }
-                assertEquals(HttpStatusCode.OK, response.status)
-                val savedPath = (response.body() as Map<String, String>)["savedPath"]!!
-                assertTrue(
-                    savedPath.startsWith("$dir/"),
-                    "saved path must be inside downloads dir: $savedPath",
-                )
+                assertEquals(HttpStatusCode.BadRequest, response.status)
                 val parentEvil = "${dir.substringBeforeLast('/')}/evil.txt"
                 assertFalse(
                     NSFileManager.defaultManager.fileExistsAtPath(parentEvil),
                     "file must not escape downloads dir",
+                )
+            }
+        } finally {
+            client.close()
+            server.stop()
+        }
+    }
+
+    @Test
+    fun upload_nested_path_lands_at_correct_subdirectory() {
+        val dir = newTempDir()
+        val server = newTestServer(dir)
+        val port = server.start()
+        val client = makeClient()
+        try {
+            runBlocking {
+                val response = client.post("http://localhost:$port/upload?name=foo/bar.txt") {
+                    contentType(ContentType.Application.OctetStream)
+                    setBody("nested".encodeToByteArray())
+                }
+                assertEquals(HttpStatusCode.OK, response.status)
+                val savedPath = (response.body() as Map<String, String>)["savedPath"]!!
+                assertTrue(savedPath.endsWith("/foo/bar.txt"), "saved path must preserve subdir: $savedPath")
+                assertTrue(NSFileManager.defaultManager.fileExistsAtPath(savedPath))
+                assertEquals("nested", readFileAsString(savedPath))
+            }
+        } finally {
+            client.close()
+            server.stop()
+        }
+    }
+
+    @Test
+    fun upload_with_url_encoded_traversal_returns_400() {
+        val dir = newTempDir()
+        val server = newTestServer(dir)
+        val port = server.start()
+        val client = makeClient()
+        try {
+            runBlocking {
+                val response = client.post("http://localhost:$port/upload?name=%2e%2e%2fescape.txt") {
+                    contentType(ContentType.Application.OctetStream)
+                    setBody("malicious".encodeToByteArray())
+                }
+                assertEquals(HttpStatusCode.BadRequest, response.status)
+                val parentEscape = "${dir.substringBeforeLast('/')}/escape.txt"
+                assertFalse(
+                    NSFileManager.defaultManager.fileExistsAtPath(parentEscape),
+                    "file must not escape downloads dir",
+                )
+            }
+        } finally {
+            client.close()
+            server.stop()
+        }
+    }
+
+    @Test
+    fun upload_through_symlink_pointing_outside_root_returns_500() {
+        val dir = newTempDir()
+        val outside = newTempDir()
+        platform.posix.symlink(outside, "$dir/link-dir")
+        val server = newTestServer(dir)
+        val port = server.start()
+        val client = makeClient()
+        try {
+            runBlocking {
+                val response = client.post("http://localhost:$port/upload?name=link-dir/secret.txt") {
+                    contentType(ContentType.Application.OctetStream)
+                    setBody("malicious".encodeToByteArray())
+                }
+                assertEquals(HttpStatusCode.InternalServerError, response.status)
+                assertFalse(
+                    NSFileManager.defaultManager.fileExistsAtPath("$outside/secret.txt"),
+                    "file must not be written through symlink to outside root",
                 )
             }
         } finally {
@@ -268,7 +339,7 @@ class FileServerTest {
     }
 
     @Test
-    fun streamUploadBody_propagates_writer_exception() = runBlocking {
+    fun streamUploadBody_propagates_writer_exception() = runTest {
         val input = ByteReadChannel("hello tether".encodeToByteArray())
         val ex = assertFailsWith<IllegalStateException> {
             streamUploadBody(input) { _, _ ->
