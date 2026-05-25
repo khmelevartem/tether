@@ -18,4 +18,4 @@ A simple prompt template — no assets, no discovery, short — lives in `.claud
 
 ## Tone and structure
 
-Match siblings in the same folder. CLAUDE.md §Code style applies to prompt prose; rules from [`docs/engineering/long-lived-artifacts.md`](../docs/engineering/long-lived-artifacts.md) apply too — no incident framing, no historical narrative, link over inline-copy.
+Match siblings in the same folder. CLAUDE.md §Code style and [`docs/engineering/long-lived-artifacts.md`](../docs/engineering/long-lived-artifacts.md) apply to prompt prose — minimal comments, no incident framing, no historical narrative, link over inline-copy.
