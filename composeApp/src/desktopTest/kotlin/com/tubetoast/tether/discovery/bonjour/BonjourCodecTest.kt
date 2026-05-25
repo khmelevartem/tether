@@ -38,6 +38,13 @@ class BonjourCodecTest {
     }
 
     @Test
+    fun `encodeTxt rejects empty key`() {
+        assertFailsWith<IllegalArgumentException> {
+            BonjourCodec.encodeTxt(mapOf("" to "1"))
+        }
+    }
+
+    @Test
     fun `encodeTxt rejects entry exceeding 255 bytes`() {
         assertFailsWith<IllegalArgumentException> {
             BonjourCodec.encodeTxt(mapOf("k" to "x".repeat(300)))

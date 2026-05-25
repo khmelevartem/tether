@@ -5,12 +5,13 @@ import com.sun.jna.Pointer
 /** Pure helpers; extracted to allow unit tests without loading libSystem. */
 internal object BonjourCodec {
     /**
-     * Encodes a property map as DNS TXT RDATA per RFC 6763 §6.1: a sequence of length-prefixed
+     * Encodes a property map as DNS TXT RDATA per RFC 6763 §6.3: a sequence of length-prefixed
      * `key=value` strings, one byte per length prefix (max 255 bytes per entry).
      */
     fun encodeTxt(props: Map<String, String>): ByteArray {
         require(props.isNotEmpty()) { "TXT props must be non-empty" }
         for ((k, _) in props) {
+            require(k.isNotEmpty()) { "TXT key must not be empty" }
             require('=' !in k) { "TXT key must not contain '=': '$k'" }
         }
         val entries = props.entries.map { (k, v) -> "$k=$v".encodeToByteArray() }

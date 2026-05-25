@@ -145,6 +145,8 @@ actual class MdnsDiscovery(
             }
             k to nsData
         }
+        // Safe: Kotlin/Native ObjC bridge maps NSDictionary* parameters to Map<Any?, *>;
+        // our keys (String) and values (NSData) are accepted by the bridge at runtime.
         @Suppress("UNCHECKED_CAST")
         return NSNetService.dataFromTXTRecordDictionary(dict as Map<Any?, *>)
     }
