@@ -15,7 +15,7 @@ import ru.pocketbyte.kydra.log.warn
 import ru.pocketbyte.kydra.log.wrapper.withTag
 
 private const val SERVICE_TYPE = "_tether._tcp."
-private val log = KydraLog.withTag(default = "Tether.MdnsDiscovery.Apple")
+private val log = KydraLog.withTag(default = "MdnsDiscovery.Apple")
 
 // Thread-safety note: NSNetService and NSNetServiceBrowser must be created and used on
 // the thread that owns their run loop. All callbacks (didPublish, didFind, didResolve)

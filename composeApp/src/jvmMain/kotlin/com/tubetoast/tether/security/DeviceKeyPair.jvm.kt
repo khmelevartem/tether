@@ -12,7 +12,7 @@ import java.security.KeyPairGenerator
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
 
-private val log = KydraLog.withTag(default = "Tether.DeviceKeyPair")
+private val log = KydraLog.withTag(default = "DeviceKeyPair")
 
 actual class DeviceKeyPair(
     private val configDir: File = File(System.getProperty("user.home"), ".config/tether"),

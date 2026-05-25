@@ -18,6 +18,8 @@ Every named logger uses the prefix `Tether.` followed by a dot-separated path th
 
 The name is the **tag** passed to the underlying writer. On Android it appears in Logcat's tag column, on Apple in the OSLog subsystem column, on Desktop as the prefix in the printed line. Truncate nothing in source — Logcat's 23-char tag limit is no longer enforced on modern Android, and a long-but-greppable name is more useful than a short cryptic one.
 
+The `Tether.` prefix is applied once in `initTetherLogging` via `withTag(prefix = TAG_PREFIX)`; call sites pass only the subsystem path (`KydraLog.withTag(default = "FileServer")`), and the writer emits `Tether.FileServer`. Do not type the prefix at the call site — it duplicates state and drifts on rename.
+
 ## Levels
 
 Four levels, present-tense semantics:
