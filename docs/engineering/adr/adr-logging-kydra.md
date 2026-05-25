@@ -113,6 +113,3 @@ The eight sub-decisions called out by #74 resolve as follows:
 - Related ADRs: [adr-network-stack.md](adr-network-stack.md) (Ktor framework that owns the SLF4J slot we fill), [adr-presentation-and-navigation.md](adr-presentation-and-navigation.md) (future Decompose components inherit this façade).
 - Issue [#74](https://github.com/khmelevartem/tether/issues/74) — full call-site inventory and DoD.
 
-## Amendment — central tag prefix
-
-The `Tether.` prefix is applied once at `KydraLog.init*` time via `.withTag(prefix = TAG_PREFIX)` from `ru.pocketbyte.kydra.log.wrapper.withTag`. Call sites pass only the subsystem path (`KydraLog.withTag(default = "FileServer")`); the writer chain emits `Tether.FileServer`. Rationale: a single source of truth for the umbrella tag — a future rename moves one constant, not seventeen call sites — and the prefix cannot drift away when a new logger is added.
