@@ -4,7 +4,7 @@ QEMU user-mode (SLIRP) networking applies when running the Android emulator with
 
 ## What works
 
-- **mDNS discovery in both directions.** Multicast packets cross the host/guest boundary in both directions. Desktop CLI sees the emulator peer; the emulator sees Desktop peers.
+- **mDNS discovery in both directions.** Desktop CLI sees the emulator peer; the emulator sees Desktop peers.
 - **Android-initiated outbound TCP.** Connections from the emulator to host services work normally.
 - **`/health` endpoint via `adb forward`.** Use `adb forward tcp:<host-port> tcp:<guest-port>` and hit `localhost:<host-port>` from the host. Response is immediate.
 

@@ -9,7 +9,7 @@ import kotlin.test.assertNull
 class BonjourCodecTest {
     @Test
     fun `encodeTxt encodes v=1 as DNS TXT RDATA`() {
-        // Expected wire format: [0x03, 'v', '=', '1'] — one length-prefixed entry
+        // [0x03, 'v', '=', '1']
         val expected = byteArrayOf(0x03, 0x76, 0x3d, 0x31)
         assertContentEquals(expected, BonjourCodec.encodeTxt(mapOf("v" to "1")))
     }
