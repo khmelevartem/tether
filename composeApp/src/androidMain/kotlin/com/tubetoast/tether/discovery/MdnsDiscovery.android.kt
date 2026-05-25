@@ -5,21 +5,37 @@ import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.os.Build
 import com.tubetoast.tether.protocol.Device
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.StateFlow
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.debug
 import ru.pocketbyte.kydra.log.warn
 import ru.pocketbyte.kydra.log.wrapper.withTag
 import java.util.concurrent.ConcurrentLinkedQueue
+import kotlin.coroutines.CoroutineContext
 
 private const val SERVICE_TYPE = "_tether._tcp."
+
+// Android NSD emits spurious onServiceLost / onServiceFound cycles for stably-published peers
+// (Bonjour mDNSResponder re-announcement reads as removal). Delay the removal: a re-find
+// within this window cancels it.
+private const val LOST_DEBOUNCE_MS = 10_000L
+
 private val log = KydraLog.withTag(default = "Tether.MdnsDiscovery.Android")
 
 actual class MdnsDiscovery(
     private val context: Context,
     private val store: DiscoveredDevicesStore,
+    debounceContext: CoroutineContext = kotlinx.coroutines.Dispatchers.Default,
 ) : DeviceDiscovery {
     actual override val discoveredDevices: StateFlow<List<Device>> = store.devices
+
+    private val debouncer = LostDebouncer(
+        scope = CoroutineScope(SupervisorJob() + debounceContext),
+        debounceMs = LOST_DEBOUNCE_MS,
+        onRemove = store::removeByName,
+    )
 
     @Volatile private var nsdManager: NsdManager? = null
 
@@ -81,6 +97,7 @@ actual class MdnsDiscovery(
             if (nsdManager == null) return
             if (serviceInfo.serviceName == ownName) return
             log.debug { "NSD service found: ${serviceInfo.serviceName}" }
+            debouncer.cancelRemoval(serviceInfo.serviceName)
             resolveQueue.add(serviceInfo)
             startNextResolve()
         }
@@ -89,7 +106,7 @@ actual class MdnsDiscovery(
             if (nsdManager == null) return
             log.debug { "NSD service lost: ${serviceInfo.serviceName}" }
             // NsdManager only populates serviceName here; host/port are null/0 — can't rebuild id.
-            store.removeByName(serviceInfo.serviceName)
+            debouncer.scheduleRemoval(serviceInfo.serviceName)
         }
     }
 
@@ -207,6 +224,7 @@ actual class MdnsDiscovery(
     actual override fun stop() {
         val nm = nsdManager ?: return
         log.debug { "Stopping NSD" }
+        debouncer.cancelAll()
         unregisterPreviousListener(nm, "stop")
         registrationListener = null
         try {
