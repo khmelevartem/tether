@@ -51,8 +51,8 @@
 - [ ] `suspend` vs `blocking` — чем `delay` отличается от `Thread.sleep`
 
 ### Structured concurrency
-- [ ] Что такое structured concurrency — scope, parent-child, когда parent завершается
-- [ ] `Job` vs `SupervisorJob` — поведение при ошибке дочернего корутина
+- [x] Что такое structured concurrency — scope, parent-child, когда parent завершается
+- [x] `Job` vs `SupervisorJob` — поведение при ошибке дочернего корутина
 - [ ] `coroutineScope` vs `supervisorScope` — разница в обработке исключений
 - [ ] Отмена: `cancel()`, `CancellationException`, `isActive`, `ensureActive`, `yield`
 - [ ] `NonCancellable` — зачем, как использовать в `finally`
