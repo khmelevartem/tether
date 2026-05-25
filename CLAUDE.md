@@ -8,76 +8,38 @@ KMP file transfer app: Android, iOS, Desktop (JVM — Windows / Linux / macOS). 
 
 ## Documentation map
 
-Read these on demand, not all upfront:
+Read on demand, not all upfront:
 
 - [`docs/product/`](docs/product/README.md) — vision, audience, features, roadmap. Source of truth for *what* / *why*.
 - [`docs/engineering/`](docs/engineering/README.md) — architecture, modules, DI, presentation, testing. Source of truth for *how*.
 - [`docs/knowledge/`](docs/knowledge/) — solved problems (Apple platform quirks, FGS, etc.). Check here when something looks weird before debugging from scratch.
 
-**Self-check before marking done** — read by what you wrote:
-- Any code → [`dependency-injection.md`](docs/engineering/dependency-injection.md)
-- UI → [`presentation-layer.md`](docs/engineering/presentation-layer.md)
-- New module/component → [`modules.md`](docs/engineering/modules.md) + [`architecture-principles.md`](docs/engineering/architecture-principles.md)
-- Tests → [`testing.md`](docs/engineering/testing.md)
-- New product spec or update of existing → [`_template.md`](docs/product/features/_template.md). Готовая соседняя спека показывает структуру, но не правила про содержание — шаблон открой отдельно.
-- New UX brief or update of existing → [`_ux-brief-template.md`](docs/product/features/_ux-brief-template.md). Соседний готовый бриф показывает форму, но дисциплина (scope cohesion, cross-ref on move, без имён кода) — в шаблоне.
-- Новый доменный термин в долгоживущем артефакте → `review-glossary` поймает в PR-волне и попросит обновить [`docs/glossary.md`](docs/glossary.md). Механизм: [`glossary-discipline.md`](docs/engineering/glossary-discipline.md).
+After writing code / UI / tests / specs / UX briefs, read the topically-matching `docs/engineering/*.md` or `docs/product/features/_template.md` before marking done.
 
 ## Architecture invariants
 
 - **Common-first.** Всё, что может жить в `commonMain` — там и лежит. Платформенные source sets (`androidMain`, `appleMain`, `jvmMain`, `desktopMain`, `iosMain`) — только для кода, требующего platform API. При выборе между `expect/actual` в `commonMain` и копированием в `platformMain` — `expect/actual`.
-- **Source set hierarchy:** `jvmMain` — общий родитель для `androidMain` и `desktopMain` (через `applyHierarchyTemplate` в `build.gradle.kts`). `appleMain` — родитель для `iosMain` (iOS — единственный native-таргет; macOS ships как Desktop JVM .app, см. [`adr-macos-native-vs-jvm.md`](docs/engineering/adr/adr-macos-native-vs-jvm.md)).
+- **Source set hierarchy.** `jvmMain` — общий родитель для `androidMain` и `desktopMain` (через `applyHierarchyTemplate` в `build.gradle.kts`). `appleMain` — родитель для `iosMain` (iOS — единственный native-таргет; macOS ships как Desktop JVM .app, см. [`adr-macos-native-vs-jvm.md`](docs/engineering/adr/adr-macos-native-vs-jvm.md)). Desktop UI vs CLI split — см. [`modules.md` §Desktop split](docs/engineering/modules.md#desktop-split-ui-vs-cli).
 
 ## Git conventions
 
-All git naming in English. **Все commit messages обязаны начинаться с номера issue:** `#<issue>: <message>`.
-
-```
-#42: add mDNS discovery for Android
-```
+All git naming in English. **Все commit messages обязаны начинаться с номера issue:** `#<issue>: <message>` (например, `#42: add mDNS discovery for Android`).
 
 Перед коммитом убедись, что issue существует. Если нет — попроси пользователя создать.
 
 ## Common commands
 
-Все Gradle команды запускай с `-q` (убирает бойлерплейт).
+Все Gradle команды запускай с `-q`. KtLint вручную не запускай — git hook делает это сам при коммите, стилевые ошибки тоже не правь руками.
 
-```bash
-./gradlew allTests -q                            # pre-commit / pre-push хуки прогонят это сами
-./gradlew :composeApp:installCli -q && tether   # Desktop CLI install (см. README.md → Desktop CLI)
-./gradlew :composeApp:runDesktopCli -q           # Desktop CLI (dev runner)
-./gradlew :composeApp:run -q                     # Desktop Compose UI (Compose plugin default)
-./gradlew :composeApp:assembleDebug              # Android APK
-```
-
-Desktop исходники разделены на два source set: `desktopMain` — shared backend + Compose UI (Clikt недоступен), `desktopCli` — CLI точка входа (видит `desktopMain` через `associateWith`, Clikt только здесь). Desktop distribution (`packageReleaseDistributionForCurrentOS`) пакует UI. CLI устанавливается через `installCli`.
-
-**KtLint — никогда не запускай вручную.** Git hook делает это сам при коммите. Стилевые ошибки не правь руками — просто коммить.
-
-Подробные команды запуска по платформам — в [README.md](README.md). Тестовые команды — в [`docs/engineering/testing.md`](docs/engineering/testing.md). Параллельный запуск всех таргетов разом — `scripts/run-all.sh` (см. [README.md](README.md) → Все таргеты разом).
+Полный список команд по платформам — [README.md](README.md). Тестовые команды — [`testing.md`](docs/engineering/testing.md). Параллельный запуск всех таргетов — `scripts/run-all.sh`.
 
 ## Slash commands и скиллы
 
-**Скиллы** (`.claude/skills/`) — основной путь, multi-agent оркестрация:
-- `/implement <N>` — end-to-end оркестратор задачи. Планирует, гоняет coder↔reviewers цикл, smoke, доводит до PR. Пользователь только в human-required гейтах (см. SKILL.md §Gate semantics). Идемпотентен: повторный вызов по issue с открытым PR — re-entry в inner loop + simplify + full review + smoke на свежем diff'е. Этот же вход используется для отработки ручного ревью на PR. На входе детектит docs-only задачи (Тип DOCS, INFRA на `.claude/`, FEATURE с маркером docs-only, ADR-as-deliverable) и делегирует в `/document`.
-- `/document <N>` — docs-only оркестратор. Планирует слои артефактов (spec / ux-brief / tech-doc / ADR / `.claude` prompt), гоняет spec-writer / ux-expert / architect, делает consistency pass, docs-scoped ревью, PR. Гейты D1/D2/D5. Используй напрямую для DOCS/INFRA задач или жди делегации из `/implement`.
-- `/code-review <PR>` — параллельный multi-agent review с постингом в GitHub.
-- `/grooming` — закрывает текущий спринт по факту, делает gap-analysis, собирает компактный план следующего (Цель / Состав / Следствия + опциональный merge order). Формат фиксирован в SKILL.md Шаг 6.
-
-**Команды** (`.claude/commands/`):
-- `/close-issue`, `/check-review`, `/sprint-pick`, `/retro`, `/quick-issue` — рабочий процесс вокруг issue/PR. `/sprint-pick` — экспресс: что брать сейчас из текущего спринта (статусы + 1–3 кандидата); лёгкий аналог `/grooming` для регулярного вызова.
-
-**Когда новый артефакт — скилл, а не команда.** Уноси в `.claude/skills/<name>/SKILL.md` (плюс `assets/*.json` для словарей и палитры) если выполняется хотя бы одно: инструкция включает фиксированные словари / цветовую палитру / конфигурацию, которые хочется править отдельно от prose; артефакт >~150 строк; в инструкции зашиты «магические» имена, ради сравнимости результатов между запусками; полезен skill discovery по описанию (`name` + `description` в YAML frontmatter). Простой prompt-шаблон без assets и discovery — `.claude/commands/<name>.md`.
-
-`/smoke-test` — runtime happy-path по платформам (Desktop CLI, Desktop↔Desktop send, Android если adb подключён, native compile iosSimulatorArm64). Прогоняй когда сомневаешься в рантайме после нетривиальных правок в сетевой части / FileServer / mDNS / FGS, перед merge runtime-changing PR, и в `/close-issue`. Skip для DOCS-only / `.claude/`-only / comment-only изменений. Smoke не заменяет `allTests`.
+`.claude/skills/` — multi-agent оркестрация (`/implement`, `/document`, `/code-review`, `/grooming`, `/smoke-test`). `.claude/commands/` — простые промпт-шаблоны (`/close-issue`, `/check-review`, `/sprint-pick`, `/retro`, `/quick-issue`). Когда новый артефакт — скилл, а когда команда — см. [`.claude/skills/_authoring.md`](.claude/skills/_authoring.md).
 
 ## Code style
 
 - **Минимум комментариев.** Перед тем как добавить — попробуй вынести блок в приватный метод: имя метода часто делает комментарий ненужным. Комментарий — только там, где код не может выразить намерение (намеренно проглоченное исключение, неочевидный инвариант внешней библиотеки).
 - **KDoc vs `//`.** KDoc — только для контрактов (nullable-семантика, неочевидные пред-/постусловия, неочевидное WHY). Не пересказывай имя метода или сигнатуру — это шум. Если KDoc не добавляет информации относительно кода — сноси его.
-- **Долгоживущий артефакт — это правило, а не его история.** Доки, код, комментарии формулируют что есть / что делать / чему равно — без «после ретро по #N», «обнаружено при работе над X», «как обсудили в #Y», без примеров и обоснований из конкретной задачи, в которой артефакт родился. Контекст принятия решения живёт в git/PR, не в файле. Если правило непонятно без отсылки к инциденту — слабая формулировка, переписывай её, а не приклеивай хвост. Применимо ко всему: CLAUDE.md, `docs/`, `.claude/skills/**`, inline-комментарии в коде, тексты ошибок.
-- **Inline-пример = форма истории, если он incident-rooted.** Соблазн «приложу пример, чтобы было понятнее» почти всегда означает приложить строку из задачи, родившей правило. Следующий агент матчит пример литерально и пропускает структурно идентичные соседние случаи. Правило: либо обобщай *форму* ошибки (контраст «принцип ловит вот это, но не похожее на него») так, чтобы пример был синтетическим и закрывал класс, — либо не приводи пример вовсе. Если без примера правило не читается — переписывай формулировку, а не подпирай её цитатой из инцидента.
-- **Утверждения доков о runtime — снапшот, не правило.** Опираешься на такое утверждение в долгоживущем артефакте (спека, doc, комментарий, скилл) — сверь с кодом до использования, оно могло устареть. Пишешь сам — предпочти продуктовый инвариант («pairing keyed by stable device identity») описанию текущей реализации; если runtime упомянуть неизбежно — оставь минимум, нужный для понимания.
-- **Ссылка на другой артефакт > копия из него.** Долгоживущий артефакт ссылается на правила/токены/таблицы из другого артефакта — давай ссылку (`см. docs/engineering/X.md §Y`), не embed'ь содержимое. Любая копия рассинхронизируется при первом изменении источника; читатель/агент действует по устаревшей версии и боксится в frozen-checklist mindset вместо holistic применения канона. Применимо ко всему: `CLAUDE.md`, `docs/`, `.claude/agents/**`, `.claude/skills/**`, KDoc, inline-комментарии. Если без inline-копии артефакт не читается — слабая формулировка ссылающейся стороны, переписывай её, не подпирай копией.
 - **Kotlin official style** (enforced by KtLint).
-**Rebase / merge main — смотри, что заехало, не только разрешай конфликты.** После `git rebase` / `git merge` main в рабочую ветку прочитай заехавшие коммиты (`git log <prev>..origin/main`) и оцени смысловое пересечение с текущей работой. Поправь работу под новый контекст или явно сообщи пользователю и предложи план, если пересечение значительное.
+- **Дисциплина долгоживущих артефактов** (CLAUDE.md, `docs/`, `.claude/`, KDoc, inline-комментарии) — [`long-lived-artifacts.md`](docs/engineering/long-lived-artifacts.md).

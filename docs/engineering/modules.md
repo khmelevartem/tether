@@ -34,6 +34,15 @@ see [adr/adr-apple-fileserver-engine.md](adr/adr-apple-fileserver-engine.md).
 
 This is fine *for now*. Layers are visually distinguishable (protocol / discovery / network / UI / platform / cli). The cost is also real: nothing prevents UI code from importing `FileServer` directly, and a change in any layer rebuilds everything.
 
+### Desktop split: UI vs CLI
+
+The `desktopMain` source set holds shared backend + Compose UI. The `desktopCli` custom compilation is a sibling that sees `desktopMain` via `associateWith`. Clikt lives **only** in `desktopCli` — the UI / backend classpath stays free of CLI argument parsing.
+
+Two distribution paths exit from this split:
+
+- `:composeApp:run` / `packageReleaseDistributionForCurrentOS` — Desktop UI (Compose plugin default; macOS ships through this path, see [`adr/adr-macos-native-vs-jvm.md`](adr/adr-macos-native-vs-jvm.md)).
+- `:composeApp:installCli` / `:composeApp:runDesktopCli` — Desktop CLI runner; `installCli` puts the `tether` script on PATH.
+
 ## Target structure (when we split)
 
 The shape we'll move toward, in priority order:
