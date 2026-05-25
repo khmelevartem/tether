@@ -70,8 +70,9 @@ Before layer-classification and any dispatch — scan the doc corpus and pull up
 - **Engineering living docs** — `ls docs/engineering/*.md`. These are **what is currently true** — comply with the ones whose topic matches the task.
 - **ADR** — `ls docs/engineering/adr/adr-*.md`. These are **why it was chosen**. For every ADR matching the task's topic, also read its **Revisit if** section and explicitly assess whether your work has tripped a trigger. If it has — the artifact layer for this task must include a reversal-update of the ADR (see `docs/engineering/adr/README.md` §Reversing an ADR).
 - **Knowledge** — `ls docs/knowledge/*.md`. Solved-problem write-ups; pull relevant overlaps so you don't duplicate formulations.
+- **Glossary** — `docs/glossary.md`. Read up front; it's short and load-bearing for terminology — `review-glossary` blocks PRs that drift from it.
 
-`CLAUDE.md` and `docs/glossary.md` are always in context — no separate recon needed.
+`CLAUDE.md` is harness-injected — no separate recon needed.
 
 Mention the relevant documents you found in the briefing to the user (see below) — they form the context for which artifact layers make sense in Step 2.
 
