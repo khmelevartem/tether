@@ -39,37 +39,21 @@ raw multicast — там оставляем JmDNS. Дисптач — по `os.n
 
 ## Native Apple-таргеты этой проблемы не имеют
 
-Описанное выше — про **JVM-сборку на macOS-хосте**. Нативные Apple-таргеты
-(`appleMain` / `iosMain` / `macosMain` через `NSNetServiceBrowser`) ходят к
-тому же `mDNSResponder` через системный Foundation API, то есть оказываются
-по правильную сторону kernel-фильтра по умолчанию. JmDNS на JVM был
-проблемой **именно** потому, что он независимый user-space multicast
-listener, а не клиент mDNSResponder.
+Описанное выше — про **JVM-сборку на macOS-хосте**. Нативный iOS-таргет
+(`appleMain` / `iosMain` через `NSNetServiceBrowser`) ходит к тому же
+`mDNSResponder` через системный Foundation API, то есть оказывается по
+правильную сторону kernel-фильтра по умолчанию. JmDNS на JVM был проблемой
+**именно** потому, что он независимый user-space multicast listener, а не
+клиент mDNSResponder.
 
-Практические следствия:
-
-- **Issue [#41](https://github.com/khmelevartem/tether/issues/41) (запуск
-  native macOS):** ожидается, что после landed entry-point `appleMain`-код
-  начнёт видеть реальные WiFi-устройства (включая Android) сразу — без
-  отдельного fix'а уровня #47. Это можно использовать как acceptance smoke
-  для #41: «native macOS видит реальный Android» эквивалентно «discovery
-  работает», и не требует продумывания JmDNS-vs-Bonjour дилеммы.
-
-- **Канонизация имени при конфликте.** mDNSResponder может переименовать
-  опубликованный сервис (`Self` → `Self (2)`), и self-фильтр должен
-  использовать имя из publish callback'а, а не запрошенное. В JVM-Bonjour
-  это сделано через `Event.OwnNameAssigned` ([`MdnsDiscoveryBonjour.kt`](../../composeApp/src/desktopMain/kotlin/com/tubetoast/tether/discovery/bonjour/MdnsDiscoveryBonjour.kt)).
-  В native-Apple ровно тот же паттерн уже реализован — `ownServiceName = sender.name`
-  в `netServiceDidPublish` callback'е [`MdnsDiscovery.apple.kt:154`](../../composeApp/src/appleMain/kotlin/com/tubetoast/tether/discovery/MdnsDiscovery.apple.kt:154).
-  Не повторяй ошибку «фильтровать по запрошенному имени» в новых
-  Apple-таргет-местах.
-
-- **Native macOS как «ground truth» для будущих сетевых багов.** Если на
-  JVM-Bonjour снова что-то сломается на этом же Mac, native macOS-клиент
-  (когда #41 закроется) даст отдельный data-point: видит ли реальный
-  Android вообще, чтобы быстро отделить «сеть/демон сломан» от «наш
-  JNA-биндинг сломан». Это аналог того, что в исследовании #47 делал
-  `dns-sd -B`, но без shell-subprocess.
+**Канонизация имени при конфликте.** mDNSResponder может переименовать
+опубликованный сервис (`Self` → `Self (2)`), и self-фильтр должен
+использовать имя из publish callback'а, а не запрошенное. В JVM-Bonjour
+это сделано через `Event.OwnNameAssigned` ([`MdnsDiscoveryBonjour.kt`](../../composeApp/src/desktopMain/kotlin/com/tubetoast/tether/discovery/bonjour/MdnsDiscoveryBonjour.kt)).
+В native-Apple ровно тот же паттерн уже реализован — `ownServiceName = sender.name`
+в `netServiceDidPublish` callback'е [`MdnsDiscovery.apple.kt:154`](../../composeApp/src/appleMain/kotlin/com/tubetoast/tether/discovery/MdnsDiscovery.apple.kt:154).
+Не повторяй ошибку «фильтровать по запрошенному имени» в новых
+Apple-таргет-местах.
 
 См. также [`apple-platform.md`](apple-platform.md) — там собраны
 платформо-специфичные патерны (ObjC delegate GC, NSRunLoop в тестах,

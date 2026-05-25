@@ -211,7 +211,7 @@ Run `/smoke-test` blocks relevant to the diff:
 |---|---|
 | `FileServer` / `FileClient` / CLI / network protocol | Desktop CLI + Desktop↔Desktop blocks |
 | Android FGS / mDNS / Android networking | Android block (if device attached) |
-| native source sets (`iosMain`, `macosMain`, `appleMain`) | native compile block |
+| native source sets (`iosMain`, `appleMain`) | native compile block |
 | DOCS-only, `.claude/`-only, comments-only | nothing |
 | Other production code | judgement call — when in doubt, run Desktop blocks |
 

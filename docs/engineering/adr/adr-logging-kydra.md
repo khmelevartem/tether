@@ -2,6 +2,7 @@
 
 **Status:** Accepted — 2026-05-23
 **Issue:** [#74](https://github.com/khmelevartem/tether/issues/74)
+**Note (2026-05-25):** `macosArm64` Kotlin/Native target removed from the build — see [adr-macos-native-vs-jvm.md](adr-macos-native-vs-jvm.md) §Reversal. KydraLog's KMP coverage still holds for the active target set (`androidTarget`, `jvm("desktop")`, `iosArm64`, `iosSimulatorArm64`).
 
 ## Context
 

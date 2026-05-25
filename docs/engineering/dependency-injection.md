@@ -14,15 +14,14 @@ The container hierarchy mirrors the source set hierarchy. Every layer adds only 
 AppContainer            (commonMain)
 ├── JvmAppContainer     (jvmMain)
 │   ├── AndroidAppContainer  (androidMain)
-│   └── DesktopAppContainer  (desktopMain)
+│   └── DesktopAppContainer  (desktopMain — ships on Windows / Linux / macOS)
 └── AppleAppContainer   (appleMain)
-    ├── IosAppContainer     (iosMain)
-    └── MacosAppContainer   (macosMain)
+    └── IosAppContainer     (iosMain)
 ```
 
-`AppContainer` (commonMain) is no-arg. Intermediate containers — `JvmAppContainer`, `AppleAppContainer` — take a typed `*AppConfig` subtype in their constructor; leaves (`AndroidAppContainer`, `DesktopAppContainer`, `IosAppContainer`, `MacosAppContainer`) may pass a concrete config up to the intermediate. `AppConfig` is the input — the values the entry point chooses (port, downloads dir, Android `Application`). The hierarchy of `*AppConfig` interfaces tracks the container hierarchy: [`AppConfig`](../../composeApp/src/commonMain/kotlin/com/tubetoast/tether/di/AppConfig.kt), [`JvmAppConfig`](../../composeApp/src/jvmMain/kotlin/com/tubetoast/tether/di/JvmAppConfig.kt), [`AndroidAppConfig`](../../composeApp/src/androidMain/kotlin/com/tubetoast/tether/di/AndroidAppConfig.kt), etc.
+`AppContainer` (commonMain) is no-arg. Intermediate containers — `JvmAppContainer`, `AppleAppContainer` — take a typed `*AppConfig` subtype in their constructor; leaves (`AndroidAppContainer`, `DesktopAppContainer`, `IosAppContainer`) may pass a concrete config up to the intermediate. `AppConfig` is the input — the values the entry point chooses (port, downloads dir, Android `Application`). The hierarchy of `*AppConfig` interfaces tracks the container hierarchy: [`AppConfig`](../../composeApp/src/commonMain/kotlin/com/tubetoast/tether/di/AppConfig.kt), [`JvmAppConfig`](../../composeApp/src/jvmMain/kotlin/com/tubetoast/tether/di/JvmAppConfig.kt), [`AndroidAppConfig`](../../composeApp/src/androidMain/kotlin/com/tubetoast/tether/di/AndroidAppConfig.kt), etc.
 
-Concrete `*AppConfig` implementations are **named classes in their own files** (per [architecture-principles.md](architecture-principles.md) — "Named classes over anonymous objects"): [`TetherAppConfig`](../../composeApp/src/androidMain/kotlin/com/tubetoast/tether/di/TetherAppConfig.kt) for Android, [`DefaultDesktopAppConfig`](../../composeApp/src/desktopMain/kotlin/com/tubetoast/tether/di/DesktopAppConfig.kt), [`DefaultIosAppConfig`](../../composeApp/src/iosMain/kotlin/com/tubetoast/tether/di/IosAppConfig.kt), [`DefaultMacosAppConfig`](../../composeApp/src/macosMain/kotlin/com/tubetoast/tether/di/MacosAppConfig.kt). Anonymous `object : AppConfig { ... }` literals invite drift between call sites.
+Concrete `*AppConfig` implementations are **named classes in their own files** (per [architecture-principles.md](architecture-principles.md) — "Named classes over anonymous objects"): [`TetherAppConfig`](../../composeApp/src/androidMain/kotlin/com/tubetoast/tether/di/TetherAppConfig.kt) for Android, [`DefaultDesktopAppConfig`](../../composeApp/src/desktopMain/kotlin/com/tubetoast/tether/di/DesktopAppConfig.kt), [`DefaultIosAppConfig`](../../composeApp/src/iosMain/kotlin/com/tubetoast/tether/di/IosAppConfig.kt). Anonymous `object : AppConfig { ... }` literals invite drift between call sites.
 
 ### Entry points
 
@@ -33,7 +32,7 @@ Each platform builds its container in its entry point and passes components down
   - [`MainUi.kt`](../../composeApp/src/desktopMain/kotlin/com/tubetoast/tether/MainUi.kt) — Compose UI runner (`desktopMain` source set, default for `nativeDistributions` packaging), launched via `./gradlew :composeApp:run`.
 - **Android** ([`TetherApp`](../../composeApp/src/androidMain/kotlin/com/tubetoast/tether/TetherApp.kt)): builds `AndroidAppContainer` lazily in the `Application` subclass and exposes it via the [`AppContainerProvider`](../../composeApp/src/androidMain/kotlin/com/tubetoast/tether/di/AppContainerProvider.kt) interface. [`TetherForegroundService`](../../composeApp/src/androidMain/kotlin/com/tubetoast/tether/network/TetherForegroundService.kt) reads it via `(application as AppContainerProvider).container`.
 - **iOS** ([`MainViewController`](../../composeApp/src/iosMain/kotlin/com/tubetoast/tether/MainViewController.kt)): builds `IosAppContainer` outside the `ComposeUIViewController { ... }` lambda so the composable does not act as a composition root (see rule 5 below).
-- **macOS**: container leaf and config exist; the entry point will follow the same shape as iOS once a macOS run target lands.
+- **macOS**: ships via Desktop JVM (see [`adr-macos-native-vs-jvm.md`](adr/adr-macos-native-vs-jvm.md)) — no separate entry point; uses the Desktop `MainUi.kt` runner.
 
 ### The Provider pattern (Android)
 
@@ -54,7 +53,7 @@ When manual DI becomes painful, we move to [Metro](https://github.com/ZacSweers/
 
 **Why Metro specifically:**
 
-- KMP-first. Supports all our targets explicitly: `iosArm64`, `iosSimulatorArm64`, `macosArm64`, JVM, Android.
+- KMP-first. Supports all our targets explicitly: `iosArm64`, `iosSimulatorArm64`, JVM, Android.
 - Compile-time graph validation. Missing bindings fail the build, not the device.
 - Compiler plugin (FIR/IR), not KSP — faster builds than `kotlin-inject`.
 - Anvil-style `@ContributesBinding` / `@ContributesTo` fits the multi-module shape we're heading toward (see [modules.md](modules.md)).

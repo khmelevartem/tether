@@ -2,6 +2,7 @@
 
 **Status:** Accepted — 2026-05-16
 **Issue:** [#166](https://github.com/khmelevartem/tether/issues/166)
+**Note (2026-05-25):** `macosArm64` Kotlin/Native target removed from the build — see [adr-macos-native-vs-jvm.md](adr-macos-native-vs-jvm.md) §Reversal. Active KMP targets now: `androidTarget`, `jvm("desktop")`, `iosArm64`, `iosSimulatorArm64`. CIO-on-Native still applies to iOS.
 
 ## Context
 

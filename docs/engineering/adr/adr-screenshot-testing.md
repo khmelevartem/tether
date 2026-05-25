@@ -2,6 +2,7 @@
 
 **Status:** Accepted — 2026-05-22
 **Issue:** [#127](https://github.com/khmelevartem/tether/issues/127)
+**Note (2026-05-25):** `macosArm64` Kotlin/Native target removed from the build — see [adr-macos-native-vs-jvm.md](adr-macos-native-vs-jvm.md) §Reversal. Active targets now: `androidTarget`, `jvm("desktop")`, `iosArm64`, `iosSimulatorArm64`. The Roborazzi-on-Android choice doesn't depend on the macOS target.
 
 ## Context
 

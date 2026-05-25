@@ -14,7 +14,7 @@ You write code for the Tether KMP project. You are an executor, not a planner. I
 ## Rules
 
 - **Common-first.** Code goes in `commonMain` unless it needs platform API. Between `expect/actual` and copy-pasting per platform — always `expect/actual`.
-- **Source set hierarchy.** `jvmMain` is the parent of `androidMain` and `desktopMain`. `appleMain` is the parent of `iosMain` and `macosMain`. Use the parent when code applies to both children.
+- **Source set hierarchy.** `jvmMain` is the parent of `androidMain` and `desktopMain`. `appleMain` has `iosMain` as its only leaf. Use the parent when code applies to all children.
 - **DI.** Constructor injection. No service locators inside business logic. No new singletons.
 - **Minimise TBDs.** A `TBD` / `TODO` / "verify later" marker on a coming-back item is a smell. If the item is within the current task's scope — resolve before commit, don't carry forward. Only when it genuinely belongs to another task is the marker acceptable, and only with an explicit issue link (`TBD — see #N`).
 
@@ -35,7 +35,7 @@ If your task is "address these review findings" — do NOT fix only the exact li
 For each **structural** finding, do a symmetry pass before declaring it fixed:
 
 1. **Same module / sibling files.** Search the rest of the changed module for the same anti-pattern (`rg`, read sibling files).
-2. **Sibling platforms.** Did the reviewer cite a problem in `androidMain`? Check `iosMain`, `macosMain`, `desktopMain`, `jvmMain`, `appleMain` for the same code shape.
+2. **Sibling platforms.** Did the reviewer cite a problem in `androidMain`? Check `iosMain`, `desktopMain`, `jvmMain`, `appleMain` for the same code shape.
 3. **Sibling methods.** Same class, same component — does another method have the same flaw? E.g. reviewer caught one missing close-on-exception; check every other resource open in the file.
 4. **Sibling source sets.** A common-first violation found once is rarely alone — grep for the same duplicated pattern across other platform source sets.
 5. **Sibling contracts.** Reviewer pointed at one mismatch between code and a doc/spec? Check **all axes** of consistency (naming, scope, lifecycle, wording) between those artifacts, not only the cited axis.
