@@ -26,7 +26,7 @@ import java.net.NetworkInterface
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 
-private val log = KydraLog.withTag(default = "Tether.MdnsDiscovery.Bonjour")
+private val log = KydraLog.withTag(default = "MdnsDiscovery.Bonjour")
 
 /**
  * JVM-on-macOS mDNS discovery backed by Apple's DNS-SD API ([DnsSd]).

@@ -112,3 +112,4 @@ The eight sub-decisions called out by #74 resolve as follows:
 - [SLF4J 2.0 provider mechanism](https://www.slf4j.org/manual.html#swapping) — context for the `slf4j-simple` choice.
 - Related ADRs: [adr-network-stack.md](adr-network-stack.md) (Ktor framework that owns the SLF4J slot we fill), [adr-presentation-and-navigation.md](adr-presentation-and-navigation.md) (future Decompose components inherit this façade).
 - Issue [#74](https://github.com/khmelevartem/tether/issues/74) — full call-site inventory and DoD.
+

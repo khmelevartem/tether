@@ -27,7 +27,7 @@ import ru.pocketbyte.kydra.log.wrapper.withTag
 // Until then the protocol treats these bytes as an opaque per-install identifier.
 private const val PUBLIC_KEY_BYTES = 32
 private const val FILE_PUBLIC = "device_public.key"
-private val log = KydraLog.withTag(default = "Tether.DeviceKeyPair")
+private val log = KydraLog.withTag(default = "DeviceKeyPair")
 
 actual class DeviceKeyPair(
     configDir: String? = null,

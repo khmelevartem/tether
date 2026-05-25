@@ -42,7 +42,7 @@ internal class IOException(
     message: String,
 ) : Exception(message)
 
-private val log = KydraLog.withTag(default = "Tether.FileServer")
+private val log = KydraLog.withTag(default = "FileServer")
 
 actual class FileServer(
     private val port: Int,

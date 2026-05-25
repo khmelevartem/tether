@@ -34,7 +34,7 @@ import ru.pocketbyte.kydra.log.wrapper.withTag
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
-private val log = KydraLog.withTag(default = "Tether.FileClient")
+private val log = KydraLog.withTag(default = "FileClient")
 
 class FileClient(
     private val client: HttpClient,

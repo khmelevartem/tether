@@ -27,7 +27,7 @@ import ru.pocketbyte.kydra.log.withMessage
 import ru.pocketbyte.kydra.log.wrapper.withTag
 
 private const val NOTIFICATION_ID = 1001
-private val log = KydraLog.withTag(default = "Tether.FGService")
+private val log = KydraLog.withTag(default = "FGService")
 private const val CHANNEL_ID = "tether_foreground"
 internal const val ACTION_STOP = "com.tubetoast.tether.action.STOP"
 

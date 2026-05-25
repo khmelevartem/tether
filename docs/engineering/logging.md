@@ -6,7 +6,7 @@ The rest of this doc is the contract any new logging call site must respect.
 
 ## Goal
 
-A reader debugging a cross-platform issue sees the same logger names and the same level semantics in Logcat, Console.app / Xcode, and Desktop stderr. The CLI starts without spurious framework warnings. Release builds do not leak DEBUG. Tests do not leak any log noise into CI output.
+A reader debugging a cross-platform issue sees the same logger names and the same level semantics in Logcat, Console.app / Xcode, and Desktop stderr. The CLI starts without spurious framework warnings. Release builds do not leak DEBUG.
 
 ## Logger names
 
@@ -17,6 +17,7 @@ Every named logger uses the prefix `Tether.` followed by a dot-separated path th
 - Platform-only subsystems carry the platform when no common-side sibling exists (`Tether.FGService` lives only on Android — no need to qualify; `Tether.MdnsDiscovery.Android` qualifies because cross-platform peers exist).
 
 The name is the **tag** passed to the underlying writer. On Android it appears in Logcat's tag column, on Apple in the OSLog subsystem column, on Desktop as the prefix in the printed line. Truncate nothing in source — Logcat's 23-char tag limit is no longer enforced on modern Android, and a long-but-greppable name is more useful than a short cryptic one.
+
 
 ## Levels
 
@@ -72,10 +73,6 @@ rg "NSLog" composeApp/src
 ```
 
 All three should return no production hits. Test source sets may print freely.
-
-## Test logging
-
-Test source sets (`commonTest`, `jvmTest`, `androidUnitTest`, `desktopTest`, `appleTest`) must not produce log output during `./gradlew allTests`. The writer initialised in test setup is a no-op writer or a WARNING-threshold writer — chosen at test-helper level, not per test. A test that needs to assert against logged content uses an in-memory writer it installs itself in `@BeforeTest`.
 
 ## Sensitive data
 

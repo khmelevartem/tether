@@ -25,7 +25,7 @@ private val IPV4_REGEX = Regex("""\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}""")
 
 internal const val REQUERY_INITIAL_INTERVAL_MS = 5_000L
 private const val REQUERY_MAX_INTERVAL_MS = 60_000L
-private val log = KydraLog.withTag(default = "Tether.MdnsDiscovery.JmDNS")
+private val log = KydraLog.withTag(default = "MdnsDiscovery.JmDNS")
 
 /**
  * JmDNS-based discovery for non-macOS JVM hosts (Linux, Windows).

@@ -22,7 +22,7 @@ import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.error
 import ru.pocketbyte.kydra.log.wrapper.withTag
 
-private val log = KydraLog.withTag(default = "Tether.Main.iOS")
+private val log = KydraLog.withTag(default = "Main.iOS")
 
 @Suppress("ktlint:standard:function-naming")
 fun MainViewController() = run {
