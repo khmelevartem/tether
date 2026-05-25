@@ -47,7 +47,7 @@ You MUST stop and ask the user in these cases (and only these):
 
 Everything else — sub-agent dispatch, mechanical fixes, aggregation of reviewer findings — you handle internally without the user. You do not perform reviews yourself; reviewers are dispatched as sub-agents.
 
-## Step 1 — Read issue + worktree setup
+## Step 1 — Reconnaissance and setup
 
 ```bash
 gh issue view <N> --json title,body,labels,comments
@@ -60,6 +60,21 @@ gh pr list --search "issue:#<N>" --state open --json number,isDraft,headRefName
 - из issue непонятно, какие именно артефакты ожидаются на выходе;
 - противоречие comment vs body, не разрешимое prioritization-правилом;
 - фразы-затычки: «опиши как считаешь нужным», «зафиксируй где надо», «и так далее».
+
+### Doc discovery
+
+Before layer-classification and any dispatch — scan the doc corpus and pull up topically-matching artifacts. Recon is cheap: filenames are designed for topic-match.
+
+- **Product features** — `ls docs/product/features/` (+ `docs/product/features/README.md` as the index). If the task targets a specific feature — read its `spec.md` (and `ux-brief.md` if present).
+- **Product context** — `docs/product/*.md` covers broad product framing (vision, audience, roadmap, tech stack, security, …). Read lazily, only when you have conceptual doubt about scope, audience or timing relative to that framing.
+- **Engineering living docs** — `ls docs/engineering/*.md`. These are **present-tense rules** for their subsystems — comply with the ones whose topic matches the task.
+- **ADR** — `ls docs/engineering/adr/adr-*.md`. These are **why it was chosen**. For every ADR matching the task's topic, also read its **Revisit if** section and explicitly assess whether your work has tripped a trigger. If it has — the artifact layer for this task must include a reversal-update of the ADR (see `docs/engineering/adr/README.md` §Reversing an ADR).
+- **Knowledge** — `ls docs/knowledge/*.md`. Solved-problem write-ups; pull relevant overlaps so you don't duplicate formulations.
+- **Glossary** — `docs/glossary.md`. Read up front; it's short and load-bearing for terminology — `review-glossary` blocks PRs that drift from it.
+
+`CLAUDE.md` is harness-injected — no separate recon needed.
+
+Mention the relevant documents you found in the briefing to the user (see below) — they form the context for which artifact layers make sense in Step 2.
 
 **Worktree setup — do this BEFORE dispatching any agent that edits files.** If you are not already in `.claude/worktrees/<branch>/`:
 

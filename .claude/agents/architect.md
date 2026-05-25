@@ -40,6 +40,8 @@ If the framing is itself unclear — escalate to the orchestrator immediately as
 
 ### Step 2 — Build a design palette
 
+**Before building the palette, list `docs/engineering/adr/*.md` and check the Revisit-if section of any topically matching ADR.** If a trigger has fired (an «accepted cost» turns out to be blocking, a constraint behind the original choice has changed), your palette options must include «confirm the ADR» and «reverse the ADR» (see `docs/engineering/adr/README.md` §Reversing an ADR) explicitly — the architectural question is now whether to keep the existing decision, not what to build de-novo.
+
 Enumerate the **architecturally distinct** options for solving the problem. Three is the minimum healthy count for a non-trivial choice; if you can only think of two, work harder — there's usually a third that lives outside your first frame (different layer, different invariant, "do nothing and accept the trade-off").
 
 For each option, capture:

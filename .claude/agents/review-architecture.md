@@ -82,6 +82,8 @@ For non-trivial structural decisions (new module, new abstraction crossing layer
 
 If the decision contradicts `architecture-principles.md`, an ADR, a feature-spec architectural call, or a prior decision visible in `docs/engineering/adr/` — flag it as REQUIRED unless the PR explicitly amends the doc/ADR in the same change.
 
+Also check the **Revisit if** section of every ADR governing the touched area. If the PR's content suggests a trigger has silently fired (an «accepted cost» the ADR listed has turned out to be blocking; a constraint behind the original choice has changed) — flag as `[REQUIRED]` to either confirm the ADR with the new evidence or reverse it in the same PR (see `docs/engineering/adr/README.md` §Reversing an ADR).
+
 ### 6. Trade-off vs violation
 
 `[REQUIRED]` — нарушение принципа: несимметрия слоёв, развернутое направление зависимости, абстракция против документированного правила, пропущенный source set. Принцип нарушен — фикс однозначен, выбор уровня не у автора.
