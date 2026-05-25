@@ -107,4 +107,14 @@ class PathSanitizationTest {
     fun `url-encoded uppercase hex passes decode`() {
         assertEquals("foo.txt", sanitize("foo%2Etxt"))
     }
+
+    @Test
+    fun `url-encoded UTF-8 multi-byte decodes to original codepoints`() {
+        // %D0%9E%D1%82%D0%BF%D1%83%D1%81%D0%BA → "Отпуск"
+        assertEquals("Отпуск", sanitize("%D0%9E%D1%82%D0%BF%D1%83%D1%81%D0%BA"))
+        // %C3%A9 → "é" (single Latin-1 supplement codepoint, two UTF-8 bytes)
+        assertEquals("résumé.txt", sanitize("r%C3%A9sum%C3%A9.txt"))
+        // %F0%9F%8F%96 → 🏖 (four-byte UTF-8 emoji)
+        assertEquals("vacation/🏖.jpg", sanitize("vacation/%F0%9F%8F%96.jpg"))
+    }
 }

@@ -28,8 +28,21 @@ internal object PathSanitization {
 
     private val driveLetterPrefix = Regex("^[A-Za-z]:")
 
+    // Decodes percent-escapes as UTF-8 byte sequences. Non-ASCII codepoints
+    // arrive percent-encoded over HTTP as multiple `%XX` bytes (one per UTF-8
+    // octet); we collect consecutive escape bytes and decode them as a batch
+    // so multi-byte codepoints reassemble correctly. Literal characters in
+    // the input are appended as-is, preserving any surrogate pairs.
     private fun urlDecode(input: String): String? {
-        val sb = StringBuilder(input.length)
+        val out = StringBuilder(input.length)
+        val pendingBytes = mutableListOf<Byte>()
+
+        fun flushBytes() {
+            if (pendingBytes.isNotEmpty()) {
+                out.append(pendingBytes.toByteArray().decodeToString())
+                pendingBytes.clear()
+            }
+        }
         var i = 0
         while (i < input.length) {
             val c = input[i]
@@ -37,13 +50,15 @@ internal object PathSanitization {
                 if (i + 2 >= input.length) return null
                 val hex = input.substring(i + 1, i + 3)
                 val code = hex.toIntOrNull(16) ?: return null
-                sb.append(code.toChar())
+                pendingBytes.add(code.toByte())
                 i += 3
             } else {
-                sb.append(c)
+                flushBytes()
+                out.append(c)
                 i++
             }
         }
-        return sb.toString()
+        flushBytes()
+        return out.toString()
     }
 }

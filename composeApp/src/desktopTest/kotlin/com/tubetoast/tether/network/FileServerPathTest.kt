@@ -92,6 +92,34 @@ class FileServerPathTest {
     }
 
     @Test
+    fun `unicode filename in name parameter lands with original codepoints`() {
+        val root = Files.createTempDirectory("tether-path-unicode").toFile().also(cleanupPaths::add)
+        val server = newServer(root)
+        val port = server.start()
+        val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
+        try {
+            runBlocking {
+                // Ktor client percent-encodes the non-ASCII bytes per URI spec.
+                // The server must reconstruct the original codepoints, not garble them
+                // by treating each percent-encoded byte as a separate Char.
+                val response = client.post("http://localhost:$port/upload?name=Отпуск/фото.jpg") {
+                    contentType(ContentType.Application.OctetStream)
+                    setBody("cyrillic content".toByteArray())
+                }
+                assertEquals(HttpStatusCode.OK, response.status)
+                val savedPath = response.body<Map<String, String>>()["savedPath"]!!
+                val saved = File(savedPath)
+                assertTrue(saved.exists())
+                assertEquals("фото.jpg", saved.name)
+                assertEquals("Отпуск", saved.parentFile.name)
+                assertEquals("cyrillic content", saved.readText())
+            }
+        } finally {
+            client.close()
+        }
+    }
+
+    @Test
     fun `dotdot traversal returns 400`() {
         val root = Files.createTempDirectory("tether-path-traversal").toFile().also(cleanupPaths::add)
         val server = newServer(root)
