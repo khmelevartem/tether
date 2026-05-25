@@ -28,7 +28,7 @@ Identify:
 
 Run the user's steps locally. Use `/smoke-test` blocks if the bug is in a smoke-covered path, or the manual scenario otherwise. Decide:
 
-- **REPRODUCED** — observed the same symptom locally
+- **REPRODUCED** — observed the same symptom locally. **Capture the observation harness** (exact commands, log greps, packet-capture filters, hardware/env configuration) used to detect the symptom. The harness becomes the contract for post-fix verification: «после фикса 0 событий через тот же grep / tcpdump / screenshot diff». Without the captured harness, the cause is not considered confirmed — the next session has no way to prove the symptom is gone except by repeating discovery.
 - **CANNOT REPRODUCE** — bug does not manifest in your environment. Document what you tried and what differs (OS version, device, build flavor, network setup). Stop here and escalate — going forward without reproduction is guessing.
 
 ### 2. Per-hypothesis experiment
@@ -71,6 +71,15 @@ Return text suitable for the caller to paste verbatim into a GitHub comment:
 - <log excerpt / tcpdump line / lsof output — be specific>
 - <experiment description>
 
+**Causal chain (runtime signal → user-visible symptom):**
+- Observed signal: <log line / wire byte / pixel diff / latency number>
+- User-visible symptom in issue body: <quote the symptom>
+- Proof of causation, not correlation: <experiment where, with signal present, symptom present; without signal, symptom absent — same hardware, same scenario>
+
+**Observation harness (for post-fix verification):**
+- <exact commands / greps / capture filters / screenshot diff steps — reusable verbatim>
+- <hardware / env configuration that produced REPRODUCED>
+
 **Hypotheses ruled out:**
 - <hypothesis A> — <how rejected>
 - <hypothesis B> — <how rejected>
@@ -78,7 +87,7 @@ Return text suitable for the caller to paste verbatim into a GitHub comment:
 Source: /bug-reproducer
 ```
 
-This becomes the contract between you and the `coder`: the fix must address this cause.
+This becomes the contract between you and the `coder`: the fix must address this cause. The **causal chain** section is load-bearing — without it, the fix may eliminate the signal without eliminating the user's actual problem (fixing a log line, not the bug). If you cannot prove causation (only correlation), say so explicitly and escalate — do not return CONFIRMED.
 
 ## Output to caller
 
