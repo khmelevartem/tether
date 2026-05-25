@@ -166,6 +166,7 @@ actual class MdnsDiscovery(
             serviceName = deviceName
             serviceType = SERVICE_TYPE
             this.port = port
+            TXT_PROPS.forEach { (k, v) -> setAttribute(k, v) }
         }
         log.debug { "Starting NSD: name=$deviceName, port=$port" }
         makeRegistrationListener().also { fresh ->
@@ -196,6 +197,7 @@ actual class MdnsDiscovery(
             serviceName = name
             serviceType = SERVICE_TYPE
             this.port = currentPort
+            TXT_PROPS.forEach { (k, v) -> setAttribute(k, v) }
         }
         makeRegistrationListener().also { fresh ->
             registrationListener = fresh

@@ -4,6 +4,7 @@ import com.sun.jna.Memory
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 
 class BonjourCodecTest {
@@ -20,6 +21,27 @@ class BonjourCodecTest {
         // [0x03, 'a', '=', '1', 0x03, 'b', '=', '2']
         val expected = byteArrayOf(0x03, 0x61, 0x3d, 0x31, 0x03, 0x62, 0x3d, 0x32)
         assertContentEquals(expected, bytes)
+    }
+
+    @Test
+    fun `encodeTxt rejects empty map`() {
+        assertFailsWith<IllegalArgumentException> {
+            BonjourCodec.encodeTxt(emptyMap())
+        }
+    }
+
+    @Test
+    fun `encodeTxt rejects key containing equals sign`() {
+        assertFailsWith<IllegalArgumentException> {
+            BonjourCodec.encodeTxt(mapOf("k=1" to "x"))
+        }
+    }
+
+    @Test
+    fun `encodeTxt rejects entry exceeding 255 bytes`() {
+        assertFailsWith<IllegalArgumentException> {
+            BonjourCodec.encodeTxt(mapOf("k" to "x".repeat(300)))
+        }
     }
 
     @Test
