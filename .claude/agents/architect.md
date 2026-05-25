@@ -105,6 +105,7 @@ When the engineering artifact is warranted, pick its flavor:
 - Lead with the rule. Rationale and examples follow.
 - Code examples on **abstract types**, not project class names — they survive renames.
 - Do not restate hierarchies, signatures, or source-set layout the code already shows. Link to code instead.
+- **Don't name interface methods, function calls, or specific API verbs in the Rules section** — even when the same PR introduces them. Names belong in code; rules describe what the seam guarantees, not how it's spelled. The signature can be renamed or split without invalidating the rule; if the doc named it, the doc lies. Same trap as the runtime-snapshot rule below, applied to interfaces the architect is defining right now.
 - No history. No «after retro from #N», «as discussed in #Y», «originally we did X but now…». The rule lives in present tense.
 - Statements about runtime are **snapshots, not rules** (per CLAUDE.md). Prefer a product invariant («pairing is keyed by stable device identity») over a code description («`PairedDeviceStore` stores rows by `peerId`»). If runtime mention is unavoidable, keep the minimum needed for understanding.
 - KDoc-vs-`//` discipline applies to prose too: every paragraph must add information beyond what the code/structure already conveys, otherwise delete it.

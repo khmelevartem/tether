@@ -15,9 +15,8 @@ composeApp/src/
 ├── commonTest/      DeviceTest, PairingProtocolTest
 ├── androidMain/     MainActivity, TetherApp, TetherForegroundService, MdnsDiscovery.android, Platform.android
 ├── iosMain/         MainViewController, Platform.ios
-├── appleMain/       MdnsDiscovery.apple, FileServer.apple (Ktor CIO Native + POSIX storage)
-├── macosMain/       Platform.macos
-├── jvmMain/         FileServer (JVM actual + storage), FileClientJvm, DeviceKeyPair   ← shared Android + Desktop JVM
+├── appleMain/       MdnsDiscovery.apple, FileServer.apple (Ktor CIO Native + POSIX storage)   ← iOS only (macOS ships via Desktop JVM, see adr-macos-native-vs-jvm.md)
+├── jvmMain/         FileServer (JVM actual + storage), FileClientJvm, DeviceKeyPair   ← shared Android + Desktop JVM (Desktop JVM also ships macOS)
 ├── jvmTest/         (empty — FileServerTest moved to desktopTest in #9)
 ├── desktopMain/     MainUi, DesktopBackend, DesktopAppContainer, MdnsDiscovery.jvm, Platform.jvm, TrustedDeviceStore.desktop  ← Desktop JVM leaf (main compilation)
 ├── desktopCli/      Main.kt  ← Desktop CLI runner (custom compilation, associateWith main; only place Clikt lives)

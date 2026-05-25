@@ -1,6 +1,6 @@
 ---
 name: smoke-test
-description: Прогон базового smoke-теста (happy-path) по платформам Tether — Desktop CLI (cli jar + /health + mDNS + stdin commands), Desktop↔Desktop send через CLI, Android (если adb-устройство подключено) с send-from-Desktop, нативная компиляция macosArm64 и iosSimulatorArm64. Используй этот скилл, когда пользователь просит «прогони smoke», «прогони smoke-тест», «basic smoke», «basic regression», «проверь сборку по платформам перед merge», «дымовой тест». Не путать с unit-тестами (`./gradlew allTests`) — smoke это рантайм-проверка стартует ли всё и видят ли друг друга, не корректность логики.
+description: Прогон базового smoke-теста (happy-path) по платформам Tether — Desktop CLI (cli jar + /health + mDNS + stdin commands), Desktop↔Desktop send через CLI, Android (если adb-устройство подключено) с send-from-Desktop, нативная компиляция iosSimulatorArm64. Используй этот скилл, когда пользователь просит «прогони smoke», «прогони smoke-тест», «basic smoke», «basic regression», «проверь сборку по платформам перед merge», «дымовой тест». Не путать с unit-тестами (`./gradlew allTests`) — smoke это рантайм-проверка стартует ли всё и видят ли друг друга, не корректность логики.
 ---
 
 # Smoke-test skill
@@ -14,7 +14,7 @@ description: Прогон базового smoke-теста (happy-path) по п
 В начале прогона **проговори это пользователю** — границы покрытия:
 
 - **Физический iPhone** — нет, требует ручной подписи и доверия сертификата.
-- **macOS run** — у `macosArm64` нет entry point, только sanity-компиляция.
+- **macOS** — ship'ится через Desktop JVM-таргет; smoke покрывается Desktop-блоком (этот же jar пакуется в `.app`/`.dmg` через `packageReleaseDistributionForCurrentOS`).
 - **iOS receive/send** — `FileServer.apple` это stub, на `start()` бросает `error()`. Только sanity-компиляция `iosSimulatorArm64`.
 - **iOS simulator runtime** — только compile-sanity, запуск не автоматизируется (требует Xcode-проекта).
 - **Android-инициированный send (Android → Desktop)** — на Android нет программного триггера отправки (intent / UI-кнопка / broadcast). Скилл проверяет обратное направление: Desktop → Android через CLI `send`.
@@ -264,7 +264,6 @@ adb devices | awk '/device$/ && !/List/ {print $1}'
 ### Блок 6: Native compile sanity
 
 ```bash
-./gradlew -q :composeApp:compileKotlinMacosArm64
 ./gradlew -q :composeApp:compileKotlinIosSimulatorArm64
 ```
 
@@ -325,7 +324,6 @@ PASS если exit=0. FAIL — приложить последние ~30 стр�
 | Android | cross-discovery | ✓ PASS | 2154ms (launch→peer-on-Desktop) |
 | Android | send Desktop→Android | ✓ PASS | savedPath parsed, diff empty |
 | Android | force-stop | ✓ PASS | process killed |
-| Native | compileKotlinMacosArm64 | ✓ PASS | 1s |
 | Native | compileKotlinIosSimulatorArm64 | ✓ PASS | 2s |
 
 ## Failures
@@ -336,7 +334,6 @@ PASS если exit=0. FAIL — приложить последние ~30 стр�
 
 - iOS simulator runtime — запустить `iosApp/iosApp.xcodeproj` в Xcode, проверить mDNS publish.
 - Физический iPhone — установить через Xcode, проверить кросс-обнаружение с Desktop.
-- macOS run — нет entry point.
 - iOS receive (FileServer.apple — stub) — пропускаем по дизайну.
 - **Android-инициированный send (Android → Desktop)** — нет CLI на Android, скилл проверяет обратное направление.
 - Notification «Stop» button on Android — проверить тап вручную; smoke использует `am force-stop`.

@@ -3,6 +3,7 @@
 **Status:** Accepted — 2026-05-13
 **Issue:** [#123](https://github.com/khmelevartem/tether/issues/123)
 **POC:** [#138](https://github.com/khmelevartem/tether/pull/138) (closed without merge — decision-history artifact)
+**Note (2026-05-25):** `macosArm64` Kotlin/Native target removed from the build — see [adr-macos-native-vs-jvm.md](adr-macos-native-vs-jvm.md) §Reversal. SecureTransport on Apple Native now applies to iOS only; the POC was run on `macosArm64` historically.
 
 ## Context
 

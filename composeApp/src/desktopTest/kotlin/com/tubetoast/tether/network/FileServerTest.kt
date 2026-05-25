@@ -208,7 +208,7 @@ class FileServerTest {
     }
 
     @Test
-    fun `upload strips path traversal from filename`() {
+    fun `upload with dotdot traversal returns 400`() {
         val tmpDir = Files.createTempDirectory("tether-test").toFile().also(cleanupPaths::add)
         val server = newServer(downloadsDir = tmpDir)
         val port = server.start()
@@ -219,13 +219,8 @@ class FileServerTest {
                     contentType(ContentType.Application.OctetStream)
                     setBody("malicious".toByteArray())
                 }
-                assertEquals(HttpStatusCode.OK, response.status)
-                val savedPath = response.body<Map<String, String>>()["savedPath"]!!
+                assertEquals(HttpStatusCode.BadRequest, response.status)
                 assertFalse(File(tmpDir.parentFile, "evil.txt").exists(), "file must not escape downloads dir")
-                assertTrue(
-                    File(savedPath).canonicalPath.startsWith(tmpDir.canonicalPath),
-                    "saved path must be inside downloads dir",
-                )
             }
         } finally {
             client.close()

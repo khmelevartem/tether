@@ -25,16 +25,32 @@ import ru.pocketbyte.kydra.log.wrapper.withTag
 
 internal const val UPLOAD_BUFFER_SIZE = 64 * 1024
 
+internal fun dedupFilename(leafName: String, exists: (candidate: String) -> Boolean): String {
+    if (!exists(leafName)) return leafName
+    // A leading dot marks a hidden file, not an extension separator.
+    val dotIndex = leafName.lastIndexOf('.')
+    val hasExt = dotIndex > 0
+    val ext = if (hasExt) leafName.substring(dotIndex + 1) else ""
+    val base = if (hasExt) leafName.substring(0, dotIndex) else leafName
+    var i = 1
+    while (true) {
+        val candidate = if (hasExt) "${base}_$i.$ext" else "${base}_$i"
+        if (!exists(candidate)) return candidate
+        i++
+    }
+}
+
 private val log = KydraLog.withTag(default = "Tether.FileServerRoutes")
 
 internal interface UploadStorage {
     fun ensureRoot()
 
-    fun resolveDestination(fileName: String): String
+    fun resolveDestination(relativePath: String): String
 
     suspend fun writeBody(body: ByteReadChannel, destination: String): Long
 
-    fun deleteIfExists(destination: String)
+    /** Deletes any partial destination file and removes empty parent directories up to root. */
+    fun abort(destination: String)
 }
 
 internal fun Application.installFileServerRoutes(
@@ -63,21 +79,24 @@ internal fun Application.installFileServerRoutes(
             call.respond(HttpStatusCode.OK, PairResponse(publicKey = serverPublicKey))
         }
         post("/upload") {
-            val rawName = call.request.queryParameters["name"]
-            if (rawName.isNullOrBlank()) {
+            val rawName = call.request.rawQueryParameters["name"]
+            val relativePath = rawName?.let { PathSanitization.sanitizeRelativePath(it) }
+            if (relativePath == null) {
+                log.info { "rejected upload — invalid_relative_path" }
                 call.respond(
                     HttpStatusCode.BadRequest,
-                    mapOf("error" to "missing 'name' query parameter"),
+                    mapOf("error" to "invalid_relative_path"),
                 )
                 return@post
             }
-            val fileName = stripPathComponents(rawName)
-            val destination = storage.resolveDestination(fileName)
             var uploadComplete = false
+            var destination: String? = null
             try {
+                val resolved = storage.resolveDestination(relativePath)
+                destination = resolved
                 tracker.withActiveTransfer {
                     val body = call.receiveChannel()
-                    val bytesWritten = storage.writeBody(body, destination)
+                    val bytesWritten = storage.writeBody(body, resolved)
                     // Ktor closes the body channel silently when the client disconnects
                     // mid-stream. closedCause covers exceptional close; the Content-Length
                     // comparison covers clean close on incomplete bodies.
@@ -87,11 +106,11 @@ internal fun Application.installFileServerRoutes(
                         error("FileServer: incomplete upload — got $bytesWritten of $expected bytes")
                     }
                     uploadComplete = true
-                    log.info { "received '$fileName' — $bytesWritten bytes → $destination" }
-                    call.respond(HttpStatusCode.OK, mapOf("savedPath" to destination))
+                    log.info { "received '$relativePath' — $bytesWritten bytes → $resolved" }
+                    call.respond(HttpStatusCode.OK, mapOf("savedPath" to resolved))
                 }
             } catch (e: Exception) {
-                log.error { "upload failed for '$fileName' — ${e.message ?: "unknown error"}" }
+                log.error { "upload failed for '$relativePath' — ${e.message ?: "unknown error"}" }
                 try {
                     call.respond(
                         HttpStatusCode.InternalServerError,
@@ -100,7 +119,7 @@ internal fun Application.installFileServerRoutes(
                 } catch (_: Exception) {
                 }
             } finally {
-                if (!uploadComplete) storage.deleteIfExists(destination)
+                if (!uploadComplete) destination?.let { storage.abort(it) }
             }
         }
     }
@@ -117,6 +136,3 @@ internal suspend fun streamUploadBody(
         write(buffer, n)
     }
 }
-
-private fun stripPathComponents(raw: String): String =
-    raw.substringAfterLast('/').substringAfterLast('\\')

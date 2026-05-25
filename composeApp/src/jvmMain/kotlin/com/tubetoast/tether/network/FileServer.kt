@@ -15,6 +15,7 @@ import ru.pocketbyte.kydra.log.info
 import ru.pocketbyte.kydra.log.withMessage
 import ru.pocketbyte.kydra.log.wrapper.withTag
 import java.io.File
+import java.io.IOException
 
 private val log = KydraLog.withTag(default = "Tether.FileServer")
 
@@ -57,12 +58,34 @@ actual class FileServer(
 private class JvmUploadStorage(
     private val root: File,
 ) : UploadStorage {
+    private val rootReal by lazy { root.toPath().toRealPath() }
+
     override fun ensureRoot() {
         root.mkdirs()
     }
 
-    override fun resolveDestination(fileName: String): String =
-        resolveDestinationFile(root, fileName).absolutePath
+    override fun resolveDestination(relativePath: String): String {
+        val dest = resolveDestinationFile(root, relativePath)
+        val created = mkdirsTracked(dest.parentFile)
+        try {
+            val destReal = if (dest.exists()) {
+                dest.toPath().toRealPath()
+            } else {
+                // resolveDestinationFile always returns a File under root, so parentFile is non-null.
+                dest.parentFile!!
+                    .toPath()
+                    .toRealPath()
+                    .resolve(dest.name)
+            }
+            if (!destReal.startsWith(rootReal)) {
+                throw IOException("destination escapes downloads root: $dest")
+            }
+        } catch (e: Throwable) {
+            created.asReversed().forEach { it.delete() }
+            throw e
+        }
+        return dest.absolutePath
+    }
 
     override suspend fun writeBody(body: ByteReadChannel, destination: String): Long =
         body.toInputStream().use { input ->
@@ -71,23 +94,31 @@ private class JvmUploadStorage(
             }
         }
 
-    override fun deleteIfExists(destination: String) {
-        try {
-            File(destination).delete()
-        } catch (_: Exception) {
+    override fun abort(destination: String) {
+        val dest = File(destination)
+        dest.delete()
+        var dir = dest.parentFile
+        while (dir != null && dir != root && dir.exists() && dir.list()?.isEmpty() == true) {
+            if (!dir.delete()) break
+            dir = dir.parentFile
         }
     }
 }
 
-private fun resolveDestinationFile(dir: File, fileName: String): File {
-    var dest = File(dir, fileName)
-    if (!dest.exists()) return dest
-    val ext = fileName.substringAfterLast('.', "")
-    val base = if (ext.isEmpty()) fileName else fileName.removeSuffix(".$ext")
-    var i = 1
-    do {
-        dest = File(dir, if (ext.isEmpty()) "${base}_$i" else "${base}_$i.$ext")
-        i++
-    } while (dest.exists())
-    return dest
+private fun mkdirsTracked(dir: File?): List<File> {
+    if (dir == null || dir.exists()) return emptyList()
+    val toCreate = mutableListOf<File>()
+    var cur: File? = dir
+    while (cur != null && !cur.exists()) {
+        toCreate += cur
+        cur = cur.parentFile
+    }
+    dir.mkdirs()
+    return toCreate.asReversed()
+}
+
+private fun resolveDestinationFile(dir: File, relativePath: String): File {
+    val initial = File(dir, relativePath)
+    val leaf = dedupFilename(initial.name) { candidate -> File(initial.parentFile, candidate).exists() }
+    return File(initial.parentFile, leaf)
 }

@@ -4,7 +4,7 @@ P2P-передача файлов между устройствами на ра�
 
 **Сценарий, который Tether закрывает:** фото с Android-телефона на MacBook сегодня едет через мессенджер (сжатие), почту (лимиты) или кабель. Tether заменяет это двумя тапами на одной Wi-Fi — оригинальный файл идёт напрямую между устройствами.
 
-**Таргеты:** Android, iOS, macOS, Desktop (JVM на Windows/Linux). Kotlin Multiplatform + Compose Multiplatform.
+**Таргеты:** Android, iOS, Desktop (JVM на Windows / Linux / macOS). Kotlin Multiplatform + Compose Multiplatform.
 
 **Статус:** ранний MVP. Дискавери, базовый протокол передачи и Desktop CLI работают; UI и pairing в работе.
 
@@ -70,13 +70,9 @@ APK — в `composeApp/build/outputs/apk/debug/`. Или запускай run-к
 
 Открой `iosApp/` в Xcode и запусти, либо используй iOS run-конфигурацию из IDE (Android Studio / Fleet с KMP-плагином).
 
-### macOS (Apple Silicon)
+### macOS
 
-`macosArm64` компилируется в native binary. Запуск — через IDE run-конфигурацию или Xcode. Чтобы проверить mDNS без UI:
-
-```bash
-dns-sd -B _tether._tcp.    # должно появиться _tether._tcp.
-```
+Через Desktop JVM-таргет (как Windows / Linux): `./gradlew :composeApp:run -q` для дев-запуска, `./gradlew :composeApp:packageReleaseDistributionForCurrentOS` для `.app`/`.dmg`-бандла с встроенным JRE. Почему не Kotlin/Native — см. [`adr-macos-native-vs-jvm.md`](docs/engineering/adr/adr-macos-native-vs-jvm.md).
 
 ### Все таргеты разом
 

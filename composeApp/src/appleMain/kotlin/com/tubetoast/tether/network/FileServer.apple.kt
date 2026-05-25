@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalForeignApi::class)
+@file:OptIn(ExperimentalForeignApi::class, kotlinx.cinterop.BetaInteropApi::class)
 
 package com.tubetoast.tether.network
 
@@ -9,23 +9,38 @@ import io.ktor.server.cio.CIOApplicationEngine
 import io.ktor.server.engine.EmbeddedServer
 import io.ktor.server.engine.embeddedServer
 import io.ktor.utils.io.ByteReadChannel
+import kotlinx.cinterop.ByteVar
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.ObjCObjectVar
 import kotlinx.cinterop.addressOf
+import kotlinx.cinterop.alloc
+import kotlinx.cinterop.allocArray
+import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.ptr
+import kotlinx.cinterop.toKString
 import kotlinx.cinterop.usePinned
+import kotlinx.cinterop.value
 import kotlinx.coroutines.runBlocking
 import platform.Foundation.NSDocumentDirectory
+import platform.Foundation.NSError
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSUserDomainMask
+import platform.posix.PATH_MAX
 import platform.posix.fclose
 import platform.posix.fflush
 import platform.posix.fopen
 import platform.posix.fwrite
+import platform.posix.realpath
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.error
 import ru.pocketbyte.kydra.log.info
 import ru.pocketbyte.kydra.log.withMessage
 import ru.pocketbyte.kydra.log.wrapper.withTag
+
+internal class IOException(
+    message: String,
+) : Exception(message)
 
 private val log = KydraLog.withTag(default = "Tether.FileServer")
 
@@ -67,35 +82,39 @@ actual class FileServer(
 private class AppleUploadStorage(
     private val root: String,
 ) : UploadStorage {
-    override fun ensureRoot() {
-        val fm = NSFileManager.defaultManager
-        if (!fm.fileExistsAtPath(root)) {
-            fm.createDirectoryAtPath(
-                path = root,
-                withIntermediateDirectories = true,
-                attributes = null,
-                error = null,
-            )
-        }
+    private val rootReal: String by lazy {
+        realpathOf(root) ?: throw IOException("FileServer: realpath failed for downloads root: $root")
     }
 
-    override fun resolveDestination(fileName: String): String {
-        val fm = NSFileManager.defaultManager
-        val firstTry = "$root/$fileName"
-        if (!fm.fileExistsAtPath(firstTry)) return firstTry
-        val ext = fileName.substringAfterLast('.', "")
-        val base = if (ext.isEmpty()) fileName else fileName.removeSuffix(".$ext")
-        var i = 1
-        while (true) {
-            val candidate = if (ext.isEmpty()) "$root/${base}_$i" else "$root/${base}_$i.$ext"
-            if (!fm.fileExistsAtPath(candidate)) return candidate
-            i++
+    override fun ensureRoot() {
+        mkdirsChecked(root)
+    }
+
+    override fun resolveDestination(relativePath: String): String {
+        val leafName = relativePath.substringAfterLast('/')
+        val parentDir = if (relativePath.contains('/')) "$root/${relativePath.substringBeforeLast('/')}" else root
+        var created: List<String> = emptyList()
+        try {
+            created = mkdirsTracked(parentDir)
+            val resolvedParent = realpathOf(parentDir)
+                ?: throw IOException("destination escapes downloads root: realpath failed for $parentDir")
+            if (!resolvedParent.startsWith(rootReal + "/") && resolvedParent != rootReal) {
+                throw IOException("destination escapes downloads root: $resolvedParent")
+            }
+
+            val leaf = dedupFilename(leafName) { candidate ->
+                NSFileManager.defaultManager.fileExistsAtPath("$resolvedParent/$candidate")
+            }
+            return "$resolvedParent/$leaf"
+        } catch (e: Throwable) {
+            created.asReversed().forEach { deleteIfEmpty(it) }
+            throw e
         }
     }
 
     override suspend fun writeBody(body: ByteReadChannel, destination: String): Long {
         val file = fopen(destination, "wb")
-            ?: error("FileServer: could not open '$destination' for writing")
+            ?: throw IOException("FileServer: could not open '$destination' for writing")
         var total = 0L
         try {
             streamUploadBody(body) { buffer, n ->
@@ -105,7 +124,7 @@ private class AppleUploadStorage(
                     // truncate while the route responded 200 OK.
                     val written = fwrite(pinned.addressOf(0), 1u, n.toULong(), file).toLong()
                     if (written < n.toLong()) {
-                        error("FileServer: short write to '$destination' — wrote $written of $n bytes")
+                        throw IOException("FileServer: short write to '$destination' — wrote $written of $n bytes")
                     }
                 }
                 total += n.toLong()
@@ -114,7 +133,7 @@ private class AppleUploadStorage(
             // fclose still runs in finally; its error is ignored because fflush
             // already validated the data reached the OS.
             if (fflush(file) != 0) {
-                error("FileServer: fflush failed for '$destination'")
+                throw IOException("FileServer: fflush failed for '$destination'")
             }
         } finally {
             fclose(file)
@@ -122,12 +141,59 @@ private class AppleUploadStorage(
         return total
     }
 
-    override fun deleteIfExists(destination: String) {
-        val fm = NSFileManager.defaultManager
-        if (fm.fileExistsAtPath(destination)) {
-            fm.removeItemAtPath(destination, error = null)
+    override fun abort(destination: String) {
+        NSFileManager.defaultManager.removeItemAtPath(destination, error = null)
+        var dir = destination.substringBeforeLast('/', missingDelimiterValue = "")
+        while (dir.isNotEmpty() && dir != rootReal) {
+            if (!deleteIfEmpty(dir)) break
+            dir = dir.substringBeforeLast('/', missingDelimiterValue = "")
         }
     }
+
+    private fun deleteIfEmpty(path: String): Boolean {
+        val fm = NSFileManager.defaultManager
+        val contents = fm.contentsOfDirectoryAtPath(path, null) ?: return false
+        if (contents.isNotEmpty()) return false
+        return fm.removeItemAtPath(path, error = null)
+    }
+}
+
+private fun mkdirsChecked(path: String) {
+    val fm = NSFileManager.defaultManager
+    if (fm.fileExistsAtPath(path)) return
+    memScoped {
+        val errorPtr = alloc<ObjCObjectVar<NSError?>>()
+        val ok = fm.createDirectoryAtPath(
+            path = path,
+            withIntermediateDirectories = true,
+            attributes = null,
+            error = errorPtr.ptr,
+        )
+        if (!ok) {
+            val msg = errorPtr.value?.localizedDescription ?: "unknown error"
+            throw IOException("FileServer: createDirectory failed for $path: $msg")
+        }
+    }
+}
+
+private fun mkdirsTracked(dir: String): List<String> {
+    val fm = NSFileManager.defaultManager
+    if (fm.fileExistsAtPath(dir)) return emptyList()
+    val toCreate = mutableListOf<String>()
+    var cur: String? = dir
+    while (cur != null && cur.isNotEmpty() && cur != "/" && !fm.fileExistsAtPath(cur)) {
+        toCreate += cur
+        val parent = cur.substringBeforeLast('/', missingDelimiterValue = "")
+        cur = if (parent.isEmpty() || parent == cur) null else parent
+    }
+    mkdirsChecked(dir)
+    return toCreate.asReversed()
+}
+
+private fun realpathOf(path: String): String? = memScoped {
+    val buf = allocArray<ByteVar>(PATH_MAX)
+    val result = realpath(path, buf) ?: return null
+    result.toKString()
 }
 
 private fun defaultDownloadsDir(): String {
