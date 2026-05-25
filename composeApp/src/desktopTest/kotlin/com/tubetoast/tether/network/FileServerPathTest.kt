@@ -104,7 +104,7 @@ class FileServerPathTest {
                 // by treating each percent-encoded byte as a separate Char.
                 val response = client.post("http://localhost:$port/upload?name=Отпуск/фото.jpg") {
                     contentType(ContentType.Application.OctetStream)
-                    setBody("cyrillic content".toByteArray())
+                    setBody("Привет, мир!".toByteArray())
                 }
                 assertEquals(HttpStatusCode.OK, response.status)
                 val savedPath = response.body<Map<String, String>>()["savedPath"]!!
@@ -112,7 +112,7 @@ class FileServerPathTest {
                 assertTrue(saved.exists())
                 assertEquals("фото.jpg", saved.name)
                 assertEquals("Отпуск", saved.parentFile.name)
-                assertEquals("cyrillic content", saved.readText())
+                assertEquals("Привет, мир!", saved.readText())
             }
         } finally {
             client.close()
