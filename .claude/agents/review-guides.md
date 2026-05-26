@@ -25,6 +25,7 @@ Always read `CLAUDE.md`. Then read the engineering doc that maps to the diff:
 | commonMain or expect/actual | `architecture-principles.md` (common-first rule) |
 | `docs/product/features/**/spec.md` | `docs/product/features/_template.md` (product-spec rules) |
 | `docs/product/features/**/ux-brief.md` | `.claude/agents/ux-expert.md` §Output (UX brief structure) |
+| `docs/**`, `.claude/**`, KDoc, comments | `docs/engineering/long-lived-artifacts.md` |
 
 ## What to check
 
@@ -35,6 +36,7 @@ Always read `CLAUDE.md`. Then read the engineering doc that maps to the diff:
 5. **Commit naming** — every commit message starts with `#<issue>: `. Run `gh pr view <PR> --json commits --jq '.commits[].messageHeadline'`.
 6. **Idioms** — Kotlin official style is enforced by KtLint (do not flag style); flag non-idiomatic patterns: `!!` where nullable handling is expected, manual loops where `map`/`filter` fits, `runBlocking` anywhere (production: refactor to `suspend`; tests: `runTest` + `TestDispatcher` per `testing.md`).
 7. **Doc-vs-code drift** — if PR changes an architectural pattern documented in `docs/engineering/`, the doc must be updated in the same PR (especially "doc-as-spec" for first real implementation of a skeleton).
+8. **Long-lived-artifact discipline** for any touched prose in `docs/**`, `.claude/**`, KDoc, comments, error messages — apply the rules from `docs/engineering/long-lived-artifacts.md`.
 
 ## What you do NOT check
 

@@ -8,18 +8,22 @@ KMP file transfer app: Android, iOS, Desktop (JVM — Windows / Linux / macOS). 
 
 ## Documentation map
 
-Read on demand, not all upfront:
+Read on demand. Match what you're touching to the corresponding canon:
 
-- [`docs/product/`](docs/product/README.md) — vision, audience, features, roadmap. Source of truth for *what* / *why*.
-- [`docs/engineering/`](docs/engineering/README.md) — architecture, modules, DI, presentation, testing. Source of truth for *how*.
-- [`docs/knowledge/`](docs/knowledge/) — solved problems (Apple platform quirks, FGS, etc.). Check here when something looks weird before debugging from scratch.
-
-After writing code / UI / tests / specs / UX briefs, read the topically-matching `docs/engineering/*.md` or `docs/product/features/_template.md` before marking done.
+- **Vision / product framing** — [`docs/product/`](docs/product/README.md). Source of truth for *what* / *why*.
+- **Engineering architecture** — [`docs/engineering/`](docs/engineering/README.md). Source of truth for *how*. Per-area:
+  - Any code → [`dependency-injection.md`](docs/engineering/dependency-injection.md)
+  - UI → [`presentation-layer.md`](docs/engineering/presentation-layer.md)
+  - New module / component → [`modules.md`](docs/engineering/modules.md) + [`architecture-principles.md`](docs/engineering/architecture-principles.md)
+  - Tests → [`testing.md`](docs/engineering/testing.md)
+- **Feature specs / UX briefs** — `docs/product/features/<slug>/{spec,ux-brief}.md`. New / updated: copy structure from [`_template.md`](docs/product/features/_template.md) and [`_ux-brief-template.md`](docs/product/features/_ux-brief-template.md).
+- **Solved problems / platform quirks** — [`docs/knowledge/`](docs/knowledge/). Check first when something looks weird before debugging from scratch.
+- **Domain terminology** — [`docs/glossary.md`](docs/glossary.md); `review-glossary` blocks drift in PRs.
 
 ## Architecture invariants
 
 - **Common-first.** Всё, что может жить в `commonMain` — там и лежит. Платформенные source sets (`androidMain`, `appleMain`, `jvmMain`, `desktopMain`, `iosMain`) — только для кода, требующего platform API. При выборе между `expect/actual` в `commonMain` и копированием в `platformMain` — `expect/actual`.
-- **Source set hierarchy.** `jvmMain` — общий родитель для `androidMain` и `desktopMain` (через `applyHierarchyTemplate` в `build.gradle.kts`). `appleMain` — родитель для `iosMain` (iOS — единственный native-таргет; macOS ships как Desktop JVM .app, см. [`adr-macos-native-vs-jvm.md`](docs/engineering/adr/adr-macos-native-vs-jvm.md)). Desktop UI vs CLI split — см. [`modules.md` §Desktop split](docs/engineering/modules.md#desktop-split-ui-vs-cli).
+- **Source set hierarchy и Desktop UI/CLI split** — см. [`modules.md`](docs/engineering/modules.md).
 
 ## Git conventions
 
@@ -27,7 +31,7 @@ All git naming in English. **Все commit messages обязаны начина�
 
 Перед коммитом убедись, что issue существует. Если нет — попроси пользователя создать.
 
-Подтянуть main в ветку — `/rebase` (мержит и показывает, что заехало). Запускается и в `/close-issue`, и mid-flight.
+Подтянуть main в ветку — `/rebase` (ребейзит на свежий main и показывает, что заехало). Запускается и в `/close-issue`, и mid-flight.
 
 ## Common commands
 
@@ -37,7 +41,7 @@ All git naming in English. **Все commit messages обязаны начина�
 
 ## Slash commands и скиллы
 
-`.claude/skills/` — multi-agent оркестрация (`/implement`, `/document`, `/code-review`, `/grooming`, `/smoke-test`). `.claude/commands/` — простые промпт-шаблоны (`/close-issue`, `/check-review`, `/sprint-pick`, `/retro`, `/quick-issue`). Когда новый артефакт — скилл, а когда команда — см. [`.claude/AUTHORING.md`](.claude/AUTHORING.md).
+Индекс и правила выбора (skill vs command) — [`.claude/README.md`](.claude/README.md).
 
 ## Code style
 

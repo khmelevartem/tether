@@ -18,7 +18,7 @@ Product-side docs (vision, audience, features) live in [`docs/product/`](../prod
 - [Testing](testing.md) — структура тестов по source sets, стиль (`runTest`/виртуальное время), особенности Apple-таргетов.
 - [Logging](logging.md) — KydraLog как единый KMP-фасад; именование `Tether.<Subsystem>`, уровни, DEBUG-гейтинг по платформам, тестовая тишина, политика sensitive-данных.
 - [Glossary discipline](glossary-discipline.md) — `docs/glossary.md` как единый словарь (product / technical); `review-glossary` как сабагент, который ловит drift и недокументированные термины в PR-диффе.
-- [Long-lived artifacts](long-lived-artifacts.md) — discipline for prose that outlives the task (rule-not-history, no incident examples, runtime-claims-are-snapshots, link-over-inline-copy). Applies to `CLAUDE.md`, `docs/`, `.claude/`, KDoc, comments, error messages.
+- [Long-lived artifacts](long-lived-artifacts.md) — writing discipline for prose that outlives the task. Applies to `CLAUDE.md`, `docs/`, `.claude/`, KDoc, comments, error messages.
 
 ## Writing style for these guides
 

@@ -1,36 +1,34 @@
-Подтянуть `origin/main` в текущую ветку и оценить, что заехало.
+Pull `origin/main` into the current branch and assess what came in.
 
-Используется и в `/close-issue` Step 0, и mid-flight во время `/implement` / ручной работы, когда нужно подмержить свежий main.
-
-## 1. Что заехало
+## 1. What came in
 
 ```bash
 git fetch origin main
 git log $(git merge-base HEAD origin/main)..origin/main --oneline
 ```
 
-Если пусто — main уже включён, стоп.
+Empty — main already included, stop.
 
-## 2. Подмержить
+## 2. Rebase
 
-По умолчанию — `merge` (сохраняет историю ветки):
+Default — `rebase` (linear history on top of fresh main):
 
 ```bash
-git merge origin/main
+git rebase origin/main
 ```
 
-`rebase` — только если пользователь явно попросил или ветка локальная и ещё не запушена.
+If the branch was already pushed, follow up with `git push --force-with-lease` after step 3 passes. Use `merge` instead only when explicitly asked or when the branch has multiple authors / shared work that would suffer from history rewrite.
 
-Конфликты — резолвь до перехода к шагу 3.
+Resolve conflicts before step 3.
 
-## 3. Оценить семантическое пересечение
+## 3. Assess semantic overlap
 
-Прочитай заехавшие коммиты (`git show <sha>` для подозрительных) и явно ответь:
+Read the incoming commits (`git show <sha>` for the suspicious ones) and answer explicitly:
 
-- Какие из них трогают слои/файлы текущей работы?
-- Есть ли изменения, которые делают текущую правку устаревшей, неполной или конфликтующей по смыслу (не по строкам)?
-- Нужно ли скорректировать текущую работу под новый контекст?
+- Which of them touch layers / files of the current work?
+- Are there changes that make the current work stale, incomplete, or semantically conflicting (not line-conflicting)?
+- Does the current work need adjustment to the new context?
 
-Чистый merge без конфликтов **не означает** отсутствие семантического столкновения. Если нашёл пересечение — сообщи пользователю одной фразой и предложи план.
+A clean rebase / merge without textual conflicts **does not mean** the absence of semantic collision. If overlap found — tell the user in one sentence and propose a plan.
 
-Если пересечений нет — одна строка «main подтянут, пересечений с текущей работой нет» и продолжай.
+If no overlap — one line «main pulled in, no overlap with current work» and continue.

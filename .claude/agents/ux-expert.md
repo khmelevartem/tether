@@ -23,6 +23,7 @@ You're called when a FEATURE issue's scope includes user-facing UI (screen, comp
 
 1. **Read the feature spec.** It's the source of truth for *what / why*; your job is the *how-it-feels*.
 2. **Read product context** where relevant: `docs/product/vision.md`, `docs/product/audience.md`.
+3. **Apply long-lived-artifact discipline** to brief prose — see [`docs/engineering/long-lived-artifacts.md`](../../docs/engineering/long-lived-artifacts.md).
 
 ## Core principles
 
