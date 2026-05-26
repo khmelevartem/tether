@@ -29,3 +29,11 @@ When writing: prefer the product invariant («pairing keyed by stable device ide
 A long-lived artifact references rules / tokens / tables from another artifact — link (`see docs/engineering/X.md §Y`), do not embed.
 
 Any copy desynchronises at the source's first change; the reader acts on a stale version and gets boxed into a frozen-checklist mindset instead of holistically applying the canon. If an artifact is unreadable without an inline copy, the referencing side's formulation is weak — rewrite it; do not prop it up with a copy.
+
+A short summary attached to the link («see X (covers A / B / C)», «see X — about the four rules of Y») is the same class as inline-copy: it duplicates the linked doc's structure right next to the link, and it desynchronises the same way. Trust the link; if the reader needs more than the link text to decide whether to click, the link text itself is weak — rewrite it.
+
+## External claims cite their source
+
+When prose describes the behaviour of an external tool, 3rd-party API, library, platform SDK, or specification — link to the authoritative doc next to the claim. Do not write from memory. External tools change; memory drifts; an unverified claim becomes permanently wrong and propagates through every artifact that references it.
+
+If the authoritative doc does not cover what you need — say so explicitly rather than presenting a project-invented rule as the tool's behaviour.

@@ -142,7 +142,9 @@ Mechanical fixes (rename, add missing link, add missing index row) — apply dir
 
 ## Step 5 — Review wave
 
-Dispatch in parallel on the staged diff (no PR yet — agents review the local working tree via `git diff main...HEAD`). Scope covers `docs/` and `.claude/` changes:
+Dispatch in parallel on the staged diff (no PR yet — agents review the local working tree via `git diff main...HEAD`). Scope covers `docs/` and `.claude/` changes.
+
+If the PR establishes or extends canon, tell each reviewer to apply the new rule to the diff itself.
 
 - `review-dod` — DoD criteria from the issue are covered by produced artifacts.
 - `review-guides` — conformance to CLAUDE.md §Code style and [`docs/engineering/long-lived-artifacts.md`](../../../docs/engineering/long-lived-artifacts.md) for all touched prose. For `docs/engineering/` artifacts additionally apply `docs/engineering/README.md` writing-style rules (rule-first, code examples on abstract types, no restating code). For `docs/product/features/<slug>/spec.md` apply `docs/product/features/_template.md`. For ADRs apply `docs/engineering/adr/_template.md` shape. For `.claude/` prompt edits apply sibling-skill/agent/command tone consistency.
