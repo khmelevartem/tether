@@ -1,163 +1,163 @@
-Завершить задачу <issue number> и смержить PR.
+Complete task <issue number> and merge the PR.
 
-Работай строго по шагам. Каждый шаг — это точка остановки: если что-то не выполнено, сообщи об этом явно и жди от пользователя подтверждения или исправления. Не переходи к следующему шагу без явного ОК.
-
----
-
-## Шаг 0 — Подтянуть main
-
-Запусти `/rebase` — подтянет `origin/main` и оценит семантическое пересечение с текущей работой. Если шаг сообщил о значимом пересечении — поправь работу под новый контекст до того, как начинать AC, smoke, ревью.
+Work strictly step by step. Each step is a stop point: if something is not done, report it explicitly and wait for the user's confirmation or correction. Do not proceed to the next step without an explicit OK.
 
 ---
 
-## Шаг 1 — Acceptance Criteria
+## Step 0 — Pull main
 
-Получи список acceptance criteria:
-- из issue (раздел DoD / Acceptance Criteria)
-- из feature-спека в `docs/product/features/`, если там есть файл для этой задачи
+Run `/rebase` — it will pull `origin/main` and assess semantic overlap with the current work. If the step reports significant overlap — adjust the work to the new context before starting AC, smoke, review.
 
-**Если ни DoD, ни feature-спека нет** (типично для инфраструктурных и мета-задач) — извлеки цели из тела issue, сформулируй проверяемый чек-лист сам и явно покажи его пользователю с пометкой «AC извлечены из тела issue, подтверди или скорректируй». Не переходи к следующему шагу, пока пользователь не подтвердил.
+---
 
-Для каждого критерия явно укажи статус: ✅ выполнен / ❌ не выполнен / ❓ невозможно проверить автоматически.
+## Step 1 — Acceptance Criteria
 
-Если есть ❌ — стоп. Не продолжай до устранения.
+Obtain the list of acceptance criteria:
+- from the issue (DoD / Acceptance Criteria section)
+- from the feature spec in `docs/product/features/`, if there is a file for this task
 
-**Проверка warnings.** Флаг `-q` скрывает Gradle/KGP warnings. Запусти один прогон без него и убедись, что новых предупреждений нет:
+**If neither a DoD nor a feature spec exists** (typical for infrastructure and meta tasks) — extract the goals from the issue body, formulate a verifiable checklist yourself, and explicitly show it to the user with the note "AC extracted from issue body, confirm or adjust". Do not proceed to the next step until the user has confirmed.
+
+For each criterion, explicitly state the status: ✅ done / ❌ not done / ❓ impossible to verify automatically.
+
+If there are ❌ items — stop. Do not continue until they are resolved.
+
+**Checking warnings.** The `-q` flag hides Gradle/KGP warnings. Run one pass without it and verify that no new warnings have appeared:
 
 ```bash
 ./gradlew allTests 2>&1 | grep -i "warning\|warn" | grep -v "^w: KLIB"
 ```
 
-Предупреждения вида `w: KLIB resolver: The same 'unique_name=...'` — существующие, игнорируй. Остальные — разбери перед мержем.
+Warnings of the form `w: KLIB resolver: The same 'unique_name=...'` are pre-existing — ignore them. All others — investigate before merging.
 
 ---
 
-## Шаг 2 — Ручные тесты
+## Step 2 — Manual tests
 
-### 2.1 Smoke-test — на усмотрение
+### 2.1 Smoke-test — at your discretion
 
-В репо есть скилл `/smoke-test` (см. `.claude/skills/smoke-test/`). Сам реши, надо ли его прогнать перед запросом подтверждения и какие блоки имеют смысл для этой задачи.
+The repo has a `/smoke-test` skill (see `.claude/skills/smoke-test/`). Decide yourself whether to run it before requesting confirmation and which blocks make sense for this task.
 
-Ориентир: какие части скилла реально пересекаются с тем, что менялось в PR. Менялся FileServer/CLI — гонять Desktop-блоки. Менялся Android FGS / mDNS — гонять Android-блок. Менялись нативные source sets — compile-блок. DOCS-only / `.claude/` / комментарии — обычно ничего гонять не нужно.
+Guideline: which parts of the skill genuinely intersect with what changed in the PR. If FileServer/CLI changed — run the Desktop blocks. If Android FGS / mDNS changed — run the Android block. If native source sets changed — the compile block. DOCS-only / `.claude/` / comments — usually nothing needs to be run.
 
-Если прогонял — приложи verdict (🟢/🟡/🔴) и список блоков к запросу подтверждения на 2.2.
+If you ran it — attach the verdict (🟢/🟡/🔴) and the list of blocks to the confirmation request in 2.2.
 
-### 2.2 Подтверждение от пользователя
+### 2.2 User confirmation
 
-Спроси пользователя явно:
+Ask the user explicitly:
 
-> Все ручные проверки пройдены? Если нет — что осталось?
+> Are all manual checks done? If not — what remains?
 
-**Это жёсткий stop-point.** Не переходи к шагу 2.3, пока пользователь не ответил явным «ОК / прошли / да». Собственный успешный smoke не считается за подтверждение — он лишь повышает уверенность пользователя при ответе.
+**This is a hard stop-point.** Do not proceed to step 2.3 until the user has replied with an explicit "OK / done / yes". A successful smoke run of your own does not count as confirmation — it only increases the user's confidence when answering.
 
-### 2.3 Проверка понимания
+### 2.3 Comprehension check
 
-Один вопрос пользователю на понимание принципов, реально применённых в этой задаче: архитектура / код / механизм / библиотека / платформенная особенность. Цель — тренажёр для собеседований Senior Android / KMP, не аудит готовности к merge.
+One question to the user to check understanding of principles actually applied in this task: architecture / code / mechanism / library / platform behavior. The goal is interview prep for Senior Android / KMP, not a merge-readiness audit.
 
-**Источник вопроса:**
-- Сначала открой [чеклист подготовки к собеседованию](../../docs/interview-prep-checklist.md) и найди невыполненный пункт (`- [ ]`), тематически совпадающий с тем, что менялось в PR. Если совпадение есть — задавай по нему.
-- Если ни один невыполненный пункт не совпадает с контекстом задачи — сформулируй свой вопрос по фактической реализации (что конкретно сделано в PR и почему именно так).
+**Source of the question:**
+- First open the [interview prep checklist](../../docs/interview-prep-checklist.md) and find an uncompleted item (`- [ ]`) that thematically matches what changed in the PR. If there is a match — ask based on it.
+- If no uncompleted item matches the context of the task — formulate your own question based on the actual implementation (what was specifically done in the PR and why).
 
-**Формат:**
-- Ровно один вопрос за прогон, не серия. Не «расскажи про X и Y и Z».
-- Открытый вопрос, не yes/no. Требуется развёрнутый ответ.
+**Format:**
+- Exactly one question per run, not a series. Not "tell me about X and Y and Z".
+- Open-ended question, not yes/no. A detailed answer is required.
 
-**После ответа пользователя:**
-- Оцени корректность: что верно, что упущено, что неточно или неверно. Без снисхождения и без агрессии — как технический собеседующий, дающий честную обратную связь.
-- Если ответ был по пункту из чеклиста — отметь его как выполненный (`- [ ]` → `- [x]`) прямо в `docs/interview-prep-checklist.md` через Edit. Если вопрос был свой (не из чеклиста) — впиши его в раздел «Дополнительные вопросы из задач» в конце чеклиста как `- [x] <вопрос>` через Edit.
+**After the user's answer:**
+- Assess correctness: what is right, what is missing, what is imprecise or wrong. Without leniency and without aggression — like a technical interviewer giving honest feedback.
+- If the answer was based on an item from the checklist — mark it as completed (`- [ ]` → `- [x]`) directly in `docs/interview-prep-checklist.md` via Edit. If the question was your own (not from the checklist) — add it to the "Additional questions from tasks" section at the end of the checklist as `- [x] <question>` via Edit.
 
-**Это не stop-point по содержанию ответа** — слабый ответ не блокирует merge. Пользователь сам решает, идти дальше или дополнительно проработать тему. Stop-point — только сам факт того, что вопрос задан и ответ получен.
+**This is not a stop-point based on the content of the answer** — a weak answer does not block the merge. The user decides themselves whether to proceed or explore the topic further. The stop-point is only the fact that the question was asked and an answer was received.
 
 ---
 
-## Шаг 3 — Code review
+## Step 3 — Code review
 
-Проверь PR:
+Check the PR:
 
 ```bash
 gh pr view <PR> --json reviews,comments --jq '{reviews: .reviews, comments: .comments}'
 ```
 
-Убедись, что все review-комментарии разобраны (resolved или отвечено с обоснованием). Сам вызов `/close-issue` — это апрув пользователя на мерж; отдельного APPROVED-review или фразы «lgtm» искать не нужно.
+Make sure all review comments are resolved (resolved or replied to with a justification). The `/close-issue` invocation itself is the user's approval for the merge; a separate APPROVED review or a "lgtm" phrase is not required.
 
 ---
 
-## Шаг 4 — Обновить документацию
+## Step 4 — Update documentation
 
-### 4.1 Статус в features/README.md
+### 4.1 Status in features/README.md
 
-Если задача реализовывала фичу из `docs/product/features/README.md` — обнови статус на `done`.
-Если это промежуточная задача (часть фичи) — обнови статус только если фича полностью готова.
+If the task implemented a feature from `docs/product/features/README.md` — update its status to `done`.
+If this is an intermediate task (part of a feature) — update the status only if the feature is fully complete.
 
-### 4.2 Затронутая документация
+### 4.2 Affected documentation
 
-Просмотри diff PR и определи: принимались ли в ходе задачи архитектурные или продуктовые решения, которые расходятся с текущей документацией?
+Review the PR diff and determine: were any architectural or product decisions made during this task that diverge from the current documentation?
 
-Затронутые файлы для проверки:
-- `docs/product/` — если изменилось поведение фичи, ЦА, стек
-- `docs/engineering/` — если изменились архитектурные принципы, схема модулей, правила DI
-- `CLAUDE.md` — если изменились процессы сборки, тестирования, структура проекта
+Files to check:
+- `docs/product/` — if feature behavior, target audience, or stack changed
+- `docs/engineering/` — if architectural principles, module layout, or DI rules changed
+- `CLAUDE.md` — if build, testing processes, or project structure changed
 
-Если документация устарела — обнови. Небольшие правки делай сразу, большие — создай отдельный issue.
+If the documentation is out of date — update it. Small edits do immediately, large ones — create a separate issue.
 
-**Doc-as-spec при первой имплементации архитектурного скетча.** Если PR — первая реальная имплементация паттерна, который в `docs/engineering/` был скетчем (маркер: «skeleton lands in #N» или примеры кода без рабочей реализации) — doc обязан быть обновлён в том же PR. Иначе следующий имплементатор пойдёт по устаревшему примеру.
+**Doc-as-spec on first implementation of an architectural sketch.** If the PR is the first real implementation of a pattern that was a sketch in `docs/engineering/` (marker: "skeleton lands in #N" or code examples without a working implementation) — the doc must be updated in the same PR. Otherwise, the next implementor will follow an outdated example.
 
-**Новый runtime-флаг — entry-point doc обязан его упомянуть.** Если в PR появился новый рантайм-флаг (env var, JVM system property, CLI option, build flag), который влияет на наблюдаемое поведение приложения — README или соответствующая entry-point секция должна его упоминать хотя бы одной строкой со ссылкой на engineering doc. Engineering doc как единственное место документации не считается покрытием: контрибьютор / пользователь ищет в README, не в `docs/engineering/`.
+**New runtime flag — the entry-point doc must mention it.** If the PR introduces a new runtime flag (env var, JVM system property, CLI option, build flag) that affects observable application behavior — the README or the corresponding entry-point section must mention it with at least one line and a link to the engineering doc. Engineering doc as the only documentation location does not count as coverage: a contributor / user looks in the README, not in `docs/engineering/`.
 
-**Новое правило в живом документе — audit фактического кода.** Если в PR добавлена / расширена политика или правило в `docs/engineering/` (sensitive-data policy, naming convention, layering rule, и т.п.) — прогони его по фактически затронутому коду свежего PR и убедись, что diff не нарушает только что введённое правило. Иначе doc сразу разойдётся с реальностью или правило молча создаст невидимые нарушения.
-
----
-
-## Шаг 5 — Зафиксировать инженерные решения, принятые по ходу
-
-Просмотри issue, переписку с пользователем и комментарии в PR: были ли приняты архитектурные / технические / процессные решения, которые **не зафиксированы** в `docs/engineering/` или `CLAUDE.md`?
-
-Примеры таких решений:
-- Выбор библиотеки, технологии или конкретного паттерна
-- Технические компромиссы — что приняли и что отложили
-- Принципы организации (модули, слои, нейминг)
-- Процессные конвенции (ветвление, формат артефактов, что выносится в отдельный issue)
-
-Если такое решение есть и оно нигде не записано — **до мержа** зафиксируй. Маленькое решение — короткой записью в существующий doc. Крупное — отдельным ADR или новым issue типа DOCS, если объём не помещается в текущий PR.
-
-Не оставляй решение жить только в чате: сессии теряются, следующий контрибьютор (или ты сам через месяц) не увидит истории и переоткроет тот же вопрос.
+**New rule in a live document — audit actual code.** If the PR adds or extends a policy or rule in `docs/engineering/` (sensitive-data policy, naming convention, layering rule, etc.) — run it against the code actually touched in the fresh PR and make sure the diff does not violate the just-introduced rule. Otherwise the doc will immediately diverge from reality, or the rule will silently create invisible violations.
 
 ---
 
-## Шаг 6 — Merge
+## Step 5 — Record engineering decisions made along the way
 
-**Перед merge: сверить `size:*` label с реальным объёмом работы.** Если задача исходно была `size:S`, а по факту получился `size:M` (или наоборот) — обнови label через `gh issue edit <N> --remove-label size:S --add-label size:M`. Метка должна отражать как реально вышло, не как изначально оценили — иначе будущая аналитика по объёмам будет врать.
+Review the issue, the conversation with the user, and comments in the PR: were any architectural / technical / process decisions made that are **not recorded** in `docs/engineering/` or `CLAUDE.md`?
 
-Не считай это «недоработкой оценки» — скоуп часто растёт по дороге из-за добавок пользователя или внешних условий. Просто фиксируй факт.
+Examples of such decisions:
+- Choice of library, technology, or specific pattern
+- Technical trade-offs — what was accepted and what was deferred
+- Organizational principles (modules, layers, naming)
+- Process conventions (branching, artifact format, what gets its own issue)
+
+If such a decision exists and is not recorded anywhere — **before merging**, record it. A small decision — as a short entry in an existing doc. A large one — as a separate ADR or a new DOCS issue if the volume doesn't fit in the current PR.
+
+Do not let a decision live only in the chat: sessions are lost, and the next contributor (or yourself a month later) won't see the history and will reopen the same question.
+
+---
+
+## Step 6 — Merge
+
+**Before merging: compare the `size:*` label with the actual volume of work.** If the task was originally `size:S` but turned out to be `size:M` (or vice versa) — update the label via `gh issue edit <N> --remove-label size:S --add-label size:M`. The label should reflect how it actually turned out, not the initial estimate — otherwise future analytics on volumes will be inaccurate.
+
+Don't treat this as "a poor estimate" — scope often grows along the way due to additions by the user or external conditions. Just record the fact.
 
 ```bash
 gh pr merge <PR> --squash --delete-branch
 ```
 
-Используй squash, если иное не указано. После мержа проверь, что PR закрыт и ветка удалена.
+Use squash unless otherwise specified. After merging, verify that the PR is closed and the branch is deleted.
 
 ---
 
-## Шаг 7 — Следующие задачи
+## Step 7 — Next tasks
 
-Посмотри в issue раздел «Следствия» и в PR — есть ли TODO, незакрытые вопросы, вещи вынесенные за скоуп.
+Look in the issue for a "Consequences" section and in the PR — are there TODOs, unresolved questions, things moved out of scope.
 
-Если есть явные следующие шаги — предложи создать issues (используй скилл `github-issue-author`).
-Если ничего нет — явно скажи об этом.
+If there are explicit next steps — offer to create issues (use the `github-issue-author` skill).
+If there is nothing — say so explicitly.
 
 ---
 
-## Шаг 8 — Ретро
+## Step 8 — Retro
 
-Были ли в ходе задачи системные сигналы? Триггеры на `/retro`:
+Were there any systemic signals during the task? Triggers for `/retro`:
 
-- багфикс (всегда — баг = система пропустила);
-- пользователь указал на трение с компонентом системы (гайд, скилл, команда, шаблон);
-- документация разошлась с реальностью (устаревший пример, неверный 3rd-party claim);
-- класс review-комментариев, который можно было поймать tooling'ом / правилом / hook'ом;
-- что-то прошло неожиданно хорошо — стоит зафиксировать механизм для воспроизведения;
-- issue/спека не хватило для старта — пробел в `github-issue-author` или `_template.md`.
+- bugfix (always — a bug = the system let it through);
+- user pointed to friction with a system component (guide, skill, command, template);
+- documentation diverged from reality (outdated example, incorrect 3rd-party claim);
+- a class of review comments that could have been caught by tooling / a rule / a hook;
+- something went unexpectedly well — worth recording the mechanism for reproduction;
+- the issue/spec wasn't sufficient to start without clarifications — a gap in `github-issue-author` or `_template.md`.
 
-**Не триггер:** агент ошибся → ревью поймало → агент починил в том же PR (это система работает). Много итераций сами по себе. Уточнения по скоупу в чате.
+**Not a trigger:** agent made a mistake → review caught it → agent fixed it in the same PR (this is the system working as intended). Many iterations by themselves. Scope clarifications in chat.
 
-Если триггер сработал — предложи `/retro` с указанием конкретного сигнала. Иначе закрой фразой «системных сигналов не вижу».
+If a trigger fired — propose `/retro` with the specific signal. Otherwise close with "I see no systemic signals".

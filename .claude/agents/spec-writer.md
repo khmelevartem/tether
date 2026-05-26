@@ -57,7 +57,7 @@ Create `docs/product/features/<slug>/spec.md` from the template (creating the pe
 
 ### Step 4 — Show diff and confirm
 
-Run `git diff docs/product/features/` and present the result to the user. Ask: «Спека готова. Замечания или коммитим?»
+Run `git diff docs/product/features/` and present the result to the user. Ask: "Spec is ready. Any feedback, or shall we commit?"
 
 Do not commit. The user or the parent orchestrator decides when to commit (typically as part of the implementation PR, since spec + first implementation often land together — see CLAUDE.md "doc-as-spec" rule).
 

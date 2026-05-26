@@ -1,107 +1,107 @@
-Проведи ретроспективу по задаче <issue number> (и связанному PR, если есть).
+Run a retrospective on task <issue number> (and the associated PR, if any).
 
-Цель — не отчёт ради отчёта и не каталог точечных ошибок, а **системные улучшения**: что в промптах, командах, скиллах, документации или структуре проекта надо изменить, чтобы будущим исполнителям было легче делать качественную работу. Каждый вывод должен заканчиваться действием.
+The goal is not a report for its own sake and not a catalog of pointwise mistakes, but **systemic improvements**: what in the prompts, commands, skills, documentation, or project structure needs to change so that future assignees can do quality work more easily. Every conclusion must end with an action.
 
-**Что НЕ интересует ретро.** Точечные ошибки агента, которые поймал ревьюер и которые были исправлены в том же PR — это система работает как задумано, не сбой. Ретро не про «агент мог быть внимательнее». Ретро про «как сделать класс таких ошибок маловероятным независимо от внимательности».
+**What the retro is NOT interested in.** Pointwise agent mistakes that the reviewer caught and that were fixed in the same PR — this is the system working as intended, not a failure. The retro is not about "the agent could have been more careful". The retro is about "how to make this class of mistakes unlikely regardless of attentiveness".
 
-**Что интересует ретро.** Системные пробелы (gap в доках/скиллах/командах/промптах) и системные удачи (что прошло неожиданно хорошо благодаря архитектуре/инструменту/паттерну — и как воспроизводить это в будущих задачах).
+**What the retro IS interested in.** Systemic gaps (gaps in docs / skills / commands / prompts) and systemic successes (what went unexpectedly smoothly due to architecture / tool / pattern — and how to reproduce it in future tasks).
 
 ---
 
-## Шаг 1 — Сбор фактов
+## Step 1 — Gather facts
 
-Собери контекст:
+Collect context:
 
 ```bash
 gh issue view <N> --json title,body,comments
-gh pr view <PR> --json title,body,commits,comments,reviews  # если известен
-git log --oneline <merge-commit> -1  # если уже смержен
+gh pr view <PR> --json title,body,commits,comments,reviews  # if known
+git log --oneline <merge-commit> -1  # if already merged
 ```
 
-Прочитай всю историю: issue, комментарии, review, переписку в PR.
+Read the full history: issue, comments, review, conversation in the PR.
 
 ---
 
-## Шаг 2 — Системный анализ
+## Step 2 — Systemic analysis
 
-Фокус: **система → действие**, не «агент → внимательность».
+Focus: **system → action**, not "agent → attentiveness".
 
-**Системные пробелы:**
-- Пробел в `CLAUDE.md` / `docs/engineering/` / скилле / шаблоне, из-за которого ошибка была *запрограммированной*?
-- Полагался ли исполнитель/ревьюер на что-то, что оказалось неверным или устаревшим (doc, пример, 3rd-party claim)?
-- Класс ревью-комментариев, который можно поймать tooling/hook/правилом — не вниманием?
-- Чего не хватило в issue/спеке для старта без уточнений?
+**Systemic gaps:**
+- A gap in `CLAUDE.md` / `docs/engineering/` / a skill / a template that made the mistake *programmatic*?
+- Did the assignee / reviewer rely on something that turned out to be incorrect or outdated (doc, example, 3rd-party claim)?
+- A class of review comments that can be caught by tooling / a hook / a rule — not by attention?
+- What was missing in the issue/spec to start without clarifications?
 
-**Системные удачи:**
-- Что прошло неожиданно гладко, почему?
-- Есть ли воспроизводимая логика — закодифицировать как принцип в `docs/engineering/`, чек в скилле, пункт в шаблоне команды?
-- Бесплатный multiplier (одно действие → несколько платформ/задач)? Каким механизмом, как развернуть на похожие случаи?
+**Systemic successes:**
+- What went unexpectedly smoothly, and why?
+- Is there a reproducible logic — to codify as a principle in `docs/engineering/`, a check in a skill, an item in a command template?
+- A free multiplier (one action → multiple platforms/tasks)? By what mechanism, how to extend it to similar cases?
 
-Если нет ни пробелов, ни удач достойных фиксации — закрой фразой «системных изменений не вижу», не выдумывай action items ради формы.
-
----
-
-## Шаг 3 — Анализ бага (только если задача — багфикс)
-
-Багфикс = система пропустила баг в main. Ретро обязательно. Системно:
-
-1. **Как баг попал в main?** Отсутствие класса тестов; гайд описывал pattern, который и привёл к багу; ревью не ловит — какой именно чек не сработал; edge case известен но не зафиксирован.
-2. **Где нужна системная защита?** Тест на класс багов, валидация, чек в `/code-review`, hook на pattern, пример/ограничение в `CLAUDE.md` или спеке.
-
-Простая защита — в ретро-PR; крупная — отдельным issue.
+If there are neither gaps nor successes worth recording — close with "I see no systemic changes", don't invent action items for the sake of form.
 
 ---
 
-## Шаг 4 — Что оптимизировать
+## Step 3 — Bug analysis (only if the task is a bugfix)
 
-На основе шагов 2–3 определи конкретные системные правки. Категории:
+Bugfix = the system let a bug through to main. Retro is mandatory. Systemically:
 
-| Категория | Когда трогать |
-|-----------|--------------|
-| `.claude/commands/*.md` | Команда давала нечёткие инструкции, не покрывала сценарий, или не имела нужного шага |
-| `.claude/skills/` | Скилл не покрывал нужный сценарий или не предотвращал класс ошибок |
-| `CLAUDE.md` | Конвенция/процесс/структура проекта не зафиксированы — агент должен был догадаться |
-| `docs/engineering/` | Архитектурный принцип / паттерн зафиксирован неверно, неполно, или его примеры расходятся с реальностью |
-| `docs/product/features/` | Feature-спек неполный или отсутствует там, где был бы полезен |
-| `.claude/skills/github-issue-author` | Issue получался с недостаточным контекстом для прямой реализации |
-| Hook в `scripts/install-hooks.sh` | Класс ошибок ловится автоматически на уровне git операции, а не только инструкцией |
+1. **How did the bug get into main?** Absence of a class of tests; a guide described a pattern that led to the bug; review didn't catch it — which specific check didn't work; an edge case was known but not recorded.
+2. **Where is systemic protection needed?** A test for the class of bugs, validation, a check in `/code-review`, a hook on a pattern, an example/restriction in `CLAUDE.md` or the spec.
 
-Для каждой потенциальной правки явно укажи, **на какой системный gap она отвечает** — без этой связи правка превращается в добавку «на всякий случай».
+Simple protection — in the retro PR; larger — as a separate issue.
 
 ---
 
-## Шаг 5 — Формулировка действий (без применения)
+## Step 4 — What to optimize
 
-На основе анализа составь список предлагаемых изменений. **Не применяй их сразу** — сначала нужен явный апрув.
+Based on steps 2–3, identify specific systemic changes. Categories:
 
-Для каждого улучшения укажи:
-- Что именно изменить (файл, раздел)
-- На какой системный gap или системную удачу отвечает (явная связь с конкретным инцидентом / эффектом из истории задачи)
-- Размер: «маленькое» (правка на месте) или «задача» (отдельный issue)
+| Category | When to touch |
+|----------|--------------|
+| `.claude/commands/*.md` | The command gave unclear instructions, didn't cover a scenario, or lacked a needed step |
+| `.claude/skills/` | The skill didn't cover the needed scenario or didn't prevent a class of errors |
+| `CLAUDE.md` | A convention / process / project structure is not recorded — the agent had to guess |
+| `docs/engineering/` | An architectural principle / pattern is recorded incorrectly, incompletely, or its examples diverge from reality |
+| `docs/product/features/` | A feature spec is incomplete or missing where it would have been useful |
+| `.claude/skills/github-issue-author` | Issues came out with insufficient context for direct implementation |
+| Hook in `scripts/install-hooks.sh` | A class of errors is catchable automatically at the git operation level, not only by instruction |
 
-Выведи список и явно спроси:
-
-> Подтверждаешь эти изменения? Если нет — скажи, что скорректировать.
-
-**Не переходи к шагу 6 без явного «да» или «ок» от пользователя.**
+For each potential change explicitly state **which systemic gap it addresses** — without this link the change becomes an addition "just in case".
 
 ---
 
-## Шаг 6 — Применение (только после апрува)
+## Step 5 — Formulate actions (without applying)
 
-**Все изменения делай на отдельной ветке от `main`, не на `main` напрямую.** Ретро-правки — такой же процесс, как обычные задачи: ветка → коммит → PR → ревью. Даже если правки маленькие и в `.claude/` — они идут через PR, чтобы остался след и возможность откатить.
+Based on the analysis, compile a list of proposed changes. **Do not apply them immediately** — explicit approval is needed first.
 
-Для каждого подтверждённого улучшения:
+For each improvement specify:
+- What exactly to change (file, section)
+- Which systemic gap or systemic success it addresses (explicit link to a specific incident / effect from the task history)
+- Size: "small" (fix in place) or "task" (separate issue)
 
-**Если изменение маленькое** (правка в документе, уточнение в команде) — сделай прямо сейчас и покажи diff.
+Output the list and explicitly ask:
 
-**Если изменение требует отдельной задачи** — создай issue через скилл `github-issue-author`. Название должно читаться как полезный инкремент к рабочему процессу, например:
-- «Добавить проверку X в code-review.md»
-- «Уточнить scope скилла implement для случая Y»
+> Do you confirm these changes? If not — tell me what to adjust.
 
-**Title PR для ретро-правок** должен начинаться с `retro from #<PR>: ...`, где `<PR>` — номер исходного PR, по которому проводилось ретро. Это даёт сразу видимую связь и упрощает поиск. Пример: `retro from #70: clarify smoke step in close-issue command`.
+**Do not proceed to step 6 without an explicit "yes" or "ok" from the user.**
 
-**Итог ретро** — выведи списком:
-- ✅ Сделано сразу: [что именно, на какой gap/удачу отвечает]
-- 📋 Запланировано: [issue #N — что, на какой gap отвечает]
-- 💡 Наблюдение без действия: [если есть — почему без действия]
+---
+
+## Step 6 — Apply (only after approval)
+
+**Make all changes on a separate branch from `main`, not directly on `main`.** Retro fixes are the same process as regular tasks: branch → commit → PR → review. Even if the changes are small and in `.claude/` — they go through a PR, so that a trace remains and rollback is possible.
+
+For each confirmed improvement:
+
+**If the change is small** (edit in a document, clarification in a command) — do it right now and show the diff.
+
+**If the change requires a separate task** — create an issue via the `github-issue-author` skill. The name should read as a useful increment to the workflow, for example:
+- "Add check X to code-review.md"
+- "Clarify scope of implement skill for case Y"
+
+**PR title for retro fixes** must start with `retro from #<PR>: ...`, where `<PR>` is the number of the original PR the retro was run on. This gives an immediately visible link and simplifies search. Example: `retro from #70: clarify smoke step in close-issue command`.
+
+**Retro outcome** — output as a list:
+- ✅ Done immediately: [what exactly, which gap/success it addresses]
+- 📋 Planned: [issue #N — what, which gap it addresses]
+- 💡 Observation without action: [if any — why without action]

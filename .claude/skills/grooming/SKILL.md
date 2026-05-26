@@ -1,206 +1,206 @@
 ---
 name: grooming
-description: Проведи груминг бэклога — закрой текущий sprint-NN.md по факту (статусы задач, доп. результаты в окне), пройдись по открытым issue, найди незаведённые задачи через gap-analysis (платформенная симметрия, TODO в коде, MVP-блокеры по роадмапу) и составь компактный кандидат на следующий спринт в фиксированном формате (Цель / Состав / Следствия / опциональный merge order). Используй когда пользователь просит «прогруми», «груминг», «спланируй спринт», «закрой спринт».
+description: Run a backlog grooming session — close the current sprint-NN.md by actuals (task statuses, extra results within the window), go through open issues, find unfiled tasks via gap-analysis (platform symmetry, TODOs in code, MVP blockers from the roadmap) and compose a compact candidate for the next sprint in a fixed format (Goal / Composition / Consequences / optional merge order). Use when the user says "groom", "grooming", "plan the sprint", "close the sprint".
 ---
 
-Проведи груминг бэклога и составь кандидат на план следующего спринта.
+Run a backlog grooming session and compose a candidate plan for the next sprint.
 
 ---
 
-## Шаг 0 — Закрыть прошлый спринт по факту
+## Step 0 — Close the previous sprint by actuals
 
-Прежде чем планировать следующий спринт, доведи текущий до состояния «факт зафиксирован». Без этого следующее планирование работает по устаревшему контексту.
+Before planning the next sprint, bring the current one to "actuals recorded" state. Without this, the next planning works from stale context.
 
-**0.1 Найди текущий спринт-док.** `ls docs/sprints/` — последний по номеру файл. Если папки нет или последний спринт уже отмечен как «closed/итог» во всех строках — пропусти шаг 0.
+**0.1 Find the current sprint doc.** `ls docs/sprints/` — the last file by number. If the folder doesn't exist or the last sprint is already marked as "closed/done" in all rows — skip Step 0.
 
-**0.2 Прочитай его** и определи список issue из секции «Состав».
+**0.2 Read it** and identify the list of issues from the "Composition" section.
 
-**0.3 Проверь фактическое состояние каждой задачи:**
+**0.3 Check the actual state of each task:**
 
 ```bash
 gh issue view <N> --json state,title
 ```
 
-Для тех, где `state` ≠ `CLOSED` — также проверь PR через `gh pr list --state all --search "<N>"`, потому что PR может быть merged без авто-закрытия issue.
+For those where `state` ≠ `CLOSED` — also check the PR via `gh pr list --state all --search "<N>"`, because a PR can be merged without auto-closing the issue.
 
-**0.4 Найди задачи, которые закрылись в окне спринта, но **не** были в исходном составе.** Это «доп. результаты» — что было захвачено сверх плана.
+**0.4 Find tasks that closed within the sprint window but were **not** in the original composition.** These are "extra results" — work done beyond the plan.
 
 ```bash
-# Дата старта/мерджа задач из состава — ориентир для окна
+# Date of start/merge of tasks from the composition — a reference for the window
 git log --oneline --since="<date-of-first-sprint-commit>" --until="<date-of-last-sprint-commit>" | grep -E "^[a-f0-9]+ #[0-9]+:"
 ```
 
-Сопоставь с составом спринта. Всё, что закрыто в этом окне и не было в составе — кандидат в секцию «Дополнительно».
+Compare with the sprint composition. Everything closed in this window that was not in the composition is a candidate for the "Additional" section.
 
-**0.5 Обнови спринт-док:**
+**0.5 Update the sprint doc:**
 
-- В таблице «Состав» добавь колонку `Итог` со статусом по каждой задаче: `✅ closed ([commit](url), PR #N)` / `🟡 partial (что осталось)` / `❌ не сделано (причина)`.
-- В начале/конце таблицы добавь одну строку **Итог:** `X/Y задач закрыты` плюс короткое «все цели достигнуты» / «частично, остался Z».
-- Добавь секцию **«Доп. результаты»** или **«Вне исходного состава»** — issues, закрытые в окне спринта, но не запланированные. Каждый — одна строка: `#N (commit, PR) — что и почему важно для feature-прогресса`.
-- В секции «Полезный инкремент» (или эквивалентной) — преврати future tense в past: «После спринта X станет...» → «X сделано: ...». Добавь подсекцию «Дополнительно» с доп. результатами.
-- В секции «Связанные продуктовые спеки» — добавь любые спеки, которые правились в окне спринта вне состава.
+- In the "Composition" table add an `Outcome` column with the status for each task: `✅ closed ([commit](url), PR #N)` / `🟡 partial (what remained)` / `❌ not done (reason)`.
+- At the beginning/end of the table add one line **Total:** `X/Y tasks closed` plus a short "all goals achieved" / "partially, Z remains".
+- Add a section **"Additional results"** or **"Outside original composition"** — issues closed in the sprint window but not planned. Each one — one line: `#N (commit, PR) — what it was and why it matters for feature progress`.
+- In the "Useful increment" section (or equivalent) — change future tense to past: "After sprint X will become..." → "X done: ...". Add an "Additional" subsection with the extra results.
+- In the "Related product specs" section — add any specs that were edited within the sprint window outside of the composition.
 
-**Стиль:** не переписывай цель спринта, не редактируй «Не вошло намеренно» — это исторический срез решения на момент планирования. Добавляй факт поверх плана, не заменяя его.
+**Style:** do not rewrite the sprint goal, do not edit "Intentionally not included" — that is a historical snapshot of the decision at planning time. Add actuals on top of the plan, don't replace it.
 
-**0.6 Сообщи пользователю результат закрытия:** «Спринт N: X/Y задач закрыты, Z доп. результатов в окне. Спринт-док обновлён. Перехожу к планированию следующего».
-
----
-
-## Шаг 1 — Продуктовый контекст
-
-Прочитай последовательно:
-
-1. `docs/product/vision.md` — зачем продукт существует
-2. `docs/product/README.md` — обзор
-3. `docs/product/roadmap.md` — этапы и приоритеты
-4. `docs/product/features/README.md` — список фич и их статус
-
-Цель: понять, на каком этапе роадмапа мы находимся, что уже реализовано, что следующее.
+**0.6 Report the closing result to the user:** "Sprint N: X/Y tasks closed, Z additional results in the window. Sprint doc updated. Moving on to planning the next one."
 
 ---
 
-## Шаг 2 — Изучение открытых issues
+## Step 1 — Product context
 
-Работай от общего к частному — не читай подробности без необходимости.
+Read in sequence:
 
-**2.1 Получи список:**
+1. `docs/product/vision.md` — why the product exists
+2. `docs/product/README.md` — overview
+3. `docs/product/roadmap.md` — stages and priorities
+4. `docs/product/features/README.md` — list of features and their status
+
+Goal: understand which roadmap stage we are at, what has already been implemented, what comes next.
+
+---
+
+## Step 2 — Review open issues
+
+Work from general to specific — don't read details unless necessary.
+
+**2.1 Get the list:**
 ```bash
 gh issue list --state open --json number,title,labels
 ```
 
-**2.2 Для каждого issue прочитай только ключевые разделы** (контекст, цель, DoD, связи):
+**2.2 For each issue read only the key sections** (context, goal, DoD, relationships):
 ```bash
 gh issue view <N> --json title,body,labels
 ```
-Ищи в body разделы: «Контекст», «Зачем», «Сделать», «DoD», «Связи», «Блокеры».
-Подробности (комментарии, история) — только если непонятны блокеры или зависимости.
+Look in body for sections: "Context", "Why", "To do", "DoD", "Relationships", "Blockers".
+Details (comments, history) — only if blockers or dependencies are unclear.
 
-**2.3 Построй мысленную карту:**
-- Какие issues блокированы другими?
-- Какие касаются одной и той же части кодовой базы (UI, network, discovery, protocol)?
-- Какие можно делать параллельно без конфликтов?
+**2.3 Build a mental map:**
+- Which issues are blocked by others?
+- Which ones touch the same part of the codebase (UI, network, discovery, protocol)?
+- Which ones can be done in parallel without conflicts?
 
 ---
 
-## Шаг 3 — Анализ готовности к спринту
+## Step 3 — Sprint readiness analysis
 
-Для каждого открытого issue оцени:
+For each open issue assess:
 
-| Критерий | Да / Нет |
+| Criterion | Yes / No |
 |----------|----------|
-| Нет известных блокеров | — |
-| Есть понятный DoD | — |
-| Если фича — есть спека в `docs/product/features/` | — |
-| Спека указана в тексте issue | — |
-| Не конфликтует по кодовой базе с другими кандидатами | — |
+| No known blockers | — |
+| Clear DoD exists | — |
+| If a feature — spec exists in `docs/product/features/` | — |
+| Spec referenced in the issue body | — |
+| Does not conflict with other candidates in the codebase | — |
 
-Если для новой функциональности нет спеки в `docs/product/features/` — отметь это явно как риск.
+If there is no spec in `docs/product/features/` for new functionality — flag this explicitly as a risk.
 
 ---
 
-## Шаг 4 — Поиск незаведённых задач (gap-analysis)
+## Step 4 — Finding unfiled tasks (gap-analysis)
 
-Прежде чем составлять план, проверь: **всё ли осмысленное к этому моменту уже заведено как issue?** Бэклог отстаёт от реального состояния кода — задача может быть очевидно нужной по смыслу, но просто никем не зафиксированной.
+Before composing the plan, check: **is everything meaningful at this point already filed as an issue?** The backlog lags behind the real state of the code — a task can be obviously needed but simply never recorded.
 
-Систематически пройдись по двум осям:
+Systematically go through two axes:
 
-### 4.1 Платформенная симметрия
+### 4.1 Platform symmetry
 
-Принцип `vision.md` обычно требует cross-platform паритет. Сравни состояние таргетов между собой:
+The `vision.md` principle usually requires cross-platform parity. Compare the state of targets against each other:
 
 ```bash
-# Что есть на каждом таргете?
+# What exists on each target?
 ls composeApp/src/{commonMain,androidMain,iosMain,appleMain,desktopMain,jvmMain}/kotlin/...
 ```
 
-Для каждого крупного компонента (`FileServer`, `FileClient`, `MdnsDiscovery`, `TrustedDeviceStore`, UI screens) сделай таблицу: **где реализовано, где stub, где не существует**. Stub'ы (классы, бросающие `error("not implemented")`) — это формально «есть», а фактически gap.
+For each major component (`FileServer`, `FileClient`, `MdnsDiscovery`, `TrustedDeviceStore`, UI screens) make a table: **where implemented, where stub, where missing**. Stubs (classes throwing `error("not implemented")`) are formally "present" but factually a gap.
 
-Если видишь асимметрию (фича закрыта на 2 из 3 платформ) — проверь:
-- Есть ли уже открытое или закрытое issue на отстающую платформу?
-- Если нет — это кандидат на новый issue.
+If you see asymmetry (a feature covered on 2 of 3 platforms) — check:
+- Is there an open or closed issue for the lagging platform?
+- If not — it's a candidate for a new issue.
 
-### 4.2 Stub'ы и TODO в коде
+### 4.2 Stubs and TODOs in code
 
 ```bash
 rg "TODO|FIXME|not (yet )?implemented|stub" composeApp/src/ --type kotlin
-rg "error\(\"" composeApp/src/ --type kotlin   # заглушки, бросающие ошибки
+rg "error\(\"" composeApp/src/ --type kotlin   # stubs throwing errors
 ```
 
-Каждое такое место — потенциальная незаведённая задача. Не фиксируй мелкие TODO внутри методов, но структурные «здесь будет реализация позже» — кандидаты.
+Each such location is a potentially unfiled task. Don't file minor TODOs inside methods, but structural "implementation comes later" markers are candidates.
 
-### 4.3 Блокеры из роадмапа
+### 4.3 Roadmap blockers
 
-Перечитай `docs/product/roadmap.md`. Для каждого пункта MVP проверь: есть ли issue, который его двигает? Если пункт MVP не имеет ни одного issue — это gap.
+Re-read `docs/product/roadmap.md`. For each MVP item check: is there an issue moving it forward? If an MVP item has no issue at all — that's a gap.
 
-### 4.4 Что делать с найденными gap'ами
+### 4.4 What to do with found gaps
 
-Перечисли пользователю **до** составления плана спринта:
+List them for the user **before** composing the sprint plan:
 
-> Перед сборкой плана я нашёл задачи, которые по смыслу нужны сейчас, но не заведены как issue:
+> Before building the plan I found tasks that are conceptually needed now but not filed as issues:
 >
-> 1. **<Название>** — <одна фраза: что и почему>. Слой/платформа: <...>. Размер: <S/M/L>.
+> 1. **<Title>** — <one sentence: what and why>. Layer/platform: <...>. Size: <S/M/L>.
 > 2. ...
 >
-> Заводить их сейчас через /github-issue-author, чтобы они стали кандидатами в спринт?
+> File them now via /github-issue-author so they become sprint candidates?
 
-Не заводи issue молча. Пользователь решает: завести сейчас, отложить, или добавить как заметку в план без формального issue.
+Don't file issues silently. The user decides: file now, defer, or add as a note to the plan without a formal issue.
 
-Если пользователь согласен — пройди интервью /github-issue-author по каждой задаче. Только после создания issue они становятся кандидатами в Шаг 5.
-
----
-
-## Шаг 5 — Отбор кандидатов
-
-Выбери 3–5 задач, которые:
-- Соответствуют текущему этапу роадмапа
-- Не блокированы — ни внешними issues, ни друг другом внутри спринта.
-  **Если #A блокирует #B — нельзя брать обе в один спринт, даже если #A почти готова.** Цепочки разводятся по спринтам: #A в этот спринт, #B в следующий. Это правило строгое: «сделаем #A быстро, потом возьмёмся за #B» приводит к простою исполнителя #B и срыву DoD спринта.
-- Можно делать параллельно (разные платформы, разные слои кодовой базы, разные фичи)
-
-Хорошие комбинации для параллельной работы:
-- Одна фича на iOS + одна на Android/Desktop
-- UI-изменение + network/discovery изменение
-- Новая фича + несвязанный багфикс
-- Несколько фич, затрагивающих разные модули
+If the user agrees — run the /github-issue-author interview for each task. Only after the issues are created do they become candidates for Step 5.
 
 ---
 
-## Шаг 6 — Формат спринт-дока
+## Step 5 — Candidate selection
 
-Сохрани в `docs/sprints/sprint-NN.md`. Только три обязательные секции + одна опциональная. Ничего сверх.
+Pick 3–5 tasks that:
+- Match the current roadmap stage
+- Are not blocked — neither by external issues nor by each other within the sprint.
+  **If #A blocks #B — both cannot be in the same sprint, even if #A is nearly done.** Chains are split across sprints: #A in this sprint, #B in the next. This rule is strict: "we'll finish #A quickly then take on #B" leads to assignee-B downtime and DoD failure.
+- Can be done in parallel (different platforms, different codebase layers, different features)
+
+Good combinations for parallel work:
+- One iOS feature + one Android/Desktop feature
+- A UI change + a network/discovery change
+- A new feature + an unrelated bugfix
+- Several features touching different modules
+
+---
+
+## Step 6 — Sprint doc format
+
+Save to `docs/sprints/sprint-NN.md`. Only three mandatory sections + one optional. Nothing beyond that.
 
 ```markdown
-## Цель спринта
+## Sprint goal
 
-<1–2 предложения. Пользовательский инкремент после спринта — не перечисление задач, а что меняется в продукте / для разработки.>
+<1–2 sentences. User-facing increment after the sprint — not a task list, but what changes in the product / for development.>
 
-## Состав
+## Composition
 
-| # | Issue | Название | Тип | Размер |
-| - | ----- | -------- | --- | ------ |
+| # | Issue | Title | Type | Size |
+| - | ----- | ----- | ---- | ---- |
 
-## Следствия
+## Consequences
 
-<1–3 пункта. Разблокированные направления — что становится возможным после этого спринта. Не «задача N сделана, теперь есть результат N» — инкремент уже описан в Цели. Мелкие infra/bug-фиксы можно не упоминать.>
+<1–3 items. Unblocked directions — what becomes possible after this sprint. Not "task N is done, now we have result N" — the increment is already described in the Goal. Minor infra/bug fixes don't need a mention.>
 
-## Порядок мерджа (опционально)
+## Merge order (optional)
 
-<Если для минимизации ребейзов имеет значение: #A → #B → #C. Иначе секцию опустить.>
+<If it matters for minimising rebases: #A → #B → #C. Otherwise omit the section.>
 ```
 
-**Размер (для колонки):**
-- **S** — изолированное изменение без платформенной специфики
-- **M** — несколько файлов / одна платформа с нюансами
-- **L** — новый компонент / несколько платформ / много неизвестного
+**Size (for the column):**
+- **S** — isolated change with no platform specifics
+- **M** — several files / one platform with nuances
+- **L** — new component / multiple platforms / lots of unknowns
 
-**Чего в спринт-доке быть не должно:**
-- Обоснований почему выбрана задача («приоритет», «потому что блокирует #N»).
-- Таблиц параллелизма по слоям, конфликт-матриц.
-- Цепочек блокировок наружу — это в Следствиях, одной фразой.
-- Списка «не вошло намеренно» — он живёт в бэклоге issue, не в спринт-доке.
-- Списка связанных продуктовых спек — спеки линкуются из issue, не дублируются здесь.
-- Per-task разворота DoD / acceptance criteria.
+**What must NOT be in the sprint doc:**
+- Justifications for why a task was chosen ("priority", "because it blocks #N").
+- Parallelism tables by layer, conflict matrices.
+- External blocking chains — that goes in Consequences, in one sentence.
+- A "not included intentionally" list — it lives in the issue backlog, not the sprint doc.
+- A list of related product specs — specs are linked from issues, not duplicated here.
+- Per-task DoD / acceptance criteria expansion.
 
-При закрытии спринта (Шаг 0) к таблице «Состав» дописывается колонка `Итог`, и добавляется секция `## Доп. результаты` — это единственное, что дорастает поверх плана.
+When closing the sprint (Step 0), an `Outcome` column is appended to the "Composition" table, and a `## Additional results` section is added — this is the only thing that grows on top of the plan.
 
-Если среди кандидатов есть задачи без спеки — явно спроси перед сохранением, нужно ли создать спеку.
+If there are tasks among the candidates without a spec — explicitly ask before saving whether a spec needs to be created.

@@ -1,29 +1,29 @@
 ---
 name: smoke-test
-description: Прогон базового smoke-теста (happy-path) по платформам Tether — Desktop CLI (cli jar + /health + mDNS + stdin commands), Desktop↔Desktop send через CLI, Android (если adb-устройство подключено) с send-from-Desktop, iOS simulator (xcodebuild + simctl) с mDNS publish + cross-discovery. Используй этот скилл, когда пользователь просит «прогони smoke», «прогони smoke-тест», «basic smoke», «basic regression», «проверь сборку по платформам перед merge», «дымовой тест». Не путать с unit-тестами (`./gradlew allTests`) — smoke это рантайм-проверка стартует ли всё и видят ли друг друга, не корректность логики.
+description: Run a basic smoke test (happy-path) across Tether platforms — Desktop CLI (cli jar + /health + mDNS + stdin commands), Desktop↔Desktop send via CLI, Android (if an adb device is connected) with send-from-Desktop, iOS simulator (xcodebuild + simctl) with mDNS publish + cross-discovery. Use this skill when the user says "run smoke", "run smoke test", "basic smoke", "basic regression", "check the build across platforms before merge", "smoke test". Not to be confused with unit tests (`./gradlew allTests`) — smoke is a runtime check that everything starts and peers can discover each other, not logic correctness.
 ---
 
 # Smoke-test skill
 
-Прогоняет базовые smoke-сценарии по таргетам Tether и выдаёт human-readable отчёт.
+Runs basic smoke scenarios across Tether targets and produces a human-readable report.
 
-**Это smoke, не регресс.** Цель — за 1-3 минуты увидеть, что ничего фундаментально не сломано (CLI стартует, FileServer отвечает, mDNS публикуется, stdin-команды работают, send roundtrip OK, нативные таргеты компилируются). Корректность бизнес-логики — задача `./gradlew allTests`.
+**This is smoke, not regression.** The goal — in 1–3 minutes — is to see that nothing is fundamentally broken (CLI starts, FileServer responds, mDNS is published, stdin commands work, send roundtrip OK, native targets compile). Business logic correctness is the job of `./gradlew allTests`.
 
-## Чего скилл НЕ проверяет (вне скоупа автоматизации)
+## What the skill does NOT check (out of scope for automation)
 
-В начале прогона **проговори это пользователю** — границы покрытия:
+At the start of the run **tell the user** — coverage boundaries:
 
-- **Физический iPhone** — нет, требует ручной подписи и доверия сертификата.
-- **macOS** — ship'ится через Desktop JVM-таргет; smoke покрывается Desktop-блоком (этот же jar пакуется в `.app`/`.dmg` через `packageReleaseDistributionForCurrentOS`).
-- **iOS Local Network Privacy prompt** — на первом запуске приложения на симуляторе iOS может показать «Allow Local Network access». Без Allow `NSNetService.publish()` молча не публикуется. Если iOS-блок упал на publish — проверить prompt вручную, дать Allow, перезапустить смоук.
-- **Android-инициированный send (Android → Desktop)** — на Android нет программного триггера отправки (intent / UI-кнопка / broadcast). Скилл проверяет обратное направление: Desktop → Android через CLI `send`.
-- **Тап по Notification «Stop»** — заменяется на `am force-stop` или broadcast. Что *кнопка нарисована и работает* — проверить вручную.
-- **Sleep/wake реального девайса** — `adb shell input keyevent SLEEP/WAKEUP` это аппроксимация, не настоящий power state.
-- **Rotation effects на FGS-выживаемость** — на эмуляторе ≠ на реальном устройстве.
+- **Physical iPhone** — no, requires manual signing and certificate trust.
+- **macOS** — ships through the Desktop JVM target; smoke is covered by the Desktop block (the same jar is packaged into `.app`/`.dmg` via `packageReleaseDistributionForCurrentOS`).
+- **iOS Local Network Privacy prompt** — on the first app launch on the simulator iOS may show "Allow Local Network access". Without Allow, `NSNetService.publish()` silently fails. If the iOS block fails on publish — check the prompt manually, grant Allow, restart the smoke.
+- **Android-initiated send (Android → Desktop)** — Android has no programmatic send trigger (intent / UI button / broadcast). The skill checks the reverse direction: Desktop → Android via CLI `send`.
+- **Tapping the Notification "Stop" button** — replaced by `am force-stop` or broadcast. That the *button is rendered and works* — verify manually.
+- **Sleep/wake of a real device** — `adb shell input keyevent SLEEP/WAKEUP` is an approximation, not a real power state.
+- **Rotation effects on FGS survivability** — emulator ≠ real device.
 
-В отчёте все эти позиции должны быть в секции **«Manual verification required»**.
+All these items must appear in the **"Manual verification required"** section of the report.
 
-## Запуск CLI
+## Starting the CLI
 
 ```bash
 ./gradlew :composeApp:cliJar -q
@@ -32,31 +32,31 @@ JAR=$(ls composeApp/build/libs/tether-cli*.jar 2>/dev/null | head -1)
 java -jar "$JAR" --name SmokeMacA --port 0 < fifo
 ```
 
-FIFO держит stdin открытым для команд `list`, `send`, `quit`.
+The FIFO keeps stdin open for `list`, `send`, `quit` commands.
 
-## План прогона
+## Run plan
 
-Скилл выполняет блоки последовательно. Падение блока не блокирует следующие. Cleanup выполняется **всегда**, даже если ранее были FAIL.
+The skill executes blocks sequentially. A block failure does not prevent subsequent blocks from running. Cleanup is performed **always**, even if there were earlier FAILs.
 
-### Блок 0: Подготовка
+### Block 0: Preparation
 
-1. Убедись, что нет работающих инстансов CLI:
+1. Make sure no CLI instances are running:
    ```bash
    pgrep -fl 'com.tubetoast.tether-.*\.jar|composeApp:run' || echo "clean"
    ```
-   Если есть — `kill` их: внешние mDNS-сервисы интерферируют с прогоном.
-2. Собрать CLI jar:
+   If there are — `kill` them: external mDNS services interfere with the run.
+2. Build the CLI jar:
    ```bash
    ./gradlew :composeApp:cliJar -q
    JAR=$(ls composeApp/build/libs/tether-cli-*.jar composeApp/build/libs/tether-cli.jar 2>/dev/null | head -1)
    ```
-   Запомни путь.
+   Remember the path.
 
-Если build падает или JAR не найден — все остальные блоки SKIP с причиной «cli jar build failed».
+If the build fails or the JAR is not found — all remaining blocks SKIP with reason "cli jar build failed".
 
-### Блок 1: Desktop CLI (инстанс A)
+### Block 1: Desktop CLI (instance A)
 
-Запуск через FIFO (stdin keeper). Имя — `SmokeMacA`, должно совпадать с тем, что Блок 2 ищет в логе инстанса B.
+Launch via FIFO (stdin keeper). Name — `SmokeMacA`, must match what Block 2 looks for in instance B's log.
 
 ```bash
 LOG_A=/tmp/smoke-cliA.log
@@ -70,16 +70,16 @@ JPID_A=$!; disown $JPID_A
 echo $JPID_A > /tmp/smoke-cliA.pid
 ```
 
-Wait до 30 сек, поллим лог:
+Wait up to 30 sec, polling the log:
 ```bash
 for i in $(seq 1 30); do grep -q 'FileServer started' $LOG_A && break; sleep 1; done
 PORT_A=$(grep -oE 'port[[:space:]]*:[[:space:]]*[0-9]+' $LOG_A | grep -oE '[0-9]+' | head -1)
 ```
 
-Сценарии:
-1. **Startup** — port распарсен, java pid жив (`ps -p $JPID_A`). PASS если оба условия.
-2. **`/health`** — `curl -sf --max-time 5 http://localhost:$PORT_A/health` → должно вернуть `Tether OK`.
-3. **`/pair` — формат публичного ключа.** Эндпоинт возвращает X.509-encoded EC P-256 SubjectPublicKeyInfo: ровно 91 байт, первый байт `0x30` (DER `SEQUENCE`), байт 26 — `0x04` (uncompressed EC point marker). Проверяем форму, а не «непустой ответ» — placeholder проскочил бы поверхностную проверку.
+Scenarios:
+1. **Startup** — port parsed, java pid is alive (`ps -p $JPID_A`). PASS if both conditions met.
+2. **`/health`** — `curl -sf --max-time 5 http://localhost:$PORT_A/health` → must return `Tether OK`.
+3. **`/pair` — public key format.** The endpoint returns an X.509-encoded EC P-256 SubjectPublicKeyInfo: exactly 91 bytes, first byte `0x30` (DER `SEQUENCE`), byte 26 — `0x04` (uncompressed EC point marker). We check the shape, not "non-empty response" — a placeholder would pass a superficial check.
    ```bash
    PAIR_RESP=$(curl -sf --max-time 5 -X POST http://localhost:$PORT_A/pair \
      -H "Content-Type: application/json" \
@@ -88,18 +88,18 @@ PORT_A=$(grep -oE 'port[[:space:]]*:[[:space:]]*[0-9]+' $LOG_A | grep -oE '[0-9]
      && echo "PASS: X.509 EC P-256 SubjectPublicKeyInfo" \
      || { echo "FAIL: bad publicKey shape: $PAIR_RESP"; }
    ```
-4. **Port LISTEN** — `lsof -nP -iTCP:$PORT_A | head -3` показывает java listener.
-5. **mDNS publish (primary)** — поллим CLI-лог, ищем `mDNS started → advertising 'SmokeMacA' on port`.
-6. **mDNS publish (secondary, опционально)** — `( dns-sd -B _tether._tcp. local. 2>&1 & DNSSD_PID=$!; sleep 8; kill $DNSSD_PID 2>/dev/null ) | grep SmokeMacA`. Если `dns-sd` нет (Linux) — этот шаг SKIP, общий результат всё равно PASS по primary.
-7. **stdin `list`** — `echo "list" > /tmp/smoke-cliA-in &; sleep 1; tail $LOG_A` — должен напечатать `[list]` или `[peers]` строку.
+4. **Port LISTEN** — `lsof -nP -iTCP:$PORT_A | head -3` shows a java listener.
+5. **mDNS publish (primary)** — poll the CLI log, look for `mDNS started → advertising 'SmokeMacA' on port`.
+6. **mDNS publish (secondary, optional)** — `( dns-sd -B _tether._tcp. local. 2>&1 & DNSSD_PID=$!; sleep 8; kill $DNSSD_PID 2>/dev/null ) | grep SmokeMacA`. If `dns-sd` is unavailable (Linux) — this step SKIP, the overall result is still PASS via primary.
+7. **stdin `list`** — `echo "list" > /tmp/smoke-cliA-in &; sleep 1; tail $LOG_A` — must print a `[list]` or `[peers]` line.
 
-Инстанс A держим живым до конца Блока 3. Проверка graceful `quit` — в Блоке 4.
+Keep instance A alive until the end of Block 3. Graceful `quit` check — in Block 4.
 
-### Блок 2: Desktop ↔ Desktop send (через CLI)
+### Block 2: Desktop ↔ Desktop send (via CLI)
 
-**Важно:** send должен идти через **CLI команду `send`**, а не через `curl POST /upload`. Это смоук-тест пользовательского сценария, а не endpoint'а.
+**Important:** send must go via the **CLI `send` command**, not via `curl POST /upload`. This is a smoke test of the user scenario, not of the endpoint.
 
-Поднимаешь второй CLI-инстанс (`SmokeMacB`) параллельно с A, ждёшь, пока mDNS даст обоим увидеть друг друга, шлёшь `send SmokeMacB <path>` в stdin A.
+Start a second CLI instance (`SmokeMacB`) in parallel with A, wait until mDNS lets both see each other, send `send SmokeMacB <path>` to stdin A.
 
 ```bash
 LOG_B=/tmp/smoke-cliB.log
@@ -110,7 +110,7 @@ nohup java -jar "$JAR" --name SmokeMacB --port 0 < /tmp/smoke-cliB-in > "$LOG_B"
 JPID_B=$!; disown $JPID_B
 echo $JPID_B > /tmp/smoke-cliB.pid
 
-# Имена должны точно совпадать с --name выше.
+# Names must exactly match the --name above.
 for i in $(seq 1 30); do
   grep -q 'SmokeMacA' $LOG_B 2>/dev/null && \
   grep -q 'SmokeMacB' $LOG_A 2>/dev/null && break
@@ -127,7 +127,7 @@ done
 SEND_LINE=$(grep -E "^\[send\] (OK|FAIL)" $LOG_A | tail -1)
 echo "$SEND_LINE"
 
-# savedPath парсим из строки "[send] OK — <ms> ms → <savedPath>", не угадываем директорию.
+# Parse savedPath from the line "[send] OK — <ms> ms → <savedPath>", don't guess the directory.
 SAVED_B=$(echo "$SEND_LINE" | sed -nE 's/.*→[[:space:]]+(.+)$/\1/p')
 if [ -n "$SAVED_B" ] && [ -f "$SAVED_B" ]; then
   diff /tmp/smoke-send.txt "$SAVED_B" && echo PASS || echo FAIL
@@ -136,15 +136,15 @@ else
 fi
 ```
 
-PASS если:
-1. в логе A есть `[send] OK — <ms> ms → <savedPath>`
-2. файл по `savedPath` идентичен оригиналу
+PASS if:
+1. log A contains `[send] OK — <ms> ms → <savedPath>`
+2. the file at `savedPath` is identical to the original
 
-Cleanup инстанса B — в Блоке 7.
+Cleanup of instance B — in Block 7.
 
-### Блок 3: Same-name discovery
+### Block 3: Same-name discovery
 
-Проверяет, что три peer'а с одинаковым requested service-name видят друг друга после mDNS conflict-rename: третий инстанс запускается с тем же `--name SmokeMacA`, что и A, параллельно с A и B.
+Verifies that three peers with the same requested service name see each other after mDNS conflict-rename: a third instance is launched with the same `--name SmokeMacA` as A, in parallel with A and B.
 
 ```bash
 LOG_C=/tmp/smoke-cliC.log
@@ -160,8 +160,8 @@ for i in $(seq 1 20); do
   echo "list" > /tmp/smoke-cliB-in &
   echo "list" > /tmp/smoke-cliC-in &
   sleep 1
-  # Строка `[peers]` начинается с ANSI-escape (`\x1b[1A\r\x1b[K`); имя ловим до `@`,
-  # чтобы захватить renamed-форму `SmokeMacA (2)`.
+  # The `[peers]` line starts with an ANSI escape (`\x1b[1A\r\x1b[K`); catch name up to `@`,
+  # to capture the renamed form `SmokeMacA (2)`.
   A_OK=$(grep -aE "\[peers\]" $LOG_A | tail -1 | grep -oE 'SmokeMac[A-Z][^@]*' | sort -u | wc -l | tr -d ' ')
   B_OK=$(grep -aE "\[peers\]" $LOG_B | tail -1 | grep -oE 'SmokeMac[A-Z][^@]*' | sort -u | wc -l | tr -d ' ')
   C_OK=$(grep -aE "\[peers\]" $LOG_C | tail -1 | grep -oE 'SmokeMac[A-Z][^@]*' | sort -u | wc -l | tr -d ' ')
@@ -169,13 +169,13 @@ for i in $(seq 1 20); do
 done
 ```
 
-PASS если каждый из A/B/C видит ≥ 2 уникальных SmokeMac-peer'ов в течение 20 сек. FAIL — приложить последние `[peers]` строки из всех трёх логов в Details.
+PASS if each of A/B/C sees ≥ 2 unique SmokeMac peers within 20 sec. FAIL — attach the last `[peers]` lines from all three logs in Details.
 
-Cleanup инстанса C — в Блоке 7.
+Cleanup of instance C — in Block 7.
 
-### Блок 3.5: Device name rename — peer видит новое имя
+### Block 3.5: Device name rename — peer sees the new name
 
-stdin `name <new>` на A; B должен увидеть новое имя через mDNS republish.
+stdin `name <new>` on A; B must see the new name via mDNS republish.
 
 ```bash
 echo "name RenamedA" > /tmp/smoke-cliA-in &
@@ -186,20 +186,20 @@ done
 grep -q "RenamedA" $LOG_B && echo PASS || echo FAIL
 ```
 
-### Блок 4: graceful quit инстанса A
+### Block 4: Graceful quit of instance A
 
-`echo "quit" > /tmp/smoke-cliA-in &`, ждать до 8 сек, проверить `ps -p $JPID_A`. PASS если процесс умер. Если не умер — FAIL «не graceful», `kill -9` и идти дальше.
+`echo "quit" > /tmp/smoke-cliA-in &`, wait up to 8 sec, check `ps -p $JPID_A`. PASS if the process exited. If not — FAIL "not graceful", `kill -9` and move on.
 
-### Блок 5: Android (условно)
+### Block 5: Android (conditional)
 
-Сначала проверка устройства:
+First check for a device:
 ```bash
 adb devices | awk '/device$/ && !/List/ {print $1}'
 ```
 
-Если пусто — весь блок SKIP с причиной «no adb device connected».
+If empty — the entire block SKIP with reason "no adb device connected".
 
-Если есть устройство:
+If a device is present:
 
 1. **Install:** `./gradlew -q :composeApp:installDebug`
 2. **Logcat clear:** `adb logcat -c`
@@ -207,8 +207,8 @@ adb devices | awk '/device$/ && !/List/ {print $1}'
    ```bash
    adb shell am start -n com.tubetoast.tether/.MainActivity
    ```
-4. **Ждём `NSD service registered` как anchor готовности.**
-   Anchor для метрики cross-discovery ставится **после** того как Android-сторона опубликовалась — дельта мерит только пропагацию через сеть + JmDNS resolve, без Android boot/init:
+4. **Wait for `NSD service registered` as the readiness anchor.**
+   The anchor for the cross-discovery metric is placed **after** the Android side has published — the delta measures only network propagation + JmDNS resolve, without Android boot/init:
    ```bash
    DEADLINE=$(($(date +%s) + 12))
    while [ $(date +%s) -lt $DEADLINE ]; do
@@ -217,16 +217,16 @@ adb devices | awk '/device$/ && !/List/ {print $1}'
    done
    NSD_READY_MS=$(python3 -c "import time; print(int(time.time() * 1000))")
    ```
-   Парсим:
+   Parse:
    - `TetherFGService: FileServer started on port <N>` → `ANDROID_PORT`
-   - `Starting NSD: name=Tether-...` и `NSD service registered: ...` — разница времён = NSD probing latency, выводим в Details.
-5. **Получить IP** через `ip addr`, не `ip route` — формат у части вендоров (ColorOS, MIUI) отличается:
+   - `Starting NSD: name=Tether-...` and `NSD service registered: ...` — time difference = NSD probing latency, output in Details.
+5. **Get IP** via `ip addr`, not `ip route` — the format differs on some vendors (ColorOS, MIUI):
    ```bash
    ANDROID_IP=$(adb shell ip addr show wlan0 2>&1 | grep "inet " | awk '{print $2}' | cut -d/ -f1 | head -1)
    ```
-   Если эмулятор и IP `10.0.2.x` — host-доступ через `adb forward tcp:18080 tcp:$ANDROID_PORT` и `localhost:18080`. Для физ. устройства — прямо `$ANDROID_IP:$ANDROID_PORT`.
-6. **`/health` sanity:** `curl -sf http://$ANDROID_IP:$ANDROID_PORT/health` → `Tether OK`. Это единственное место, где curl допустим — endpoint sanity, не пользовательский flow.
-7. **Cross-discovery с замером времени:** поллим лог Desktop CLI на `Tether-<MODEL>`. Дельта от `NSD_READY_MS`, не от `am start`:
+   If emulator and IP is `10.0.2.x` — host access via `adb forward tcp:18080 tcp:$ANDROID_PORT` and `localhost:18080`. For a physical device — directly `$ANDROID_IP:$ANDROID_PORT`.
+6. **`/health` sanity:** `curl -sf http://$ANDROID_IP:$ANDROID_PORT/health` → `Tether OK`. This is the only place where curl is acceptable — endpoint sanity, not a user flow.
+7. **Cross-discovery with timing:** poll the Desktop CLI log for `Tether-<MODEL>`. Delta from `NSD_READY_MS`, not from `am start`:
    ```bash
    for i in $(seq 1 30); do
      sleep 1
@@ -237,8 +237,8 @@ adb devices | awk '/device$/ && !/List/ {print $1}'
    ANDROID_NAME=$(grep -oE 'Tether-[A-Za-z0-9_]+' $LOG_A | head -1)
    echo "cross-discovery: ${DELTA_MS}ms, peer=$ANDROID_NAME"
    ```
-   В отчёт: `Android | cross-discovery | ✓ PASS | 250 ms` — network-propagation + JmDNS resolve.
-8. **Send Desktop → Android (через CLI):**
+   In the report: `Android | cross-discovery | ✓ PASS | 250 ms` — network-propagation + JmDNS resolve.
+8. **Send Desktop → Android (via CLI):**
    ```bash
    if echo "$ANDROID_IP" | grep -q "^10\.0\.2\."; then
      echo "SKIP: Android emulator detected — QEMU user-mode NAT drops host→guest TCP payload; see docs/knowledge/android-emulator-networking.md"
@@ -252,25 +252,25 @@ adb devices | awk '/device$/ && !/List/ {print $1}'
        sleep 1
      done
      SEND_LINE=$(grep -E "^\[send\] (OK|FAIL)" $LOG_A | tail -1)
-     # На Android savedPath абсолютный — `cat` его напрямую через adb shell
+     # On Android savedPath is absolute — cat it directly via adb shell
      SAVED_PATH=$(echo "$SEND_LINE" | sed -nE 's/.*→[[:space:]]+(.+)$/\1/p')
      adb shell cat "$SAVED_PATH" 2>/dev/null | diff - /tmp/smoke-android.txt && echo PASS || echo FAIL
    fi
    ```
-   PASS если в логе Desktop CLI `[send] OK` И файл на Android по распарсенному savedPath идентичен. SKIP если `10.0.2.x` (QEMU NAT) или ANDROID_NAME пустой — не FAIL.
-9. **Stop service:** `adb shell am force-stop com.tubetoast.tether`. PASS если приложение умерло. (Тап Notification «Stop» — manual.)
+   PASS if Desktop CLI log has `[send] OK` AND the file on Android at the parsed savedPath is identical. SKIP if `10.0.2.x` (QEMU NAT) or ANDROID_NAME is empty — not FAIL.
+9. **Stop service:** `adb shell am force-stop com.tubetoast.tether`. PASS if the app exited. (Notification "Stop" tap — manual.)
 
-Помечай каждый под-сценарий отдельно: install, FGS+mDNS up (с NSD probing latency), /health sanity, cross-discovery (с ms), send-desktop-to-android, stop.
+Mark each sub-scenario separately: install, FGS+mDNS up (with NSD probing latency), /health sanity, cross-discovery (with ms), send-desktop-to-android, stop.
 
-### Блок 5.5: iOS simulator runtime (условно)
+### Block 5.5: iOS simulator runtime (conditional)
 
-Pre-checks (любой fail → весь блок SKIP с причиной):
-- `xcrun simctl help >/dev/null 2>&1` — Xcode CLI tools установлены.
-- `[ -d iosApp/iosApp.xcodeproj ]` — проект есть.
+Pre-checks (any fail → entire block SKIP with reason):
+- `xcrun simctl help >/dev/null 2>&1` — Xcode CLI tools installed.
+- `[ -d iosApp/iosApp.xcodeproj ]` — project exists.
 
-Иначе:
+Otherwise:
 
-1. **Resolve+boot симулятора.** Дефолт `iPhone 17` (как в `scripts/run-all.sh`). Если другой нужен — переменная `IOS_DEVICE`.
+1. **Resolve + boot the simulator.** Default `iPhone 17` (as in `scripts/run-all.sh`). If another is needed — variable `IOS_DEVICE`.
    ```bash
    IOS_DEVICE="${IOS_DEVICE:-iPhone 17}"
    UDID=$(xcrun simctl list devices available \
@@ -279,7 +279,7 @@ Pre-checks (любой fail → весь блок SKIP с причиной):
    xcrun simctl boot "$UDID" 2>/dev/null || true
    open -a Simulator
    ```
-2. **Build + install + launch.** Используем `build/ios` под derivedDataPath, чтобы переиспользовать кеш между прогонами.
+2. **Build + install + launch.** Use `build/ios` as derivedDataPath to reuse the cache between runs.
    ```bash
    IOS_DERIVED=build/ios
    IOS_APP="$IOS_DERIVED/Build/Products/Debug-iphonesimulator/Tether.app"
@@ -292,8 +292,8 @@ Pre-checks (любой fail → весь блок SKIP с причиной):
    xcrun simctl install "$UDID" "$IOS_APP"
    xcrun simctl launch "$UDID" "$IOS_BUNDLE_ID" > /tmp/smoke-ios-launch.log 2>&1
    ```
-   PASS если build exit=0, install exit=0, launch exit=0. FAIL — tail `/tmp/smoke-ios-build.log`.
-3. **mDNS publish.** До 30 сек поллим `dns-sd`:
+   PASS if build exit=0, install exit=0, launch exit=0. FAIL — tail `/tmp/smoke-ios-build.log`.
+3. **mDNS publish.** Poll `dns-sd` for up to 30 sec:
    ```bash
    IOS_NAME=""
    for i in $(seq 1 30); do
@@ -303,36 +303,36 @@ Pre-checks (любой fail → весь блок SKIP с причиной):
      sleep 1
    done
    ```
-   PASS если `IOS_NAME` непуст. FAIL причина — скорее всего Local Network Privacy prompt (см. «Чего скилл НЕ проверяет»).
-4. **TXT publish.** `dns-sd -q "${IOS_NAME}._tether._tcp.local." TXT` за ~3 сек, должно вернуть `4 bytes: 03 76 3D 31` (`v=1`). PASS если бинарный паттерн совпал.
-5. **Cross-discovery.** До 30 сек ждать появления iOS-peer'a в логе Desktop CLI A:
+   PASS if `IOS_NAME` is non-empty. FAIL reason — most likely a Local Network Privacy prompt (see "What the skill does NOT check").
+4. **TXT publish.** `dns-sd -q "${IOS_NAME}._tether._tcp.local." TXT` for ~3 sec, must return `4 bytes: 03 76 3D 31` (`v=1`). PASS if the binary pattern matched.
+5. **Cross-discovery.** Wait up to 30 sec for the iOS peer to appear in Desktop CLI A's log:
    ```bash
    for i in $(seq 1 30); do grep -q "$IOS_NAME" "$LOG_A" && break; sleep 1; done
    ```
-   PASS если в логе A появилась строка с `IOS_NAME`.
+   PASS if a line with `IOS_NAME` appeared in log A.
 
-Cleanup iOS — в Блоке 7.
+iOS cleanup — in Block 7.
 
-### Блок 7: Cleanup
+### Block 7: Cleanup
 
-Выполняется **всегда**:
+Executed **always**:
 - `kill $(cat /tmp/smoke-cliA.pid /tmp/smoke-cliB.pid /tmp/smoke-cliC.pid /tmp/smoke-cliA-keeper.pid /tmp/smoke-cliB-keeper.pid /tmp/smoke-cliC-keeper.pid 2>/dev/null) 2>/dev/null`
-- `pkill -f 'com.tubetoast.tether.*\.jar'` (страховка)
+- `pkill -f 'com.tubetoast.tether.*\.jar'` (safety net)
 - `rm -f /tmp/smoke-cli*-in /tmp/smoke-cli*.log /tmp/smoke-cli*.pid /tmp/smoke-cli*-keeper.pid /tmp/smoke-send.txt /tmp/smoke-android.txt`
-- Файлы в `~/Downloads/Tether/`, которые сами создали — убираем по `savedPath` из лога A.
-- `adb shell rm -f /sdcard/Android/data/com.tubetoast.tether/files/Tether/smoke-android.txt` (или по `SAVED_PATH` если парсили)
+- Files in `~/Downloads/Tether/` that we created — clean up by `savedPath` from log A.
+- `adb shell rm -f /sdcard/Android/data/com.tubetoast.tether/files/Tether/smoke-android.txt` (or by `SAVED_PATH` if parsed)
 - `adb shell am force-stop com.tubetoast.tether`
-- `xcrun simctl terminate "$UDID" com.tubetoast.tether.Tether 2>/dev/null || true` (если `UDID` был резолвлен в Блоке 5.5)
+- `xcrun simctl terminate "$UDID" com.tubetoast.tether.Tether 2>/dev/null || true` (if `UDID` was resolved in Block 5.5)
 - `rm -f /tmp/smoke-ios-build.log /tmp/smoke-ios-launch.log`
 
-## Формат отчёта
+## Report format
 
-В конце прогона печатаешь markdown-отчёт:
+At the end of the run print a markdown report:
 
 ```markdown
 # Smoke test report
 
-**Дата:** YYYY-MM-DD HH:MM
+**Date:** YYYY-MM-DD HH:MM
 **Branch:** <git branch>
 **Commit:** <short sha>
 **CLI Jar:** <auto-detected name> (built in Ns)
@@ -343,7 +343,7 @@ Cleanup iOS — в Блоке 7.
 - **FAIL:** M
 - **SKIP:** K
 - **Total:** N+M+K
-- **Verdict:** 🟢 GREEN | 🟡 YELLOW (есть SKIP, FAIL=0) | 🔴 RED (есть FAIL)
+- **Verdict:** 🟢 GREEN | 🟡 YELLOW (SKIPs present, FAIL=0) | 🔴 RED (FAIL present)
 
 ## Results
 
@@ -355,7 +355,7 @@ Cleanup iOS — в Блоке 7.
 | Desktop CLI A | /pair X.509 EC P-256 | ✓ PASS | 91 bytes, DER prefix OK |
 | Desktop CLI A | port LISTEN | ✓ PASS | java *:49507 |
 | Desktop CLI A | mDNS publish (log) | ✓ PASS | advertising 'SmokeMacA' |
-| Desktop CLI A | mDNS publish (dns-sd) | ✓ PASS | SmokeMacA в browse |
+| Desktop CLI A | mDNS publish (dns-sd) | ✓ PASS | SmokeMacA in browse |
 | Desktop CLI A | stdin `list` | ✓ PASS | peer printed |
 | Desktop↔Desktop | send via CLI | ✓ PASS | savedPath parsed, diff empty |
 | Same-name discovery | A/B/C convergence | ✓ PASS | each sees 2 SmokeMac peers in 3s |
@@ -377,56 +377,56 @@ Cleanup iOS — в Блоке 7.
 
 ## Failures
 
-(подробности FAIL: команда, stderr tail, гипотеза причины)
+(FAIL details: command, stderr tail, hypothesised cause)
 
-## Manual verification required (не покрыто smoke)
+## Manual verification required (not covered by smoke)
 
-- Физический iPhone — установить через Xcode, проверить кросс-обнаружение с Desktop.
-- iOS receive (FileServer.apple — stub) — пропускаем по дизайну.
-- **Android-инициированный send (Android → Desktop)** — нет CLI на Android, скилл проверяет обратное направление.
-- Notification «Stop» button on Android — проверить тап вручную; smoke использует `am force-stop`.
-- Sleep/wake real device — `adb input keyevent` ≠ реальный power state.
-- Rotation persistence — на реальном устройстве, эмулятор недостаточен.
+- Physical iPhone — install via Xcode, verify cross-discovery with Desktop.
+- iOS receive (FileServer.apple — stub) — skipped by design.
+- **Android-initiated send (Android → Desktop)** — no CLI on Android, the skill checks the reverse direction.
+- Notification "Stop" button on Android — verify tap manually; smoke uses `am force-stop`.
+- Sleep/wake real device — `adb input keyevent` ≠ real power state.
+- Rotation persistence — on a real device; emulator is insufficient.
 
 ## Environment
 
 - OS: Darwin <version> arm64
 - Java: <java -version>
-- adb device: <serial / model / API> или "none"
+- adb device: <serial / model / API> or "none"
 - Xcode: <xcodebuild -version | head -1>
-- dns-sd: <path> или "not available"
+- dns-sd: <path> or "not available"
 ```
 
-## Как вызывать
+## How to invoke
 
-Когда пользователь просит «прогони smoke»:
+When the user asks to "run smoke":
 
-1. Печатаешь короткий план (1-2 строки): «прогоню Desktop CLI через cli jar, Desktop↔Desktop send, Android если есть устройство, native compile. Что не проверяю — см. отчёт».
-2. Запускаешь блоки.
-3. Печатаешь отчёт.
-4. Если verdict 🔴 — даёшь recommend: какой блок упал и куда смотреть.
+1. Print a short plan (1–2 lines): "I'll run Desktop CLI via cli jar, Desktop↔Desktop send, Android if a device is connected, native compile. What I don't check — see the report."
+2. Run the blocks.
+3. Print the report.
+4. If verdict is 🔴 — give a recommendation: which block failed and where to look.
 
-Не уточняй у пользователя — скилл должен быть «zero-question»: всё, что неавтоматизируемо, идёт в Manual verification.
+Don't ask the user for clarification — the skill must be "zero-question": everything non-automatable goes into Manual verification.
 
-## Edge cases при прогоне
+## Edge cases during the run
 
-- **Gradle daemon занят** — не убивай его, переиспользуется.
-- **CLI jar устаревший (изменился код)** — `cliJar` сам пересоберёт что нужно. Не делай `clean`.
-- **Имя jar может содержать версию** — определяй динамически через glob `composeApp/build/libs/tether-cli-*.jar composeApp/build/libs/tether-cli.jar | head -1`. Не хардкодь имя файла.
-- **`dns-sd` не на macOS** — Linux нет; secondary mDNS check SKIP с причиной «dns-sd not available». Primary check (grep CLI лога на `mDNS started`) всё равно работает.
-- **`timeout` на macOS отсутствует** — pattern `( cmd & PID=$!; sleep N; kill $PID )` вместо `timeout`.
-- **FIFO writer keeper умер раньше времени** — readLine() вернёт null, CLI выйдет; проверяй `ps -p $KEEPER`.
-- **Эмулятор Android в NAT (10.0.2.x)** — cross-discovery работает в обе стороны (multicast проходит). Host→guest TCP payload QEMU user-mode NAT не проксирует: handshake проходит, данные не доходят. Send-блок (шаг 8) — SKIP при `10.0.2.x`, не FAIL. Health доступен через `adb forward`. См. `docs/knowledge/android-emulator-networking.md`.
-- **`ip route` ненадёжен на части вендоров** (ColorOS, MIUI отдают подсеть вместо src) — используй `ip addr show wlan0`.
-- **Несколько adb-устройств** — выбирай первое или fail с уточнением. Не вешай скилл на специфичный serial.
-- **`savedPath` всегда парсить из лога**, не угадывать `$HOME/Downloads/Tether/...` — директория загрузок настраивается пользователем.
+- **Gradle daemon busy** — don't kill it, it will be reused.
+- **CLI jar stale (code changed)** — `cliJar` will rebuild what's needed. Don't run `clean`.
+- **Jar name may contain version** — determine dynamically via glob `composeApp/build/libs/tether-cli-*.jar composeApp/build/libs/tether-cli.jar | head -1`. Don't hardcode the filename.
+- **`dns-sd` not on macOS** — unavailable on Linux; secondary mDNS check SKIP with reason "dns-sd not available". Primary check (grep CLI log for `mDNS started`) still works.
+- **`timeout` absent on macOS** — use pattern `( cmd & PID=$!; sleep N; kill $PID )` instead of `timeout`.
+- **FIFO writer keeper died early** — readLine() returns null, CLI exits; check `ps -p $KEEPER`.
+- **Android emulator in NAT (10.0.2.x)** — cross-discovery works both ways (multicast passes). QEMU user-mode NAT does not proxy host→guest TCP payload: handshake passes, data doesn't arrive. Send block (step 8) — SKIP at `10.0.2.x`, not FAIL. Health is accessible via `adb forward`. See `docs/knowledge/android-emulator-networking.md`.
+- **`ip route` unreliable on some vendors** (ColorOS, MIUI return subnet instead of src) — use `ip addr show wlan0`.
+- **Multiple adb devices** — pick the first or fail with a clarification. Don't hang the skill on a specific serial.
+- **`savedPath` must always be parsed from the log**, don't guess `$HOME/Downloads/Tether/...` — the downloads directory is user-configurable.
 
-## Что НЕ делать
+## What NOT to do
 
-- **Не используй `./gradlew :composeApp:run`** — это Compose UI, не CLI.
-- **Не запускай `allTests`** — это другой инструмент. Smoke ≤3 минуты.
-- **Не модифицируй код приложения** даже если видишь проблему. Сообщай в отчёте, заводи issue отдельно.
-- **Не лезь в `~/Downloads`** дальше своих файлов — там пользовательский контент.
-- **Не запускай `./gradlew clean`** — съест кеш и замедлит следующий прогон.
-- **Не отправляй ничего в сеть** кроме localhost и `$ANDROID_IP` (последний — только если adb-устройство подключено).
-- **Не угадывай пути назначения файлов** — всегда парси из `[send] OK — ... → <savedPath>`.
+- **Don't use `./gradlew :composeApp:run`** — that is the Compose UI, not the CLI.
+- **Don't run `allTests`** — that is a different tool. Smoke ≤3 minutes.
+- **Don't modify application code** even if you see a problem. Report it in the report, file a separate issue.
+- **Don't go into `~/Downloads`** beyond your own files — that is user content.
+- **Don't run `./gradlew clean`** — it will eat the cache and slow down the next run.
+- **Don't send anything over the network** other than localhost and `$ANDROID_IP` (the latter — only if an adb device is connected).
+- **Don't guess file destination paths** — always parse from `[send] OK — ... → <savedPath>`.

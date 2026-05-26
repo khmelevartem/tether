@@ -20,7 +20,7 @@ Skip and return `PHASE: Tests — N/A` if PR_TYPE is `DOCS` or pure `INFRA` (no 
 ### 1. For each test added
 
 - **Does it actually test the behavior it names?** If you mentally invert the production logic, does this test fail? If the test would pass on a stub returning the expected output regardless of inputs — it's not a test, it's a tautology.
-- **Edge cases from the issue.** Open the issue's "Краевые случаи" / "Edge cases" / "Non-functional" sections. Every listed case must be covered or have an explicit reason it cannot be.
+- **Edge cases from the issue.** Open the issue's "Edge cases" / "Non-functional" sections. Every listed case must be covered or have an explicit reason it cannot be.
 - **Fakes vs mocks.** Per `testing.md`, prefer fakes over mocks. Mocks coupling to call order are a smell.
 - **Test isolation.** Tests must not depend on each other. No shared mutable static state between tests. CI-runnable.
 
@@ -34,7 +34,7 @@ For BUGFIX specifically: there MUST be a test that fails on the pre-fix code and
 
 Tests are not `[OPTIONAL]`. A scenario is `[REQUIRED]` if:
 - (a) it can be automated in the existing test infrastructure, AND
-- (b) it's in scope: DoD item, "Краевые случаи" from issue, or behavior the PR introduces/changes.
+- (b) it's in scope: DoD item, "Edge cases" from issue, or behavior the PR introduces/changes.
 
 The only legitimate reasons for `[OPTIONAL]`:
 - Scenario cannot be automated without disproportionate infrastructure (real disk-full, hardware-only, real network drop) — say so explicitly.
@@ -59,7 +59,7 @@ Default fix for a CI-red test is in the code. Flag as `[REQUIRED]` any PR change
 
 ### 7. Coroutine test API — `runTest` + `TestDispatcher`, not `runBlocking`
 
-Per `testing.md§Стиль`: coroutine tests use `runTest` + `TestDispatcher`, not `runBlocking`. Flag `runBlocking` in any new or modified test as `[REQUIRED]`. The only legitimate exception per `testing.md§Реальное время vs виртуальное` is waiting on events from external native APIs running on real threads outside the test's `CoroutineScope` (JmDNS, NsdManager, real Ktor server engine) — and even then the test must explain in a comment WHY virtual time cannot substitute.
+Per `testing.md §Style`: coroutine tests use `runTest` + `TestDispatcher`, not `runBlocking`. Flag `runBlocking` in any new or modified test as `[REQUIRED]`. The only legitimate exception per `testing.md §Real time vs virtual time` is waiting on events from external native APIs running on real threads outside the test's `CoroutineScope` (JmDNS, NsdManager, real Ktor server engine) — and even then the test must explain in a comment WHY virtual time cannot substitute.
 
 "Pre-existing file-wide convention" is NOT a valid excuse. A documented rule violation is drift, not convention; flag it as `[REQUIRED]` even if the orchestrator's prompt pre-classifies it as out of scope. The PR either fixes the drift in this PR or files a tracked follow-up before merge.
 

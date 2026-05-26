@@ -1,90 +1,90 @@
-Снимок прогресса проекта: инфра/фичи по PR + готовность MVP по roadmap.
+Project progress snapshot: infra/features by PR + MVP readiness by roadmap.
 
-## Что собрать
+## What to collect
 
-1. **PR-статистика через GraphQL.** Один запрос `gh api graphql` с пагинацией по `repository.pullRequests` — за раз `number, title, state, createdAt, mergedAt, additions, deletions, changedFiles, commits.totalCount, comments.totalCount, reviews.totalCount, reviewThreads.totalCount`. REST list endpoint `/pulls` не возвращает `commits`/`comments`/`review_comments` per PR — нужен GraphQL или per-PR detail call.
+1. **PR statistics via GraphQL.** One `gh api graphql` request with pagination over `repository.pullRequests` — fetching `number, title, state, createdAt, mergedAt, additions, deletions, changedFiles, commits.totalCount, comments.totalCount, reviews.totalCount, reviewThreads.totalCount` at once. The REST list endpoint `/pulls` does not return `commits`/`comments`/`review_comments` per PR — GraphQL or per-PR detail calls are needed.
 
-2. **MVP-скоуп.** Прочитай `docs/product/roadmap.md` (секция `## MVP`) — список MVP-пунктов. Прочитай `docs/product/features/README.md` — статусы фичей и связанные issues. Прочитай последний `docs/sprints/sprint-*.md` (по большему номеру) — что в работе сейчас.
+2. **MVP scope.** Read `docs/product/roadmap.md` (section `## MVP`) — list of MVP items. Read `docs/product/features/README.md` — feature statuses and linked issues. Read the latest `docs/sprints/sprint-*.md` (with the highest number) — what is in progress now.
 
-## Категоризация PR
+## PR categorization
 
-**Feature** — PR трогает продуктовый код или заполняет/правит продуктовую спеку:
-- `composeApp/src/**` (кроме `build.gradle.kts`-only), реализация discovery / FileServer / pairing / UI;
-- `docs/product/features/**` — заполнение спек фичей;
-- `docs/product/vision.md`, `roadmap.md`, `security.md`, `monetization.md` — продуктовое содержание.
+**Feature** — PR touches product code or fills in / edits a product spec:
+- `composeApp/src/**` (except `build.gradle.kts`-only), implementation of discovery / FileServer / pairing / UI;
+- `docs/product/features/**` — filling in feature specs;
+- `docs/product/vision.md`, `roadmap.md`, `security.md`, `monetization.md` — product content.
 
-**Infra** — всё остальное:
-- `.claude/**` (скиллы, агенты, hooks, commands);
-- `docs/engineering/**`, ADR'ы;
-- ретро-PR (заголовок начинается с `retro`);
+**Infra** — everything else:
+- `.claude/**` (skills, agents, hooks, commands);
+- `docs/engineering/**`, ADRs;
+- retro PRs (title starts with `retro`);
 - sprint planning, `docs/sprints/**`;
-- Gradle build, CI, конфиги;
-- чистые рефакторы без user-visible изменений.
+- Gradle build, CI, configs;
+- pure refactors with no user-visible changes.
 
-Если PR смешанный — отнеси по доминанте (>50% diff). Сомневаешься — спроси у пользователя один раз для всего батча.
+If a PR is mixed — categorize by the dominant part (>50% of the diff). If in doubt — ask the user once for the whole batch.
 
-## MVP-готовность
+## MVP readiness
 
-Для каждого пункта из `roadmap.md ## MVP` оцени готовность (0–100%) по доказательствам:
+For each item from `roadmap.md ## MVP` assess readiness (0–100%) based on evidence:
 
-- 100% — feature имеет статус `done` в `features/README.md` И есть смерженные PR, покрывающие все платформы.
-- 50–80% — частично: либо protocol-слой без UI, либо платформ-парность неполная (например, Android+iOS done, Desktop tbd).
-- 10–30% — только спека `scoped`, кода нет; или только один из нескольких компонентов.
-- 0% — ни кода, ни спеки в статусе ≥`scoped`.
+- 100% — feature has status `done` in `features/README.md` AND there are merged PRs covering all platforms.
+- 50–80% — partial: either protocol layer without UI, or platform parity incomplete (e.g., Android+iOS done, Desktop tbd).
+- 10–30% — only spec `scoped`, no code; or only one of several components.
+- 0% — neither code nor spec with status ≥`scoped`.
 
-Не угадывай — каждую оценку обоснуй ссылкой на PR номера и/или строки в `features/README.md`. Если по доказательствам не ясно — отметь `?` и спроси.
+Don't guess — justify each assessment with PR numbers and/or lines in `features/README.md`. If the evidence is unclear — mark `?` and ask.
 
-## Скорость (velocity) per day
+## Velocity per day
 
-Дневная скорость = сумма стоимости задач, закрытых за день. Стоимость одной задачи:
+Daily velocity = sum of the cost of tasks closed that day. Cost of one task:
 
 ```
 cost(task) = base(size) + 0.3·comments + LOC/200 + cycleHours/24
 ```
 
-- `base(size)` — по issue-лейблу закрытого PR: `size:S=1`, `size:M=3`, `size:L=8`, без лейбла=2. Ретро / PR без issue: `base=1`.
-- `comments` = `comments.totalCount + reviewThreads.totalCount` PR.
-- `LOC` = `additions + deletions` PR.
-- `cycleHours` = часы между первым коммитом PR (`commits.nodes[0].commit.committedDate`) и `mergedAt`.
+- `base(size)` — by the issue label of the closed PR: `size:S=1`, `size:M=3`, `size:L=8`, no label=2. Retro / PR without issue: `base=1`.
+- `comments` = `comments.totalCount + reviewThreads.totalCount` of the PR.
+- `LOC` = `additions + deletions` of the PR.
+- `cycleHours` = hours between the first commit of the PR (`commits.nodes[0].commit.committedDate`) and `mergedAt`.
 
-Все слагаемые подобраны так, чтобы для типичного `size:M` PR (~5 комментов, ~400 LOC, ~6h цикла) дать соизмеримый вклад: `3 + 1.5 + 2 + 0.25 ≈ 7`. Базовый размер задаёт пол, активность добавляет сверху.
+All components are calibrated so that for a typical `size:M` PR (~5 comments, ~400 LOC, ~6h cycle) they give a comparable contribution: `3 + 1.5 + 2 + 0.25 ≈ 7`. Base size sets the floor, activity adds on top.
 
-`velocity(D) = Σ cost(task)` по PR, смерженным в день `D` (по `mergedAt::date`, UTC). День без merge — `0`.
+`velocity(D) = Σ cost(task)` for PRs merged on day `D` (by `mergedAt::date`, UTC). A day without a merge — `0`.
 
-Связь PR ↔ issue по префиксу `#N:` в title PR или в первом коммите (CLAUDE.md commit convention). Лейбл size — с issue.
+PR ↔ issue linkage by the `#N:` prefix in the PR title or first commit (CLAUDE.md commit convention). Size label — from the issue.
 
-**Окно** — день. Неделя на проекте возрастом ~месяц неинформативна.
+**Window** — one day. A week for a project ~one month old is uninformative.
 
-## Вывод
+## Output
 
-Один HTML-файл `/tmp/tether-progress.html` (видим в Launch preview panel), содержащий:
+One HTML file `/tmp/tether-progress.html` (visible in the Launch preview panel), containing:
 
-1. **KPI-плитка сверху**: всего смержено PR · % feature / % infra · % MVP (средневзвешенно, равные веса по пунктам) · активные дни · текущий спринт + его номер · средняя дневная скорость.
-2. **Stacked bar по неделям** (feature vs infra) — динамика соотношения.
-3. **Velocity per day** — line chart дневной стоимости. Точки красятся по доминанте дня (feature золото, infra тёмный янтарь); серая линия — сам валор. Под ним три цифры: суммарный / средний / пиковый день. Цель графика — визуальная проверка гипотезы «инфра-дни тянут за собой feature-всплески».
-4. **Bubble scatter** PR: x=commits, y=comments, размер=LOC, цвет=категория. Подпись «правый верх — тяжёлые PR».
-5. **Таблица MVP** (7 строк): пункт roadmap | статус фичи | % готовности | доказательства (PR-номера, ссылка на спеку).
-6. **Топ-5 тяжёлых PR** (по `commits + comments`).
-7. **Блок «что дальше»**: что в работе в текущем спринте (issues), что блокирует MVP.
+1. **KPI tile at the top**: total merged PRs · % feature / % infra · % MVP (weighted average, equal weights per item) · active days · current sprint + its number · average daily velocity.
+2. **Stacked bar by week** (feature vs infra) — dynamics of the ratio.
+3. **Velocity per day** — line chart of daily cost. Points colored by the day's dominant category (feature gold, infra dark amber); gray line — the value itself. Below it three numbers: total / average / peak day. The goal of the chart is a visual check of the hypothesis "infra-days drive feature spikes".
+4. **Bubble scatter** of PRs: x=commits, y=comments, size=LOC, color=category. Label "top right — heavy PRs".
+5. **MVP table** (7 rows): roadmap item | feature status | % readiness | evidence (PR numbers, link to spec).
+6. **Top 5 heaviest PRs** (by `commits + comments`).
+7. **"What's next" block**: what is in progress in the current sprint (issues), what is blocking MVP.
 
-**Стиль — нейтральный, без RPG-обёртки.** `progress-boring` существует именно как трезвый dashboard, поэтому визуально он не должен наследовать палитру/шрифты из `/progress` (Cinzel, золото, пергамент, орнаменты `❧`). Не подключай `.claude/skills/progress/assets/palette.json` и не используй его токены даже если они уже загружены в контексте — это инерция, а не правило.
+**Style — neutral, no RPG wrapper.** `progress-boring` exists precisely as a sober dashboard, so visually it must not inherit the palette/fonts from `/progress` (Cinzel, gold, parchment, ornaments `❧`). Do not load `.claude/skills/progress/assets/palette.json` and do not use its tokens even if they are already in context — that would be inertia, not a rule.
 
-Конкретно:
-- **Шрифты** — системный sans-serif стек (`-apple-system, Segoe UI, Roboto, Inter, sans-serif`), для цифр — моноширинный (`ui-monospace, SF Mono, Menlo, monospace`). Никаких декоративных засечных и заголовочных антик.
-- **Палитра** — нейтральная тёмная: фон `#0f1115` / `#161922`, текст `#e6e8eb` / muted `#8b9098`, акцент `#6ea8fe` (холодный синий) для feature, `#9aa0a6` (серый) для infra. Кровавый/золотой не использовать.
-- **Декор** — без рамок-орнаментов, без псевдо-элементов, без эмодзи в заголовках. Простые `1px solid` границы карточек, плоские углы, минимум.
-- **Заголовки** — обычным весом (600), без `text-transform: uppercase` и `letter-spacing`, кроме мелких labels у KPI.
+Specifically:
+- **Fonts** — system sans-serif stack (`-apple-system, Segoe UI, Roboto, Inter, sans-serif`), for numbers — monospace (`ui-monospace, SF Mono, Menlo, monospace`). No decorative serif or display fonts.
+- **Palette** — neutral dark: background `#0f1115` / `#161922`, text `#e6e8eb` / muted `#8b9098`, accent `#6ea8fe` (cold blue) for feature, `#9aa0a6` (gray) for infra. No crimson/gold.
+- **Decoration** — no ornamental borders, no pseudo-elements, no emojis in headings. Simple `1px solid` card borders, flat corners, minimal.
+- **Headings** — normal weight (600), no `text-transform: uppercase` and no `letter-spacing`, except for small KPI labels.
 
-Chart.js через CDN. Графики тоже в нейтральных тонах (тот же синий+серый, не gold/amber).
+Chart.js via CDN. Charts also in neutral tones (same blue+gray, not gold/amber).
 
-После сборки HTML — короткий текстовый дайджест в чат (5–7 строк), без повторения цифр из таблицы:
-- одна фраза про соотношение и тренд по неделям;
-- общий процент MVP + какие 2-3 пункта тянут вниз;
-- одно наблюдение про скорость: есть ли видимая корреляция «infra-день → feature-всплеск через 1–2 дня», или дни перемешаны без паттерна;
-- 1-2 наблюдения, которых не видно по цифрам (например, «весь UI-слой ещё впереди», «спринт 4 снимает архитектурные блокеры»).
+After building the HTML — a short text digest in chat (5–7 lines), without repeating figures from the table:
+- one phrase on the ratio and weekly trend;
+- overall MVP percentage + which 2-3 items are pulling it down;
+- one observation on velocity: is there a visible correlation "infra-day → feature spike 1–2 days later", or are days mixed without a pattern;
+- 1-2 observations not visible from the numbers (e.g., "the entire UI layer is still ahead", "sprint 4 removes architectural blockers").
 
-## Чего не делать
+## What not to do
 
-- Не запускай Gradle, тесты, smoke — это чистая аналитика.
-- Не пиши markdown-отчёт в `docs/` — это эфемерный снимок, живёт в `/tmp/`.
-- Не категоризируй вручную больше 10 PR без оптимизации — если их много, напиши короткий Python-скрипт.
+- Do not run Gradle, tests, smoke — this is pure analytics.
+- Do not write a markdown report in `docs/` — this is an ephemeral snapshot, it lives in `/tmp/`.
+- Do not categorize more than 10 PRs manually without optimization — if there are many, write a short Python script.

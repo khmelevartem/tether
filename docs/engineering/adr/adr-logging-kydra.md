@@ -57,7 +57,7 @@ Closes the SLF4J warning trivially (real provider present on JVM). Costs: the Ap
 
 No external dependency. `expect fun logger(tag: String): Logger` in `commonMain`; `actual` per source set wraps Logcat / OSLog / `println`. Filtering and tagging written by us.
 
-Closes the common-side gap minimally. Costs: maintenance — every level enum, every decorator, every filter is ours to keep working across Kotlin / Native upgrades; the existing KMP libraries are exactly this code, already vendored. The "don't write your own KMP logger" sentence in the issue ("своё писать не надо") rejects this explicitly.
+Closes the common-side gap minimally. Costs: maintenance — every level enum, every decorator, every filter is ours to keep working across Kotlin / Native upgrades; the existing KMP libraries are exactly this code, already vendored. The "don't write your own KMP logger" sentence in the issue ("no need to write our own") rejects this explicitly.
 
 ## Decision
 

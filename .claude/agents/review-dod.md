@@ -21,7 +21,7 @@ If the issue references a feature spec in `docs/product/features/` — read it; 
 
 ## What to check
 
-1. **Extract every acceptance criterion** from the issue body (DoD / Acceptance Criteria / "Сделать" / "Краевые случаи" sections) and from the feature spec if present. Treat both as a single combined checklist.
+1. **Extract every acceptance criterion** from the issue body (DoD / Acceptance Criteria / "To do" / "Edge cases" sections) and from the feature spec if present. Treat both as a single combined checklist.
 2. **For each criterion, classify against the diff:**
    - `DONE` — the diff visibly implements it (point to file:line)
    - `MISSING` — no trace in the diff

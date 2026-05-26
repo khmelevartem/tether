@@ -1,43 +1,43 @@
 # Testing
 
-Тесты обязательны. При реализации любой функциональности пиши unit и/или интеграционные тесты — ориентируйся на краевые случаи из issue.
+Tests are mandatory. When implementing any functionality, write unit and/or integration tests — use the edge cases from the issue as a guide.
 
-**Behavior fix — regression test в том же коммите.** Если коммит чинит наблюдаемое поведение (баг, регрессия, не-feature), в том же коммите должен быть тест, который падал бы без фикса. Это применимо одинаково к BUGFIX-issue и к багам, найденным mid-flight у FEATURE-задачи (ручной тест пользователя, ревью, smoke). Если регрессионный тест дороже самого фикса — это сигнал, что seam для тестируемости нужно доработать в том же change (выделить функцию, вынести зависимость в параметр), а не отложить.
+**Behaviour fix — regression test in the same commit.** If a commit fixes an observable behaviour (bug, regression, non-feature), the same commit must include a test that would have failed without the fix. This applies equally to BUGFIX issues and to bugs found mid-flight on a FEATURE task (manual user test, review, smoke). If the regression test costs more than the fix itself — that is a signal that the testability seam needs to be improved in the same change (extract a function, move a dependency into a parameter), not deferred.
 
-## Где что лежит
+## Where things live
 
-- `commonTest/` — протокол и shared-логика.
-- `jvmTest/` — тесты, общие для Android и Desktop (например, `FileServerTest`); прогоняются в `desktopTest` и `androidUnitTest`.
+- `commonTest/` — protocol and shared logic.
+- `jvmTest/` — tests shared by Android and Desktop (e.g. `FileServerTest`); run in `desktopTest` and `androidUnitTest`.
 - `desktopTest/` — Desktop-only (`FileClientTest`, `MdnsDiscoveryTest`).
-- `appleTest/` — Apple-таргеты (см. ниже про NSRunLoop).
+- `appleTest/` — Apple targets (see NSRunLoop note below).
 
-## Стиль
+## Style
 
 - `kotlin.test`.
-- Для корутин — `runTest` + `TestDispatcher` (из `kotlinx-coroutines-test`), **не `runBlocking`**.
-- Управляй временем виртуально через `advanceTimeBy()` / `advanceUntilIdle()` — это ускоряет тесты и делает их детерминированными.
-- Правило `tether:no-run-blocking-in-tests` (`:ktlint-rules`) автоматически запрещает `runBlocking` в test source set'ах. Для легитимных integration-тестов на реальных потоках добавляй `@Suppress("ktlint:tether:no-run-blocking-in-tests")` — на класс, когда класс целиком — integration-suite вокруг одного внешнего API (real CIO server, JmDNS), даже если отдельные тесты этого класса не используют `runBlocking`; на функцию, когда integration-метод стоит в неинтеграционном по природе классе. Рядом с suppress'ом — `//`-комментарий, какое именно real-thread событие ждём.
+- For coroutines — `runTest` + `TestDispatcher` (from `kotlinx-coroutines-test`), **not `runBlocking`**.
+- Control time virtually via `advanceTimeBy()` / `advanceUntilIdle()` — this speeds tests up and makes them deterministic.
+- The `tether:no-run-blocking-in-tests` rule (`:ktlint-rules`) automatically forbids `runBlocking` in test source sets. For legitimate integration tests on real threads, add `@Suppress("ktlint:tether:no-run-blocking-in-tests")` — on the class when the entire class is an integration suite around a single external API (real CIO server, JmDNS), even if individual tests in that class do not use `runBlocking`; on the function when an integration method sits inside a class that is not an integration suite by nature. Alongside the suppress — a `//` comment naming the specific real-thread event being awaited.
 
-## Реальное время vs виртуальное
+## Real time vs virtual time
 
-- `Thread.sleep` и `System.currentTimeMillis`-polling допустимы **только** для ожидания событий от внешних нативных API (JmDNS, NsdManager и т.п.), которые работают на реальных потоках вне нашего `CoroutineScope`. Внутри тела теста всё остальное — виртуальное время.
-- `withTimeout` внутри `runTest` использует **виртуальные** часы даже на `Dispatchers.IO` — не рассчитывай на него как на реальный таймаут.
+- `Thread.sleep` and `System.currentTimeMillis`-polling are permissible **only** when waiting for events from external native APIs (JmDNS, NsdManager, etc.) that run on real threads outside our `CoroutineScope`. Everything else inside the test body uses virtual time.
+- `withTimeout` inside `runTest` uses **virtual** clocks even on `Dispatchers.IO` — do not rely on it as a real-time timeout.
 
 ## Apple targets
 
-NSRunLoop нужно качать вручную — подробнее в [`docs/knowledge/apple-platform.md`](../knowledge/apple-platform.md).
+NSRunLoop must be pumped manually — see [`docs/knowledge/apple-platform.md`](../knowledge/apple-platform.md) for details.
 
-## Test seams для `expect` классов
+## Test seams for `expect` classes
 
-Если actual-имплементация в принципе не может failить в тесте без мока платформенного API (`NSUserDefaults.synchronize()` всегда true в Robolectric/sim, DataStore не валится по запросу) — объявляй `expect open class` с `open fun` для методов, которые нужно подменять. Тест объявляет анонимный `object : TrustedDeviceStore(...)` с `override fun saveTrustedKey(...) = throw ...` и подкладывает в production-код через тот же DI-вход, что и реальный store. Это сохраняет DI-граф (тот же тип течёт в `FileServer`) и не плодит интерфейс-обёртку ради одной точки подмены.
+If an `actual` implementation fundamentally cannot fail in a test without mocking a platform API (`NSUserDefaults.synchronize()` is always true in Robolectric / simulator, DataStore does not throw on demand) — declare `expect open class` with `open fun` for the methods that need to be substituted. The test declares an anonymous `object : TrustedDeviceStore(...)` with `override fun saveTrustedKey(...) = throw ...` and supplies it through the same DI entry point as the real store. This preserves the DI graph (the same type flows into `FileServer`) and avoids creating an interface wrapper for a single substitution point.
 
-Не делай это превентивно — только когда контракт «при ошибке actual должен бросить» нужно проверить end-to-end (HTTP-уровень в нашем случае), а триггер ошибки на платформе недостижим. Пример — `TrustedDeviceStore` в #9: HTTP `/pair → 500` тестируется на каждом actual через throwing-subclass.
+Do not do this preemptively — only when the contract "the actual must throw on error" needs to be verified end-to-end (the HTTP level in our case), and the error trigger on the platform is unreachable. Example — `TrustedDeviceStore` in #9: HTTP `/pair → 500` is tested on every actual via a throwing subclass.
 
-## HTTP-клиент в unit-тестах
+## HTTP client in unit tests
 
-Класс, держащий `HttpClient`, принимает его через конструктор; production-конфиг строится в `companion object { fun default() }`. Тест передаёт `HttpClient(MockEngine)` с handler'ом, отвечающим на запросы.
+A class holding an `HttpClient` accepts it via constructor; the production config is built in `companion object { fun default() }`. The test passes `HttpClient(MockEngine)` with a handler that responds to requests.
 
-Чтобы `delay()` в handler'е и внутренние таймеры клиента подчинялись `TestCoroutineScheduler` под `runTest`, пинь dispatcher на engine:
+To make `delay()` in the handler and the client's internal timers obey the `TestCoroutineScheduler` under `runTest`, pin the dispatcher on the engine:
 
 ```kotlin
 private fun TestScope.httpFor(handler: ...): HttpClient =
@@ -49,21 +49,21 @@ private fun TestScope.httpFor(handler: ...): HttpClient =
     }
 ```
 
-Без `dispatcher = ...` handler'ы поднимают свой engine dispatcher (real-time) — virtual time `runTest`'а игнорируется, тест становится либо медленным, либо flaky.
+Without `dispatcher = ...`, handlers spin up their own engine dispatcher (real-time) — `runTest`'s virtual time is ignored, and the test becomes either slow or flaky.
 
-Real-CIO server (`embeddedServer(CIO)`) под virtual time **не приводится**: `CIOApplicationEngine` хардкодит `userDispatcher = Dispatchers.IOBridge` и оборачивает route handler'ы в `withContext(userDispatcher)`. Если тест требует именно реального CIO — это integration-уровень, держи его в `FileServerTest` с `runBlocking` и реальным временем.
+A real CIO server (`embeddedServer(CIO)`) does **not** submit to virtual time: `CIOApplicationEngine` hard-codes `userDispatcher = Dispatchers.IOBridge` and wraps route handlers in `withContext(userDispatcher)`. If a test specifically requires a real CIO server — that is integration-level; keep it in `FileServerTest` with `runBlocking` and real time.
 
-## Удаление тестов
+## Removing tests
 
-Удалять тесты нежелательно — они защищают инварианты, часть из которых не очевидна по имени теста. До удаления:
+Removing tests is undesirable — they protect invariants, some of which are not obvious from the test name. Before removing:
 
-1. Перечисли все инварианты, которые тест проверял (не только те, что в имени).
-2. Для каждого укажи, чем он защищён после удаления: другим тестом, контрактом типа, property кода.
-3. Если хотя бы один инвариант остаётся без защиты — либо не удаляй тест, либо в том же коммите добавь защиту (тест / тип / проверку).
+1. List every invariant the test was checking (not only those in the name).
+2. For each, state what protects it after removal: another test, a type contract, a code property.
+3. If even one invariant is left unprotected — either do not remove the test, or add protection (test / type / assertion) in the same commit.
 
-Эта инвентаризация — обязательная часть commit message / PR description при удалении теста.
+This inventory is a mandatory part of the commit message / PR description when removing a test.
 
-Альтернативы удалению: `@Ignore` со ссылкой на tracking issue (тест поломан временно), упрощение теста (слишком тяжёлый), вынос в отдельный source set (платформ-специфичен).
+Alternatives to removal: `@Ignore` with a link to a tracking issue (test is temporarily broken), simplifying the test (too heavy), moving it to a separate source set (platform-specific).
 
 ## Screenshot tests
 
@@ -84,11 +84,11 @@ PNGs land in `composeApp/build/outputs/roborazzi/`. Filenames encode the composa
 - Wrap every preview in `PreviewSurface { }` from `com.tubetoast.tether.ui.preview` for consistent theme + background.
 - Use fake state from `PreviewFixtures` in the same package — no inline data fabrication.
 
-## Запуск
+## Running
 
 ```bash
-./gradlew allTests -q                                    # все тесты; pre-commit / pre-push хуки прогонят их сами
-./gradlew :composeApp:desktopTest -q                     # только Desktop JVM
-./gradlew :composeApp:commonTest -q                      # только common
+./gradlew allTests -q                                    # all tests; pre-commit / pre-push hooks run them automatically
+./gradlew :composeApp:desktopTest -q                     # Desktop JVM only
+./gradlew :composeApp:commonTest -q                      # common only
 ./gradlew :composeApp:desktopTest --tests "com.tubetoast.tether.network.FileServerTest"
 ```

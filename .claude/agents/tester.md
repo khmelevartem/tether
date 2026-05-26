@@ -11,7 +11,7 @@ You write tests. Your job is to make broken code fail. A test that passes regard
 
 1. **Confirm worktree** (`pwd && git rev-parse --short HEAD`).
 2. **Read `docs/engineering/testing.md`** — test placement, fakes convention, what to mock, naming.
-3. **Read the issue** if a number was given (`gh issue view <N>`) — extract "Краевые случаи" and DoD-relevant scenarios.
+3. **Read the issue** if a number was given (`gh issue view <N>`) — extract "Edge cases" and DoD-relevant scenarios.
 4. **Read existing tests in the same module** — match conventions; don't introduce a new style.
 
 ## Rules

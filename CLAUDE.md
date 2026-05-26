@@ -22,30 +22,32 @@ Read on demand. Match what you're touching to the corresponding canon:
 
 ## Architecture invariants
 
-- **Common-first.** Всё, что может жить в `commonMain` — там и лежит. Платформенные source sets (`androidMain`, `appleMain`, `jvmMain`, `desktopMain`, `iosMain`) — только для кода, требующего platform API. При выборе между `expect/actual` в `commonMain` и копированием в `platformMain` — `expect/actual`.
-- **Source set hierarchy и Desktop UI/CLI split** — см. [`modules.md`](docs/engineering/modules.md).
+- **Common-first.** Everything that can live in `commonMain` — lives there. Platform source sets (`androidMain`, `appleMain`, `jvmMain`, `desktopMain`, `iosMain`) — only for code that requires platform API. When choosing between `expect/actual` in `commonMain` and copying into `platformMain` — `expect/actual`.
+- **Source set hierarchy and Desktop UI/CLI split** — see [`modules.md`](docs/engineering/modules.md).
 
 ## Git conventions
 
-All git naming in English. **Все commit messages обязаны начинаться с номера issue:** `#<issue>: <message>` (например, `#42: add mDNS discovery for Android`).
+All git naming in English. **All commit messages must start with the issue number:** `#<issue>: <message>` (e.g., `#42: add mDNS discovery for Android`).
 
-Перед коммитом убедись, что issue существует. Если нет — попроси пользователя создать.
+All issue titles, issue bodies, and PR titles and descriptions must be written in English. Russian is only permitted in interactive chat.
 
-Подтянуть main в ветку — `/rebase` (ребейзит на свежий main и показывает, что заехало). Запускается и в `/close-issue`, и mid-flight.
+Before committing, make sure the issue exists. If it does not — ask the user to create it.
+
+To pull main into the branch — `/rebase` (rebases onto fresh main and shows what came in). Run both in `/close-issue` and mid-flight.
 
 ## Common commands
 
-Все Gradle команды запускай с `-q`. KtLint вручную не запускай — git hook делает это сам при коммите, стилевые ошибки тоже не правь руками.
+Run all Gradle commands with `-q`. Do not run KtLint manually — the git hook does it automatically on commit; do not fix style errors by hand either.
 
-Полный список команд по платформам — [README.md](README.md). Тестовые команды — [`testing.md`](docs/engineering/testing.md). Параллельный запуск всех таргетов — `scripts/run-all.sh`.
+Full list of commands by platform — [README.md](README.md). Test commands — [`testing.md`](docs/engineering/testing.md). Parallel run of all targets — `scripts/run-all.sh`.
 
-## Slash commands и скиллы
+## Slash commands and skills
 
-Индекс и правила выбора (skill vs command) — [`.claude/README.md`](.claude/README.md).
+Index and selection rules (skill vs command) — [`.claude/README.md`](.claude/README.md).
 
 ## Code style
 
-- **Минимум комментариев.** Перед тем как добавить — попробуй вынести блок в приватный метод: имя метода часто делает комментарий ненужным. Комментарий — только там, где код не может выразить намерение (намеренно проглоченное исключение, неочевидный инвариант внешней библиотеки).
-- **KDoc vs `//`.** KDoc — только для контрактов (nullable-семантика, неочевидные пред-/постусловия, неочевидное WHY). Не пересказывай имя метода или сигнатуру — это шум. Если KDoc не добавляет информации относительно кода — сноси его.
+- **Minimal comments.** Before adding one — try extracting the block into a private method: the method name often makes the comment unnecessary. A comment only where code cannot express intent (deliberately swallowed exception, non-obvious external-library invariant).
+- **KDoc vs `//`.** KDoc — only for contracts (nullable semantics, non-obvious pre-/postconditions, non-obvious WHY). Do not restate the method name or signature — that is noise. If KDoc adds no information relative to the code — remove it.
 - **Kotlin official style** (enforced by KtLint).
-- **Дисциплина долгоживущих артефактов** (CLAUDE.md, `docs/`, `.claude/`, KDoc, inline-комментарии) — [`long-lived-artifacts.md`](docs/engineering/long-lived-artifacts.md).
+- **Long-lived artifacts discipline** (CLAUDE.md, `docs/`, `.claude/`, KDoc, inline comments) — [`long-lived-artifacts.md`](docs/engineering/long-lived-artifacts.md).

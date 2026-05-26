@@ -86,15 +86,15 @@ Also check the **Revisit if** section of every ADR governing the touched area. I
 
 ### 6. Trade-off vs violation
 
-`[REQUIRED]` — нарушение принципа: несимметрия слоёв, развернутое направление зависимости, абстракция против документированного правила, пропущенный source set. Принцип нарушен — фикс однозначен, выбор уровня не у автора.
+`[REQUIRED]` — a principle violation: layer asymmetry, reversed dependency direction, an abstraction contradicting a documented rule, a missing source set. The principle is violated — the fix is unambiguous; the author has no choice of level.
 
-`[QUESTION]` — обмен между двумя валидными shape'ами, где оба удовлетворяют принципам, но имеют разные ergonomic / robustness / maintainability profile'ы. Особенно в build-tooling / `.claude/` / CI / Gradle subprojects слое, где выбор часто упирается в «удобство для будущих контрибьюторов» vs «защита от опечатки». Не флагай как `[REQUIRED]` — это policy-выбор, не correctness. Назови два варианта явно, опиши trade-off, оставь решение пользователю.
+`[QUESTION]` — a trade-off between two valid shapes where both satisfy principles but have different ergonomic / robustness / maintainability profiles. Especially in the build-tooling / `.claude/` / CI / Gradle subprojects layer, where the choice often comes down to "convenience for future contributors" vs "protection against a typo". Do not flag as `[REQUIRED]` — this is a policy choice, not a correctness issue. Name both variants explicitly, describe the trade-off, and leave the decision to the user.
 
-Сигналы что находка — trade-off, а не violation:
-- Оба варианта работают и тесты зелёные;
-- Принцип, который нарушается, сам формулируется как «лучше» / «чище» / «менее хрупко», а не как абсолют («запрещено», «никогда», «всегда»);
-- В смежных модулях / прошлых PR живут оба shape'а;
-- Стоимость переключения значительная (ломает ergonomics для всех будущих модулей ради одного edge case).
+Signals that a finding is a trade-off, not a violation:
+- Both variants work and tests are green;
+- The principle being "violated" is itself phrased as "better" / "cleaner" / "less fragile", not as an absolute ("forbidden", "never", "always");
+- Both shapes coexist in adjacent modules / past PRs;
+- The switching cost is significant (breaks ergonomics for all future modules for the sake of one edge case).
 
 ### 7. Scope of the architectural change
 
