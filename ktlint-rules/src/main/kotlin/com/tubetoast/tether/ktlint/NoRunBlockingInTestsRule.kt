@@ -21,8 +21,8 @@ class NoRunBlockingInTestsRule : Rule(RuleId("tether:no-run-blocking-in-tests"),
         if (calleeName == "runBlocking") {
             emit(
                 node.startOffset,
-                "runBlocking запрещён в тестах (testing.md§Стиль) — используй runTest + TestDispatcher. " +
-                    "Suppress с обоснованием для integration-тестов на реальных потоках.",
+                "runBlocking is not allowed in tests (testing.md§Style) — use runTest + TestDispatcher. " +
+                    "Suppress with justification for integration tests on real coroutines.",
                 false,
             )
         }

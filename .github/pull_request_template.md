@@ -1,21 +1,21 @@
 <!--
-Цель — ревьюер быстро видит суть + места, где автор не уверен.
-Пустые секции удаляй. `Closes #N` — обязательно.
+Goal — the reviewer quickly sees the essence + places where the author is uncertain.
+Delete empty sections. `Closes #N` — required.
 
-Антипаттерны (не пиши такое):
-- AC-чек-лист, повторяющий issue DoD
-- «Test plan» / «Smoke: N/A» для тривиальных и DOCS-only PR
-- Пересказ diff'а файл за файлом
-- Длинная преамбула — начинай сразу с «зачем»
+Anti-patterns (do not write these):
+- AC checklist that duplicates the issue DoD
+- "Test plan" / "Smoke: N/A" for trivial and DOCS-only PRs
+- A file-by-file retelling of the diff
+- A long preamble — start straight with "why"
 -->
 
-**Что / зачем.** 1-2 предложения. Какой эффект или инвариант меняется.
+**What / why.** 1-2 sentences. What effect or invariant changes.
 
-**👀 Sanity-check.** Выборы, где не уверен; defer-решения («отложил X в follow-up» / TODO в Y) — выноси сюда, не в Notes внизу; неочевидные места `file:line`. Удали секцию, если нечего.
+**👀 Sanity-check.** Choices you are uncertain about; defer decisions ("deferred X to follow-up" / TODO in Y) — put them here, not in Notes below; non-obvious spots `file:line`. Delete the section if there is nothing.
 - 
 
-**Scope.** Опускай для локальных PR.
-- ❌ не трогал: X (живёт в Y / отложено в #N)
-- 📎 задето: #M / doc Z — обновлено / отложено
+**Scope.** Omit for local PRs.
+- ❌ not touched: X (lives in Y / deferred to #N)
+- 📎 affected: #M / doc Z — updated / deferred
 
 Closes #
