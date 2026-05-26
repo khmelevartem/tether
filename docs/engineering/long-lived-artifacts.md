@@ -34,8 +34,6 @@ A short summary attached to the link («see X (covers A / B / C)», «see X — 
 
 ## External claims cite their source
 
-When prose describes the behaviour of an external tool, 3rd-party API, library, platform SDK, or specification (Claude Code, `gh`, Gradle, Kotlin Multiplatform, Android / iOS / macOS platform APIs, Ktor, Compose, …) — link to the authoritative doc next to the claim. Do not write from memory.
+When prose describes the behaviour of an external tool, 3rd-party API, library, platform SDK, or specification — link to the authoritative doc next to the claim. Do not write from memory. External tools change; memory drifts; an unverified claim becomes permanently wrong and propagates through every artifact that references it.
 
-External tools change; memory drifts; a rule built on an unverified claim becomes permanently wrong and propagates through every artifact that references it. The reader (human or agent) cannot tell verified claims from unverified ones without the citation.
-
-If the authoritative doc does not say what you need — say so explicitly («not specified by Anthropic; this is a project convention») rather than presenting a project-invented rule as the tool's behaviour.
+If the authoritative doc does not cover what you need — say so explicitly rather than presenting a project-invented rule as the tool's behaviour.

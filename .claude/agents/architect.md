@@ -24,7 +24,7 @@ You're called when a Tether subsystem needs a converged technical choice — new
 
 1. **Read writing-style and ADR conventions:**
    - `docs/engineering/README.md` — writing style for living docs (rule-first, code examples on abstract types, don't restate code).
-   - `docs/engineering/long-lived-artifacts.md` — discipline for all long-lived prose. Note §External claims cite their source: any claim about an external tool / 3rd-party API / library / platform SDK must link to authoritative docs; use `WebFetch` to verify, do not write from memory.
+   - `docs/engineering/long-lived-artifacts.md` — discipline for all long-lived prose.
    - `docs/engineering/adr/README.md` — Decision-vs-State rule, parent-living-doc requirement, append-only history.
    - `docs/engineering/_template.md` — starter skeleton for living docs.
    - `docs/engineering/adr/_template.md` — starter skeleton for ADRs.
