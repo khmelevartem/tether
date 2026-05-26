@@ -85,6 +85,7 @@ kotlin {
         // src/appleMain/ and src/jvmMain/ are picked up by their respective source sets.
 
         commonMain.dependencies {
+            implementation(libs.androidx.datastore.preferences.core)
             implementation(libs.kydra.log)
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
@@ -124,7 +125,6 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.activity.compose)
             implementation(libs.androidx.lifecycle.service)
-            implementation("androidx.datastore:datastore-preferences:1.1.1")
         }
 
         androidUnitTest.dependencies {

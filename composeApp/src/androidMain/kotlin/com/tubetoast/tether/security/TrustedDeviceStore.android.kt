@@ -1,10 +1,9 @@
 package com.tubetoast.tether.security
 
-import android.content.Context
+import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import ru.pocketbyte.kydra.log.KydraLog
@@ -14,14 +13,9 @@ import ru.pocketbyte.kydra.log.wrapper.withTag
 private val log = KydraLog.withTag(default = "TrustedDeviceStore")
 
 // Stored values are public keys, so confidentiality at rest is intentionally not provided.
-private val Context.trustedDevicesDataStore: androidx.datastore.core.DataStore<Preferences> by
-    preferencesDataStore(name = "tether_trusted_devices")
-
 actual open class TrustedDeviceStore(
-    private val context: Context,
+    private val store: DataStore<Preferences>,
 ) {
-    private val store get() = context.trustedDevicesDataStore
-
     actual open fun isTrusted(deviceId: String): Boolean = getPublicKey(deviceId) != null
 
     actual open fun saveTrustedKey(deviceId: String, publicKey: ByteArray) {

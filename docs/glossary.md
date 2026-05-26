@@ -38,4 +38,5 @@ Engineering concepts. The vocabulary [`architect`](../.claude/agents/architect.m
 - **Path sanitization** — the two-layer boundary that maps an untrusted `name` parameter to a safe on-disk destination: Layer 1 is the lexical sanitizer in the route handler, Layer 2 is the canonical-realisation check in UploadStorage. (see [file-transfer-wire.md](engineering/file-transfer-wire.md))
 - **Abort** — UploadStorage's failure-path cleanup: deletes the partial destination file and removes empty parent directories up to the downloads root. _Avoid:_ cancel, rollback.
 - **Downloads root** — the per-device root directory into which incoming files are landed; the security boundary every received file must stay inside. _Avoid:_ destination root, downloads folder when the security property matters.
+- **Store** — a typed `commonMain` class wrapping `DataStore<Preferences>` for a single concern, owning its key namespace, defaults, and compound-value serialisation. (see [persistence.md](engineering/persistence.md))
 

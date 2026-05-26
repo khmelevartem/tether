@@ -14,7 +14,7 @@ import com.tubetoast.tether.network.FileClient
 import com.tubetoast.tether.network.send
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.protocol.SendResult
-import com.tubetoast.tether.util.formatBytes
+import com.tubetoast.tether.transfer.formatBytes
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -47,7 +47,7 @@ class TetherCommand :
     override fun run() = runBlocking {
         initTetherLogging(debugEnabled = isDebugEnabled())
         val container = DesktopAppContainer(
-            DefaultDesktopAppConfig(port = port ?: 0, namePersistence = EphemeralDeviceNamePersistence()),
+            DefaultDesktopAppConfig(port = port ?: 0, namePersistenceOverride = EphemeralDeviceNamePersistence()),
         )
 
         container.nameStore.init()
