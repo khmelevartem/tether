@@ -26,7 +26,9 @@ import platform.Foundation.NSError
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSUserDomainMask
+import platform.posix.EEXIST
 import platform.posix.PATH_MAX
+import platform.posix.errno
 import platform.posix.fclose
 import platform.posix.fflush
 import platform.posix.fopen
@@ -79,6 +81,8 @@ actual class FileServer(
     }
 }
 
+private const val MAX_DEDUP_RETRIES = 1000
+
 private class AppleUploadStorage(
     private val root: String,
 ) : UploadStorage {
@@ -90,29 +94,43 @@ private class AppleUploadStorage(
         mkdirsChecked(root)
     }
 
-    override fun resolveDestination(relativePath: String): String {
+    override fun resolveDestination(relativePath: String): UploadHandle {
         val leafName = relativePath.substringAfterLast('/')
         val parentDir = if (relativePath.contains('/')) "$root/${relativePath.substringBeforeLast('/')}" else root
-        var created: List<String> = emptyList()
+        val created = mkdirsTracked(parentDir)
         try {
-            created = mkdirsTracked(parentDir)
             val resolvedParent = realpathOf(parentDir)
                 ?: throw IOException("destination escapes downloads root: realpath failed for $parentDir")
             if (!resolvedParent.startsWith(rootReal + "/") && resolvedParent != rootReal) {
                 throw IOException("destination escapes downloads root: $resolvedParent")
             }
 
-            val leaf = dedupFilename(leafName) { candidate ->
-                NSFileManager.defaultManager.fileExistsAtPath("$resolvedParent/$candidate")
+            repeat(MAX_DEDUP_RETRIES) {
+                val leaf = dedupFilename(leafName) { candidate ->
+                    NSFileManager.defaultManager.fileExistsAtPath("$resolvedParent/$candidate")
+                }
+                val candidatePath = "$resolvedParent/$leaf"
+                val file = fopen(candidatePath, "wbx")
+                if (file != null) {
+                    fclose(file)
+                    return UploadHandle(candidatePath, created.asReversed())
+                }
+                if (errno != EEXIST) {
+                    throw IOException("FileServer: could not create placeholder '$candidatePath'")
+                }
+                // EEXIST: another concurrent upload claimed this name; retry dedup.
             }
-            return "$resolvedParent/$leaf"
+            throw IOException(
+                "FileServer: could not reserve destination for $relativePath after $MAX_DEDUP_RETRIES attempts",
+            )
         } catch (e: Throwable) {
             created.asReversed().forEach { deleteIfEmpty(it) }
             throw e
         }
     }
 
-    override suspend fun writeBody(body: ByteReadChannel, destination: String): Long {
+    override suspend fun writeBody(body: ByteReadChannel, handle: UploadHandle): Long {
+        val destination = handle.destination
         val file = fopen(destination, "wb")
             ?: throw IOException("FileServer: could not open '$destination' for writing")
         var total = 0L
@@ -141,13 +159,9 @@ private class AppleUploadStorage(
         return total
     }
 
-    override fun abort(destination: String) {
-        NSFileManager.defaultManager.removeItemAtPath(destination, error = null)
-        var dir = destination.substringBeforeLast('/', missingDelimiterValue = "")
-        while (dir.isNotEmpty() && dir != rootReal) {
-            if (!deleteIfEmpty(dir)) break
-            dir = dir.substringBeforeLast('/', missingDelimiterValue = "")
-        }
+    override fun abort(handle: UploadHandle) {
+        NSFileManager.defaultManager.removeItemAtPath(handle.destination, error = null)
+        handle.createdDirs.forEach { deleteIfEmpty(it) }
     }
 
     private fun deleteIfEmpty(path: String): Boolean {

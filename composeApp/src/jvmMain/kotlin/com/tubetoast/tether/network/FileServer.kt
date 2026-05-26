@@ -16,6 +16,8 @@ import ru.pocketbyte.kydra.log.withMessage
 import ru.pocketbyte.kydra.log.wrapper.withTag
 import java.io.File
 import java.io.IOException
+import java.nio.file.FileAlreadyExistsException
+import java.nio.file.Files as NioFiles
 
 private val log = KydraLog.withTag(default = "FileServer")
 
@@ -55,6 +57,8 @@ actual class FileServer(
     }
 }
 
+private const val MAX_DEDUP_RETRIES = 1000
+
 private class JvmUploadStorage(
     private val root: File,
 ) : UploadStorage {
@@ -64,43 +68,47 @@ private class JvmUploadStorage(
         root.mkdirs()
     }
 
-    override fun resolveDestination(relativePath: String): String {
-        val dest = resolveDestinationFile(root, relativePath)
-        val created = mkdirsTracked(dest.parentFile)
+    override fun resolveDestination(relativePath: String): UploadHandle {
+        val initial = File(root, relativePath)
+        val created = mkdirsTracked(initial.parentFile)
         try {
-            val destReal = if (dest.exists()) {
-                dest.toPath().toRealPath()
-            } else {
-                // resolveDestinationFile always returns a File under root, so parentFile is non-null.
-                dest.parentFile!!
-                    .toPath()
-                    .toRealPath()
-                    .resolve(dest.name)
+            val parentReal = initial.parentFile!!.toPath().toRealPath()
+            if (!parentReal.startsWith(rootReal)) {
+                throw IOException("destination escapes downloads root: $initial")
             }
-            if (!destReal.startsWith(rootReal)) {
-                throw IOException("destination escapes downloads root: $dest")
+            repeat(MAX_DEDUP_RETRIES) {
+                val leaf = dedupFilename(initial.name) { candidate ->
+                    parentReal.resolve(candidate).toFile().exists()
+                }
+                val candidate = parentReal.resolve(leaf).toFile()
+                try {
+                    NioFiles.createFile(candidate.toPath())
+                    return UploadHandle(candidate.absolutePath, created.asReversed().map { it.absolutePath })
+                } catch (_: FileAlreadyExistsException) {
+                    // Another concurrent upload claimed this name; retry dedup.
+                }
             }
+            throw IOException(
+                "FileServer: could not reserve destination for $relativePath after $MAX_DEDUP_RETRIES attempts",
+            )
         } catch (e: Throwable) {
             created.asReversed().forEach { it.delete() }
             throw e
         }
-        return dest.absolutePath
     }
 
-    override suspend fun writeBody(body: ByteReadChannel, destination: String): Long =
+    override suspend fun writeBody(body: ByteReadChannel, handle: UploadHandle): Long =
         body.toInputStream().use { input ->
-            File(destination).outputStream().use { output ->
+            File(handle.destination).outputStream().use { output ->
                 input.copyTo(output, bufferSize = UPLOAD_BUFFER_SIZE)
             }
         }
 
-    override fun abort(destination: String) {
-        val dest = File(destination)
-        dest.delete()
-        var dir = dest.parentFile
-        while (dir != null && dir != root && dir.exists() && dir.list()?.isEmpty() == true) {
-            if (!dir.delete()) break
-            dir = dir.parentFile
+    override fun abort(handle: UploadHandle) {
+        File(handle.destination).delete()
+        handle.createdDirs.forEach { path ->
+            val dir = File(path)
+            if (dir.exists() && dir.list()?.isEmpty() == true) dir.delete()
         }
     }
 }
@@ -115,10 +123,4 @@ private fun mkdirsTracked(dir: File?): List<File> {
     }
     dir.mkdirs()
     return toCreate.asReversed()
-}
-
-private fun resolveDestinationFile(dir: File, relativePath: String): File {
-    val initial = File(dir, relativePath)
-    val leaf = dedupFilename(initial.name) { candidate -> File(initial.parentFile, candidate).exists() }
-    return File(initial.parentFile, leaf)
 }
