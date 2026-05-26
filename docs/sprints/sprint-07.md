@@ -4,12 +4,20 @@
 
 ## Состав
 
-| # | Issue | Название | Тип | Размер |
-| - | ----- | -------- | --- | ------ |
-| 1 | [#190](https://github.com/khmelevartem/tether/issues/190) | Common transfer state-machine: BatchSender и TransferComponent с тестами | feature | M |
-| 2 | [#201](https://github.com/khmelevartem/tether/issues/201) | Device list: реализовать четырёхкейсовый row contract (paired × reachable) | feature | M |
-| 3 | [#41](https://github.com/khmelevartem/tether/issues/41) | macOS native entry point — запускаемое приложение для macosArm64 | feature | S |
-| 4 | [#91](https://github.com/khmelevartem/tether/issues/91) | Передача файла на Android-эмулятор зависает по таймауту | bug | S |
+**Итог:** 3/4 задач закрыты, ось state-machine и Android-bug закрыты в плановом окне; device-list row contract вынесен и переблокирован.
+
+| # | Issue | Название | Тип | Размер | Итог |
+| - | ----- | -------- | --- | ------ | ---- |
+| 1 | [#190](https://github.com/khmelevartem/tether/issues/190) | Common transfer state-machine: BatchSender и TransferComponent с тестами | feature | M | ✅ closed ([PR #263](https://github.com/khmelevartem/tether/pull/263)) |
+| 2 | [#201](https://github.com/khmelevartem/tether/issues/201) | Device list: реализовать четырёхкейсовый row contract (paired × reachable) | feature | M | ❌ переделан и заблокирован на ещё не сделанные задачи по логике |
+| 3 | [#41](https://github.com/khmelevartem/tether/issues/41) | macOS native entry point — запускаемое приложение для macosArm64 | feature | S | ✅ closed ([PR #259](https://github.com/khmelevartem/tether/pull/259), [PR #260](https://github.com/khmelevartem/tether/pull/260)) — драгнут в Desktop JVM, нативный target dropped |
+| 4 | [#91](https://github.com/khmelevartem/tether/issues/91) | Передача файла на Android-эмулятор зависает по таймауту | bug | S | ✅ closed ([PR #268](https://github.com/khmelevartem/tether/pull/268)) |
+
+## Доп. результаты
+
+- [#261](https://github.com/khmelevartem/tether/issues/261) — `/close-issue`: post-factum size estimate + проверка понимания принципов перед merge. Усиливает retro-фазу: больше нельзя смержить без явного size/Тип на закрытой задаче.
+- [#272](https://github.com/khmelevartem/tether/issues/272) — CLAUDE.md: вынести orchestrator-only и discipline-блоки, сжать common commands. Чистка перегруженного root-инструкции.
+- [#270](https://github.com/khmelevartem/tether/issues/270) и логирование: централизация `Tether.` tag prefix + удаление `suppressTestLogs` cargo. Подняли качество tooling вокруг runtime-диагностики (фоном к #91).
 
 ## Следствия
 
