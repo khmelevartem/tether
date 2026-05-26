@@ -7,7 +7,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
-import com.tubetoast.tether.transfer.formatBytes
+import com.tubetoast.tether.transfer.ByteFormatting
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
 import com.tubetoast.tether.ui.theme.TetherTheme
@@ -40,16 +40,16 @@ private fun buildProgressText(
     bytesPerSecond: Long?,
     calculatingPlaceholder: String,
 ): String {
-    val sent = formatBytes(sentBytes)
+    val sent = ByteFormatting.formatSize(sentBytes)
     return buildString {
         if (totalBytes != null) {
-            append("$sent / ${formatBytes(totalBytes)}")
+            append("$sent / ${ByteFormatting.formatSize(totalBytes)}")
         } else {
             append(sent)
         }
         append(" · ")
         if (bytesPerSecond != null) {
-            append("${formatBytes(bytesPerSecond)}/s")
+            append("${ByteFormatting.formatSize(bytesPerSecond)}/s")
         } else {
             append(calculatingPlaceholder)
         }

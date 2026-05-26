@@ -56,7 +56,6 @@ class PeerTransferComponentTest {
             },
             inboundEvents = events,
             onShowDetailsCallback = {},
-            connectionMonitor = monitor,
             scope = scope,
         )
     }
@@ -283,5 +282,33 @@ class PeerTransferComponentTest {
         assertEquals(2, state.received)
         assertEquals(3, state.total)
         assertIs<PartialOutcome>(state.partialReason)
+    }
+
+    @Test
+    fun `onRetryFile resends only the named file`() = runTest {
+        val sendCalls = mutableMapOf("a.txt" to 0, "b.txt" to 0, "c.txt" to 0)
+        val component = buildComponent(
+            scope = backgroundScope,
+            sendOneOverride = { src, onProgress ->
+                sendCalls[src.name] = (sendCalls[src.name] ?: 0) + 1
+                if (src.name == "b.txt" && sendCalls["b.txt"] == 1) {
+                    throw ReceiverWriteFailedException(507)
+                }
+                onProgress(src.sizeBytes ?: 0L, src.sizeBytes)
+            },
+        )
+
+        component.startOutbound(
+            listOf(FakeFileSource("a.txt", 100L), FakeFileSource("b.txt", 100L), FakeFileSource("c.txt", 100L)),
+        )
+        runCurrent()
+        assertIs<PeerTransferState.Sent>(component.state.value)
+
+        component.onRetryFile("b.txt")
+        runCurrent()
+
+        assertEquals(1, sendCalls["a.txt"])
+        assertEquals(2, sendCalls["b.txt"])
+        assertEquals(1, sendCalls["c.txt"])
     }
 }

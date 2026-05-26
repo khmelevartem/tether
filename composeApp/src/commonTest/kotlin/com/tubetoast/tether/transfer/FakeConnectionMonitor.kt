@@ -2,7 +2,7 @@ package com.tubetoast.tether.transfer
 
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlin.time.Duration
 
@@ -21,5 +21,5 @@ internal class FakeConnectionMonitor : ConnectionMonitor {
     }
 
     override suspend fun awaitReconnect(timeout: Duration): Boolean =
-        reconnectResult.filter { it != null }.first()!!
+        reconnectResult.filterNotNull().first()
 }

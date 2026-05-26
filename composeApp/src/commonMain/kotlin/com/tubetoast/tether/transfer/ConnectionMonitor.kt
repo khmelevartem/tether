@@ -7,6 +7,6 @@ data object ConnectionDrop
 interface ConnectionMonitor {
     val drops: Flow<ConnectionDrop>
 
-    /** Suspends until the peer reconnects. Returns true if reconnected, false if timed out. */
+    /** Returns true if reconnected within `timeout`, false if timed out. */
     suspend fun awaitReconnect(timeout: kotlin.time.Duration = ReconnectionTimeout.DEFAULT): Boolean
 }

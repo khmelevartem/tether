@@ -6,7 +6,6 @@ import com.arkivanov.decompose.value.Value
 import com.tubetoast.tether.transfer.BatchOutcome
 import com.tubetoast.tether.transfer.BatchProgress
 import com.tubetoast.tether.transfer.BatchSender
-import com.tubetoast.tether.transfer.ConnectionMonitor
 import com.tubetoast.tether.transfer.FailureReason
 import com.tubetoast.tether.transfer.FileSource
 import com.tubetoast.tether.transfer.PartialOutcome
@@ -29,7 +28,6 @@ class PeerTransferComponent(
     private val batchSenderFactory: () -> BatchSender,
     private val inboundEvents: Flow<ReceiveEvent>,
     private val onShowDetailsCallback: (PeerIdentity) -> Unit,
-    private val connectionMonitor: ConnectionMonitor,
     private val reconnectionTimeout: Duration = ReconnectionTimeout.DEFAULT,
     private val scope: CoroutineScope,
 ) : ComponentContext by componentContext {
@@ -318,6 +316,8 @@ private fun List<PerFileStatus.Failed>.dominantPartialReason(): PartialOutcome {
     return when {
         unreadableCount == size -> PartialOutcome.FilesUnreadable(unreadableCount)
         cancelledByUserCount == size -> PartialOutcome.SenderCancelled
+        all { it.reason is FailureReason.PeerUnreachable } -> PartialOutcome.PeerUnreachable
+        all { it.reason is FailureReason.ReceiverWriteFailed } -> PartialOutcome.ReceiverWriteFailed
         else -> PartialOutcome.ConnectionLost
     }
 }

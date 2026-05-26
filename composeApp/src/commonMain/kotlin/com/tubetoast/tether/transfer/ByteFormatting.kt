@@ -7,7 +7,7 @@ object ByteFormatting {
         if (bytesPerSec == null) "Calculating…" else "${formatBytes(bytesPerSec)}/s"
 }
 
-internal fun formatBytes(bytes: Long): String = when {
+private fun formatBytes(bytes: Long): String = when {
     bytes >= 1_073_741_824L -> "${formatOneDecimal(bytes / 1_073_741_824.0)} GB"
     bytes >= 1_048_576L -> "${formatOneDecimal(bytes / 1_048_576.0)} MB"
     bytes >= 1_024L -> "${formatOneDecimal(bytes / 1_024.0)} KB"

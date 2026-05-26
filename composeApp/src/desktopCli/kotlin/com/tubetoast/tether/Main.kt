@@ -14,7 +14,7 @@ import com.tubetoast.tether.network.FileClient
 import com.tubetoast.tether.network.send
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.protocol.SendResult
-import com.tubetoast.tether.transfer.formatBytes
+import com.tubetoast.tether.transfer.ByteFormatting
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -188,8 +188,12 @@ suspend fun handleSend(
         if ((now - lastPrint) >= 500.milliseconds) {
             val intervalSec = (now - lastPrint).inWholeMilliseconds / 1000.0
             val speed = if (intervalSec > 0) (transferred - lastBytes) / intervalSec else 0.0
-            val formattedTotal = total?.let { " / ${formatBytes(it)}" } ?: ""
-            progressOutput("\r[send] ${formatBytes(transferred)}$formattedTotal  (${formatBytes(speed.toLong())}/s)   ")
+            val formattedTotal = total?.let { " / ${ByteFormatting.formatSize(it)}" } ?: ""
+            progressOutput(
+                "\r[send] ${ByteFormatting.formatSize(
+                    transferred,
+                )}$formattedTotal  (${ByteFormatting.formatSize(speed.toLong())}/s)   ",
+            )
             lastPrint = now
             lastBytes = transferred
         }

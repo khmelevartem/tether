@@ -7,6 +7,8 @@ import com.arkivanov.decompose.router.stack.childStack
 import com.arkivanov.decompose.router.stack.pushNew
 import com.arkivanov.decompose.value.MutableValue
 import com.arkivanov.decompose.value.Value
+import com.tubetoast.tether.presentation.transfer.TransferDetailsComponent
+import com.tubetoast.tether.transfer.FileSource
 import com.tubetoast.tether.transfer.PeerIdentity
 
 class PendingFilesSummary {
@@ -14,8 +16,6 @@ class PendingFilesSummary {
         val NONE = PendingFilesSummary()
     }
 }
-
-sealed interface FileSource
 
 class RootComponent(
     componentContext: ComponentContext,

@@ -10,6 +10,7 @@ import com.tubetoast.tether.transfer.FakeFileSource
 import com.tubetoast.tether.transfer.FileSource
 import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PerFileStatus
+import com.tubetoast.tether.transfer.ReceiverWriteFailedException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
@@ -19,6 +20,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -50,7 +52,6 @@ class TransferDetailsComponentTest {
             },
             inboundEvents = MutableSharedFlow(),
             onShowDetailsCallback = {},
-            connectionMonitor = monitor,
             scope = scope,
         )
     }
@@ -181,5 +182,32 @@ class TransferDetailsComponentTest {
         assertIs<PerFileStatus.Failed>(finalFile2)
         assertEquals(FailureReason.CancelledByUser, finalFile2.reason)
         assertEquals(true, finalFile2.cancelledByUser)
+    }
+
+    @Test
+    fun `onRetryAll re-runs failed files via peerComponent`() = runTest {
+        val sendCalls = mutableMapOf("a.txt" to 0, "b.txt" to 0)
+        val peerComponent = buildPeerComponent(
+            scope = backgroundScope,
+            sendOneOverride = { src, onProgress ->
+                sendCalls[src.name] = (sendCalls[src.name] ?: 0) + 1
+                if (src.name == "b.txt" && sendCalls["b.txt"] == 1) {
+                    throw ReceiverWriteFailedException(507)
+                }
+                onProgress(src.sizeBytes ?: 0L, src.sizeBytes)
+            },
+        )
+        val details = buildDetails(peerComponent)
+
+        peerComponent.startOutbound(listOf(FakeFileSource("a.txt", 100L), FakeFileSource("b.txt", 100L)))
+        runCurrent()
+        assertIs<PeerTransferState.Sent>(peerComponent.state.value)
+
+        details.onRetryAll()
+        runCurrent()
+
+        assertEquals(1, sendCalls["a.txt"])
+        assertEquals(2, sendCalls["b.txt"])
+        assertNull((peerComponent.state.value as? PeerTransferState.Sent)?.partialReason)
     }
 }
