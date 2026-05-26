@@ -268,6 +268,7 @@ Report to the user:
 - AC: all `[DONE]` (from `review-dod`).
 - Smoke: 🟢 with blocks executed.
 - Any `[UNVERIFIABLE]` from reviewers.
+- Manual test plan — 1–2 предложения с упором на регрессионный smoke и shipping behaviour, явно говори «backend-only, нечего тестировать руками» если нет visible diff'а.
 
 Next step is manual review on GitHub, then `/close-issue <N>`.
 

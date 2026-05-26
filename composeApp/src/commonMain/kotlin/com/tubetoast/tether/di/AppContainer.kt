@@ -7,6 +7,8 @@ import com.tubetoast.tether.network.DefaultTransferActivityTracker
 import com.tubetoast.tether.network.FileClient
 import com.tubetoast.tether.network.FileServer
 import com.tubetoast.tether.network.TransferActivityTracker
+import com.tubetoast.tether.preferences.FileTransferPreferences
+import com.tubetoast.tether.preferences.PeerPreferencesStore
 import com.tubetoast.tether.presentation.RootComponentFactory
 import com.tubetoast.tether.security.TrustedDeviceStore
 
@@ -20,4 +22,6 @@ abstract class AppContainer {
     open val fileClient: FileClient by lazy { FileClient.default(transferActivityTracker) }
     abstract val trustedDeviceStore: TrustedDeviceStore
     open val rootComponentFactory: RootComponentFactory by lazy { RootComponentFactory(mdnsDiscovery) }
+    abstract val peerPreferencesStore: PeerPreferencesStore
+    abstract val fileTransferPreferences: FileTransferPreferences
 }

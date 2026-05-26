@@ -182,7 +182,7 @@
 
 ### Механизм
 - [x] `expect` / `actual` — как работает, ограничения
-- [ ] Alternatives to expect/actual — interfaces + DI, когда что
+- [x] Alternatives to expect/actual — interfaces + DI, когда что
 - [ ] Структура модулей: `commonMain` / `androidMain` / `iosMain` / `desktopMain`
 
 ### Kotlin/Native

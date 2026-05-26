@@ -12,6 +12,10 @@ class RootComponentFactory(
             deviceListFactory = { ctx ->
                 DeviceListComponent(componentContext = ctx, discovery = discovery)
             },
-            transferDetailsFactory = { _, peer -> TransferDetailsComponent(peer) },
+            transferDetailsFactory = { _, _ ->
+                error(
+                    "TODO(#191): wire to per-peer TransferDetailsComponent via PeerTransferComponent registry",
+                )
+            },
         )
 }
