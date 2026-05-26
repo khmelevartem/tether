@@ -93,7 +93,7 @@ class BatchSender(
 
                 perFile[i] = PerFileStatus.InProgress(src.name, src.sizeBytes, 0L)
 
-                val ema = BytesPerSecEma(timeSource = timeSource)
+                val rate = BytesPerSecondMovingAverage(timeSource = timeSource)
                 var bytesDone = 0L
                 var dropDetected = false
                 var lastActiveState: PeerTransferState =
@@ -110,7 +110,7 @@ class BatchSender(
                                 val delta = done - bytesDone
                                 bytesDone = done
                                 sentBytes += delta
-                                ema.record(bytesDone)
+                                rate.record(bytesDone)
                                 perFile[i] = PerFileStatus.InProgress(src.name, src.sizeBytes, bytesDone)
                             }
                         }
@@ -127,7 +127,7 @@ class BatchSender(
                                         sources,
                                         sentBytes,
                                         totalBytes,
-                                        ema.valueOrNull(),
+                                        rate.valueOrNull(),
                                         perFile,
                                     )
                                 lastActiveState = st
@@ -278,11 +278,11 @@ class BatchSender(
     }
 }
 
-class BytesPerSecEma(
+private class BytesPerSecondMovingAverage(
     private val timeSource: TimeSource = TimeSource.Monotonic,
 ) {
-    private val alpha = 0.3
-    private var ema: Double? = null
+    private val smoothing = 0.3
+    private var current: Double? = null
     private var lastBytes: Long = 0L
     private var lastMark = timeSource.markNow()
 
@@ -290,11 +290,11 @@ class BytesPerSecEma(
         val elapsed = lastMark.elapsedNow()
         if (elapsed.inWholeMilliseconds <= 0) return
         val elapsedSec = elapsed.toDouble(DurationUnit.SECONDS).coerceAtLeast(0.001)
-        val rate = (bytesNow - lastBytes).toDouble() / elapsedSec
-        ema = ema?.let { it * (1 - alpha) + rate * alpha } ?: rate
+        val sample = (bytesNow - lastBytes).toDouble() / elapsedSec
+        current = current?.let { it * (1 - smoothing) + sample * smoothing } ?: sample
         lastBytes = bytesNow
         lastMark = timeSource.markNow()
     }
 
-    fun valueOrNull(): Long? = ema?.toLong()
+    fun valueOrNull(): Long? = current?.toLong()
 }
