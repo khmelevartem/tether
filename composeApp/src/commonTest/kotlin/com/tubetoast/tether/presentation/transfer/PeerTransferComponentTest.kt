@@ -31,11 +31,11 @@ class PeerTransferComponentTest {
         pauseChannel: Channel<Unit>? = null,
         sendOneOverride: (suspend (FileSource, (Long, Long?) -> Unit) -> Unit)? = null,
         scope: kotlinx.coroutines.CoroutineScope,
-    ): DefaultPeerTransferComponent {
+    ): PeerTransferComponent {
         val lifecycle = LifecycleRegistry()
         lifecycle.resume()
         val context = DefaultComponentContext(lifecycle)
-        return DefaultPeerTransferComponent(
+        return PeerTransferComponent(
             componentContext = context,
             peer = peer,
             batchSenderFactory = {

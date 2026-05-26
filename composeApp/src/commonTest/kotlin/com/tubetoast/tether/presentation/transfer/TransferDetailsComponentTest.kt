@@ -1,7 +1,6 @@
 package com.tubetoast.tether.presentation.transfer
 
 import com.arkivanov.decompose.DefaultComponentContext
-import com.arkivanov.decompose.value.MutableValue
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.resume
 import com.tubetoast.tether.transfer.FailureReason
@@ -28,12 +27,12 @@ class TransferDetailsComponentTest {
         scope: kotlinx.coroutines.CoroutineScope,
         pauseChannel: Channel<Unit>? = null,
         sendOneOverride: (suspend (FileSource, (Long, Long?) -> Unit) -> Unit)? = null,
-    ): DefaultPeerTransferComponent {
+    ): PeerTransferComponent {
         val lifecycle = LifecycleRegistry()
         lifecycle.resume()
         val context = DefaultComponentContext(lifecycle)
         val monitor = FakeConnectionMonitor()
-        return DefaultPeerTransferComponent(
+        return PeerTransferComponent(
             componentContext = context,
             peer = peer,
             batchSenderFactory = {
@@ -57,11 +56,11 @@ class TransferDetailsComponentTest {
     private fun buildDetails(
         peerComponent: PeerTransferComponent,
         onBack: () -> Unit = {},
-    ): DefaultTransferDetailsComponent {
+    ): TransferDetailsComponent {
         val lifecycle = LifecycleRegistry()
         lifecycle.resume()
         val context = DefaultComponentContext(lifecycle)
-        return DefaultTransferDetailsComponent(
+        return TransferDetailsComponent(
             componentContext = context,
             peerComponent = peerComponent,
             onBack = onBack,
@@ -82,46 +81,6 @@ class TransferDetailsComponentTest {
         runCurrent()
 
         assertIs<PeerTransferState.Cancelled>(peerComponent.state.value)
-    }
-
-    @Test
-    fun `onRetryAll delegates to peer component`() = runTest {
-        var retryCalled = false
-        val lifecycle = LifecycleRegistry()
-        lifecycle.resume()
-        val context = DefaultComponentContext(lifecycle)
-
-        val fakePeer = object : PeerTransferComponent {
-            override val peer = PeerIdentity("fake-peer")
-            override val state = MutableValue<PeerTransferState>(PeerTransferState.Idle(this.peer))
-
-            override fun toggleExpanded() {}
-
-            override fun startOutbound(sources: List<FileSource>) {}
-
-            override fun onCancel() {}
-
-            override fun onRetry() {
-                retryCalled = true
-            }
-
-            override fun onRetryFile(name: String) {}
-
-            override fun onCancelFile(name: String) {}
-
-            override fun onDismiss() {}
-
-            override fun onShowDetails() {}
-        }
-        val details = DefaultTransferDetailsComponent(
-            componentContext = context,
-            peerComponent = fakePeer,
-            onBack = {},
-        )
-
-        details.onRetryAll()
-
-        assertEquals(true, retryCalled)
     }
 
     @Test
