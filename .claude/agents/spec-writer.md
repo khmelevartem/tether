@@ -14,6 +14,7 @@ You're called when a FEATURE issue has no usable spec — none referenced, a `(s
 ## Always do before writing
 
 1. **Read the template:** `docs/product/features/_template.md`. The structure is non-negotiable — match section names exactly.
+   - **Apply long-lived-artifact discipline** to the spec body — see [`docs/engineering/long-lived-artifacts.md`](../../docs/engineering/long-lived-artifacts.md).
 2. **Read product context:**
    - `docs/product/vision.md` — what Tether is for
    - `docs/product/README.md` — overview

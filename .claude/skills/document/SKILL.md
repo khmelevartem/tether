@@ -122,7 +122,7 @@ Each sub-agent owns the decisions inside its layer — palette, clarifying quest
 
    If only one is needed, run it alone.
 
-3. **.claude prompt** — write directly via Edit/Write. No sub-agent dispatch (an agent editing its own definition would race itself). Match the tone and structure of siblings in `.claude/skills/*/SKILL.md`, `.claude/agents/*.md`, `.claude/commands/*.md`. CLAUDE.md §Code style rules apply to prompt prose: rule-first, no history, no «после ретро по #N». If the prompt change encodes a non-trivial behavioural choice, dispatch `architect` first to converge the choice and produce an ADR; only then write the prompt edit.
+3. **.claude prompt** — write directly via Edit/Write. No sub-agent dispatch (an agent editing its own definition would race itself). Match the tone and structure of siblings in `.claude/skills/*/SKILL.md`, `.claude/agents/*.md`, `.claude/commands/*.md`. CLAUDE.md §Code style and [`docs/engineering/long-lived-artifacts.md`](../../../docs/engineering/long-lived-artifacts.md) apply to prompt prose: rule-first, no history, no incident framing. If the prompt change encodes a non-trivial behavioural choice, dispatch `architect` first to converge the choice and produce an ADR; only then write the prompt edit.
 
 Each sub-agent / direct write returns: paths produced, index updates, converged-decision summary, open questions (if any). Open questions in any layer block forward progress on that layer; resolve via D1 and re-dispatch the same agent (not yourself).
 
@@ -145,7 +145,7 @@ Mechanical fixes (rename, add missing link, add missing index row) — apply dir
 Dispatch in parallel on the staged diff (no PR yet — agents review the local working tree via `git diff main...HEAD`). Scope covers `docs/` and `.claude/` changes:
 
 - `review-dod` — DoD criteria from the issue are covered by produced artifacts.
-- `review-guides` — conformance to CLAUDE.md §Code style for all touched prose. For `docs/engineering/` artifacts additionally apply `docs/engineering/README.md` writing-style rules (rule-first, code examples on abstract types, no restating code). For `docs/product/features/<slug>/spec.md` apply `docs/product/features/_template.md`. For ADRs apply `docs/engineering/adr/_template.md` shape. For `.claude/` prompt edits apply sibling-skill/agent/command tone consistency.
+- `review-guides` — conformance to CLAUDE.md §Code style and [`docs/engineering/long-lived-artifacts.md`](../../../docs/engineering/long-lived-artifacts.md) for all touched prose. For `docs/engineering/` artifacts additionally apply `docs/engineering/README.md` writing-style rules (rule-first, code examples on abstract types, no restating code). For `docs/product/features/<slug>/spec.md` apply `docs/product/features/_template.md`. For ADRs apply `docs/engineering/adr/_template.md` shape. For `.claude/` prompt edits apply sibling-skill/agent/command tone consistency.
 - `review-reuse` — no duplication of existing specs / briefs / living docs / knowledge, no contradictions with neighbours, no doc-vs-code drift.
 - `review-glossary` — load-bearing terms in the produced artifacts match [`docs/glossary.md`](../../../docs/glossary.md); new domain terms get an entry.
 - `review-adversarial` — runs after the above with their combined findings as input; probes what was missed, what factual claims were not verified.
