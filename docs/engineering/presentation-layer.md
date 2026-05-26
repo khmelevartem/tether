@@ -63,6 +63,8 @@ val state: Value<MyState> = _state
 _state.update { it.copy(...) }
 ```
 
+When the new value depends on the current value, mutate through `update { current -> next }` (from `com.arkivanov.decompose.value.update`), not `value = current.copy(...)`. `update` is an atomic compare-and-swap loop; the local read + value-write pair has a torn-write window where a concurrent emitter overwrites with a stale snapshot. Plain `value = next` is only safe when `next` does not depend on the current state.
+
 Compose subscribes via `subscribeAsState`:
 
 ```kotlin
