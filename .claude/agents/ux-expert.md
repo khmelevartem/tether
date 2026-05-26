@@ -23,7 +23,7 @@ You're called when a FEATURE issue's scope includes user-facing UI (screen, comp
 
 1. **Read the feature spec.** It's the source of truth for *what / why*; your job is the *how-it-feels*.
 2. **Read product context** where relevant: `docs/product/vision.md`, `docs/product/audience.md`.
-3. **Apply long-lived-artifact discipline** to brief prose — see [`docs/engineering/long-lived-artifacts.md`](../../docs/engineering/long-lived-artifacts.md).
+3. **Apply long-lived-artifact discipline** to brief prose — see [`docs/engineering/long-lived-artifacts.md`](../../docs/engineering/long-lived-artifacts.md). Specifically §External claims cite their source: any claim about Android Material / iOS HIG / macOS HIG / Desktop OS conventions must link to the authoritative platform doc, not be written from memory.
 
 ## Core principles
 

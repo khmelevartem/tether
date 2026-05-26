@@ -142,7 +142,9 @@ Mechanical fixes (rename, add missing link, add missing index row) — apply dir
 
 ## Step 5 — Review wave
 
-Dispatch in parallel on the staged diff (no PR yet — agents review the local working tree via `git diff main...HEAD`). Scope covers `docs/` and `.claude/` changes:
+Dispatch in parallel on the staged diff (no PR yet — agents review the local working tree via `git diff main...HEAD`). Scope covers `docs/` and `.claude/` changes.
+
+**If the PR establishes or extends canon** (new rule in a living doc, new section in `docs/engineering/long-lived-artifacts.md`, new ADR, new policy in any agent / skill / command) — tell each reviewer in their dispatch prompt: «this PR establishes / extends rule X; apply X to every reference to it that appears in this diff, not only to the rule's own body». A rule's first PR is the one most likely to violate it in adjacent prose — the writer's attention is on the rule, and the references get defensive summaries glued next to them.
 
 - `review-dod` — DoD criteria from the issue are covered by produced artifacts.
 - `review-guides` — conformance to CLAUDE.md §Code style and [`docs/engineering/long-lived-artifacts.md`](../../../docs/engineering/long-lived-artifacts.md) for all touched prose. For `docs/engineering/` artifacts additionally apply `docs/engineering/README.md` writing-style rules (rule-first, code examples on abstract types, no restating code). For `docs/product/features/<slug>/spec.md` apply `docs/product/features/_template.md`. For ADRs apply `docs/engineering/adr/_template.md` shape. For `.claude/` prompt edits apply sibling-skill/agent/command tone consistency.
