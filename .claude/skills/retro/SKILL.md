@@ -1,3 +1,8 @@
+---
+name: retro
+description: Run a retrospective on a GitHub task (issue + PR) to identify systemic gaps and systemic successes, propose changes to CLAUDE.md / docs / skills / commands / hooks, and apply approved ones on a separate retro branch with PR title `retro from #<PR>: …`. Use when the user says "retro", "retrospective", "разбор по задаче", "look back at task N", or invokes `/retro`.
+---
+
 Run a retrospective on task <issue number> (and the associated PR, if any).
 
 The goal is not a report for its own sake and not a catalog of pointwise mistakes, but **systemic improvements**: what in the prompts, commands, skills, documentation, or project structure needs to change so that future assignees can do quality work more easily. Every conclusion must end with an action.
@@ -58,8 +63,9 @@ Based on steps 2–3, identify specific systemic changes. Categories:
 
 | Category | When to touch |
 |----------|--------------|
-| `.claude/commands/*.md` | The command gave unclear instructions, didn't cover a scenario, or lacked a needed step |
-| `.claude/skills/` | The skill didn't cover the needed scenario or didn't prevent a class of errors |
+| `.claude/skills/<name>/SKILL.md` | The skill (workflow procedure or orchestration) didn't cover the needed scenario, didn't prevent a class of errors, or lacked a needed step |
+| `.claude/commands/*.md` | One of the remaining single-file templates (`rebase`, `quick-issue`, `progress-boring`) gave unclear instructions or missed a scenario |
+| `.claude/agents/<name>.md` | A sub-agent's brief is incomplete, allowed an out-of-scope decision, or missed a check |
 | `CLAUDE.md` | A convention / process / project structure is not recorded — the agent had to guess |
 | `docs/engineering/` | An architectural principle / pattern is recorded incorrectly, incompletely, or its examples diverge from reality |
 | `docs/product/features/` | A feature spec is incomplete or missing where it would have been useful |

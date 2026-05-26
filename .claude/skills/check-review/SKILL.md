@@ -1,3 +1,8 @@
+---
+name: check-review
+description: Read the latest review comments on the PR you are working on, classify each as pointwise or structural (re-auditing the whole diff for structural ones), reject reviewer-priority labels in favor of own value assessment, fix valid ones, reply to invalid ones in the original thread via `in_reply_to`, push. Use when the user says "check review", "process PR comments", "address review", "посмотри ревью", "обработай комменты", or invokes `/check-review`.
+---
+
 Review the latest comments on the PR you are working on. Assess which of them are valid, fix the valid ones. If there are invalid ones, reply to them explaining why you consider them invalid. Push the changes.
 
 ## Important: pointwise fix vs structural finding
