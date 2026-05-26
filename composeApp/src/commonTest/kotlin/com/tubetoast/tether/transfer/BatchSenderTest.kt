@@ -1,10 +1,5 @@
-package com.tubetoast.tether.presentation.transfer
+package com.tubetoast.tether.transfer
 
-import com.tubetoast.tether.transfer.FailureReason
-import com.tubetoast.tether.transfer.FakeConnectionMonitor
-import com.tubetoast.tether.transfer.FakeFileSource
-import com.tubetoast.tether.transfer.FileSource
-import com.tubetoast.tether.transfer.PeerIdentity
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -42,32 +37,30 @@ class BatchSenderTest {
     )
 
     @Test
-    fun `happy path all succeed returns AllSent and emits Sent`() = runTest {
-        val emitted = mutableListOf<PeerTransferState>()
+    fun `happy path all succeed returns AllSent and emits Completed AllSent`() = runTest {
+        val emitted = mutableListOf<BatchProgress>()
         val outcome = makeSender().run(sources("a.txt", "b.txt", "c.txt"), peer) { emitted.add(it) }
 
         assertIs<BatchOutcome.AllSent>(outcome)
-        val sent = emitted.last()
-        assertIs<PeerTransferState.Sent>(sent)
-        assertEquals(3, sent.sent)
-        assertEquals(3, sent.total)
-        assertNull(sent.partialReason)
+        val completed = emitted.last()
+        assertIs<BatchProgress.Completed>(completed)
+        assertIs<BatchOutcome.AllSent>(completed.outcome)
     }
 
     @Test
-    fun `happy path emits ActiveOutbound before Sent`() = runTest {
-        val emitted = mutableListOf<PeerTransferState>()
+    fun `happy path emits Sending before Completed`() = runTest {
+        val emitted = mutableListOf<BatchProgress>()
         makeSender().run(sources("a.txt", "b.txt", "c.txt"), peer) { emitted.add(it) }
 
-        val active = emitted.dropLast(1)
-        assertTrue(active.isNotEmpty(), "Expected at least one ActiveOutbound before Sent")
-        active.forEach { assertIs<PeerTransferState.ActiveOutbound>(it) }
+        val sending = emitted.dropLast(1)
+        assertTrue(sending.isNotEmpty(), "Expected at least one Sending before Completed")
+        sending.forEach { assertIs<BatchProgress.Sending>(it) }
     }
 
     @Test
     fun `cancel mid-file returns Cancelled with remaining files`() = runTest {
         val pauseChannel = Channel<Unit>(0)
-        val emitted = mutableListOf<PeerTransferState>()
+        val emitted = mutableListOf<BatchProgress>()
         val monitor = FakeConnectionMonitor()
         val sender = BatchSender(
             sendOne = { _, _ -> pauseChannel.receive() },
@@ -85,13 +78,15 @@ class BatchSenderTest {
         runCurrent()
 
         val last = emitted.last()
-        assertIs<PeerTransferState.Cancelled>(last)
-        assertTrue(last.remaining.isNotEmpty(), "Expected remaining files")
+        assertIs<BatchProgress.Completed>(last)
+        val cancelled = last.outcome
+        assertIs<BatchOutcome.Cancelled>(cancelled)
+        assertTrue(cancelled.remaining.isNotEmpty(), "Expected remaining files")
     }
 
     @Test
     fun `unreadable file skips and rest succeed with FilesUnreadable partial reason`() = runTest {
-        val emitted = mutableListOf<PeerTransferState>()
+        val emitted = mutableListOf<BatchProgress>()
         val sender = makeSender(
             sendOne = { src, onProgress ->
                 if (src.name == "b.txt") throw UnreadableSourceException("b.txt")
@@ -102,21 +97,18 @@ class BatchSenderTest {
         val outcome = sender.run(sources("a.txt", "b.txt", "c.txt"), peer) { emitted.add(it) }
 
         assertIs<BatchOutcome.PartialSent>(outcome)
-        val sent = emitted.last()
-        assertIs<PeerTransferState.Sent>(sent)
-        assertEquals(2, sent.sent)
-        val partial = sent.partialReason
-        assertIs<PartialOutcome.FilesUnreadable>(partial)
-        assertEquals(1, partial.count)
+        val last = emitted.last()
+        assertIs<BatchProgress.Completed>(last)
+        assertIs<BatchOutcome.PartialSent>(last.outcome)
 
-        val bFile = sent.perFile.first { it.name == "b.txt" }
+        val bFile = last.perFile.first { it.name == "b.txt" }
         assertIs<PerFileStatus.Failed>(bFile)
         assertIs<FailureReason.Unreadable>(bFile.reason)
     }
 
     @Test
     fun `ReceiverWriteFailed file is marked failed and batch continues`() = runTest {
-        val emitted = mutableListOf<PeerTransferState>()
+        val emitted = mutableListOf<BatchProgress>()
         val sender = makeSender(
             sendOne = { src, onProgress ->
                 if (src.name == "b.txt") throw ReceiverWriteFailedException(507)
@@ -127,10 +119,9 @@ class BatchSenderTest {
         val outcome = sender.run(sources("a.txt", "b.txt", "c.txt"), peer) { emitted.add(it) }
 
         assertIs<BatchOutcome.PartialSent>(outcome)
-        val sent = emitted.last()
-        assertIs<PeerTransferState.Sent>(sent)
-        assertEquals(2, sent.sent)
-        val bFile = sent.perFile.first { it.name == "b.txt" }
+        val last = emitted.last()
+        assertIs<BatchProgress.Completed>(last)
+        val bFile = last.perFile.first { it.name == "b.txt" }
         assertIs<PerFileStatus.Failed>(bFile)
         val reason = bFile.reason
         assertIs<FailureReason.ReceiverWriteFailed>(reason)
@@ -140,7 +131,7 @@ class BatchSenderTest {
     @Test
     fun `connection drop then reconnect resumes and produces AllSent`() = runTest {
         val pauseChannel = Channel<Unit>(0)
-        val emitted = mutableListOf<PeerTransferState>()
+        val emitted = mutableListOf<BatchProgress>()
         val monitor = FakeConnectionMonitor()
         var sendCallCount = 0
         val sender = BatchSender(
@@ -168,15 +159,16 @@ class BatchSenderTest {
         job.join()
 
         val last = emitted.last()
-        assertIs<PeerTransferState.Sent>(last)
-        assertEquals(3, last.sent)
-        assertNull(last.partialReason)
+        assertIs<BatchProgress.Completed>(last)
+        assertIs<BatchOutcome.AllSent>(last.outcome)
+        assertEquals(3, last.perFile.count { it is PerFileStatus.Done })
+        assertNull(last.perFile.filterIsInstance<PerFileStatus.Failed>().firstOrNull())
     }
 
     @Test
-    fun `connection drop then reconnect false produces Error NetworkLost`() = runTest {
+    fun `connection drop then reconnect false produces Failed NetworkLost`() = runTest {
         val pauseChannel = Channel<Unit>(0)
-        val emitted = mutableListOf<PeerTransferState>()
+        val emitted = mutableListOf<BatchProgress>()
         val monitor = FakeConnectionMonitor()
         var sendCallCount = 0
         val sender = BatchSender(
@@ -209,9 +201,11 @@ class BatchSenderTest {
         assertEquals(1, failedOutcome.sent)
 
         val last = emitted.last()
-        assertIs<PeerTransferState.Error>(last)
-        assertEquals(TransferErrorReason.NetworkLost, last.reason)
-        assertEquals(1, last.sent)
+        assertIs<BatchProgress.Completed>(last)
+        val completedOutcome = last.outcome
+        assertIs<BatchOutcome.Failed>(completedOutcome)
+        assertEquals(TransferErrorReason.NetworkLost, completedOutcome.reason)
+        assertEquals(1, completedOutcome.sent)
 
         val failedFiles = last.perFile.filterIsInstance<PerFileStatus.Failed>()
         assertEquals(2, failedFiles.size)
@@ -220,7 +214,7 @@ class BatchSenderTest {
 
     @Test
     fun `empty source list returns AllSent without emitting`() = runTest {
-        val emitted = mutableListOf<PeerTransferState>()
+        val emitted = mutableListOf<BatchProgress>()
         val outcome = makeSender().run(emptyList(), peer) { emitted.add(it) }
 
         assertIs<BatchOutcome.AllSent>(outcome)
@@ -246,7 +240,7 @@ class BatchSenderTest {
 
     @Test
     fun `PeerUnreachable exception produces FailureReason PeerUnreachable per file`() = runTest {
-        val emitted = mutableListOf<PeerTransferState>()
+        val emitted = mutableListOf<BatchProgress>()
         val sender = makeSender(
             sendOne = { src, onProgress ->
                 if (src.name == "b.txt") throw PeerUnreachableException()
@@ -257,16 +251,16 @@ class BatchSenderTest {
         val outcome = sender.run(sources("a.txt", "b.txt", "c.txt"), peer) { emitted.add(it) }
 
         assertIs<BatchOutcome.PartialSent>(outcome)
-        val sent = emitted.last()
-        assertIs<PeerTransferState.Sent>(sent)
-        val bFile = sent.perFile.first { it.name == "b.txt" }
+        val last = emitted.last()
+        assertIs<BatchProgress.Completed>(last)
+        val bFile = last.perFile.first { it.name == "b.txt" }
         assertIs<PerFileStatus.Failed>(bFile)
         assertEquals(FailureReason.PeerUnreachable, bFile.reason)
     }
 
     @Test
-    fun `all files PeerUnreachable produces Error PeerUnreachable`() = runTest {
-        val emitted = mutableListOf<PeerTransferState>()
+    fun `all files PeerUnreachable produces Failed PeerUnreachable`() = runTest {
+        val emitted = mutableListOf<BatchProgress>()
         val sender = makeSender(
             sendOne = { _, _ -> throw PeerUnreachableException() },
         )
@@ -276,13 +270,15 @@ class BatchSenderTest {
         assertIs<BatchOutcome.Failed>(outcome)
         assertEquals(TransferErrorReason.PeerUnreachable, outcome.reason)
         val last = emitted.last()
-        assertIs<PeerTransferState.Error>(last)
-        assertEquals(TransferErrorReason.PeerUnreachable, last.reason)
+        assertIs<BatchProgress.Completed>(last)
+        val lastOutcome = last.outcome
+        assertIs<BatchOutcome.Failed>(lastOutcome)
+        assertEquals(TransferErrorReason.PeerUnreachable, lastOutcome.reason)
     }
 
     @Test
-    fun `all files ReceiverWriteFailed produces Error ReceiverWriteFailed`() = runTest {
-        val emitted = mutableListOf<PeerTransferState>()
+    fun `all files ReceiverWriteFailed produces Failed ReceiverWriteFailed`() = runTest {
+        val emitted = mutableListOf<BatchProgress>()
         val sender = makeSender(
             sendOne = { _, _ -> throw ReceiverWriteFailedException(507) },
         )
@@ -292,13 +288,15 @@ class BatchSenderTest {
         assertIs<BatchOutcome.Failed>(outcome)
         assertEquals(TransferErrorReason.ReceiverWriteFailed, outcome.reason)
         val last = emitted.last()
-        assertIs<PeerTransferState.Error>(last)
-        assertEquals(TransferErrorReason.ReceiverWriteFailed, last.reason)
+        assertIs<BatchProgress.Completed>(last)
+        val lastOutcome = last.outcome
+        assertIs<BatchOutcome.Failed>(lastOutcome)
+        assertEquals(TransferErrorReason.ReceiverWriteFailed, lastOutcome.reason)
     }
 
     @Test
-    fun `mixed failure types with no successes produces Error AllFilesFailed`() = runTest {
-        val emitted = mutableListOf<PeerTransferState>()
+    fun `mixed failure types with no successes produces Failed AllFilesFailed`() = runTest {
+        val emitted = mutableListOf<BatchProgress>()
         var callCount = 0
         val sender = makeSender(
             sendOne = { _, _ ->
@@ -312,14 +310,16 @@ class BatchSenderTest {
         assertIs<BatchOutcome.Failed>(outcome)
         assertEquals(TransferErrorReason.AllFilesFailed, outcome.reason)
         val last = emitted.last()
-        assertIs<PeerTransferState.Error>(last)
-        assertEquals(TransferErrorReason.AllFilesFailed, last.reason)
+        assertIs<BatchProgress.Completed>(last)
+        val lastOutcome = last.outcome
+        assertIs<BatchOutcome.Failed>(lastOutcome)
+        assertEquals(TransferErrorReason.AllFilesFailed, lastOutcome.reason)
     }
 
     @Test
     fun `cancel marks remaining files with TransferCancelled reason`() = runTest {
         val pauseChannel = Channel<Unit>(0)
-        val emitted = mutableListOf<PeerTransferState>()
+        val emitted = mutableListOf<BatchProgress>()
         val monitor = FakeConnectionMonitor()
         val sender = BatchSender(
             sendOne = { _, _ -> pauseChannel.receive() },
@@ -337,47 +337,29 @@ class BatchSenderTest {
         runCurrent()
 
         val last = emitted.last()
-        assertIs<PeerTransferState.Cancelled>(last)
+        assertIs<BatchProgress.Completed>(last)
+        assertIs<BatchOutcome.Cancelled>(last.outcome)
         val cancelledFiles = last.perFile.filterIsInstance<PerFileStatus.Failed>()
         assertTrue(cancelledFiles.any { it.reason == FailureReason.TransferCancelled })
     }
 
     @Test
-    fun `all files skipped by user produces SenderCancelled partial outcome`() = runTest {
-        val emitted = mutableListOf<PeerTransferState>()
+    fun `all files skipped by user produces PartialSent`() = runTest {
+        val emitted = mutableListOf<BatchProgress>()
         val sender = makeSender()
 
         val outcome = sender.run(sources("a.txt", "b.txt"), peer, skipPredicate = { true }) { emitted.add(it) }
 
         assertIs<BatchOutcome.PartialSent>(outcome)
-        val sent = emitted.last()
-        assertIs<PeerTransferState.Sent>(sent)
-        assertIs<PartialOutcome.SenderCancelled>(sent.partialReason)
-    }
-
-    @Test
-    fun `ReceiverWriteFailed has SenderCancelled partialReason when mixed with cancelled`() = runTest {
-        val emitted = mutableListOf<PeerTransferState>()
-        val sender = makeSender(
-            sendOne = { src, onProgress ->
-                if (src.name == "b.txt") throw ReceiverWriteFailedException(507)
-                onProgress(src.sizeBytes ?: 0L, src.sizeBytes)
-            },
-        )
-
-        val outcome = sender.run(sources("a.txt", "b.txt", "c.txt"), peer) { emitted.add(it) }
-
-        assertIs<BatchOutcome.PartialSent>(outcome)
-        val sent = emitted.last()
-        assertIs<PeerTransferState.Sent>(sent)
-        val partial = sent.partialReason
-        assertIs<PartialOutcome.ConnectionLost>(partial)
+        val last = emitted.last()
+        assertIs<BatchProgress.Completed>(last)
+        assertIs<BatchOutcome.PartialSent>(last.outcome)
     }
 
     @Test
     fun `cancel before first file produces Cancelled with sent=0 and all files remaining`() = runTest {
         val gate = CompletableDeferred<Unit>()
-        val emitted = mutableListOf<PeerTransferState>()
+        val emitted = mutableListOf<BatchProgress>()
         val monitor = FakeConnectionMonitor()
         val sender = BatchSender(
             sendOne = { _, _ -> gate.await() },
@@ -396,16 +378,18 @@ class BatchSenderTest {
         runCurrent()
 
         val last = emitted.last()
-        assertIs<PeerTransferState.Cancelled>(last)
-        assertEquals(0, last.sent)
-        assertEquals(srcs.size, last.remaining.size)
-        assertTrue(last.remaining.containsAll(srcs.map { it.name }))
+        assertIs<BatchProgress.Completed>(last)
+        val cancelled = last.outcome
+        assertIs<BatchOutcome.Cancelled>(cancelled)
+        assertEquals(0, cancelled.sent)
+        assertEquals(srcs.size, cancelled.remaining.size)
+        assertTrue(cancelled.remaining.containsAll(srcs.map { it.name }))
     }
 
     @Test
     fun `cancelCurrent arriving after sendOne completes does not mislabel file as CancelledByUser`() = runTest {
         val testDispatcher = StandardTestDispatcher(testScheduler)
-        val emitted = mutableListOf<PeerTransferState>()
+        val emitted = mutableListOf<BatchProgress>()
         var sendOneCompleted = false
         val sender = BatchSender(
             sendOne = { src, onProgress ->
@@ -426,10 +410,10 @@ class BatchSenderTest {
         job.join()
 
         assertTrue(sendOneCompleted, "sendOne must complete bytes before cancelCurrent arrives")
-        val sent = emitted.filterIsInstance<PeerTransferState.Sent>().lastOrNull()
+        val completed = emitted.filterIsInstance<BatchProgress.Completed>().lastOrNull()
         assertTrue(
-            sent != null &&
-                sent.perFile.none {
+            completed != null &&
+                completed.perFile.none {
                     it is PerFileStatus.Failed &&
                         (it.reason is FailureReason.CancelledByUser) &&
                         it.name == "a.txt"
@@ -441,7 +425,7 @@ class BatchSenderTest {
     @Test
     fun `remaining list excludes skipped files on cancel`() = runTest {
         val pauseChannel = Channel<Unit>(0)
-        val emitted = mutableListOf<PeerTransferState>()
+        val emitted = mutableListOf<BatchProgress>()
         val monitor = FakeConnectionMonitor()
         val sender = BatchSender(
             sendOne = { src, onProgress ->
@@ -467,7 +451,9 @@ class BatchSenderTest {
         runCurrent()
 
         val last = emitted.last()
-        assertIs<PeerTransferState.Cancelled>(last)
-        assertTrue("file2.txt" !in last.remaining, "Skipped file must not appear in remaining")
+        assertIs<BatchProgress.Completed>(last)
+        val lastOutcome = last.outcome
+        assertIs<BatchOutcome.Cancelled>(lastOutcome)
+        assertTrue("file2.txt" !in lastOutcome.remaining, "Skipped file must not appear in remaining")
     }
 }

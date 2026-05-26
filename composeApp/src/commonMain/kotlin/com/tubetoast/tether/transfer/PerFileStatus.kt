@@ -1,6 +1,4 @@
-package com.tubetoast.tether.presentation.transfer
-
-import com.tubetoast.tether.transfer.FailureReason
+package com.tubetoast.tether.transfer
 
 sealed interface PerFileStatus {
     val name: String

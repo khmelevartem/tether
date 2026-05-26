@@ -3,11 +3,13 @@ package com.tubetoast.tether.presentation.transfer
 import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.resume
+import com.tubetoast.tether.transfer.BatchSender
 import com.tubetoast.tether.transfer.FailureReason
 import com.tubetoast.tether.transfer.FakeConnectionMonitor
 import com.tubetoast.tether.transfer.FakeFileSource
 import com.tubetoast.tether.transfer.FileSource
 import com.tubetoast.tether.transfer.PeerIdentity
+import com.tubetoast.tether.transfer.PerFileStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel

@@ -3,12 +3,18 @@ package com.tubetoast.tether.presentation.transfer
 import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.decompose.value.MutableValue
 import com.arkivanov.decompose.value.Value
+import com.tubetoast.tether.transfer.BatchOutcome
+import com.tubetoast.tether.transfer.BatchProgress
+import com.tubetoast.tether.transfer.BatchSender
 import com.tubetoast.tether.transfer.ConnectionMonitor
 import com.tubetoast.tether.transfer.FailureReason
 import com.tubetoast.tether.transfer.FileSource
+import com.tubetoast.tether.transfer.PartialOutcome
 import com.tubetoast.tether.transfer.PeerIdentity
+import com.tubetoast.tether.transfer.PerFileStatus
 import com.tubetoast.tether.transfer.ReceiveEvent
 import com.tubetoast.tether.transfer.ReconnectionTimeout
+import com.tubetoast.tether.transfer.TransferErrorReason
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
@@ -143,9 +149,69 @@ class PeerTransferComponent(
         val sender = batchSenderFactory()
         currentSender = sender
         try {
-            sender.run(sources, peer, { src -> src.name in cancelledFileNames.value }) { st -> mutableState.value = st }
+            sender.run(sources, peer, { src -> src.name in cancelledFileNames.value }) { progress ->
+                mutableState.value = mapProgress(progress)
+            }
         } finally {
             currentSender = null
+        }
+    }
+
+    private fun mapProgress(progress: BatchProgress): PeerTransferState = when (progress) {
+        is BatchProgress.Sending -> PeerTransferState.ActiveOutbound(
+            peer = progress.peer,
+            currentFile = progress.currentFile,
+            currentIndex = progress.currentIndex,
+            totalFiles = progress.totalFiles,
+            sentBytes = progress.sentBytes,
+            totalBytes = progress.totalBytes,
+            bytesPerSec = progress.bytesPerSec,
+            skippedCount = progress.skippedCount,
+            perFile = progress.perFile,
+        )
+        is BatchProgress.Reconnecting -> PeerTransferState.Reconnecting(
+            peer = progress.peer,
+            direction = Direction.Outbound,
+            remainingSeconds = progress.remainingSeconds,
+            snapshotBeforeDrop = mapProgress(progress.snapshotBeforeDrop),
+        )
+        is BatchProgress.Completed -> mapCompleted(progress)
+    }
+
+    private fun mapCompleted(progress: BatchProgress.Completed): PeerTransferState {
+        val peer = progress.peer
+        val perFile = progress.perFile
+        return when (val outcome = progress.outcome) {
+            is BatchOutcome.AllSent -> PeerTransferState.Sent(
+                peer = peer,
+                sent = perFile.count { it is PerFileStatus.Done },
+                total = perFile.size,
+                perFile = perFile,
+                partialReason = null,
+            )
+            is BatchOutcome.PartialSent -> {
+                val failedEntries = perFile.filterIsInstance<PerFileStatus.Failed>()
+                val doneCount = perFile.count { it is PerFileStatus.Done }
+                PeerTransferState.Sent(
+                    peer = peer,
+                    sent = doneCount,
+                    total = perFile.size,
+                    perFile = perFile,
+                    partialReason = failedEntries.dominantPartialReason(),
+                )
+            }
+            is BatchOutcome.Cancelled -> PeerTransferState.Cancelled(
+                peer = peer,
+                sent = outcome.sent,
+                remaining = outcome.remaining,
+                perFile = perFile,
+            )
+            is BatchOutcome.Failed -> PeerTransferState.Error(
+                peer = peer,
+                reason = outcome.reason,
+                sent = outcome.sent,
+                perFile = perFile,
+            )
         }
     }
 
@@ -243,5 +309,15 @@ class PeerTransferComponent(
                 )
             }
         }
+    }
+}
+
+private fun List<PerFileStatus.Failed>.dominantPartialReason(): PartialOutcome {
+    val unreadableCount = count { it.reason is FailureReason.Unreadable }
+    val cancelledByUserCount = count { it.cancelledByUser }
+    return when {
+        unreadableCount == size -> PartialOutcome.FilesUnreadable(unreadableCount)
+        cancelledByUserCount == size -> PartialOutcome.SenderCancelled
+        else -> PartialOutcome.ConnectionLost
     }
 }

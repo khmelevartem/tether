@@ -1,10 +1,5 @@
-package com.tubetoast.tether.presentation.transfer
+package com.tubetoast.tether.transfer
 
-import com.tubetoast.tether.transfer.ConnectionMonitor
-import com.tubetoast.tether.transfer.FailureReason
-import com.tubetoast.tether.transfer.FileSource
-import com.tubetoast.tether.transfer.PeerIdentity
-import com.tubetoast.tether.transfer.ReconnectionTimeout
 import com.tubetoast.tether.util.IoDispatcher
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -57,17 +52,13 @@ class BatchSender(
         sources: List<FileSource>,
         peer: PeerIdentity,
         skipPredicate: (FileSource) -> Boolean = { false },
-        emit: suspend (PeerTransferState) -> Unit,
+        emit: suspend (BatchProgress) -> Unit,
     ): BatchOutcome = withContext(dispatcher) {
         if (sources.isEmpty()) return@withContext BatchOutcome.AllSent
 
         val perFile: MutableList<PerFileStatus> = sources
-            .map {
-                PerFileStatus.Queued(
-                    it.name,
-                    it.sizeBytes,
-                )
-            }.toMutableList()
+            .map { PerFileStatus.Queued(it.name, it.sizeBytes) }
+            .toMutableList()
         var sentBytes = 0L
         val totalBytes: Long? = sources.fold(0L as Long?) { acc, src ->
             val size = src.sizeBytes
@@ -80,13 +71,12 @@ class BatchSender(
                 val src = sources[i]
 
                 if (skipPredicate(src)) {
-                    perFile[i] =
-                        PerFileStatus.Failed(
-                            src.name,
-                            src.sizeBytes,
-                            FailureReason.CancelledByUser,
-                            cancelledByUser = true,
-                        )
+                    perFile[i] = PerFileStatus.Failed(
+                        src.name,
+                        src.sizeBytes,
+                        FailureReason.CancelledByUser,
+                        cancelledByUser = true,
+                    )
                     i++
                     continue
                 }
@@ -96,9 +86,9 @@ class BatchSender(
                 val rate = BytesPerSecondMovingAverage(timeSource = timeSource)
                 var bytesDone = 0L
                 var dropDetected = false
-                var lastActiveState: PeerTransferState =
-                    buildActiveState(peer, i, sources, sentBytes, totalBytes, null, perFile)
-                emit(lastActiveState)
+                var lastSending: BatchProgress.Sending =
+                    buildSending(peer, i, sources, sentBytes, totalBytes, null, perFile)
+                emit(lastSending)
 
                 val fileGeneration: Long = ++currentGeneration
                 currentFileName = src.name
@@ -121,16 +111,8 @@ class BatchSender(
                                 delay(progressThrottle)
                                 ensureActive()
                                 val st =
-                                    buildActiveState(
-                                        peer,
-                                        i,
-                                        sources,
-                                        sentBytes,
-                                        totalBytes,
-                                        rate.valueOrNull(),
-                                        perFile,
-                                    )
-                                lastActiveState = st
+                                    buildSending(peer, i, sources, sentBytes, totalBytes, rate.valueOrNull(), perFile)
+                                lastSending = st
                                 emit(st)
                             }
                         }
@@ -170,11 +152,10 @@ class BatchSender(
 
                 if (dropDetected) {
                     emit(
-                        PeerTransferState.Reconnecting(
+                        BatchProgress.Reconnecting(
                             peer = peer,
-                            direction = Direction.Outbound,
                             remainingSeconds = reconnectionTimeout.inWholeSeconds.toInt(),
-                            snapshotBeforeDrop = lastActiveState,
+                            snapshotBeforeDrop = lastSending,
                         ),
                     )
                     if (connectionMonitor.awaitReconnect(reconnectionTimeout)) {
@@ -186,11 +167,12 @@ class BatchSender(
                             perFile[j] =
                                 PerFileStatus.Failed(sources[j].name, sources[j].sizeBytes, FailureReason.NetworkLost)
                         }
-                        val doneCount = perFile.count { it is PerFileStatus.Done }
-                        emit(
-                            PeerTransferState.Error(peer, TransferErrorReason.NetworkLost, doneCount, perFile.toList()),
+                        val outcome = BatchOutcome.Failed(
+                            TransferErrorReason.NetworkLost,
+                            perFile.count { it is PerFileStatus.Done },
                         )
-                        return@withContext BatchOutcome.Failed(TransferErrorReason.NetworkLost, doneCount)
+                        emit(BatchProgress.Completed(peer, outcome, perFile.toList()))
+                        return@withContext outcome
                     }
                 }
 
@@ -207,14 +189,15 @@ class BatchSender(
                     perFile[j] = PerFileStatus.Failed(st.name, st.size, FailureReason.TransferCancelled)
                 }
             }
-            emit(PeerTransferState.Cancelled(peer, doneCount, remaining, perFile.toList()))
-            return@withContext BatchOutcome.Cancelled(doneCount, remaining)
+            val outcome = BatchOutcome.Cancelled(doneCount, remaining)
+            emit(BatchProgress.Completed(peer, outcome, perFile.toList()))
+            return@withContext outcome
         }
 
         return@withContext finalizeOutcome(peer, sources, perFile, emit)
     }
 
-    private fun buildActiveState(
+    private fun buildSending(
         peer: PeerIdentity,
         index: Int,
         sources: List<FileSource>,
@@ -222,7 +205,7 @@ class BatchSender(
         totalBytes: Long?,
         bytesPerSec: Long?,
         perFile: List<PerFileStatus>,
-    ): PeerTransferState.ActiveOutbound = PeerTransferState.ActiveOutbound(
+    ): BatchProgress.Sending = BatchProgress.Sending(
         peer = peer,
         currentFile = sources[index].name,
         currentIndex = index,
@@ -238,43 +221,35 @@ class BatchSender(
         peer: PeerIdentity,
         sources: List<FileSource>,
         perFile: MutableList<PerFileStatus>,
-        emit: suspend (PeerTransferState) -> Unit,
+        emit: suspend (BatchProgress) -> Unit,
     ): BatchOutcome {
         val doneCount = perFile.count { it is PerFileStatus.Done }
         val failedEntries = perFile.filterIsInstance<PerFileStatus.Failed>()
         val failedNames = failedEntries.map { it.name }
 
         if (failedNames.isEmpty()) {
-            emit(PeerTransferState.Sent(peer, doneCount, sources.size, perFile.toList(), null))
-            return BatchOutcome.AllSent
+            val outcome = BatchOutcome.AllSent
+            emit(BatchProgress.Completed(peer, outcome, perFile.toList()))
+            return outcome
         }
 
         val allCancelledByUser = failedEntries.all { it.cancelledByUser }
         if (doneCount == 0 && !allCancelledByUser) {
             val errorReason = failedEntries.dominantErrorReason()
-            emit(PeerTransferState.Error(peer, errorReason, 0, perFile.toList()))
-            return BatchOutcome.Failed(errorReason, 0)
+            val outcome = BatchOutcome.Failed(errorReason, 0)
+            emit(BatchProgress.Completed(peer, outcome, perFile.toList()))
+            return outcome
         }
 
-        val partialReason = failedEntries.dominantPartialReason()
-        emit(PeerTransferState.Sent(peer, doneCount, sources.size, perFile.toList(), partialReason))
-        return BatchOutcome.PartialSent(failedNames)
+        val outcome = BatchOutcome.PartialSent(failedNames)
+        emit(BatchProgress.Completed(peer, outcome, perFile.toList()))
+        return outcome
     }
 
     private fun List<PerFileStatus.Failed>.dominantErrorReason(): TransferErrorReason = when {
         all { it.reason is FailureReason.ReceiverWriteFailed } -> TransferErrorReason.ReceiverWriteFailed
         all { it.reason is FailureReason.PeerUnreachable } -> TransferErrorReason.PeerUnreachable
         else -> TransferErrorReason.AllFilesFailed
-    }
-
-    private fun List<PerFileStatus.Failed>.dominantPartialReason(): PartialOutcome {
-        val unreadableCount = count { it.reason is FailureReason.Unreadable }
-        val cancelledByUserCount = count { it.cancelledByUser }
-        return when {
-            unreadableCount == size -> PartialOutcome.FilesUnreadable(unreadableCount)
-            cancelledByUserCount == size -> PartialOutcome.SenderCancelled
-            else -> PartialOutcome.ConnectionLost
-        }
     }
 }
 

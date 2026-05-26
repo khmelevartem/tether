@@ -16,7 +16,7 @@ import java.io.File
 class DesktopAppContainer(
     config: DesktopAppConfig,
 ) : JvmAppContainer(config) {
-    override val trustedDeviceStore: TrustedDeviceStore = config.trustedDeviceStore
+    override val trustedDeviceStore: TrustedDeviceStore = TrustedDeviceStore()
     private val dataStore = PreferenceDataStoreFactory.createWithPath {
         File(config.preferencesFilePath).also { it.parentFile?.mkdirs() }.absolutePath.toPath()
     }

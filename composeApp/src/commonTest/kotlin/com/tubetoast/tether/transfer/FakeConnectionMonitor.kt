@@ -7,13 +7,13 @@ import kotlinx.coroutines.flow.first
 import kotlin.time.Duration
 
 internal class FakeConnectionMonitor : ConnectionMonitor {
-    override val drops = MutableSharedFlow<Unit>(extraBufferCapacity = 16)
+    override val drops = MutableSharedFlow<ConnectionDrop>(extraBufferCapacity = 16)
 
     private val reconnectResult = MutableStateFlow<Boolean?>(null)
 
     suspend fun drop() {
         reconnectResult.value = null
-        drops.emit(Unit)
+        drops.emit(ConnectionDrop)
     }
 
     fun reconnect(success: Boolean) {

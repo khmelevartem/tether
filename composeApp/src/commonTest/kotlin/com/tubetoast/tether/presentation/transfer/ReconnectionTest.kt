@@ -1,8 +1,13 @@
 package com.tubetoast.tether.presentation.transfer
 
+import com.tubetoast.tether.transfer.BatchOutcome
+import com.tubetoast.tether.transfer.BatchProgress
+import com.tubetoast.tether.transfer.BatchSender
 import com.tubetoast.tether.transfer.FakeConnectionMonitor
 import com.tubetoast.tether.transfer.FakeFileSource
 import com.tubetoast.tether.transfer.PeerIdentity
+import com.tubetoast.tether.transfer.PerFileStatus
+import com.tubetoast.tether.transfer.TransferErrorReason
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
@@ -42,7 +47,7 @@ class ReconnectionTest {
             dispatcher = Dispatchers.Unconfined,
         )
 
-        val emitted = mutableListOf<PeerTransferState>()
+        val emitted = mutableListOf<BatchProgress>()
         val job = launch {
             sender.run(sources("a.txt", "b.txt", "c.txt"), peer) { emitted.add(it) }
         }
@@ -61,9 +66,10 @@ class ReconnectionTest {
         job.join()
 
         val last = emitted.last()
-        assertIs<PeerTransferState.Sent>(last)
-        assertEquals(3, last.sent)
-        assertNull(last.partialReason)
+        assertIs<BatchProgress.Completed>(last)
+        assertIs<BatchOutcome.AllSent>(last.outcome)
+        assertEquals(3, last.perFile.count { it is PerFileStatus.Done })
+        assertNull(last.perFile.filterIsInstance<PerFileStatus.Failed>().firstOrNull())
     }
 
     @Test
@@ -105,7 +111,7 @@ class ReconnectionTest {
     }
 
     @Test
-    fun `second drop with timeout produces Error even after first successful reconnect`() = runTest {
+    fun `second drop with timeout produces Failed even after first successful reconnect`() = runTest {
         val monitor = FakeConnectionMonitor()
         var sendCount = 0
         val pause = Channel<Unit>(0)

@@ -1,4 +1,4 @@
-package com.tubetoast.tether.presentation.transfer
+package com.tubetoast.tether.transfer
 
 sealed interface PartialOutcome {
     data object SenderCancelled : PartialOutcome

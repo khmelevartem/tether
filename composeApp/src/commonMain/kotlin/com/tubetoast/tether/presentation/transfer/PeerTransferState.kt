@@ -1,6 +1,9 @@
 package com.tubetoast.tether.presentation.transfer
 
+import com.tubetoast.tether.transfer.PartialOutcome
 import com.tubetoast.tether.transfer.PeerIdentity
+import com.tubetoast.tether.transfer.PerFileStatus
+import com.tubetoast.tether.transfer.TransferErrorReason
 
 sealed interface PeerTransferState {
     val peer: PeerIdentity
