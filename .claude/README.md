@@ -28,7 +28,32 @@ How Tether extends Claude Code. Two artifact homes, both creating a `/slash-comm
 
 ## Agents index
 
-`.claude/agents/<name>.md` — sub-agent definitions dispatched by orchestrating skills. Writing agents: `architect`, `spec-writer`, `ux-expert`, `coder`, `ui-expert`, `tester`, `bug-reproducer`. Reviewing agents: `review-{dod,guides,glossary,reuse,architecture,correctness,tests,platform,ux,design-system,visual,adversarial}`.
+`.claude/agents/<name>.md` — sub-agent definitions dispatched by orchestrating skills.
+
+Writing agents:
+
+- `architect` — designs the technical system for a subsystem; writes living engineering doc + ADR.
+- `bug-reproducer` — reproduces a bug and confirms root cause before any fix is written.
+- `coder` — implements code changes; follows CLAUDE.md, DI checklist, common-first.
+- `spec-writer` — drafts product feature specs in `docs/product/features/`.
+- `tester` — writes / extends tests for KMP code per `testing.md`.
+- `ui-expert` — Compose Multiplatform UI specialist (Android / Desktop / iOS).
+- `ux-expert` — turns a spec into a cross-platform UX brief.
+
+Reviewing agents (dispatched by `code-review` / `implement` / `document`):
+
+- `review-adversarial` — probes what earlier reviewers missed; cross-checks factual claims.
+- `review-architecture` — high-level architectural decision (decomposition, layering, coupling).
+- `review-correctness` — correctness, security, concurrency, resource lifecycle.
+- `review-design-system` — Compose UI conformance to Tether design system (tokens, M3 ban, icons).
+- `review-dod` — DoD criteria from the issue are covered.
+- `review-glossary` — terminology vs `docs/glossary.md`.
+- `review-guides` — conformance to `CLAUDE.md` + `docs/engineering/*`.
+- `review-platform` — KMP source-set placement, expect/actual, platform parity.
+- `review-reuse` — duplication, doc-vs-code drift, 3rd-party-API claims.
+- `review-tests` — test coverage (edge cases for FEATURE/BUGFIX, survival for REFACTOR).
+- `review-ux` — UI code vs the feature's UX brief.
+- `review-visual` — renders Compose `@Preview` to PNG and reviews against visual identity + brief.
 
 ## Skill or command — checkable criteria
 
