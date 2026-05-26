@@ -10,6 +10,7 @@ import com.tubetoast.tether.transfer.FakeFileSource
 import com.tubetoast.tether.transfer.FileSource
 import com.tubetoast.tether.transfer.PartialOutcome
 import com.tubetoast.tether.transfer.PeerIdentity
+import com.tubetoast.tether.transfer.PeerUnreachableException
 import com.tubetoast.tether.transfer.PerFileStatus
 import com.tubetoast.tether.transfer.ReceiveEvent
 import com.tubetoast.tether.transfer.ReceiverWriteFailedException
@@ -310,5 +311,64 @@ class PeerTransferComponentTest {
         assertEquals(1, sendCalls["a.txt"])
         assertEquals(2, sendCalls["b.txt"])
         assertEquals(1, sendCalls["c.txt"])
+    }
+
+    @Test
+    fun `partial success with all PeerUnreachable failures produces PartialOutcome PeerUnreachable`() = runTest {
+        val component = buildComponent(
+            scope = backgroundScope,
+            sendOneOverride = { src, onProgress ->
+                if (src.name == "b.txt") throw PeerUnreachableException()
+                onProgress(src.sizeBytes ?: 0L, src.sizeBytes)
+            },
+        )
+
+        component.startOutbound(listOf(FakeFileSource("a.txt", 100L), FakeFileSource("b.txt", 100L)))
+        runCurrent()
+
+        val state = component.state.value
+        assertIs<PeerTransferState.Sent>(state)
+        assertEquals(PartialOutcome.PeerUnreachable, state.partialReason)
+    }
+
+    @Test
+    fun `partial success with all ReceiverWriteFailed produces ReceiverWriteFailed partial`() = runTest {
+        val component = buildComponent(
+            scope = backgroundScope,
+            sendOneOverride = { src, onProgress ->
+                if (src.name == "b.txt") throw ReceiverWriteFailedException(507)
+                onProgress(src.sizeBytes ?: 0L, src.sizeBytes)
+            },
+        )
+
+        component.startOutbound(listOf(FakeFileSource("a.txt", 100L), FakeFileSource("b.txt", 100L)))
+        runCurrent()
+
+        val state = component.state.value
+        assertIs<PeerTransferState.Sent>(state)
+        assertEquals(PartialOutcome.ReceiverWriteFailed, state.partialReason)
+    }
+
+    @Test
+    fun `partial success with heterogeneous failures produces PartialOutcome ConnectionLost`() = runTest {
+        val component = buildComponent(
+            scope = backgroundScope,
+            sendOneOverride = { src, onProgress ->
+                when (src.name) {
+                    "b.txt" -> throw PeerUnreachableException()
+                    "c.txt" -> throw ReceiverWriteFailedException(507)
+                    else -> onProgress(src.sizeBytes ?: 0L, src.sizeBytes)
+                }
+            },
+        )
+
+        component.startOutbound(
+            listOf(FakeFileSource("a.txt", 100L), FakeFileSource("b.txt", 100L), FakeFileSource("c.txt", 100L)),
+        )
+        runCurrent()
+
+        val state = component.state.value
+        assertIs<PeerTransferState.Sent>(state)
+        assertEquals(PartialOutcome.ConnectionLost, state.partialReason)
     }
 }
