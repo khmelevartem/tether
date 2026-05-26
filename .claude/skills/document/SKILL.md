@@ -19,14 +19,14 @@ Issue number `<N>`.
 
 ## Re-entry contract
 
-Skill идемпотентен по issue. На каждом вызове первым делом проверь `gh pr list --search "issue:#<N>" --state open`:
+The skill is idempotent per issue. At each invocation, first check `gh pr list --search "issue:#<N>" --state open`:
 
-- **PR нет** → стартуй Step 1.
-- **PR есть и открыт** → ты в pull-request feedback итерации. Прочитай **все** human-комменты на PR (`gh api repos/<owner>/<repo>/pulls/<PR>/comments` + `gh pr view <PR> --comments`) и для каждого определи статус: адресован в коммитах после него — или нет. **Дата создания не определяет актуальность** — фильтровать комменты по `created_at > <дата-прошлого-прогона>` запрещено, потому что неадресованный коммент остаётся актуальным независимо от того, насколько он старый. **Counted is not read** — выдача `length`/счётчика без выгрузки `body` каждого коммента не считается прочтением; пока неадресованные комменты не отработаны, consistency wave (Step 4) и review wave (Step 5) не запускаются, иначе обе пройдут впустую на diff'е, который надо переделать. Прогон **обязан** включать на свежем diff'е (`docs/` + `.claude/`): Step 4 (consistency pass) → Step 5 (review wave).
+- **No PR** → start Step 1.
+- **PR exists and is open** → you are in a pull-request feedback iteration. Read **all** human comments on the PR (`gh api repos/<owner>/<repo>/pulls/<PR>/comments` + `gh pr view <PR> --comments`) and for each determine its status: addressed in commits after it — or not. **Creation date does not determine relevance** — filtering comments by `created_at > <date-of-previous-run>` is forbidden, because an unaddressed comment remains relevant regardless of how old it is. **Counted is not read** — returning a `length`/count without fetching the `body` of each comment does not count as reading; while unaddressed comments remain outstanding, the consistency wave (Step 4) and review wave (Step 5) must not run, otherwise both will process a diff that needs to be redone. The run **must** include on a fresh diff (`docs/` + `.claude/`): Step 4 (consistency pass) → Step 5 (review wave).
 
-Шаг 6 (commit + present + push) в re-entry упрощается: коммит идёт в существующую ветку, force-push не нужен, новый PR не создавать.
+Step 6 (commit + present + push) is simplified on re-entry: the commit goes into the existing branch, force-push is not needed, do not create a new PR.
 
-**После push в re-entry — обязательно ответь на каждый адресованный inline-коммент** через `gh api -X POST repos/<owner>/<repo>/pulls/<PR>/comments/<comment_id>/replies -f body="<reply>"`. Для каждого коммента: что сделано + SHA коммита (или явное обоснование, если коммент сознательно отклонён). Без ответа ревьюер не видит закрытия loop'а и тред остаётся «висящим»; следующий re-entry опять прочитает его как unaddressed и зря погонит consistency + review. Ответ — это сигнал «адресовано», не вежливость.
+**After push on re-entry — reply to every addressed inline comment** via `gh api -X POST repos/<owner>/<repo>/pulls/<PR>/comments/<comment_id>/replies -f body="<reply>"`. For each comment: what was done + the commit SHA (or explicit reasoning if the comment was deliberately declined). Without a reply the reviewer cannot see the loop closed and the thread stays "hanging"; the next re-entry will read it again as unaddressed and uselessly re-run consistency + review. A reply is the "addressed" signal, not a courtesy.
 
 ## Gate semantics — when to stop and ask the user
 
@@ -54,12 +54,12 @@ gh issue view <N> --json title,body,labels,comments
 gh pr list --search "issue:#<N>" --state open --json number,isDraft,headRefName
 ```
 
-**Comments — это не дискуссия, это потенциально canon-update body.** При противоречии comment'а с body — приоритет comment'у, эскалируй пользователю одной строкой.
+**Comments are not a discussion — they are potentially a canon-update body.** When a comment conflicts with the body — the comment takes priority; escalate to the user in one line.
 
-**Critical reading.** Воспринимай описание issue как **стартовую точку, не как факт**. Подсвечивай и эскалируй пользователю до начала работы, если:
-- из issue непонятно, какие именно артефакты ожидаются на выходе;
-- противоречие comment vs body, не разрешимое prioritization-правилом;
-- фразы-затычки: «опиши как считаешь нужным», «зафиксируй где надо», «и так далее».
+**Critical reading.** Treat the issue description as a **starting point, not a fact**. Flag and escalate to the user before starting work if:
+- it is unclear from the issue which specific artifacts are expected as output;
+- a conflict between a comment and the body that cannot be resolved by the prioritisation rule;
+- filler phrases: "describe as you see fit", "record wherever appropriate", "and so on".
 
 ### Doc discovery
 
@@ -87,7 +87,7 @@ All subsequent agent dispatches happen with this as cwd.
 
 ### Briefing back to the user
 
-После прочтения issue и разведки, **перед** любым вопросом пользователю (D1, Open questions от sub-agent'ов, classification-неоднозначности) выдай в чат короткий бриф 3–6 строк: что делаем, зачем (мотивация / контекст из issue), предварительный набор слоёв (spec / ux-brief / tech-doc / ADR / knowledge / .claude prompt). Если в этом же сообщении задаёшь вопросы — к каждому приложи 1–2 строки контекста (что говорит issue, какие варианты на столе), чтобы пользователь отвечал, не уходя на GitHub перечитывать тело. Бриф один на прогон; в re-entry не повторяй.
+After reading the issue and doing recon, **before** any question to the user (D1, open questions from sub-agents, classification ambiguities) — post a short 3–6 line briefing in chat: what we are doing, why (motivation / context from the issue), the preliminary set of layers (spec / ux-brief / tech-doc / ADR / knowledge / .claude prompt). If you are asking questions in the same message — attach 1–2 lines of context to each (what the issue says, what options are on the table), so the user can answer without going to GitHub to re-read the body. One briefing per run; do not repeat on re-entry.
 
 ## Step 2 — Layer classification
 
@@ -95,12 +95,12 @@ Decide which artifact layers this issue needs. Read the issue body, comments, li
 
 | Layer | Needed when | Artifact | Writer |
 |---|---|---|---|
-| **spec** | Тип FEATURE AND `docs/product/features/<slug>/spec.md` отсутствует, `(stub)`, или blocking open questions | `docs/product/features/<slug>/spec.md` | `spec-writer` |
-| **ux-brief** | FEATURE с user-facing UI (screen / component / navigation) AND `ux-brief.md` отсутствует или stale relative to spec changes | `docs/product/features/<slug>/ux-brief.md` | `ux-expert` |
-| **tech-doc** | Subsystem с нетривиальным механизмом (protocol / library choice / cross-platform invariant) не покрыт `docs/engineering/<name>.md`, либо существующий устарел | `docs/engineering/<name>.md` | `architect` |
-| **ADR** | Architectural choice с ≥3 considered options, история выбора имеет ценность (нельзя восстановить из кода + living docs) | `docs/engineering/adr/adr-<name>.md` | `architect` |
-| **knowledge** | Solved problem / platform quirk / workaround worth capturing for the next person (the kind currently in `docs/knowledge/`: Android FGS gotchas, Apple platform quirks, Ktor CIO traps, mDNS-Bonjour interactions, …). Trigger usually from a retro or a closed BUGFIX — issue says «зафиксируй вот это поведение» | `docs/knowledge/<name>.md` | `architect` |
-| **.claude prompt** | Deliverable — правка skill prompt (`.claude/skills/<name>/SKILL.md`), agent definition (`.claude/agents/<name>.md`), slash command (`.claude/commands/<name>.md`), hook (`.claude/scripts/*`, `.claude/settings.json`). Сюда же — задачи типа INFRA / без Тип, меняющие поведение агентов или slash-commands | `.claude/skills/<...>` / `.claude/agents/<...>` / `.claude/commands/<...>` | orchestrator (inline) |
+| **spec** | Type FEATURE AND `docs/product/features/<slug>/spec.md` is missing, `(stub)`, or has blocking open questions | `docs/product/features/<slug>/spec.md` | `spec-writer` |
+| **ux-brief** | FEATURE with user-facing UI (screen / component / navigation) AND `ux-brief.md` is missing or stale relative to spec changes | `docs/product/features/<slug>/ux-brief.md` | `ux-expert` |
+| **tech-doc** | Subsystem with a non-trivial mechanism (protocol / library choice / cross-platform invariant) not covered by `docs/engineering/<name>.md`, or the existing one is outdated | `docs/engineering/<name>.md` | `architect` |
+| **ADR** | Architectural choice with ≥3 considered options, the decision history has value (cannot be reconstructed from code + living docs) | `docs/engineering/adr/adr-<name>.md` | `architect` |
+| **knowledge** | Solved problem / platform quirk / workaround worth capturing for the next person (the kind currently in `docs/knowledge/`: Android FGS gotchas, Apple platform quirks, Ktor CIO traps, mDNS-Bonjour interactions, …). Trigger usually from a retro or a closed BUGFIX — issue says "record this behaviour" | `docs/knowledge/<name>.md` | `architect` |
+| **.claude prompt** | Deliverable — editing a skill prompt (`.claude/skills/<name>/SKILL.md`), agent definition (`.claude/agents/<name>.md`), slash command (`.claude/commands/<name>.md`), hook (`.claude/scripts/*`, `.claude/settings.json`). Also includes INFRA / typeless tasks that change agent or slash-command behaviour | `.claude/skills/<...>` / `.claude/agents/<...>` / `.claude/commands/<...>` | orchestrator (inline) |
 
 Multiple layers per issue are normal (e.g. FEATURE with UI and a new mechanism → spec + ux-brief + tech-doc; mechanism choice on existing FEATURE → tech-doc + ADR; new skill + its README example → .claude prompt + tech-doc; closed BUGFIX revealing a platform quirk → knowledge).
 
@@ -169,7 +169,7 @@ git push -u origin docs/<N>-<short-slug>
 gh pr create --title "<title>" --body "<...>"
 ```
 
-Read [`.github/pull_request_template.md`](../../../.github/pull_request_template.md) before composing the body. `Closes #<N>` is required. `👀 Sanity-check` lists every defer-decision (open question parked, follow-up artifact planned, layer skipped). List layers touched + artifact paths in `Что / зачем` or as a trailing line; omit `Dependency check: n/a` boilerplate.
+Read [`.github/pull_request_template.md`](../../../.github/pull_request_template.md) before composing the body. `Closes #<N>` is required. `👀 Sanity-check` lists every defer-decision (open question parked, follow-up artifact planned, layer skipped). List layers touched + artifact paths in the "What / why" section or as a trailing line; omit `Dependency check: n/a` boilerplate.
 
 Report to the user:
 - PR URL.

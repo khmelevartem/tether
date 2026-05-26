@@ -30,15 +30,15 @@ Clean Architecture and adjacent patterns are full of ceremony that doesn't pay r
 
 ## Common-first across KMP targets
 
-Всё, что может жить в `commonMain` — там и лежит; платформенные source sets только для кода, требующего platform API. Это применимо ко всему — domain, network, presentation, UI. Реализация в `commonMain` поставляется на все активные таргеты одной кодовой базой.
+Everything that can live in `commonMain` lives there; platform source sets are for code that requires platform API only. This applies to everything — domain, network, presentation, UI. An implementation in `commonMain` ships to all active targets from a single codebase.
 
-- Компиляция ≠ корректность: код едет на все таргеты, но визуальная/runtime-корректность на каждом не гарантирована билдом. **Ручной smoke обязателен на каждой платформе** перед запросом ревью (`/implement` Step 7).
+- Compilation ≠ correctness: code runs on all targets, but visual / runtime correctness on each is not guaranteed by the build. **A manual smoke test is mandatory on every platform** before requesting review (`/implement` Step 7).
 
-**UI specifically** — самый видимый multiplier: Compose Multiplatform в `commonMain` едет на Android, iOS и Desktop (когда entry point вызывает `App()`) одной имплементацией.
+**UI specifically** is the most visible multiplier: Compose Multiplatform in `commonMain` ships to Android, iOS, and Desktop (when the entry point calls `App()`) as a single implementation.
 
-Per-platform composables / `actual`-имплементации — исключение и требуют обоснования реальным API-ограничением (system share sheet, hardware sensor), не предпочтением.
+Per-platform composables / `actual` implementations are the exception and require justification by a real API constraint (system share sheet, hardware sensor), not by preference.
 
-**Перед своим `expect`/`actual` проверь, не закрыт ли вопрос upstream KMP-артефактом.** Если библиотека уже шипит `expect val` / `expect class` (`Dispatchers.IO`, `androidx.datastore-preferences-core`, …) — используй её напрямую, не оборачивай. Свой `expect`-wrapper поверх чужого — no-op слой, который только маскирует, что задача уже решена. Триггер для своих `expect/actual` — реально отсутствующий в библиотеках платформенный API, а не «единообразие в этом проекте».
+**Before writing your own `expect`/`actual`, check whether an upstream KMP artefact already covers it.** If a library already ships `expect val` / `expect class` (`Dispatchers.IO`, `androidx.datastore-preferences-core`, …) — use it directly, do not wrap it. Your own `expect`-wrapper on top of someone else's is a no-op layer that merely hides that the problem is already solved. The trigger for your own `expect/actual` is a platform API that genuinely has no library coverage — not "consistency within this project".
 
 ## Domain identity over display labels
 

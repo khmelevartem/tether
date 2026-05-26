@@ -1,49 +1,49 @@
 # Tether
 
-P2P-передача файлов между устройствами на разных OS — по локальной Wi-Fi сети, без облака, без аккаунтов, без сжатия.
+P2P file transfer between devices on different OSes — over a local Wi-Fi network, no cloud, no accounts, no compression.
 
-**Сценарий, который Tether закрывает:** фото с Android-телефона на MacBook сегодня едет через мессенджер (сжатие), почту (лимиты) или кабель. Tether заменяет это двумя тапами на одной Wi-Fi — оригинальный файл идёт напрямую между устройствами.
+**The scenario Tether solves:** a photo from an Android phone to a MacBook today travels via messenger (compression), email (limits), or a cable. Tether replaces this with two taps on the same Wi-Fi — the original file goes directly between devices.
 
-**Таргеты:** Android, iOS, Desktop (JVM на Windows / Linux / macOS). Kotlin Multiplatform + Compose Multiplatform.
+**Targets:** Android, iOS, Desktop (JVM on Windows / Linux / macOS). Kotlin Multiplatform + Compose Multiplatform.
 
-**Статус:** ранний MVP. Дискавери, базовый протокол передачи и Desktop CLI работают; UI и pairing в работе.
+**Status:** early MVP. Discovery, the basic transfer protocol, and Desktop CLI work; UI and pairing are in progress.
 
-## Документация
+## Documentation
 
-- [Vision & принципы](docs/product/vision.md) — что мы строим и почему.
-- [Roadmap](docs/product/roadmap.md) — что в MVP, что после, что отложено.
-- [Фичи](docs/product/features/README.md) — статус по каждой фиче и ссылки на спеки.
-- [Tech stack](docs/product/tech-stack.md) — выбор стека.
-- [Security](docs/product/security.md) — модель угроз, pairing, шифрование.
-- [Engineering docs](docs/engineering/README.md) — архитектура, модули, DI, тестирование.
+- [Vision & principles](docs/product/vision.md) — what we are building and why.
+- [Roadmap](docs/product/roadmap.md) — what is in MVP, what comes after, what is deferred.
+- [Features](docs/product/features/README.md) — status per feature and links to specs.
+- [Tech stack](docs/product/tech-stack.md) — stack choices.
+- [Security](docs/product/security.md) — threat model, pairing, encryption.
+- [Engineering docs](docs/engineering/README.md) — architecture, modules, DI, testing.
 
 ## Quick start
 
-Требуется JDK 21 (Temurin).
+Requires JDK 21 (Temurin).
 
-### Desktop CLI (отладочный раннер)
+### Desktop CLI (debug runner)
 
-Стартует `FileServer` + mDNS-дискавери, читает команды из stdin (`list`, `send <peer> <path>`, `quit`).
+Starts `FileServer` + mDNS discovery, reads commands from stdin (`list`, `send <peer> <path>`, `quit`).
 
 ```bash
-# первый раз — собрать uber JAR и поставить wrapper в ~/.local/bin
+# first time — build the uber JAR and install the wrapper to ~/.local/bin
 ./gradlew :composeApp:installCli -q
 
-# убедись, что ~/.local/bin в PATH
+# make sure ~/.local/bin is in PATH
 export PATH="$PATH:$HOME/.local/bin"
 
-# запуск с дефолтами (случайный порт, имя устройства = "Tether-$USER")
+# run with defaults (random port, device name = "Tether-$USER")
 tether
 
-# свои имя и порт
+# custom name and port
 tether --name MyMac --port 8080
 ```
 
-Проверка, что сервер живой: `curl http://localhost:<port>/health` → `Tether OK`.
+Check the server is alive: `curl http://localhost:<port>/health` → `Tether OK`.
 
-Подробные логи (DEBUG): `TETHER_LOG_DEBUG=true tether` или `-Dtether.log.debug=true`. Полные правила и платформенные гейты — [`docs/engineering/logging.md`](docs/engineering/logging.md).
+Verbose logs (DEBUG): `TETHER_LOG_DEBUG=true tether` or `-Dtether.log.debug=true`. Full rules and platform gates — [`docs/engineering/logging.md`](docs/engineering/logging.md).
 
-Пример сессии:
+Example session:
 ```
 > send Phone /tmp/photo.jpg
 [send] 12.3 MB / 50.0 MB  (3.4 MB/s)
@@ -64,38 +64,38 @@ Native app bundle: `./gradlew :composeApp:packageReleaseDistributionForCurrentOS
 ./gradlew :composeApp:assembleDebug
 ```
 
-APK — в `composeApp/build/outputs/apk/debug/`. Или запускай run-конфигурацию `composeApp` из Android Studio.
+APK — in `composeApp/build/outputs/apk/debug/`. Or run the `composeApp` run configuration from Android Studio.
 
 ### iOS
 
-Открой `iosApp/` в Xcode и запусти, либо используй iOS run-конфигурацию из IDE (Android Studio / Fleet с KMP-плагином).
+Open `iosApp/` in Xcode and run, or use the iOS run configuration from the IDE (Android Studio / Fleet with the KMP plugin).
 
 ### macOS
 
-Через Desktop JVM-таргет (как Windows / Linux): `./gradlew :composeApp:run -q` для дев-запуска, `./gradlew :composeApp:packageReleaseDistributionForCurrentOS` для `.app`/`.dmg`-бандла с встроенным JRE. Почему не Kotlin/Native — см. [`adr-macos-native-vs-jvm.md`](docs/engineering/adr/adr-macos-native-vs-jvm.md).
+Via the Desktop JVM target (same as Windows / Linux): `./gradlew :composeApp:run -q` for a dev run, `./gradlew :composeApp:packageReleaseDistributionForCurrentOS` for an `.app`/`.dmg` bundle with an embedded JRE. Why not Kotlin/Native — see [`adr-macos-native-vs-jvm.md`](docs/engineering/adr/adr-macos-native-vs-jvm.md).
 
-### Все таргеты разом
+### All targets at once
 
-`scripts/run-all.sh` параллельно поднимает CLI (в отдельном окне Terminal — нужен интерактивный stdin), Desktop UI, iOS-симулятор и Android-эмулятор. Логи каждого таргета — в `scripts/.run-all/<target>.log`, агрегированный `tail -F` в основном окне. Ctrl-C глушит всех.
+`scripts/run-all.sh` starts the CLI in parallel (in a separate Terminal window — interactive stdin required), Desktop UI, iOS simulator, and Android emulator. Logs for each target — in `scripts/.run-all/<target>.log`, aggregated `tail -F` in the main window. Ctrl-C shuts everything down.
 
 ```bash
-./scripts/run-all.sh                          # всё
-./scripts/run-all.sh --no-android             # без эмулятора
+./scripts/run-all.sh                          # everything
+./scripts/run-all.sh --no-android             # without emulator
 ./scripts/run-all.sh --ios-device "iPhone 17 Pro"
 ```
 
-Требует: `tether` в `PATH` (см. Desktop CLI выше), хотя бы один AVD (создать в Android Studio один раз — сам Studio при запуске скрипта не нужен), установленный Xcode с симуляторами. Это dev-удобство для параллельной проверки руками; не заменяет `./gradlew allTests` и `/smoke-test`.
+Requires: `tether` in `PATH` (see Desktop CLI above), at least one AVD (create in Android Studio once — Studio itself is not needed when running the script), Xcode installed with simulators. This is a dev convenience for parallel manual verification; it does not replace `./gradlew allTests` and `/smoke-test`.
 
-## Для контрибьюторов
+## For contributors
 
-- [CLAUDE.md](CLAUDE.md) — что обязан знать AI-агент или новый контрибьютор: архитектурные инварианты, git conventions, worktree-дисциплина.
-- [docs/engineering/](docs/engineering/README.md) — архитектура и правила написания кода (DI, modules, testing).
-- [.claude/skills/](.claude/skills/) — multi-agent скиллы: `/implement` (issue → PR оркестратор), `/code-review` (параллельный multi-agent review).
-- [.claude/commands/](.claude/commands/) — slash-команды для типовых workflow (`/close-issue`, `/check-review`, `/grooming`, `/retro`, `/quick-issue`).
+- [CLAUDE.md](CLAUDE.md) — what an AI agent or new contributor must know: architecture invariants, git conventions, worktree discipline.
+- [docs/engineering/](docs/engineering/README.md) — architecture and code-writing rules (DI, modules, testing).
+- [.claude/skills/](.claude/skills/) — multi-agent skills: `/implement` (issue → PR orchestrator), `/code-review` (parallel multi-agent review).
+- [.claude/commands/](.claude/commands/) — slash commands for common workflows (`/close-issue`, `/check-review`, `/grooming`, `/retro`, `/quick-issue`).
 
-Тесты:
+Tests:
 ```bash
 ./gradlew allTests -q
 ```
 
-KtLint запускается автоматически через git hook — руками не вызывай.
+KtLint runs automatically via a git hook — do not invoke it manually.

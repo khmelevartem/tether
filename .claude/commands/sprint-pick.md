@@ -1,61 +1,61 @@
-Экспресс: что брать из текущего спринта прямо сейчас. Только чтение и `gh`, без Gradle.
+Quick look: what to pick from the current sprint right now. Read-only and `gh` only, no Gradle.
 
-## 1. Спринт
+## 1. Sprint
 
-Возьми `docs/sprints/sprint-NN.md` с максимальным NN. Прочитай **только** секции «Цель спринта», «Состав», «Цепочки блокировок». Извлеки номера issue.
+Take `docs/sprints/sprint-NN.md` with the maximum NN. Read **only** the sections "Sprint goal", "Composition", "Blocking chains". Extract issue numbers.
 
-Если файла нет — скажи и предложи `/grooming`. Стоп.
+If the file doesn't exist — say so and propose `/grooming`. Stop.
 
-## 2. Статусы одним батчем
+## 2. Statuses in one batch
 
 ```bash
-gh issue view <N1> <N2> ... --json number,state,title    # последовательно, без --jq, можно в одном bash блоке через ;
+gh issue view <N1> <N2> ... --json number,state,title    # sequentially, without --jq, can be in one bash block via ;
 ```
 
-Или короче — для каждого `<N>` параллельно:
+Or shorter — for each `<N>` in parallel:
 ```bash
 gh issue view <N> --json number,state,title
 gh pr list --search "<N> in:title" --state open --json number,isDraft,mergeable
 ```
 
-Группируй в один tool-call с `;` между командами. Не вызывай `dependencies/blocked_by` сразу для всех — только для тех, что `OPEN` без активного PR (кандидаты на старт).
+Group into one tool-call with `;` between commands. Do not call `dependencies/blocked_by` for all at once — only for those that are `OPEN` without an active PR (candidates for starting).
 
-Маркировка:
+Marking:
 - ✅ closed
 - 🟡 open + open PR
-- 🟢 open, без PR
-- 🔴 blocked (если шаг 3 нашёл open-блокер)
+- 🟢 open, no PR
+- 🔴 blocked (if step 3 found an open blocker)
 
-## 3. Блокеры — только для 🟢
+## 3. Blockers — only for 🟢
 
-Для каждой 🟢:
+For each 🟢:
 ```bash
 gh api repos/khmelevartem/tether/issues/<N>/dependencies/blocked_by --jq '.[] | "\(.number) \(.state)"'
 ```
 
-Если есть open-блокер → 🔴. Учти также внутренний порядок мерджа из «Цепочки блокировок» спринт-дока.
+If there is an open blocker → 🔴. Also account for the internal merge order from the "Blocking chains" section of the sprint doc.
 
-## 4. Вывод (компактный)
+## 4. Output (compact)
 
 ```
-Спринт N — «<цель>»
+Sprint N — "<goal>"
 ✅ #a #b   🟡 #c   🟢 #d #e   🔴 #f (blocked by #g)
 
-Брать сейчас:
-1. #N — <название>. Почему: <одна фраза>.
+Pick now:
+1. #N — <title>. Why: <one sentence>.
 2. ...
 ```
 
-1–3 пункта максимум, только из 🟢. Критерии выбора (по убыванию):
-1. Разблокирует наибольший хвост (упомянута в «Цепочки блокировок наружу» или blocking-связях).
-2. Не конфликтует с тем, что уже 🟡 (по слоям из спринт-дока).
-3. Меньший размер → быстрее.
+1–3 items maximum, only from 🟢. Selection criteria (in descending order):
+1. Unblocks the longest tail (mentioned in "Blocking chains outward" or blocking-links).
+2. Does not conflict with what is already 🟡 (by layers from the sprint doc).
+3. Smaller size → faster.
 
-Если 🟢 пусто — скажи, и предложи: добить 🟡, разблокировать 🔴, или `/grooming` для нового спринта.
+If 🟢 is empty — say so, and propose: finish 🟡, unblock 🔴, or `/grooming` for a new sprint.
 
-## Не делать
+## Do not
 
-- Не править спринт-док (это `/grooming` шаг 0).
-- Не запускать Gradle/тесты/smoke.
-- Не делать gap-анализ, не создавать issues.
-- Не вызывать `/implement` — только предложить команду.
+- Do not edit the sprint doc (that's `/grooming` step 0).
+- Do not run Gradle / tests / smoke.
+- Do not do gap analysis, do not create issues.
+- Do not invoke `/implement` — only propose the command.

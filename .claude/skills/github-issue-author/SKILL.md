@@ -1,153 +1,153 @@
 ---
 name: github-issue-author
-description: Создание issue на GitHub через `gh` CLI по строгому шаблону - название как полезный инкремент, развёрнутое описание (контекст, сценарии, технические детали, DoD, следствия) и связи parent/blocking/blocked. Используй этот скилл всегда, когда пользователь просит создать issue, задачу, тикет на GitHub, оформить фичу/баг, завести задачу в репозиторий, или упоминает `gh issue create` - даже если он не называет шаблон явно. Подходит как для одиночных issue, так и для серии связанных задач (epic + sub-issues).
+description: Create a GitHub issue via `gh` CLI using a strict template — title as a useful increment, detailed description (context, scenarios, technical details, DoD, dependencies) and parent/blocking/blocked relationships. Use this skill whenever the user asks to create an issue, task, or ticket on GitHub, to formalise a feature/bug, to file a task in the repository, or mentions `gh issue create` — even if they don't name the template explicitly. Suitable for both single issues and a series of related tasks (epic + sub-issues).
 ---
 
 # GitHub Issue Author
 
-Скилл для создания issue на GitHub через `gh` CLI по шаблону, в котором название читается как полезный инкремент к проекту, а описание содержит достаточно контекста и критериев приёмки, чтобы исполнитель мог взять задачу без дополнительных уточнений.
+Skill for creating GitHub issues via the `gh` CLI using a template where the title reads as a useful increment to the project and the description contains enough context and acceptance criteria for the assignee to pick up the task without further clarification.
 
-## Язык issue
+## Issue language
 
-По умолчанию — **русский**. Название и тело issue пишутся на русском. Технические термины (имена классов, файлов, флагов, API) остаются на английском как есть.
+Default — **English**. Issue titles and bodies are written in English. Technical terms (class names, file names, flags, APIs) stay in English as-is.
 
-Переключайся на другой язык только если пользователь явно об этом попросил («оформи на английском», «делай issue по-английски»), либо если репозиторий явно англоязычный (README/issues/CONTRIBUTING на английском, команда работает на английском) — в этом случае подтверди выбор у пользователя одной фразой перед созданием черновика.
+Switch to a different language only if the user explicitly requests it ("write it in Russian", "make the issue in Russian"), or if the repository is explicitly non-English (README/issues/CONTRIBUTING in another language, team works in another language) — in that case, confirm the choice with the user in one sentence before drafting.
 
-## Когда применять
+## When to apply
 
-- Пользователь просит «создай issue / задачу / тикет», «оформи задачу на github», «заведи issue про X».
-- Пользователь описывает фичу или багу и подразумевает, что её надо положить в трекер.
-- Пользователь просит разбить большую задачу на серию связанных issue (epic + дочерние).
-- Пользователь упоминает `gh issue create` или редактирует уже черновик issue.
+- The user says "create an issue / task / ticket", "file a task on github", "open an issue about X".
+- The user describes a feature or bug and implies it should go into the tracker.
+- The user asks to split a large task into a series of related issues (epic + children).
+- The user mentions `gh issue create` or is editing an existing issue draft.
 
-Не применяй, если пользователь просит **обсудить** идею, написать ТЗ в документ, или сделать PR (это другое).
+Do not apply if the user wants to **discuss** an idea, write a spec into a document, or create a PR (those are different).
 
-## Высокоуровневый процесс
+## High-level process
 
-1. **Разведка проекта** — найти `AGENTS.md` / `CLAUDE.md` / `CONTRIBUTING.md`, найти 1-2 похожих закрытых issue.
-2. **Интервью** — перечислить, что уже понятно из запроса и разведки, и спросить про пробелы.
-3. **Черновик** — сформировать название и описание по шаблону (см. [TEMPLATE.md](TEMPLATE.md)).
-4. **Glossary review.** Дёрни `review-glossary` сабагент на draft body. Drift flags поверни в правку черновика; если term отсутствует в глоссарии — спроси пользователя, добавлять ли entry сейчас или это task-local.
-5. **Ревью** — показать черновик пользователю **до создания issue**, дождаться апрува или правок.
-6. **Создание** — `gh issue create --body-file`.
-7. **Связи** — привязать к родительскому через `gh api` (sub-issues) или упоминания в теле.
+1. **Project reconnaissance** — find `AGENTS.md` / `CLAUDE.md` / `CONTRIBUTING.md`, find 1–2 similar closed issues.
+2. **Interview** — list what is already clear from the request and recon, and ask about gaps.
+3. **Draft** — form a title and description according to the template (see [TEMPLATE.md](TEMPLATE.md)).
+4. **Glossary review.** Dispatch the `review-glossary` sub-agent on the draft body. Turn drift flags into draft edits; if a term is absent from the glossary — ask the user whether to add an entry now or treat it as task-local.
+5. **Review** — show the draft to the user **before creating the issue**, wait for approval or edits.
+6. **Create** — `gh issue create --body-file`.
+7. **Relationships** — link to the parent via `gh api` (sub-issues) or mentions in the body.
 
-Никогда не создавай issue без явного апрува черновика — `gh issue create` это сторонний эффект, который пользователь должен подтвердить.
+Never create an issue without explicit draft approval — `gh issue create` is a side effect the user must confirm.
 
-Никогда не пиши черновик до того, как получены ответы на ключевые вопросы интервью. Исключение — запрос пользователя уже содержит фактически готовый черновик со всеми разделами.
+Never write a draft before receiving answers to key interview questions. Exception: the user's request already contains a practically complete draft with all sections.
 
-## Разведка проекта
+## Project reconnaissance
 
-Перед интервью сделай два быстрых действия — они дают контекст, без которого интервью получится поверхностным, а issue — расходящимся со стилем проекта.
+Before the interview, take two quick actions — they provide context without which the interview will be superficial and the issue will diverge from the project's style.
 
-### Файл правил для агентов
+### Agent rules file
 
-Проверь наличие в репозитории одного из:
-- `AGENTS.md` (формирующийся стандарт)
+Check the repository for one of:
+- `AGENTS.md` (emerging standard)
 - `CLAUDE.md`
-- `.cursor/rules/` (директория)
+- `.cursor/rules/` (directory)
 - `CONTRIBUTING.md`
 
-Если файл есть — **прочитай его**. Из него ты узнаешь команды тестов/линтера/билда, конвенции коммитов, какие папки трогать нельзя — это всё пригодится для разделов «DoD» и «Out of scope».
+If the file exists — **read it**. It tells you test/linter/build commands, commit conventions, and which folders to avoid — all useful for the "DoD" and "Out of scope" sections.
 
-Если файла нет — **отметь это для пользователя одной строкой** в начале интервью: «В репозитории нет AGENTS.md / CLAUDE.md / CONTRIBUTING.md. Отдельным issue стоит завести его создание — это сильно помогает агентам в дальнейшей работе. Сделать сейчас или позже?» Не настаивай, но проговори.
+If no file exists — **note this to the user in one line** at the start of the interview: "The repository has no AGENTS.md / CLAUDE.md / CONTRIBUTING.md. A separate issue should be filed to create one — it greatly helps agents in future work. Do it now or later?" Don't insist, but mention it.
 
-### Похожие закрытые issue
+### Similar closed issues
 
-Сделай 1-2 поиска по закрытым issue, чтобы найти референсы:
+Run 1–2 searches over closed issues to find references:
 
 ```bash
-gh issue list --repo OWNER/REPO --state closed --search "ключевые слова задачи" --limit 5 --json number,title,url
+gh issue list --repo OWNER/REPO --state closed --search "relevant keywords" --limit 5 --json number,title,url
 ```
 
-Если нашёл явно похожие (тот же модуль, та же область) — запомни их номера. На этапе черновика добавишь в раздел «Референсы». Это даёт исполнителю **готовые примеры решений в этом конкретном проекте** — намного ценнее общих принципов.
+If you find clearly similar ones (same module, same area) — note their numbers. At the draft stage you'll add them to the "References" section. This gives the assignee **ready-made solution examples in this specific project** — far more valuable than general principles.
 
-Если ничего не нашлось — это нормально, раздел «Референсы» можно опустить.
+If nothing was found — that's fine, the "References" section can be omitted.
 
-### Продуктовая документация
+### Product documentation
 
-Если в репозитории есть `docs/product/`, проверь наличие feature-спека для создаваемой задачи:
+If the repository has `docs/product/`, check for a feature spec for the task being created:
 
 ```bash
 ls docs/product/features/
 ```
 
-Если файл для этой фичи существует — **прочитай его**. Он содержит:
-- Acceptance Criteria — переноси в DoD issue напрямую
-- Out of scope — переноси в одноимённый раздел issue
-- Technical Notes — используй для раздела «Технические подробности»
+If a file for this feature exists — **read it**. It contains:
+- Acceptance Criteria — copy directly into the issue DoD
+- Out of scope — copy into the same-named section of the issue
+- Technical Notes — use for the "Technical details" section
 
-Feature-спек имеет приоритет над тем, что пользователь описал в запросе — если есть противоречие, уточни у пользователя перед черновиком.
+The feature spec takes priority over what the user described in the request — if there is a conflict, clarify with the user before drafting.
 
-Если `docs/product/features/` есть, но файла для этой фичи нет — работай как обычно, без упоминания этого пользователю.
+If `docs/product/features/` exists but there is no file for this feature — proceed as normal without mentioning this to the user.
 
-### Когда разведку можно пропустить
+### When to skip reconnaissance
 
-- Пользователь явно сказал «не лезь в репо, я знаю что делаю»
-- Репозиторий приватный и `gh` не имеет доступа (в этом случае честно скажи об этом и переходи к интервью)
-- Запрос — про создание самого первого issue в новом репозитории
+- The user explicitly said "don't dig into the repo, I know what I'm doing"
+- The repository is private and `gh` has no access (in this case, tell the user honestly and proceed to the interview)
+- The request is about creating the very first issue in a new repository
 
-## Сбор контекста
+## Gathering context
 
-**Сначала уточни пробелы, потом пиши черновик.** Скилл работает в режиме «интервью → черновик», а не «черновик с допущениями → правки». Это экономит итерации: дешевле задать 2-3 вопроса, чем переписывать готовый issue.
+**Clarify gaps first, then write the draft.** The skill operates in "interview → draft" mode, not "draft with assumptions → revisions". This saves iterations: asking 2–3 questions is cheaper than rewriting a finished issue.
 
-Перед написанием черновика убедись, что у тебя есть ответы на все эти вопросы:
+Before writing the draft, make sure you have answers to all these questions:
 
-- **Репозиторий** — `owner/repo`. Если не указан, попробуй определить через `gh repo view --json nameWithOwner` в текущей рабочей директории. Если не вышло — спроси.
-- **Тип задачи** — `FEATURE | BUGFIX | REFACTOR | INFRA | DOCS | DEPENDENCY`. Определи сам по описанию и подтверди в интервью, если неочевидно. Нужно для поля `**Тип**` в шаблоне — агент-ревьюер читает его при проверке PR.
-- **Что за приложение/проект** — на одной фразе. Нужно для раздела «Контекст».
-- **Зачем нужна задача** — какую проблему решает, что станет лучше после её выполнения. Без этого раздел «Зачем» получится пустым.
-- **Как должно работать** — основной сценарий хотя бы в общих чертах. Краевые случаи можешь предложить сам, но основной поток должен подтвердить пользователь.
-- **Технический контур** — какие файлы/модули затронуты. Если пользователь не знает или это не определено заранее — допустимо оставить `(уточнить при разборе)`, но **спроси сначала**, не предполагай молча.
-- **Связи** — есть ли parent epic, что блокирует, что блокируется этой задачей. Спрашивай явно, потому что пользователь часто забывает упомянуть.
-- **Labels / assignee / milestone** — есть ли стандартные для этого репозитория. Опционально, но если пользователь хочет — узнай.
+- **Repository** — `owner/repo`. If not specified, try to determine it via `gh repo view --json nameWithOwner` in the current working directory. If that fails — ask.
+- **Task type** — `FEATURE | BUGFIX | REFACTOR | INFRA | DOCS | DEPENDENCY`. Determine from the description and confirm in the interview if unclear. Needed for the `**Type**` field in the template — the reviewer agent reads it when checking the PR.
+- **What the app/project is** — in one sentence. Needed for the "Context" section.
+- **Why this task is needed** — what problem it solves, what will improve after it's done. Without this the "Why" section will be empty.
+- **How it should work** — the main scenario at least in broad strokes. You can propose edge cases yourself, but the main flow must be confirmed by the user.
+- **Technical scope** — which files/modules are affected. If the user doesn't know or it isn't defined upfront — it's acceptable to leave `(clarify during breakdown)`, but **ask first**, don't assume silently.
+- **Relationships** — is there a parent epic, what does this block, what blocks it. Ask explicitly, because the user often forgets to mention.
+- **Labels / assignee / milestone** — are there standard ones for this repository. Optional, but find out if the user wants them.
 
-### Как задавать вопросы
+### How to ask questions
 
-Группируй в один заход. Не больше 4-5 вопросов за раз — иначе пользователь устанет отвечать. Если вопросов больше — раздели на две волны: сначала самое нужное (что за проект, зачем, основной сценарий), потом детали (модули, связи, labels).
+Group into one pass. No more than 4–5 questions at a time — otherwise the user gets tired of answering. If there are more — split into two waves: first the most important (what is the project, why, main scenario), then details (modules, relationships, labels).
 
-Если пользователь в исходном запросе уже ответил на часть вопросов — не переспрашивай их, спрашивай только про пробелы. Явно перечисли в начале, что **уже** понятно из запроса, чтобы пользователь видел: ты прочитал и понял.
+If the user's original request already answered some questions — don't ask them again, ask only about gaps. Explicitly list at the start what is **already** clear from the request, so the user sees you read and understood.
 
-**Пример хорошего вопроса:**
+**Example of a good question:**
 
-> Из запроса я понял:
-> - репозиторий `myorg/shop`
-> - задача про кеширование поисковой выдачи на фронте
-> - проблема — повторный запрос при возврате со страницы товара
+> From the request I understood:
+> - repository `myorg/shop`
+> - task is about caching search results on the frontend
+> - problem — repeated request when returning from a product page
 >
-> Уточни, пожалуйста:
-> 1. Какой TTL у кеша? (или это «до закрытия вкладки»)
-> 2. Есть ли parent issue / epic, к которому привязать?
-> 3. Какие labels поставить? (или ничего)
+> Please clarify:
+> 1. What is the cache TTL? (or is it "until the tab is closed")
+> 2. Is there a parent issue / epic to link to?
+> 3. Which labels to apply? (or none)
 
-После получения ответов — переходи к черновику. Не задавай повторно вопросы, ответ на которые уже есть, не растягивай интервью.
+After receiving answers — move to the draft. Don't ask again questions that already have answers, don't stretch the interview.
 
-### Когда пропустить интервью
+### When to skip the interview
 
-Если запрос пользователя уже содержит развёрнутое описание со всеми разделами (фактически готовый черновик), и нет очевидных пробелов — пропусти этап вопросов, сразу переходи к оформлению по шаблону. В этом случае в черновике пометь `[?допущение: ...]` те места, которые ты дополнил сам, и пользователь подтвердит/поправит на этапе ревью.
+If the user's request already contains a detailed description with all sections (effectively a ready draft), and there are no obvious gaps — skip the questions step, go directly to formatting with the template. In this case, mark `[?assumption: ...]` in the draft where you filled in something yourself, and the user will confirm/correct at the review stage.
 
-## Шаблон issue
+## Issue template
 
-Полный шаблон и объяснение каждого раздела — см. [TEMPLATE.md](TEMPLATE.md).
+Full template and explanation of each section — see [TEMPLATE.md](TEMPLATE.md).
 
-## Связи между issue
+## Relationships between issues
 
-**Принцип: связи проставляем через нативные GitHub-поля, а не текстом в теле issue.** Тело issue остаётся про задачу; связи живут в API/UI и видны как структурированные данные (sub-issues sidebar, blocked-by/blocking sidebar, project fields). Это даёт боту-ревьюеру и автоматизациям машинно-читаемый граф зависимостей.
+**Principle: relationships are set through native GitHub fields, not text in the issue body.** The issue body stays about the task; relationships live in the API/UI and are visible as structured data (sub-issues sidebar, blocked-by/blocking sidebar, project fields). This gives the reviewer bot and automations a machine-readable dependency graph.
 
-GitHub поддерживает:
+GitHub supports:
 
-1. **Sub-issues / parent** — нативный механизм через GraphQL (`addSubIssue` / `removeSubIssue`), виден в UI как иерархия.
-2. **Blocked by / blocks (Relationships в UI)** — нативные issue dependencies. Экспонируются через **REST**, а не GraphQL: `POST /repos/{owner}/{repo}/issues/{issue_number}/dependencies/blocked_by` с телом `{"issue_id": <database_id>}`. В UI показываются в сайдбаре issue как "Relationships". GraphQL-мутации `addIssueDependency` **не существует** — не пытайся её вызывать.
-3. **Related** — нативного поля нет; используем упоминание `#123` в теле, либо общий parent/epic, либо тег labels.
+1. **Sub-issues / parent** — native mechanism via GraphQL (`addSubIssue` / `removeSubIssue`), visible in the UI as a hierarchy.
+2. **Blocked by / blocks (Relationships in UI)** — native issue dependencies. Exposed via **REST**, not GraphQL: `POST /repos/{owner}/{repo}/issues/{issue_number}/dependencies/blocked_by` with body `{"issue_id": <database_id>}`. Shown in the UI in the issue sidebar as "Relationships". GraphQL mutation `addIssueDependency` **does not exist** — do not attempt to call it.
+3. **Related** — no native field; use a `#123` mention in the body, a shared parent/epic, or label tags.
 
-**Текстовый блок `**Связи:**` в теле issue не используем** — он дублирует то, что уже есть в нативных полях, и расходится с ним при правках. Исключение — fallback, если конкретная мутация недоступна в репозитории (см. ниже).
+**Do not use a text block `**Relationships:**` in the issue body** — it duplicates what's already in native fields and drifts from them when edited. Exception: fallback if a specific mutation is unavailable in the repository (see below).
 
 ### Sub-issue (parent → child)
 
-Sub-issues создаются через `gh api` (фича выкатилась в 2024 и доступна через GraphQL):
+Sub-issues are created via `gh api` (the feature rolled out in 2024 and is available via GraphQL):
 
 ```bash
-# Получить node_id родительского и дочернего issue
+# Get node_id of parent and child issues
 PARENT_ID=$(gh api graphql -f query='
   query($owner: String!, $repo: String!, $number: Int!) {
     repository(owner: $owner, name: $repo) {
@@ -162,7 +162,7 @@ CHILD_ID=$(gh api graphql -f query='
     }
   }' -F owner=OWNER -F repo=REPO -F number=CHILD_NUMBER --jq '.data.repository.issue.id')
 
-# Привязать дочернее к родительскому
+# Link child to parent
 gh api graphql -f query='
   mutation($parentId: ID!, $childId: ID!) {
     addSubIssue(input: { issueId: $parentId, subIssueId: $childId }) {
@@ -171,115 +171,115 @@ gh api graphql -f query='
   }' -F parentId="$PARENT_ID" -F childId="$CHILD_ID"
 ```
 
-Если `addSubIssue` возвращает ошибку про неизвестное поле — у репозитория не включена фича sub-issues. Сообщи об этом пользователю и предложи fallback через упоминания в теле parent.
+If `addSubIssue` returns an error about an unknown field — the repository does not have sub-issues enabled. Notify the user and offer a fallback via mentions in the parent body.
 
 ### Blocked by / blocks (Relationships)
 
-В UI GitHub это поле называется **Relationships**, в REST API — **issue dependencies**. Используется **REST**, не GraphQL.
+In the GitHub UI this field is called **Relationships**, in the REST API — **issue dependencies**. Use **REST**, not GraphQL.
 
 ```bash
-# Получи database id (целое число, поле `id` в REST-ответе, НЕ node_id) блокирующего issue
+# Get the database id (integer, the `id` field in the REST response, NOT node_id) of the blocking issue
 BLOCKER_DB_ID=$(gh api repos/OWNER/REPO/issues/BLOCKER_NUMBER --jq .id)
 
-# A блокирует B  ⇄  B blocked by A
-# Вызываем на blocked issue (B), передаём database id блокирующего (A)
+# A blocks B  ⇄  B blocked by A
+# Call on the blocked issue (B), pass the database id of the blocker (A)
 gh api repos/OWNER/REPO/issues/BLOCKED_NUMBER/dependencies/blocked_by \
   -X POST -F issue_id=$BLOCKER_DB_ID
 ```
 
-Проверить текущие связи: `gh api repos/OWNER/REPO/issues/N/dependencies/blocked_by` (возвращает массив issue, блокирующих N).
+Check current relationships: `gh api repos/OWNER/REPO/issues/N/dependencies/blocked_by` (returns an array of issues blocking N).
 
-Если endpoint возвращает 404 на `POST` — фича Relationships в репозитории не включена. Fallback: добавить в тело blocked issue одну строку `Blocked by #N` и попросить пользователя включить Relationships в settings репозитория.
+If the endpoint returns 404 on `POST` — the Relationships feature is not enabled in the repository. Fallback: add one line `Blocked by #N` to the blocked issue body and ask the user to enable Relationships in repository settings.
 
 ### Related
 
-Нативного поля нет. Используем:
-- Упоминание `#N` в разделе **Контекст** или **Зачем** issue (там, где это естественно по смыслу).
-- Общий parent/epic, если задачи действительно связаны иерархически.
-- Labels (например, `area:discovery`), если это тематическая, а не задаче-задачная связь.
+No native field. Use:
+- A `#N` mention in the **Context** or **Why** section of the issue (where it makes natural sense).
+- A shared parent/epic, if the tasks are genuinely related hierarchically.
+- Labels (e.g. `area:discovery`), if it's a thematic relationship rather than a task-to-task one.
 
-Отдельный текстовый блок `**Связи:**` в конце issue не делаем — упоминание `#N` уже создаёт двустороннюю ссылку в GitHub UI.
+Don't create a separate text block `**Relationships:**` at the end of the issue — the `#N` mention already creates a bidirectional link in the GitHub UI.
 
-## Создание issue через `gh` CLI
+## Creating issues via `gh` CLI
 
-### Подготовка
+### Preparation
 
-1. Проверь, что `gh` авторизован: `gh auth status`. Если нет — попроси пользователя выполнить `gh auth login`.
-2. Определи репозиторий. Если работаешь в локальном клоне — `gh issue create` сам подхватит. Иначе нужен `--repo owner/repo`.
-3. Сохрани тело issue во временный файл (через флаг `--body-file`), а не в `--body` — так не сломается на спецсимволах, кавычках и переносах строк.
+1. Verify `gh` is authorised: `gh auth status`. If not — ask the user to run `gh auth login`.
+2. Determine the repository. If working in a local clone — `gh issue create` will detect it automatically. Otherwise `--repo owner/repo` is needed.
+3. Save the issue body to a temporary file (via the `--body-file` flag), not in `--body` — this won't break on special characters, quotes, and line breaks.
 
-### Команда создания
+### Create command
 
 ```bash
-# Сохрани тело в файл (используй create_file tool, не heredoc, чтобы избежать проблем с экранированием)
-# Путь: /tmp/issue-body.md
+# Save body to file (use the create_file tool, not heredoc, to avoid escaping issues)
+# Path: /tmp/issue-body.md
 
 gh issue create \
   --repo OWNER/REPO \
-  --title "Кеширование результатов поиска на стороне клиента" \
+  --title "Cache search results on the client side" \
   --body-file /tmp/issue-body.md \
   --label "feature,frontend"
 ```
 
-Опциональные флаги:
-- `--assignee @me` или `--assignee username`
+Optional flags:
+- `--assignee @me` or `--assignee username`
 - `--milestone "v1.2"`
 - `--project "Roadmap"`
 
-После создания `gh` выводит URL — сохрани его, он понадобится для привязки sub-issues.
+After creation `gh` outputs a URL — save it, it will be needed for linking sub-issues.
 
-### Получение номера созданного issue
+### Getting the number of the created issue
 
 ```bash
 URL=$(gh issue create --repo OWNER/REPO --title "..." --body-file /tmp/issue-body.md)
 NUMBER=$(echo "$URL" | grep -oE '[0-9]+$')
 ```
 
-### Создание серии связанных issue
+### Creating a series of related issues
 
-Если нужно создать parent + N дочерних:
+If you need to create a parent + N children:
 
-1. Создай parent первым, запиши его номер.
-2. Создай каждый child, запиши номера.
-3. Для каждого child вызови `addSubIssue` mutation с parent_id и child_id.
-4. В тело parent **не добавляй** список дочерних руками — UI GitHub отрисует их сам через sub-issues API.
+1. Create the parent first, record its number.
+2. Create each child, record their numbers.
+3. For each child call the `addSubIssue` mutation with parent_id and child_id.
+4. Do **not** add a list of children manually to the parent body — the GitHub UI will render them automatically via the sub-issues API.
 
-Если sub-issues API недоступен — добавь в тело parent список:
+If the sub-issues API is unavailable — add a list to the parent body:
 
 ```markdown
-**Дочерние задачи:**
-- [ ] #11 — Авторизация по email
-- [ ] #12 — Восстановление пароля
-- [ ] #13 — Двухфакторка через TOTP
+**Child tasks:**
+- [ ] #11 — Email authentication
+- [ ] #12 — Password recovery
+- [ ] #13 — Two-factor via TOTP
 ```
 
-## Workflow при работе с пользователем
+## Workflow when working with the user
 
-1. **Разведка** — проверь `AGENTS.md` / `CONTRIBUTING.md`, поищи 1-2 похожих закрытых issue. Это занимает 2-3 команды и сильно улучшает качество черновика.
-2. **Интервью** — перечисли, что уже понятно из запроса и разведки, и задай вопросы по пробелам. Не более 4-5 вопросов за раз. Не переходи к черновику, пока не получишь ответы.
-3. **Черновик** — название и полное тело issue **на русском** (если не оговорено иное), как markdown в чате. Не создавай файл и не вызывай `gh` на этом шаге. Помечай `[?допущение: ...]` оставшиеся неуверенности. За шаблоном — см. [TEMPLATE.md](TEMPLATE.md).
-4. **Glossary review** — дёрни `review-glossary` сабагент на draft body. Drift flags поверни в правку, undocumented terms — спроси у пользователя, добавлять ли entry сейчас.
-5. **Ревью** — дождись апрува или правок. Если правок много или они касаются скоупа — может стоит переспросить пару пунктов из интервью.
-6. **Создание** — `gh issue create --body-file`. Покажи URL результата.
-7. **Связи** — sub-issues через API, упоминания через редактирование тела (`gh issue edit NUMBER --body-file ...`).
-8. **Итог** — список созданных issue с номерами и URL.
+1. **Reconnaissance** — check `AGENTS.md` / `CONTRIBUTING.md`, search for 1–2 similar closed issues. This takes 2–3 commands and greatly improves draft quality.
+2. **Interview** — list what is already clear from the request and recon, and ask questions about gaps. No more than 4–5 questions at a time. Don't proceed to the draft until you receive answers.
+3. **Draft** — title and full issue body **in English** (unless otherwise agreed), as markdown in the chat. Don't create a file or call `gh` at this step. Mark `[?assumption: ...]` for remaining uncertainties. For the template — see [TEMPLATE.md](TEMPLATE.md).
+4. **Glossary review** — dispatch the `review-glossary` sub-agent on the draft body. Turn drift flags into edits; undocumented terms — ask the user whether to add an entry now.
+5. **Review** — wait for approval or edits. If there are many edits or they affect scope — it may be worth re-asking a couple of interview questions.
+6. **Create** — `gh issue create --body-file`. Show the result URL.
+7. **Relationships** — sub-issues via API, mentions via body editing (`gh issue edit NUMBER --body-file ...`).
+8. **Summary** — list of created issues with numbers and URLs.
 
-## Примеры
+## Examples
 
-Полные примеры создания issue — см. [EXAMPLES.md](EXAMPLES.md).
+Full issue creation examples — see [EXAMPLES.md](EXAMPLES.md).
 
-- Пример 1: одиночный issue, фича
-- Пример 2: epic + sub-issues
+- Example 1: single issue, feature
+- Example 2: epic + sub-issues
 
-## Что избегать
+## What to avoid
 
-- **Не создавай issue без апрува** черновика, даже если запрос кажется однозначным.
-- **Не пропускай разведку** — `AGENTS.md` и похожие закрытые issue обычно дают 80% контекста, который пользователь иначе бы дал руками.
-- **Не растягивай тело** ради заполнения всех разделов — пропускай опциональные если нечего сказать. Лучше пустой раздел отсутствует, чем заполнен «нет» или «н/д».
-- **Не оставляй DoD абстрактным** — если в репозитории нашёлся `AGENTS.md` или `package.json` / `pyproject.toml`, бери команды оттуда. «Юнит-тесты есть» — это не DoD.
-- **Не выдумывай `Out of scope` ради раздела** — но и не оставляй его пустым на сложных задачах. Один-два пункта почти всегда есть.
-- **Не используй приставки** в названиях (`[FEATURE]`, `feat:`). Категоризация — через labels.
-- **Не клади тело в `--body`** через CLI напрямую с большим текстом — используй `--body-file`.
-- **Не проставляй labels, которых нет в репозитории** — сначала проверь `gh label list --repo OWNER/REPO`, если не уверен.
-- **Не выдумывай файлы и модули**, если их не упоминал пользователь и они не очевидны из репозитория. Лучше написать `(уточнить при разборе)`.
-- **Не игнорируй `size:L`** — это сигнал «дроби на эпик», а не «пиши большой issue».
+- **Don't create an issue without draft approval**, even if the request seems unambiguous.
+- **Don't skip reconnaissance** — `AGENTS.md` and similar closed issues usually provide 80% of the context the user would otherwise supply manually.
+- **Don't pad the body** just to fill all sections — skip optional ones if there's nothing to say. A missing section is better than one filled with "none" or "n/a".
+- **Don't leave DoD abstract** — if the repository has `AGENTS.md` or `package.json` / `pyproject.toml`, take commands from there. "Unit tests exist" is not a DoD.
+- **Don't invent Out of scope just to fill the section** — but don't leave it empty on complex tasks. One or two points are almost always there.
+- **Don't use prefixes** in titles (`[FEATURE]`, `feat:`). Categorisation — via labels.
+- **Don't put the body in `--body`** via CLI directly with large text — use `--body-file`.
+- **Don't apply labels that don't exist in the repository** — first check `gh label list --repo OWNER/REPO` if unsure.
+- **Don't invent files and modules** if the user didn't mention them and they're not obvious from the repository. Better to write `(clarify during breakdown)`.
+- **Don't ignore `size:L`** — it's a signal to "split into an epic", not "write a big issue".

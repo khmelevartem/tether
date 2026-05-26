@@ -70,7 +70,7 @@ Bad: «what library should we use?» (that's your job to propose). Good: «we're
 
 Surface the palette **next to** the questions so the user can converge on a choice across iterations, not by accepting your pre-shaped plan. Mark the option you'd recommend and why, but don't make the others vestigial.
 
-Stop and wait for answers. Do NOT proceed to Step 4 with unanswered questions or vague answers («что-нибудь» / «как считаешь нужным»).
+Stop and wait for answers. Do NOT proceed to Step 4 with unanswered questions or vague answers ("anything" / "whatever you think best").
 
 ### Step 4 — Converge
 
@@ -140,7 +140,7 @@ Re-read both artifacts and self-check:
 - ADR: Decision is a choice, not state. Every rejected option has one line. Parent living doc exists and is linked.
 - Index entries: tone matches siblings.
 
-Run `git diff docs/engineering/` and present to the orchestrator/user. Ask: «Готово. Замечания или коммитим?»
+Run `git diff docs/engineering/` and present to the orchestrator/user. Ask: "Done. Any feedback, or shall we commit?"
 
 Do not commit. The orchestrator decides when to commit.
 

@@ -1,46 +1,46 @@
-# Примеры создания issue
+# Issue creation examples
 
-## Пример 1: одиночный issue, фича
+## Example 1: single issue, feature
 
-**Запрос пользователя:** «Заведи issue в myorg/shop про то, что нам нужно кешировать результаты поиска на фронте, чтобы при возврате назад не было запроса к API».
+**User request:** "Create an issue in myorg/shop about the fact that we need to cache search results on the frontend so that navigating back does not trigger an API request."
 
-**После разведки:** в репо есть `AGENTS.md` с командами `pnpm test`, `pnpm lint`, `pnpm test:e2e`. Найден похожий закрытый issue #128 — LRU-кеш для recently viewed.
+**After scouting:** the repo has `AGENTS.md` with commands `pnpm test`, `pnpm lint`, `pnpm test:e2e`. Found a similar closed issue #128 — LRU cache for recently viewed.
 
-**После интервью:** пользователь подтвердил TTL 5 минут, отсутствие parent epic, labels `frontend,performance`.
+**After interview:** the user confirmed TTL of 5 minutes, no parent epic, labels `frontend,performance`.
 
-**Черновик:**
+**Draft:**
 
-> **Название:** Кеширование результатов поиска на стороне клиента
+> **Title:** Client-side search results caching
 >
-> **Тип:** FEATURE
+> **Type:** FEATURE
 >
-> ## Контекст
+> ## Context
 >
-> Фронтенд интернет-магазина (myorg/shop), страница поисковой выдачи и навигация между ней и карточками товаров.
+> The front end of an online store (myorg/shop), the search results page, and navigation between it and product cards.
 >
-> ## Зачем
+> ## Why
 >
-> Сейчас при возврате со страницы товара на страницу выдачи происходит повторный запрос к `/api/search`, что даёт ощущение лагов и грузит API. Пользователь видит лоадер вместо мгновенного отображения уже знакомого списка. Цель — отображать предыдущую выдачу мгновенно, актуализируя её в фоне (stale-while-revalidate).
+> Currently, returning from a product page to the results page triggers a repeat request to `/api/search`, which feels laggy and loads the API. The user sees a loader instead of an instant display of an already-familiar list. The goal is to display the previous results instantly, refreshing them in the background (stale-while-revalidate).
 >
-> ## Как должно работать
+> ## How it should work
 >
-> ### Основной сценарий
+> ### Main scenario
 >
-> 1. Пользователь делает поиск, видит выдачу. Результат сохраняется в кеш по ключу `query + filters + page`.
-> 2. Пользователь кликает на товар, переходит на карточку.
-> 3. Пользователь жмёт «назад» — выдача отображается мгновенно из кеша, в фоне идёт revalidate-запрос.
-> 4. Если ответ revalidate отличается — список плавно обновляется.
+> 1. The user performs a search and sees results. The result is saved to the cache under the key `query + filters + page`.
+> 2. The user clicks on a product and navigates to its card.
+> 3. The user presses "back" — the results are displayed instantly from the cache; a revalidate request runs in the background.
+> 4. If the revalidate response differs — the list updates smoothly.
 >
-> ### Краевые случаи
+> ### Edge cases
 >
-> - Кеш протух (старше 5 минут) — показываем skeleton, ждём ответа API.
-> - Изменились фильтры — кеш по новому ключу, старый не показываем.
-> - Ошибка revalidate — оставляем кешированный результат, показываем тост.
+> - Cache is stale (older than 5 minutes) — show skeleton, wait for API response.
+> - Filters changed — cache under a new key; do not show the old one.
+> - Revalidate error — keep the cached result, show a toast.
 >
-> ## Контракт
+> ## Contract
 >
 > ```ts
-> // src/features/search/cache.ts (новый файл)
+> // src/features/search/cache.ts (new file)
 > export interface SearchCache {
 >   get(key: SearchKey): CachedResult | null
 >   set(key: SearchKey, value: SearchResult): void
@@ -49,71 +49,71 @@
 > export type CachedResult = { value: SearchResult; storedAt: number }
 > ```
 >
-> Изменённые внешние контракты: нет.
-> Новые/изменённые таблицы БД: нет.
+> Changed external contracts: none.
+> New/changed DB tables: none.
 >
-> ## Технические подробности
+> ## Technical details
 >
-> ### Затрагиваемые модули
+> ### Affected modules
 >
-> - `src/features/search/api.ts` — обёртка над fetch, точка интеграции с кешем
-> - `src/features/search/cache.ts` (новый) — in-memory + sessionStorage LRU
-> - `src/features/search/SearchResultsPage.tsx` — использование revalidate-флоу
+> - `src/features/search/api.ts` — fetch wrapper, integration point with the cache
+> - `src/features/search/cache.ts` (new) — in-memory + sessionStorage LRU
+> - `src/features/search/SearchResultsPage.tsx` — consuming the revalidate flow
 >
-> ### Ориентиры в коде
+> ### Code landmarks
 >
-> - `src/features/recentlyViewed/cache.ts` — похожий LRU + sessionStorage, можно взять за образец
-> - `src/lib/cache-key.ts` — есть `buildCacheKey`, использовать его, не писать свой
+> - `src/features/recentlyViewed/cache.ts` — similar LRU + sessionStorage, can be used as a reference
+> - `src/lib/cache-key.ts` — has `buildCacheKey`, use it instead of writing your own
 >
 > ```bash
-> rg "sessionStorage" src/features/    # места, где уже используется
-> rg "stale-while-revalidate"          # есть ли паттерн в проекте
+> rg "sessionStorage" src/features/    # places where it is already used
+> rg "stale-while-revalidate"          # whether the pattern exists in the project
 > ```
 >
-> ### Нефункциональные требования
+> ### Non-functional requirements
 >
-> Размер кеша — не больше 50 последних запросов, вытеснение по LRU. Не складывать в кеш ответы с `Cache-Control: no-store`.
+> Cache size — no more than 50 recent queries, eviction by LRU. Do not cache responses with `Cache-Control: no-store`.
 >
-> ### Обработка ошибок
+> ### Error handling
 >
-> При ошибке revalidate — `logger.warn`, кеш не инвалидируем. При ошибке записи в sessionStorage (квота) — fallback на in-memory only, `logger.debug`.
+> On revalidate error — `logger.warn`, do not invalidate cache. On sessionStorage write error (quota) — fall back to in-memory only, `logger.debug`.
 >
 > ## Out of scope
 >
-> - Серверный edge-кеш для `/api/search` — отдельный issue (см. «Следствия»).
-> - Кеширование автокомплита `/api/search/suggest` — другая поверхность.
-> - Рефакторинг `SearchResultsPage.tsx` сверх минимально необходимой интеграции.
+> - Server-side edge cache for `/api/search` — separate issue (see "Consequences").
+> - Caching autocomplete `/api/search/suggest` — different surface.
+> - Refactoring `SearchResultsPage.tsx` beyond the minimum necessary integration.
 >
 > ## Definition of Done
 >
-> - [ ] `pnpm test src/features/search/cache.test.ts` проходит, покрывает: add, evict-on-overflow (>50), ttl-expiry
-> - [ ] `pnpm lint` без новых ошибок
-> - [ ] `pnpm test:e2e -- search-cache` — сценарий «поиск → карточка → назад» проходит без запроса к `/api/search` в первые 100мс
-> - [ ] Ручная проверка: открыть DevTools → Network, выполнить поиск, перейти на товар, вернуться — запрос к `/api/search` не повторяется
-> - [ ] Lighthouse Performance ≥ 85 на `/search` (`pnpm lighthouse --url /search`)
+> - [ ] `pnpm test src/features/search/cache.test.ts` passes, covers: add, evict-on-overflow (>50), ttl-expiry
+> - [ ] `pnpm lint` with no new errors
+> - [ ] `pnpm test:e2e -- search-cache` — the "search → product card → back" scenario passes without a request to `/api/search` in the first 100ms
+> - [ ] Manual check: open DevTools → Network, perform a search, navigate to a product, go back — no repeat request to `/api/search`
+> - [ ] Lighthouse Performance ≥ 85 on `/search` (`pnpm lighthouse --url /search`)
 >
-> ## Референсы
+> ## References
 >
-> - #128 — LRU для recently viewed (закрыт, паттерн оттуда)
+> - #128 — LRU for recently viewed (closed, pattern taken from there)
 >
-> ## Следствия
+> ## Consequences
 >
-> - Завести issue на серверный edge-кеш для `/api/search`
-> - Решить, нужно ли кешировать выдачу автокомплита — отдельное обсуждение
+> - Create an issue for the server-side edge cache for `/api/search`
+> - Decide whether autocomplete results need caching — separate discussion
 
-После апрува:
+After approval:
 
 ```bash
 gh issue create --repo myorg/shop \
-  --title "Кеширование результатов поиска на стороне клиента" \
+  --title "Client-side search results caching" \
   --body-file /tmp/issue-body.md \
   --label "frontend,performance"
 ```
 
-## Пример 2: epic + sub-issues
+## Example 2: epic + sub-issues
 
-Если пользователь говорит «разбей на подзадачи», создаёшь N+1 issue: один родительский (краткий, обзорный) и N дочерних (по полному шаблону), затем связываешь через `addSubIssue`.
+If the user says "break it into subtasks", create N+1 issues: one parent (brief, overview) and N children (using the full template), then link them via `addSubIssue`.
 
-Родительский issue в этом случае имеет **сокращённое** тело — Контекст, Зачем, общий DoD. Контракт и технические подробности живут в дочерних. Label `size:L` на parent-issue уместен.
+The parent issue in this case has a **shortened** body — Context, Why, overall DoD. Contract and technical details live in the children. The label `size:L` on the parent issue is appropriate.
 
-Если задача явно тянет на `size:L` — это сигнал предложить пользователю дробление в эпик ещё на этапе интервью.
+If a task clearly warrants `size:L` — that is a signal to suggest breaking it into an epic during the interview stage.

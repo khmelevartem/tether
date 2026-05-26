@@ -1,205 +1,205 @@
-# Шаблон GitHub Issue
+# GitHub Issue Template
 
-Полный шаблон и объяснение каждого раздела.
+Full template and explanation of each section.
 
-## Название
+## Title
 
-Краткое (обычно 4-10 слов), описывает **полезный инкремент** к проекту — то, что появится после выполнения задачи. Читается как пункт changelog или коммит в стиле «что добавили / что починили».
+Brief (usually 4-10 words), describes a **useful increment** to the project — what will exist after the task is done. Reads like a changelog entry or a commit in the style of "what was added / what was fixed."
 
-**Никаких приставок** типа `[FEATURE]`, `[BUG]`, `feat:`, `task:`. Категоризация — через labels, не через название.
+**No prefixes** like `[FEATURE]`, `[BUG]`, `feat:`, `task:`. Categorization — via labels, not the title.
 
-Тест: если выписать названия всех закрытых issue подряд — они должны читаться как история развития проекта.
+Test: if you list the titles of all closed issues in sequence — they should read as the history of the project's development.
 
-**Хорошо:**
-- `Авторизация по магической ссылке на email`
-- `Кеширование результатов поиска на стороне клиента`
-- `Экспорт отчёта в PDF из карточки заказа`
-- `Откат миграции БД при падении init-контейнера`
+**Good:**
+- `Magic-link email authentication`
+- `Client-side search results caching`
+- `PDF export from order card`
+- `DB migration rollback on init-container failure`
 
-**Плохо:**
-- `[FEATURE] Добавить авторизацию` — приставка, глагол «добавить»
-- `Fix bug` — не описывает инкремент
-- `Авторизация` — слишком общо, непонятно что именно появится
-- `Реализовать класс AuthService` — про реализацию, а не про инкремент
+**Bad:**
+- `[FEATURE] Add authentication` — prefix, verb "add"
+- `Fix bug` — does not describe the increment
+- `Authentication` — too broad, unclear what exactly will appear
+- `Implement AuthService class` — about the implementation, not the increment
 
-## Размер задачи
+## Task size
 
-GitHub не имеет нативного поля «размер» на уровне issue — де-факто стандарт это **label** вида `size:S`, `size:M`, `size:L`. Его и используй при создании через `--label`.
+GitHub has no native "size" field at the issue level — the de facto standard is a **label** of the form `size:S`, `size:M`, `size:L`. Use that when creating via `--label`.
 
-Шкала: `S` — до 4 часов, `M` — до одного дня, `L` — до трёх дней. Всё крупнее `L` — сигнал дробить на эпик с sub-issues.
+Scale: `S` — up to 4 hours, `M` — up to one day, `L` — up to three days. Anything larger than `L` is a signal to break it into an epic with sub-issues.
 
-Если в репозитории есть GitHub Projects с кастомным полем «Size» или «Story Points» — его можно выставить после создания issue через `gh project item-edit` (требует `gh auth refresh -s project`). Спроси пользователя нужно ли это, не делай по умолчанию.
+If the repository has a GitHub Projects with a custom "Size" or "Story Points" field — it can be set after issue creation via `gh project item-edit` (requires `gh auth refresh -s project`). Ask the user whether this is needed; do not do it by default.
 
-## Полный шаблон описания
+## Full description template
 
 ```markdown
-**Тип:** FEATURE | BUGFIX | REFACTOR | INFRA | DOCS | DEPENDENCY
+**Type:** FEATURE | BUGFIX | REFACTOR | INFRA | DOCS | DEPENDENCY
 
-## Контекст
+## Context
 
-Одно-два предложения: какая часть какого приложения. Где в системе живёт эта задача.
+One or two sentences: which part of which application. Where in the system this task lives.
 
-## Что сделать
+## What to do
 
-Одно-два предложения: что конкретно сделать. Что добавить, починить, изменить или удалить.
+One or two sentences: what exactly to do. What to add, fix, change, or remove.
 
-## Зачем
+## Why
 
-Развёрнуто (~5 предложений, без жёсткого лимита): какую проблему решает, зачем сейчас, опционально — откуда возник запрос. Термины с расшифровкой и полезные ссылки (RFC, дизайн-документ, обсуждение в чате) — здесь же.
+In detail (~5 sentences, no strict limit): what problem it solves, why now, optionally — where the request came from. Terms with definitions and useful links (RFC, design document, chat discussion) — here too.
 
-## Блокеры и внешние условия
+## Blockers and external conditions
 
-Что должно быть готово/доступно к моменту выполнения: внешние сервисы, креды, решения от смежных команд, мерж другого PR, прогон миграции.
+What must be ready/available at the time of execution: external services, credentials, decisions from adjacent teams, another PR merged, a migration run.
 
-## Как должно работать
+## How it should work
 
-### Основной сценарий
+### Main scenario
 
-Пошагово или прозой — что происходит в типичном случае. Что видит/делает пользователь (или вызывающий код), что отвечает система.
+Step-by-step or in prose — what happens in the typical case. What the user (or calling code) sees/does, what the system responds.
 
-### Краевые случаи
+### Edge cases
 
-Что делать, если: пустой ввод, отвалилась сеть, конкурентные запросы, истёкший токен, отсутствие прав, лимиты. Перечислить только релевантное — лучше 3 реальных, чем 10 надуманных.
+What to do if: empty input, network failure, concurrent requests, expired token, missing permissions, limits. List only the relevant ones — 3 real ones are better than 10 invented ones.
 
-### Продолжение работы
+### Continuation of work
 
-Если задача — часть большего флоу: что происходит после, кто подхватывает, какие следующие шаги пользователя/системы.
+If the task is part of a larger flow: what happens next, who picks it up, what are the next steps for the user/system.
 
-## Контракт
+## Contract
 
-Точная форма того, что должно появиться после задачи. Это снимает с исполнителя необходимость додумывать сигнатуры.
+The exact shape of what should exist after the task. This removes the need for the implementer to guess signatures.
 
-**Публичный API после задачи** — TypeScript-интерфейсы, Python-сигнатуры функций, схемы эндпоинтов, схемы событий, форматы CLI-команд. То, что увидит и будет использовать вызывающий код.
+**Public API after the task** — TypeScript interfaces, Python function signatures, endpoint schemas, event schemas, CLI command formats. What calling code will see and use.
 
 \`\`\`ts
-// пример: src/features/search/cache.ts (новый файл)
+// example: src/features/search/cache.ts (new file)
 export interface SearchCache {
   get(key: SearchKey): CachedResult | null
   set(key: SearchKey, value: SearchResult): void
 }
 \`\`\`
 
-**Изменённые внешние контракты** — что меняется в существующих публичных API, схемах БД, форматах конфигов, переменных окружения. Если ничего не меняется — написать «нет».
+**Changed external contracts** — what changes in existing public APIs, DB schemas, config formats, environment variables. If nothing changes — write "none."
 
-**Новые/изменённые таблицы или коллекции** — schema-diff, если затрагивается БД.
+**New/changed tables or collections** — schema diff, if the DB is affected.
 
-Если задача чисто визуальная или конфигурационная и контракта нет — раздел можно опустить.
+If the task is purely visual or configurational and has no contract — the section can be omitted.
 
-## Перед началом
+## Before starting
 
-**Обязательно сделать план реализации до того, как трогать код.** План показать пользователю, дождаться апрува. Без апрува плана задачу не начинать.
+**Mandatory: produce an implementation plan before touching code.** Show the plan to the user and wait for approval. Do not start the task without plan approval.
 
-В плане отразить: какие файлы/модули затрагиваются, какая стратегия валидации, какие открытые вопросы из задачи решаются по дороге. Если что-то в техдеталях задачи кажется сомнительным или конфликтует с гайдами — не переделывать молча, показать альтернативу в плане.
+The plan should reflect: which files/modules are affected, what the validation strategy is, what open questions from the task are resolved along the way. If something in the technical details looks questionable or conflicts with the guides — do not silently rework it; show the alternative in the plan.
 
-Этот пункт — default для проекта, оставлять во всех задачах сложнее тривиальных. Убирать только при `size:S` И когда задача — точечная правка без архитектурных решений (опечатка, переименование, обновление зависимости).
+This item is the default for the project; keep it in all tasks more complex than trivial. Remove only for `size:S` AND when the task is a pinpoint fix with no architectural decisions (typo, rename, dependency update).
 
-Дополнительные шаги, специфичные для конкретной задачи:
+Additional steps specific to the task:
 
-1. Воспроизвести проблему по шагам (для багов).
-2. Замерить текущий показатель (для оптимизаций).
-3. Подтвердить, что ожидаемое поведение действительно отсутствует.
+1. Reproduce the problem step by step (for bugs).
+2. Measure the current metric (for optimizations).
+3. Confirm that the expected behavior is genuinely absent.
 
-Если воспроизвести/замерить не удалось — закрыть как `outdated` и не делать.
+If reproduction/measurement fails — close as `outdated` and do not proceed.
 
-### Гипотезы о причинах (для BUGFIX)
+### Hypotheses about the cause (for BUGFIX)
 
-Если в issue включён раздел с возможными причинами / гипотезами / candidate-объяснениями — оформляй его именно как **непроверенные гипотезы**, а не как факт. Используй формулировки «возможно», «гипотеза», «candidate cause», нумеруй пункты и явно укажи в начале раздела:
+If the issue includes a section on possible causes / hypotheses / candidate explanations — format it explicitly as **unverified hypotheses**, not as fact. Use formulations like "possibly," "hypothesis," "candidate cause," number the items, and explicitly state at the top of the section:
 
-> Это **непроверенные гипотезы** автора issue. До написания PR исполнитель обязан верифицировать реальный root cause (через `/implement` → агент `bug-reproducer`, или вручную воспроизведя баг и проверив каждую гипотезу минимальным экспериментом) и зафиксировать его комментарием в issue.
+> These are **unverified hypotheses** by the issue author. Before writing a PR the implementer must verify the actual root cause (via `/implement` → `bug-reproducer` agent, or by manually reproducing the bug and checking each hypothesis with a minimal experiment) and record it in a comment on the issue.
 
-Без этой пометки исполнитель может взять первую гипотезу как факт и написать корректный с виду фикс, который не решает реальную проблему. Это уже происходило (см. retro по #71 / #47).
+Without this note the implementer may treat the first hypothesis as fact and write a fix that looks correct but does not solve the real problem. This has already happened (see retro on #71 / #47).
 
-## Технические подробности
+## Technical details
 
-### Затрагиваемые модули
+### Affected modules
 
-Список классов / модулей / файлов / эндпоинтов / таблиц БД, которые предполагается тронуть. Если неизвестно точно — указать предполагаемое место и пометить `(уточнить)`.
+List of classes / modules / files / endpoints / DB tables expected to be touched. If not known precisely — state the presumed location and mark `(to confirm)`.
 
-### Ориентиры в коде
+### Code landmarks
 
-(опционально, но сильно помогает агенту-исполнителю)
+(optional, but greatly helps the implementing agent)
 
-**Похожие реализации в проекте** — указать файлы/модули, где уже есть похожий паттерн. Это помогает не писать с нуля и держать стиль проекта консистентным:
+**Similar implementations in the project** — point to files/modules where a similar pattern already exists. This helps avoid writing from scratch and keeps the project style consistent:
 
-- `src/features/recentlyViewed/cache.ts` — похожая идея LRU + sessionStorage, можно взять за образец
+- `src/features/recentlyViewed/cache.ts` — similar LRU + sessionStorage idea, can be used as a reference
 
-**Команды для разведки** — `rg` / `grep` / `gh` команды, которые помогают исполнителю быстро найти нужные места:
+**Scouting commands** — `rg` / `grep` / `gh` commands that help the implementer quickly find the relevant places:
 
 \`\`\`bash
-rg "sessionStorage" src/features/    # все места, где уже используется
-rg "swr|stale-while-revalidate"      # есть ли уже паттерн в проекте
+rg "sessionStorage" src/features/    # all places where it is already used
+rg "swr|stale-while-revalidate"      # whether the pattern already exists in the project
 \`\`\`
 
-### Нефункциональные требования
+### Non-functional requirements
 
-Производительность, безопасность, совместимость, ограничения по ресурсам, требования к логированию/метрикам.
+Performance, security, compatibility, resource limits, logging/metrics requirements.
 
-### Обработка ошибок
+### Error handling
 
-Какие ошибки могут возникнуть, как обрабатываются, что логировать, что показывать пользователю.
+What errors can occur, how they are handled, what to log, what to show the user.
 
 ## Out of scope
 
-Явные границы — что в эту задачу **не входит**, даже если кажется, что входит. Это снимает раздувание PR и упреждает «по дороге починю».
+Explicit boundaries — what is **not** part of this task, even if it might seem like it is. This prevents PR scope creep and pre-empts "I'll fix this along the way."
 
-- Что не делаем (с пояснением, если неочевидно).
-- Сопутствующие задачи, которые вынесены в отдельный issue (с номерами, если уже заведены).
-- Технический долг, который видно по дороге, но трогать сейчас нельзя.
+- What we are not doing (with explanation if non-obvious).
+- Related tasks that have been moved to a separate issue (with numbers, if already created).
+- Technical debt that is visible along the way but must not be touched now.
 
-Если границы тривиальны — раздел можно опустить, но для задач сложнее «поправить опечатку» обычно стоит заполнить.
+If the boundaries are trivial — the section can be omitted, but for tasks more complex than "fix a typo" it is usually worth filling in.
 
 ## Definition of Done
 
-Формулировки в стиле «можно проверить да/нет», в терминах наблюдаемого поведения или измеримой характеристики, не структурного артефакта. Класс / интерфейс / метод существуют как способ доставить поведение, но их наличие само по себе ничего не доказывает (пустая реализация, не подключённая в DI). Описывай то, что увидит пользователь или автотест.
+Formulations in the style of "can be verified yes/no," in terms of observable behavior or a measurable characteristic, not a structural artifact. A class / interface / method exists as a means of delivering behavior, but its mere existence proves nothing (empty implementation, not wired into DI). Describe what the user or an automated test will see.
 
-✗ `DeviceNameStore с реализациями на 4 платформах поднят` — структурно, не наблюдаемо.
-✓ `Сохранённое имя устройства переживает перезапуск приложения на всех 4 платформах`.
+✗ `DeviceNameStore with implementations on 4 platforms is in place` — structural, not observable.
+✓ `The saved device name survives an app restart on all 4 platforms`.
 
-Где можно — указывай **конкретные команды** для прогона, не описания. Исполнитель должен иметь возможность скопировать и запустить.
+Where possible — specify **concrete commands** to run, not descriptions. The implementer should be able to copy and execute.
 
-- [ ] План реализации согласован с пользователем до начала кодинга (см. «Перед началом»)
-- [ ] `<команда тестов на затронутые файлы>` проходит, покрывает: <перечислить сценарии>
-- [ ] `<команда линтера>` без новых ошибок
-- [ ] `<команда e2e/интеграционных тестов, если применимо>` проходит
-- [ ] Ручная проверка: `<пошаговый сценарий или ссылка на демо-стенд>`
-- [ ] Документация / changelog / обновлённые ENV — если применимо
+- [ ] Implementation plan approved by the user before coding starts (see "Before starting")
+- [ ] `<test command for affected files>` passes, covers: <list scenarios>
+- [ ] `<linter command>` with no new errors
+- [ ] `<e2e/integration test command, if applicable>` passes
+- [ ] Manual check: `<step-by-step scenario or link to demo environment>`
+- [ ] Documentation / changelog / updated ENV — if applicable
 
-Команды берутся из `AGENTS.md` / `CONTRIBUTING.md` / `package.json` проекта (см. раздел «Разведка»). Если правил нет — пиши общеупотребительные (`pytest path/to/test.py`, `pnpm test`, `cargo test`) и помечай `(уточнить раннер)`.
+Commands are taken from `AGENTS.md` / `CONTRIBUTING.md` / `package.json` of the project (see "Scouting"). If no rules exist — write common ones (`pytest path/to/test.py`, `pnpm test`, `cargo test`) and mark `(confirm runner)`.
 
-## Референсы
+## References
 
-Похожие задачи в истории проекта — закрытые issue, PR, обсуждения, которые служат хорошим образцом. Найдены на этапе разведки.
+Similar tasks in the project history — closed issues, PRs, discussions that serve as a good example. Found during the scouting phase.
 
-- #42 — кеширование автокомплита (закрыт, паттерн оттуда)
-- #128 — LRU для recently viewed (закрыт)
+- #42 — autocomplete caching (closed, pattern taken from there)
+- #128 — LRU for recently viewed (closed)
 
-## Следствия
+## Consequences
 
-Задачи, которые непосредственно вытекают из этой, но не помещаются в её скоуп. Будущие issue, которые надо завести после мержа.
+Tasks that directly follow from this one but do not fit within its scope. Future issues to be created after the merge.
 ```
 
-**Связи (parent / blocked-by / blocks) в теле не пишем** — они проставляются через нативные GitHub-поля: sub-issues (GraphQL) + Relationships, известные в REST как issue dependencies (REST `POST /repos/{o}/{r}/issues/{n}/dependencies/blocked_by`). См. раздел «Связи между issue» в [SKILL.md](SKILL.md). В теле issue остаётся только сама задача.
+**Relationships (parent / blocked-by / blocks) are not written in the body** — they are set via native GitHub fields: sub-issues (GraphQL) + Relationships, known in REST as issue dependencies (REST `POST /repos/{o}/{r}/issues/{n}/dependencies/blocked_by`). See the "Issue relationships" section in [SKILL.md](SKILL.md). Only the task itself remains in the issue body.
 
-«Related» — упоминание `#N` встраивается в раздел «Контекст» или «Зачем» там, где это естественно по смыслу, либо выражается через общий parent/labels.
+"Related" — a mention of `#N` is embedded in the "Context" or "Why" section where it fits naturally by meaning, or expressed through a shared parent/labels.
 
-## Что важно при заполнении
+## What matters when filling in
 
-- **Контекст** — широкий мазок, не пересказ README. Координата «где мы сейчас».
-- **Зачем** — здесь главная ценность для исполнителя. Не «нужно сделать X», а «без X происходит Y, что мешает Z».
-- **Контракт** — даже если пользователь не дал точные сигнатуры, **предложи их в черновике** на основе раздела «Зачем». Пользователь подправит. Это всё равно лучше, чем оставлять додумывание исполнителю.
-- **Технические подробности** — гипотеза, а не приказ. Исполнитель может выбрать другой путь, но имеет от чего оттолкнуться.
-- **Out of scope** — даже 1-2 пункта лучше, чем пустой раздел. «Не трогаем серверный кеш», «Не рефакторим X сверх необходимого» — это уже сильно сужает поле для агента.
-- **DoD** — конкретика побеждает. «`pnpm test path/to/cache.test.ts` проходит» лучше, чем «юнит-тесты есть». Команды берутся из `AGENTS.md` если он есть.
-- **Парные стороны контракта — в одной задаче.** Если фикс/фича логически двусторонняя (client↔server, sender↔receiver, producer↔consumer, write-path↔read-path), обе стороны должны жить в одном issue и быть в DoD одной задачи. Не выноси «вторую половину» в doc-ремарку, отдельный issue или TODO в коде — серверная защита, у которой клиент не выставляет precondition, физически не срабатывает в продакшне, и об этом узнают только когда уже произошёл инцидент. Признак, что задача двусторонняя: «server X validates Y» / «receiver checks Z, sent by sender» / «consumer expects field N, produced by producer». Если в `Что сделать` фигурируют только одна сторона — проверь, что вторая либо уже в main, либо включена в эту же задачу.
+- **Context** — a broad stroke, not a retelling of the README. A coordinate of "where we are now."
+- **Why** — this is the main value for the implementer. Not "we need to do X," but "without X, Y happens, which prevents Z."
+- **Contract** — even if the user did not provide exact signatures, **propose them in a draft** based on the "Why" section. The user will correct them. That is still better than leaving the guesswork to the implementer.
+- **Technical details** — a hypothesis, not an order. The implementer may choose a different path but has something to start from.
+- **Out of scope** — even 1-2 points is better than an empty section. "We are not touching the server cache," "We are not refactoring X beyond what is necessary" — that already significantly narrows the scope for the agent.
+- **DoD** — specifics win. "`pnpm test path/to/cache.test.ts` passes" is better than "unit tests exist." Commands are taken from `AGENTS.md` if it is present.
+- **Paired sides of the contract — in one task.** If a fix/feature is logically two-sided (client↔server, sender↔receiver, producer↔consumer, write-path↔read-path), both sides must live in the same issue and be in the DoD of the same task. Do not move "the other half" into a doc remark, a separate issue, or a TODO in code — a server-side guard for which the client does not set a precondition physically does not trigger in production, and this is only discovered when an incident has already occurred. The sign that a task is two-sided: "server X validates Y" / "receiver checks Z, sent by sender" / "consumer expects field N, produced by producer." If "What to do" mentions only one side — verify that the other is either already in main or included in this same task.
 
-## Что пропускать на маленьких задачах (size:S)
+## What to skip for small tasks (size:S)
 
-Для задач размером до 4 часов часть разделов — лишний вес. Правило: если раздел потребует больше времени на написание, чем выполнение задачи — пропускай.
+For tasks up to 4 hours, some sections are unnecessary weight. Rule: if a section takes more time to write than the task takes to execute — skip it.
 
-**Можно пропустить целиком:** Блокеры, Контракт (если изменений API нет), Ориентиры в коде, Нефункциональные требования, Продолжение работы, Референсы, Следствия.
+**Can be skipped entirely:** Blockers, Contract (if no API changes), Code landmarks, Non-functional requirements, Continuation of work, References, Consequences.
 
-**Перед началом** — для тривиальных правок (опечатка, переименование, обновление зависимости) можно пропустить. Иначе оставить хотя бы default-пункт про план + апрув.
+**Before starting** — for trivial fixes (typo, rename, dependency update) can be skipped. Otherwise keep at least the default item about the plan + approval.
 
-**Нельзя пропускать никогда:** Контекст, Зачем, Основной сценарий, Краевые случаи (хотя бы 2-3), Out of scope (хотя бы 1-2 пункта если задача неочевидна), DoD (включая пункт про апрув плана).
+**Can never be skipped:** Context, Why, Main scenario, Edge cases (at least 2-3), Out of scope (at least 1-2 points if the task is non-obvious), DoD (including the plan approval item).
 
-Для `size:S` разумный минимум — Контекст + Зачем + Как должно работать + Out of scope (1-2) + DoD (3-4 конкретных пункта).
+For `size:S` the reasonable minimum is Context + Why + How it should work + Out of scope (1-2) + DoD (3-4 concrete points).
