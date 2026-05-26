@@ -27,9 +27,9 @@ Read on demand. Match what you're touching to the corresponding canon:
 
 ## Git conventions
 
-All git naming in English. **All commit messages must start with the issue number:** `#<issue>: <message>` (e.g., `#42: add mDNS discovery for Android`).
+All git naming in English. **All commit messages and PR titles must start with the issue number:** `#<issue>: <message>` (e.g., `#42: add mDNS discovery for Android`). Retro commits and PRs use `retro from #<issue>: <message>`.
 
-All issue titles, issue bodies, and PR titles and descriptions must be written in English. Russian is only permitted in interactive chat.
+All issue titles, issue bodies, and PR descriptions must be written in English. Russian is only permitted in interactive chat.
 
 Before committing, make sure the issue exists. If it does not — ask the user to create it.
 
