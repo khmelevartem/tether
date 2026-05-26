@@ -1,5 +1,7 @@
 package com.tubetoast.tether.util
 
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 
-expect val IoDispatcher: CoroutineDispatcher
+val IoDispatcher: CoroutineDispatcher = Dispatchers.IO
