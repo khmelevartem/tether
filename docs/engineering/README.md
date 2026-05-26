@@ -19,6 +19,7 @@ Product-side docs (vision, audience, features) live in [`docs/product/`](../prod
 - [Logging](logging.md) — KydraLog как единый KMP-фасад; именование `Tether.<Subsystem>`, уровни, DEBUG-гейтинг по платформам, тестовая тишина, политика sensitive-данных.
 - [Persistence](persistence.md) — key-value store contract and DataStore backend.
 - [Glossary discipline](glossary-discipline.md) — `docs/glossary.md` как единый словарь (product / technical); `review-glossary` как сабагент, который ловит drift и недокументированные термины в PR-диффе.
+- [Long-lived artifacts](long-lived-artifacts.md) — writing discipline for prose that outlives the task. Applies to `CLAUDE.md`, `docs/`, `.claude/`, KDoc, comments, error messages.
 
 ## Writing style for these guides
 
