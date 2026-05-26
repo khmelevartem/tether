@@ -3,6 +3,7 @@ package com.tubetoast.tether.presentation.transfer
 import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.decompose.value.MutableValue
 import com.arkivanov.decompose.value.Value
+import com.arkivanov.decompose.value.update
 import com.tubetoast.tether.transfer.BatchOutcome
 import com.tubetoast.tether.transfer.BatchProgress
 import com.tubetoast.tether.transfer.BatchSender
@@ -101,37 +102,43 @@ class PeerTransferComponent(
             }
             is PerFileStatus.Queued -> {
                 cancelledFileNames.update { it + name }
-                val updated = current.perFile.toMutableList()
-                updated[idx] = PerFileStatus.Failed(
-                    status.name,
-                    status.size,
-                    FailureReason.CancelledByUser,
-                    cancelledByUser = true,
-                )
-                mutableState.value = current.copy(
-                    perFile = updated,
-                    skippedCount = updated.count { it is PerFileStatus.Failed },
-                )
+                mutableState.update { s ->
+                    val active = s as? PeerTransferState.ActiveOutbound ?: return@update s
+                    val rowIdx = active.perFile.indexOfFirst { it.name == name }.takeIf { it >= 0 } ?: return@update s
+                    val updated = active.perFile.toMutableList()
+                    updated[rowIdx] = PerFileStatus.Failed(
+                        status.name,
+                        status.size,
+                        FailureReason.CancelledByUser,
+                        cancelledByUser = true,
+                    )
+                    active.copy(
+                        perFile = updated,
+                        skippedCount = updated.count { it is PerFileStatus.Failed },
+                    )
+                }
             }
             else -> Unit
         }
     }
 
     fun onDismiss() {
-        val current = mutableState.value
-        if (current is PeerTransferState.Sent ||
-            current is PeerTransferState.Received ||
-            current is PeerTransferState.Cancelled ||
-            current is PeerTransferState.Error
-        ) {
-            mutableState.value = PeerTransferState.Idle(peer)
+        mutableState.update { s ->
+            if (s is PeerTransferState.Sent ||
+                s is PeerTransferState.Received ||
+                s is PeerTransferState.Cancelled ||
+                s is PeerTransferState.Error
+            ) {
+                PeerTransferState.Idle(peer)
+            } else {
+                s
+            }
         }
     }
 
     fun toggleExpanded() {
-        val current = mutableState.value
-        if (current is PeerTransferState.Idle) {
-            mutableState.value = current.copy(expanded = !current.expanded)
+        mutableState.update { s ->
+            (s as? PeerTransferState.Idle)?.copy(expanded = !s.expanded) ?: s
         }
     }
 
@@ -231,80 +238,89 @@ class PeerTransferComponent(
                 )
             }
             is ReceiveEvent.Progress -> {
-                val current = mutableState.value as? PeerTransferState.ActiveInbound ?: return
-                val idx = current.perFile.indexOfFirst { it.name == ev.name }.takeIf { it >= 0 }
-                    ?: current.perFile.indexOfFirst { it.name.isEmpty() }.takeIf { it >= 0 }
-                    ?: current.currentIndex
-                val updated = current.perFile.toMutableList()
-                updated[idx] = PerFileStatus.InProgress(ev.name, ev.totalBytes, ev.receivedBytes)
-                mutableState.value = current.copy(
-                    currentFile = ev.name,
-                    receivedBytes = ev.receivedBytes,
-                    totalBytes = ev.totalBytes,
-                    perFile = updated,
-                )
+                mutableState.update { s ->
+                    val active = s as? PeerTransferState.ActiveInbound ?: return@update s
+                    val idx = active.perFile.indexOfFirst { it.name == ev.name }.takeIf { it >= 0 }
+                        ?: active.perFile.indexOfFirst { it.name.isEmpty() }.takeIf { it >= 0 }
+                        ?: active.currentIndex
+                    val updated = active.perFile.toMutableList()
+                    updated[idx] = PerFileStatus.InProgress(ev.name, ev.totalBytes, ev.receivedBytes)
+                    active.copy(
+                        currentFile = ev.name,
+                        receivedBytes = ev.receivedBytes,
+                        totalBytes = ev.totalBytes,
+                        perFile = updated,
+                    )
+                }
             }
             is ReceiveEvent.FileCompleted -> {
                 confirmedReceived.update { it + ev.name }
-                val current = mutableState.value as? PeerTransferState.ActiveInbound ?: return
-                val idx = current.perFile.indexOfFirst { it.name == ev.name }.takeIf { it >= 0 }
-                    ?: current.currentIndex
-                val updated = current.perFile.toMutableList()
-                updated[idx] = PerFileStatus.Done(ev.name, current.perFile[idx].size)
-                mutableState.value = current.copy(
-                    currentIndex = (idx + 1).coerceAtMost(current.totalFiles - 1),
-                    perFile = updated,
-                )
+                mutableState.update { s ->
+                    val active = s as? PeerTransferState.ActiveInbound ?: return@update s
+                    val idx = active.perFile.indexOfFirst { it.name == ev.name }.takeIf { it >= 0 }
+                        ?: active.currentIndex
+                    val updated = active.perFile.toMutableList()
+                    updated[idx] = PerFileStatus.Done(ev.name, active.perFile[idx].size)
+                    active.copy(
+                        currentIndex = (idx + 1).coerceAtMost(active.totalFiles - 1),
+                        perFile = updated,
+                    )
+                }
             }
             is ReceiveEvent.BatchCompleted -> {
-                val current = mutableState.value
-                val perFile = (current as? PeerTransferState.ActiveInbound)?.perFile ?: emptyList()
-                val partialReason = if (ev.received < ev.total) {
-                    val failedEntries = perFile.filterIsInstance<PerFileStatus.Failed>()
-                    val cancelledCount = failedEntries.count { it.reason is FailureReason.CancelledByUser }
-                    if (cancelledCount > 0 && cancelledCount == failedEntries.size) {
-                        PartialOutcome.ReceiverCancelled
+                mutableState.update { s ->
+                    val perFile = (s as? PeerTransferState.ActiveInbound)?.perFile ?: emptyList()
+                    val partialReason = if (ev.received < ev.total) {
+                        val failedEntries = perFile.filterIsInstance<PerFileStatus.Failed>()
+                        val cancelledCount = failedEntries.count { it.reason is FailureReason.CancelledByUser }
+                        if (cancelledCount > 0 && cancelledCount == failedEntries.size) {
+                            PartialOutcome.ReceiverCancelled
+                        } else {
+                            PartialOutcome.ConnectionLost
+                        }
                     } else {
-                        PartialOutcome.ConnectionLost
+                        null
                     }
-                } else {
-                    null
+                    PeerTransferState.Received(
+                        peer = peer,
+                        received = ev.received,
+                        total = ev.total,
+                        perFile = perFile,
+                        partialReason = partialReason,
+                    )
                 }
-                mutableState.value = PeerTransferState.Received(
-                    peer = peer,
-                    received = ev.received,
-                    total = ev.total,
-                    perFile = perFile,
-                    partialReason = partialReason,
-                )
             }
             is ReceiveEvent.Failed -> {
-                val current = mutableState.value as? PeerTransferState.ActiveInbound ?: return
-                val idx = current.perFile.indexOfFirst { it.name == ev.file }.takeIf { it >= 0 }
-                    ?: current.currentIndex
-                val updated = current.perFile.toMutableList()
-                updated[idx] = PerFileStatus.Failed(ev.file, current.perFile[idx].size, ev.reason)
-                mutableState.value = current.copy(perFile = updated)
+                mutableState.update { s ->
+                    val active = s as? PeerTransferState.ActiveInbound ?: return@update s
+                    val idx = active.perFile.indexOfFirst { it.name == ev.file }.takeIf { it >= 0 }
+                        ?: active.currentIndex
+                    val updated = active.perFile.toMutableList()
+                    updated[idx] = PerFileStatus.Failed(ev.file, active.perFile[idx].size, ev.reason)
+                    active.copy(perFile = updated)
+                }
             }
             is ReceiveEvent.ConnectionLost -> {
-                val snapshot = mutableState.value
-                mutableState.value = PeerTransferState.Reconnecting(
-                    peer = peer,
-                    direction = Direction.Inbound,
-                    remainingSeconds = reconnectionTimeout.inWholeSeconds.toInt(),
-                    snapshotBeforeDrop = snapshot,
-                )
+                mutableState.update { snapshot ->
+                    PeerTransferState.Reconnecting(
+                        peer = peer,
+                        direction = Direction.Inbound,
+                        remainingSeconds = reconnectionTimeout.inWholeSeconds.toInt(),
+                        snapshotBeforeDrop = snapshot,
+                    )
+                }
             }
             ReceiveEvent.ReceiverSuspended -> {
-                val current = mutableState.value
-                val perFile = (current as? PeerTransferState.ActiveInbound)?.perFile ?: emptyList()
-                val doneCount = perFile.count { it is PerFileStatus.Done }
-                mutableState.value = PeerTransferState.Error(
-                    peer = peer,
-                    reason = TransferErrorReason.ReceiverSuspended,
-                    sent = doneCount,
-                    perFile = perFile,
-                )
+                mutableState.update { s ->
+                    val perFile = (s as? PeerTransferState.ActiveInbound)?.perFile ?: emptyList()
+                    val doneCount = perFile.count { it is PerFileStatus.Done }
+                    PeerTransferState.Error(
+                        peer = peer,
+                        reason = TransferErrorReason.ReceiverSuspended,
+                        sent = doneCount,
+                        perFile = perFile,
+                    )
+                }
             }
         }
     }
