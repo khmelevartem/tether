@@ -36,9 +36,7 @@ class TransferDetailsComponentTest {
         lifecycle.resume()
         val context = DefaultComponentContext(lifecycle)
         val monitor = FakeConnectionMonitor()
-        return PeerTransferComponent(
-            componentContext = context,
-            peer = peer,
+        val repository = PeerTransferRepositoryImpl(
             batchSenderFactory = {
                 BatchSender(
                     sendOne = sendOneOverride ?: { src, onProgress ->
@@ -51,8 +49,14 @@ class TransferDetailsComponentTest {
                 )
             },
             inboundEvents = MutableSharedFlow(),
-            onShowDetailsCallback = {},
             scope = scope,
+        )
+        return PeerTransferComponent(
+            componentContext = context,
+            peer = peer,
+            repository = repository,
+            onShowDetailsCallback = {},
+            coroutineScope = scope,
         )
     }
 

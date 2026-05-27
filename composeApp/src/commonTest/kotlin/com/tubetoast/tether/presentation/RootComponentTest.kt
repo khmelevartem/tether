@@ -6,15 +6,12 @@ import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.resume
 import com.arkivanov.essenty.statekeeper.StateKeeperDispatcher
 import com.tubetoast.tether.discovery.FakeDeviceDiscovery
+import com.tubetoast.tether.presentation.transfer.FakePeerTransferRepository
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.presentation.transfer.TransferDetailsComponent
-import com.tubetoast.tether.transfer.BatchSender
-import com.tubetoast.tether.transfer.FakeConnectionMonitor
 import com.tubetoast.tether.transfer.PeerIdentity
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.builtins.serializer
 import kotlin.test.Test
@@ -22,7 +19,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotSame
 import kotlin.test.assertSame
-import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class RootComponentTest {
@@ -115,21 +111,12 @@ class RootComponentTest {
                 )
             },
             transferDetailsFactory = { childCtx, peer ->
-                val monitor = FakeConnectionMonitor()
                 val peerComponent = PeerTransferComponent(
                     componentContext = childCtx,
                     peer = peer,
-                    batchSenderFactory = {
-                        BatchSender(
-                            sendOne = { _, _ -> },
-                            connectionMonitor = monitor,
-                            progressThrottle = 100.milliseconds,
-                            dispatcher = Dispatchers.Unconfined,
-                        )
-                    },
-                    inboundEvents = MutableSharedFlow(),
+                    repository = FakePeerTransferRepository(),
                     onShowDetailsCallback = {},
-                    scope = coroutineScope,
+                    coroutineScope = coroutineScope,
                 )
                 TransferDetailsComponent(
                     componentContext = childCtx,
