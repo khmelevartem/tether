@@ -1,6 +1,6 @@
 package com.tubetoast.tether.network
 
-internal const val MAX_DEDUP_RETRIES = 1000
+internal const val MAX_DEDUP_RETRIES = 16
 
 /** Returns the reserved leaf name, or throws if no free name is found within [MAX_DEDUP_RETRIES] attempts. */
 internal fun reserveDeduplicatedFile(
