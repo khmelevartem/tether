@@ -7,17 +7,17 @@ import com.tubetoast.tether.network.DefaultTransferActivityTracker
 import com.tubetoast.tether.network.FileClient
 import com.tubetoast.tether.network.FileServer
 import com.tubetoast.tether.network.TransferActivityTracker
+import com.tubetoast.tether.network.TransportPeerTransferDataSource
 import com.tubetoast.tether.preferences.FileTransferPreferences
 import com.tubetoast.tether.preferences.PeerPreferencesStore
 import com.tubetoast.tether.presentation.RootComponentFactory
-import com.tubetoast.tether.presentation.transfer.PeerTransferRepository
-import com.tubetoast.tether.presentation.transfer.PeerTransferRepositoryImpl
 import com.tubetoast.tether.security.TrustedDeviceStore
-import com.tubetoast.tether.transfer.ReceiveEvent
+import com.tubetoast.tether.transfer.PeerTransferDataSource
+import com.tubetoast.tether.transfer.PeerTransferRepository
+import com.tubetoast.tether.transfer.PeerTransferRepositoryImpl
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.MutableSharedFlow
 
 abstract class AppContainer {
     protected abstract val namePersistence: DeviceNamePersistence
@@ -35,13 +35,11 @@ abstract class AppContainer {
     abstract val fileTransferPreferences: FileTransferPreferences
     open val appScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    open val inboundEvents: MutableSharedFlow<ReceiveEvent> = MutableSharedFlow(extraBufferCapacity = 64)
+    open val peerTransferDataSource: PeerTransferDataSource by lazy {
+        TransportPeerTransferDataSource(fileClient, transferActivityTracker)
+    }
 
     open val peerTransferRepository: PeerTransferRepository by lazy {
-        PeerTransferRepositoryImpl(
-            batchSenderFactory = { error("TODO(#191): wire BatchSender to FileClient in Phase B") },
-            inboundEvents = inboundEvents,
-            scope = appScope,
-        )
+        PeerTransferRepositoryImpl(peerTransferDataSource, appScope)
     }
 }

@@ -11,6 +11,7 @@ Product-side docs (vision, audience, features) live in [`docs/product/`](../prod
 - [Dependency Injection](dependency-injection.md) — DI strategy now (manual composition root) and later (Metro). Concrete rules for new code.
 - [Presentation Layer](presentation-layer.md) — Decompose-based components; how to write them, subscribe from Compose, and test.
 - [Peer Discovery](discovery.md) — layered model (mDNS + rendezvous + HTTP-scan + UDP-broadcast + manual entry), contracts, identity, liveness.
+- [File transfer](file-transfer.md) — layering of the transfer subsystem: domain state machine + repository, transport-adapter data source, presentation Components observing per-peer state.
 - [File transfer wire contract](file-transfer-wire.md) — `POST /upload?name=<relative-path>` shape, two-layer path sanitization (lexical in route + canonical-realisation in `UploadStorage`), per-platform storage seam.
 - [Local-network availability](wifi-availability.md) — single common stream gating discovery and the no-local-network UI; per-platform sources (Android `NetworkCallback`, Apple `NWPathMonitor`, Desktop `NetworkInterface` polling).
 - [UI Style Guide](ui-style-guide.md) — token tables, `TetherTheme` rule, Tabler Icons usage, motion specs, accessibility checklist.
@@ -45,4 +46,5 @@ ADRs in [`adr/`](adr/) capture the *why* behind one-time architectural choices. 
 - [Logging — KydraLog](adr/adr-logging-kydra.md) — chose KydraLog as the single KMP logging facade; SLF4J handled via `slf4j-simple` on JVM; per-platform DEBUG gates.
 - [Screenshot testing](adr/adr-screenshot-testing.md) — chose Roborazzi + ComposablePreviewScanner on the Android target via Robolectric for headless `@Preview`-to-PNG rendering in the agent loop.
 - [Key-value persistence — DataStore](adr/adr-persistence-key-value.md) — chose `androidx.datastore-preferences-core` direct over wrapper libraries and per-store actuals.
+- [Transfer state — domain repository over a data-source seam](adr/adr-transfer-state-repository.md) — chose a domain `PeerTransferRepository` over a `PeerTransferDataSource` interface over Component-owned state or a presentation-layer repository wired to transport directly.
 

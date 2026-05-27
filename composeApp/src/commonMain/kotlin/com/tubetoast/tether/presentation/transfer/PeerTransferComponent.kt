@@ -6,6 +6,8 @@ import com.arkivanov.decompose.value.Value
 import com.arkivanov.essenty.lifecycle.coroutines.coroutineScope
 import com.tubetoast.tether.transfer.FileSource
 import com.tubetoast.tether.transfer.PeerIdentity
+import com.tubetoast.tether.transfer.PeerTransferRepository
+import com.tubetoast.tether.transfer.PeerTransferState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 

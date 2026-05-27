@@ -7,14 +7,16 @@ import com.tubetoast.tether.transfer.BatchSender
 import com.tubetoast.tether.transfer.FailureReason
 import com.tubetoast.tether.transfer.FakeConnectionMonitor
 import com.tubetoast.tether.transfer.FakeFileSource
+import com.tubetoast.tether.transfer.FakePeerTransferDataSource
 import com.tubetoast.tether.transfer.FileSource
 import com.tubetoast.tether.transfer.PeerIdentity
+import com.tubetoast.tether.transfer.PeerTransferRepositoryImpl
+import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.PerFileStatus
 import com.tubetoast.tether.transfer.ReceiverWriteFailedException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -36,8 +38,8 @@ class TransferDetailsComponentTest {
         lifecycle.resume()
         val context = DefaultComponentContext(lifecycle)
         val monitor = FakeConnectionMonitor()
-        val repository = PeerTransferRepositoryImpl(
-            batchSenderFactory = {
+        val dataSource = FakePeerTransferDataSource(
+            senderProvider = {
                 BatchSender(
                     sendOne = sendOneOverride ?: { src, onProgress ->
                         pauseChannel?.receive()
@@ -48,7 +50,9 @@ class TransferDetailsComponentTest {
                     dispatcher = Dispatchers.Unconfined,
                 )
             },
-            inboundEvents = MutableSharedFlow(),
+        )
+        val repository = PeerTransferRepositoryImpl(
+            dataSource = dataSource,
             scope = scope,
         )
         return PeerTransferComponent(

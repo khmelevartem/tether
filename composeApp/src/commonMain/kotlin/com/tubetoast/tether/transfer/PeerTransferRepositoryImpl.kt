@@ -1,20 +1,8 @@
-package com.tubetoast.tether.presentation.transfer
+package com.tubetoast.tether.transfer
 
-import com.tubetoast.tether.transfer.BatchOutcome
-import com.tubetoast.tether.transfer.BatchProgress
-import com.tubetoast.tether.transfer.BatchSender
-import com.tubetoast.tether.transfer.FailureReason
-import com.tubetoast.tether.transfer.FileSource
-import com.tubetoast.tether.transfer.PartialOutcome
-import com.tubetoast.tether.transfer.PeerIdentity
-import com.tubetoast.tether.transfer.PerFileStatus
-import com.tubetoast.tether.transfer.ReceiveEvent
-import com.tubetoast.tether.transfer.ReconnectionTimeout
-import com.tubetoast.tether.transfer.TransferErrorReason
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,27 +12,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.time.Duration
 
-interface PeerTransferRepository {
-    fun observe(peer: PeerIdentity): StateFlow<PeerTransferState>
-
-    fun startOutbound(peer: PeerIdentity, sources: List<FileSource>)
-
-    fun cancel(peer: PeerIdentity)
-
-    fun retry(peer: PeerIdentity)
-
-    fun retryFile(peer: PeerIdentity, name: String)
-
-    fun cancelFile(peer: PeerIdentity, name: String)
-
-    fun dismiss(peer: PeerIdentity)
-
-    fun toggleExpanded(peer: PeerIdentity)
-}
-
 class PeerTransferRepositoryImpl(
-    private val batchSenderFactory: () -> BatchSender,
-    private val inboundEvents: Flow<ReceiveEvent>,
+    private val dataSource: PeerTransferDataSource,
     private val scope: CoroutineScope,
     private val reconnectionTimeout: Duration = ReconnectionTimeout.DEFAULT,
 ) : PeerTransferRepository {
@@ -58,7 +27,7 @@ class PeerTransferRepositoryImpl(
 
     init {
         scope.launch {
-            inboundEvents.collect { ev -> mutex.withLock { handleInbound(ev) } }
+            dataSource.inboundEvents.collect { ev -> mutex.withLock { handleInbound(ev) } }
         }
     }
 
@@ -207,7 +176,7 @@ class PeerTransferRepositoryImpl(
     private suspend fun launchBatchIn(peer: PeerIdentity, sources: List<FileSource>) {
         val thisJob = currentCoroutineContext()[Job]
         val sender = mutex.withLock {
-            batchSenderFactory().also { currentSenders[peer] = it }
+            dataSource.outboundSender(peer).also { currentSenders[peer] = it }
         }
         try {
             sender.run(sources, peer, { src -> src.name in cancelledFor(peer).value }) { progress ->

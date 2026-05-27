@@ -2,6 +2,7 @@ package com.tubetoast.tether.presentation.transfer
 
 import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.decompose.value.Value
+import com.tubetoast.tether.transfer.PeerTransferState
 
 class TransferDetailsComponent(
     componentContext: ComponentContext,

@@ -1,7 +1,5 @@
-package com.tubetoast.tether.presentation.transfer
+package com.tubetoast.tether.transfer
 
-import com.tubetoast.tether.transfer.FileSource
-import com.tubetoast.tether.transfer.PeerIdentity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

@@ -1,18 +1,8 @@
-package com.tubetoast.tether.presentation.transfer
+package com.tubetoast.tether.transfer
 
-import com.tubetoast.tether.transfer.BatchSender
-import com.tubetoast.tether.transfer.FakeConnectionMonitor
-import com.tubetoast.tether.transfer.FakeFileSource
-import com.tubetoast.tether.transfer.FileSource
-import com.tubetoast.tether.transfer.PartialOutcome
-import com.tubetoast.tether.transfer.PeerIdentity
-import com.tubetoast.tether.transfer.PeerUnreachableException
-import com.tubetoast.tether.transfer.ReceiveEvent
-import com.tubetoast.tether.transfer.ReceiverWriteFailedException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -26,13 +16,19 @@ class PeerTransferRepositoryTest {
     private val peer = PeerIdentity("test-peer")
 
     private fun buildRepository(
-        events: MutableSharedFlow<ReceiveEvent> = MutableSharedFlow(extraBufferCapacity = 16),
+        dataSource: FakePeerTransferDataSource,
+        scope: kotlinx.coroutines.CoroutineScope,
+    ): PeerTransferRepositoryImpl = PeerTransferRepositoryImpl(
+        dataSource = dataSource,
+        scope = scope,
+    )
+
+    private fun buildDataSource(
         monitor: FakeConnectionMonitor = FakeConnectionMonitor(),
         pauseChannel: Channel<Unit>? = null,
         sendOneOverride: (suspend (FileSource, (Long, Long?) -> Unit) -> Unit)? = null,
-        scope: kotlinx.coroutines.CoroutineScope,
-    ): PeerTransferRepositoryImpl = PeerTransferRepositoryImpl(
-        batchSenderFactory = {
+    ): FakePeerTransferDataSource = FakePeerTransferDataSource(
+        senderProvider = {
             BatchSender(
                 sendOne = sendOneOverride ?: { src, onProgress ->
                     pauseChannel?.receive()
@@ -43,14 +39,13 @@ class PeerTransferRepositoryTest {
                 dispatcher = Dispatchers.Unconfined,
             )
         },
-        inboundEvents = events,
-        scope = scope,
     )
 
     @Test
     fun `startOutbound while Active is no-op`() = runTest {
         val pauseChannel = Channel<Unit>(0)
-        val repo = buildRepository(pauseChannel = pauseChannel, scope = backgroundScope)
+        val dataSource = buildDataSource(pauseChannel = pauseChannel)
+        val repo = buildRepository(dataSource, backgroundScope)
 
         repo.startOutbound(peer, listOf(FakeFileSource("a.txt", 100L)))
         runCurrent()
@@ -67,7 +62,8 @@ class PeerTransferRepositoryTest {
     @Test
     fun `cancel transitions state to Cancelled`() = runTest {
         val pauseChannel = Channel<Unit>(0)
-        val repo = buildRepository(pauseChannel = pauseChannel, scope = backgroundScope)
+        val dataSource = buildDataSource(pauseChannel = pauseChannel)
+        val repo = buildRepository(dataSource, backgroundScope)
 
         repo.startOutbound(peer, listOf(FakeFileSource("a.txt", 100L), FakeFileSource("b.txt", 100L)))
         runCurrent()
@@ -82,8 +78,7 @@ class PeerTransferRepositoryTest {
     @Test
     fun `retry sends only failed files and skips already succeeded ones`() = runTest {
         val sendCalls = mutableMapOf("a.txt" to 0, "b.txt" to 0, "c.txt" to 0)
-        val repo = buildRepository(
-            scope = backgroundScope,
+        val dataSource = buildDataSource(
             sendOneOverride = { src, onProgress ->
                 sendCalls[src.name] = (sendCalls[src.name] ?: 0) + 1
                 if (src.name == "b.txt" && sendCalls["b.txt"] == 1) {
@@ -92,6 +87,7 @@ class PeerTransferRepositoryTest {
                 onProgress(src.sizeBytes ?: 0L, src.sizeBytes)
             },
         )
+        val repo = buildRepository(dataSource, backgroundScope)
 
         repo.startOutbound(
             peer,
@@ -118,8 +114,8 @@ class PeerTransferRepositoryTest {
 
     @Test
     fun `retry after ReceiverSuspended does not restart transfer`() = runTest {
-        val events = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
-        val repo = buildRepository(events = events, scope = backgroundScope)
+        val dataSource = buildDataSource()
+        val repo = buildRepository(dataSource, backgroundScope)
 
         repo.retry(peer)
         runCurrent()
@@ -130,8 +126,7 @@ class PeerTransferRepositoryTest {
     @Test
     fun `retryFile resends only the named file`() = runTest {
         val sendCalls = mutableMapOf("a.txt" to 0, "b.txt" to 0, "c.txt" to 0)
-        val repo = buildRepository(
-            scope = backgroundScope,
+        val dataSource = buildDataSource(
             sendOneOverride = { src, onProgress ->
                 sendCalls[src.name] = (sendCalls[src.name] ?: 0) + 1
                 if (src.name == "b.txt" && sendCalls["b.txt"] == 1) {
@@ -140,6 +135,7 @@ class PeerTransferRepositoryTest {
                 onProgress(src.sizeBytes ?: 0L, src.sizeBytes)
             },
         )
+        val repo = buildRepository(dataSource, backgroundScope)
 
         repo.startOutbound(
             peer,
@@ -158,13 +154,13 @@ class PeerTransferRepositoryTest {
 
     @Test
     fun `partial success with all PeerUnreachable failures produces PartialOutcome PeerUnreachable`() = runTest {
-        val repo = buildRepository(
-            scope = backgroundScope,
+        val dataSource = buildDataSource(
             sendOneOverride = { src, onProgress ->
                 if (src.name == "b.txt") throw PeerUnreachableException()
                 onProgress(src.sizeBytes ?: 0L, src.sizeBytes)
             },
         )
+        val repo = buildRepository(dataSource, backgroundScope)
 
         repo.startOutbound(peer, listOf(FakeFileSource("a.txt", 100L), FakeFileSource("b.txt", 100L)))
         runCurrent()
@@ -176,13 +172,13 @@ class PeerTransferRepositoryTest {
 
     @Test
     fun `partial success with all ReceiverWriteFailed produces ReceiverWriteFailed partial`() = runTest {
-        val repo = buildRepository(
-            scope = backgroundScope,
+        val dataSource = buildDataSource(
             sendOneOverride = { src, onProgress ->
                 if (src.name == "b.txt") throw ReceiverWriteFailedException(507)
                 onProgress(src.sizeBytes ?: 0L, src.sizeBytes)
             },
         )
+        val repo = buildRepository(dataSource, backgroundScope)
 
         repo.startOutbound(peer, listOf(FakeFileSource("a.txt", 100L), FakeFileSource("b.txt", 100L)))
         runCurrent()
@@ -194,8 +190,7 @@ class PeerTransferRepositoryTest {
 
     @Test
     fun `partial success with heterogeneous failures produces PartialOutcome ConnectionLost`() = runTest {
-        val repo = buildRepository(
-            scope = backgroundScope,
+        val dataSource = buildDataSource(
             sendOneOverride = { src, onProgress ->
                 when (src.name) {
                     "b.txt" -> throw PeerUnreachableException()
@@ -204,6 +199,7 @@ class PeerTransferRepositoryTest {
                 }
             },
         )
+        val repo = buildRepository(dataSource, backgroundScope)
 
         repo.startOutbound(
             peer,
