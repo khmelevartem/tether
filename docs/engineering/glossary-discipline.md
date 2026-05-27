@@ -16,12 +16,12 @@ Lives at [`docs/glossary.md`](../glossary.md). Terms cross all three documentati
 A term must **carry meaning outside the code** — something product or engineering discussions reference by name. It recurs across long-lived artifacts (specs, engineering docs, ADRs, review comments) as a concept, not as a symbol reference.
 
 What does NOT qualify, even if it recurs in the diff:
-- Kotlin type names (`UploadHandle`, `FileServerRoutes`).
-- Function / method names (`atomicCreateFile`, `reserveDeduplicatedFile`, `dedupFilename`).
-- API / library symbol names (`File.createNewFile`, `fopen("wbx")`, `expect/actual`).
+- Kotlin type names.
+- Function / method names.
+- API / library symbol names.
 - Implementation techniques tied to a specific call site — describe them where the technique lives, not in the glossary.
 
-A symbol from the code that also names a stable engineering concept (`FileServer`, `UploadStorage`) does qualify — the entry is about the concept, the symbol name happens to match.
+A symbol from the code that also names a stable engineering concept (the server, the storage, a view, a test fixture) does qualify — the entry is about the concept, the symbol name happens to match.
 
 ## How drift is caught
 

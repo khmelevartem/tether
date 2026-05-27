@@ -36,7 +36,7 @@ Always read `CLAUDE.md`. Then read the engineering doc that maps to the diff:
 5. **Commit naming** — every commit message starts with `#<issue>: `. Run `gh pr view <PR> --json commits --jq '.commits[].messageHeadline'`.
 6. **Idioms** — Kotlin official style is enforced by KtLint (do not flag style); flag non-idiomatic patterns: `!!` where nullable handling is expected, manual loops where `map`/`filter` fits, `runBlocking` anywhere (production: refactor to `suspend`; tests: `runTest` + `TestDispatcher` per `testing.md`).
 7. **Doc-vs-code drift** — if PR changes an architectural pattern documented in `docs/engineering/`, the doc must be updated in the same PR (especially "doc-as-spec" for first real implementation of a skeleton).
-8. **Long-lived-artifact discipline** for any touched prose in `docs/**`, `.claude/**`, KDoc, comments, error messages — apply the rules from `docs/engineering/long-lived-artifacts.md`. In particular: flag code symbols inside docs prose — class names, method names, API names in backticks (`File.createNewFile`, `UploadStorageBackend`, `expect/actual`) — unless the surrounding rule is genuinely about that symbol (glossary entry, doc whose subject is the library binding). Most occurrences are leakage from the writing session; the rule reads the same with the symbol removed.
+8. **Long-lived-artifact discipline** for any touched prose in `docs/**`, `.claude/**`, KDoc, comments, error messages — apply the rules from `docs/engineering/long-lived-artifacts.md`.
 
 ## What you do NOT check
 
