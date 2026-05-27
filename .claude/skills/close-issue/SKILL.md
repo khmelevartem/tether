@@ -148,7 +148,7 @@ Use squash unless otherwise specified. After merging, verify that the PR is clos
 
 Look in the issue for a "Consequences" section and in the PR — are there TODOs, unresolved questions, things moved out of scope.
 
-If there are explicit next steps — offer to create issues (use the `github-issue-author` skill).
+If there are explicit next steps — offer to create issues (use the `create-issue` skill).
 If there is nothing — say so explicitly.
 
 ---
@@ -162,7 +162,7 @@ Were there any systemic signals during the task? Triggers for `/retro`:
 - documentation diverged from reality (outdated example, incorrect 3rd-party claim);
 - a class of review comments that could have been caught by tooling / a rule / a hook;
 - something went unexpectedly well — worth recording the mechanism for reproduction;
-- the issue/spec wasn't sufficient to start without clarifications — a gap in `github-issue-author` or `_template.md`.
+- the issue/spec wasn't sufficient to start without clarifications — a gap in `create-issue` or `_template.md`.
 
 **Not a trigger:** agent made a mistake → review caught it → agent fixed it in the same PR (this is the system working as intended). Many iterations by themselves. Scope clarifications in chat.
 

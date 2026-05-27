@@ -1,9 +1,9 @@
 ---
-name: github-issue-author
-description: Create a GitHub issue via `gh` CLI as the single entry point for any "file a task / open a ticket" request. Produces a lean body — Goal, minimal Context, Entry point, product-level Definition of Done, mandatory Out of scope — and sets parent/blocked-by/blocks via native GitHub fields. Use whenever the user says create an issue / task / ticket, formalise a bug or feature, mentions `gh issue create`, or invokes `/quick-issue`. Works for a single issue or an epic + sub-issues.
+name: create-issue
+description: Create a GitHub issue via `gh` CLI as the single entry point for any "file a task / open a ticket" request. Produces a lean body — Goal, minimal Context, Entry point, product-level Definition of Done, mandatory Out of scope — and sets parent/blocked-by/blocks via native GitHub fields. Use whenever the user says create an issue / task / ticket, formalise a bug or feature, or mentions `gh issue create`. Works for a single issue or an epic + sub-issues.
 ---
 
-# GitHub Issue Author
+# Create Issue
 
 Single entry point for creating GitHub issues. One mode, one shape — a **lean** body that gives the implementer enough to start without pre-baking design.
 
@@ -20,7 +20,7 @@ Default — **English**. Titles and bodies are in English; technical terms (clas
 - User says "create an issue / task / ticket", "file a task on github", "open an issue about X".
 - User describes a feature or bug and implies it goes into the tracker.
 - User asks to split a large task into an epic + children.
-- User mentions `gh issue create` or invokes `/quick-issue`.
+- User mentions `gh issue create`.
 
 Do not apply for **discussion**, writing into a spec document, or creating a PR — those are different.
 

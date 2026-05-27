@@ -29,7 +29,7 @@ A symbol from the code that also names a stable engineering concept (the server,
 
 - `/implement` Step 4 (inner-loop reviewer wave) and Step 6 (full pre-PR review wave A);
 - `/document` Step 5 (review wave);
-- `github-issue-author` Step 4 (before showing the draft to the user).
+- `create-issue` Step 4 (before showing the draft to the user).
 
 The agent samples load-bearing nouns in the prose surfaces of the diff (KDoc, docstrings, comments, every touched file under `docs/` and `.claude/`), compares against the glossary, and emits `[REQUIRED]` findings for drift and for new domain terms without an entry.
 

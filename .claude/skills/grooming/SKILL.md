@@ -141,11 +141,11 @@ List them for the user **before** composing the sprint plan:
 > 1. **<Title>** — <one sentence: what and why>. Layer/platform: <...>. Size: <S/M/L>.
 > 2. ...
 >
-> File them now via /github-issue-author so they become sprint candidates?
+> File them now via /create-issue so they become sprint candidates?
 
 Don't file issues silently. The user decides: file now, defer, or add as a note to the plan without a formal issue.
 
-If the user agrees — run the /github-issue-author interview for each task. Only after the issues are created do they become candidates for Step 5.
+If the user agrees — run the /create-issue interview for each task. Only after the issues are created do they become candidates for Step 5.
 
 ---
 

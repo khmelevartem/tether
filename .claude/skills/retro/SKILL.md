@@ -69,7 +69,7 @@ Based on steps 2–3, identify specific systemic changes. Categories:
 | `CLAUDE.md` | A convention / process / project structure is not recorded — the agent had to guess |
 | `docs/engineering/` | An architectural principle / pattern is recorded incorrectly, incompletely, or its examples diverge from reality |
 | `docs/product/features/` | A feature spec is incomplete or missing where it would have been useful |
-| `.claude/skills/github-issue-author` | Issues came out with insufficient context for direct implementation |
+| `.claude/skills/create-issue` | Issues came out with insufficient context for direct implementation |
 | Hook in `scripts/install-hooks.sh` | A class of errors is catchable automatically at the git operation level, not only by instruction |
 
 For each potential change explicitly state **which systemic gap it addresses** — without this link the change becomes an addition "just in case".
@@ -101,7 +101,7 @@ For each confirmed improvement:
 
 **If the change is small** (edit in a document, clarification in a command) — do it right now and show the diff.
 
-**If the change requires a separate task** — create an issue via the `github-issue-author` skill. The name should read as a useful increment to the workflow, for example:
+**If the change requires a separate task** — create an issue via the `create-issue` skill. The name should read as a useful increment to the workflow, for example:
 - "Add check X to code-review.md"
 - "Clarify scope of implement skill for case Y"
 

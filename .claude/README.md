@@ -10,7 +10,7 @@ How Tether extends Claude Code. Two artifact homes, both creating a `/slash-comm
 - `close-issue` — finish an issue and merge its PR.
 - `code-review` — multi-agent review of a PR; fan-out + adversarial + GitHub post.
 - `document` — docs-only issue orchestrator (spec / ux-brief / tech-doc / ADR / knowledge / `.claude` prompt).
-- `github-issue-author` — single entry point for `gh issue create` (also handles `/quick-issue`); lean body shape (Goal / Entry point / product-level DoD / Out of scope).
+- `create-issue` — single entry point for `gh issue create`; lean body shape (Goal / Entry point / product-level DoD / Out of scope).
 - `grooming` — close current sprint by reality + gap-analysis + draft next sprint.
 - `implement` — issue-to-PR orchestrator (coder ↔ reviewers loop, smoke, PR).
 - `progress` — RPG-themed project snapshot.
@@ -23,7 +23,6 @@ How Tether extends Claude Code. Two artifact homes, both creating a `/slash-comm
 `.claude/commands/<name>.md` — single-file prompt templates.
 
 - `progress-boring` — flat numbers variant of `/progress`.
-- `quick-issue` — thin alias that invokes the `github-issue-author` skill.
 - `rebase` — pull `origin/main` and assess semantic overlap.
 
 ## Agents index
