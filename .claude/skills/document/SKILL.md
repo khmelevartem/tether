@@ -114,6 +114,8 @@ Order matters — lower layers depend on upper ones for vocabulary and scope.
 
 Each sub-agent owns the decisions inside its layer — palette, clarifying questions to the user, convergence. You do not pre-design or pre-research for them. You route, then aggregate.
 
+**Prose discipline carry-forward.** Every dispatch brief in this wave (`spec-writer`, `ux-expert`, `architect`) must instruct the sub-agent to load [`docs/engineering/long-lived-artifacts.md`](../../../docs/engineering/long-lived-artifacts.md) before writing any prose, and to apply its rules — rule-not-history, link-over-inline-copy, refer-to-a-slot-functionally — to every paragraph it produces. Without this, sub-agents draft from defaults; violations surface only at Step 5 (review-guides), forcing an avoidable iteration.
+
 1. **spec** (if needed) → dispatch `spec-writer`. It decides user needs and scenarios, runs its own clarifying-questions phase, scope cohesion pass, and `docs/product/features/README.md` row update. Open questions it could not converge on → D1 → relay to user verbatim → re-dispatch with answers.
 
 2. **ux-brief** AND **tech-doc / ADR / knowledge** — if both needed, dispatch **in parallel** (file-disjoint by construction: ux-brief lives in `docs/product/features/<slug>/`, the others in `docs/engineering/` or `docs/knowledge/`):
