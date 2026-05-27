@@ -13,12 +13,15 @@ import com.tubetoast.tether.transfer.ReconnectionTimeout
 import com.tubetoast.tether.transfer.TransferErrorReason
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlin.time.Duration
 
 interface PeerTransferRepository {
@@ -45,6 +48,7 @@ class PeerTransferRepositoryImpl(
     private val scope: CoroutineScope,
     private val reconnectionTimeout: Duration = ReconnectionTimeout.DEFAULT,
 ) : PeerTransferRepository {
+    private val mutex = Mutex()
     private val states = mutableMapOf<PeerIdentity, MutableStateFlow<PeerTransferState>>()
     private val activeJobs = mutableMapOf<PeerIdentity, Job?>()
     private val currentSenders = mutableMapOf<PeerIdentity, BatchSender?>()
@@ -54,7 +58,7 @@ class PeerTransferRepositoryImpl(
 
     init {
         scope.launch {
-            inboundEvents.collect { ev -> handleInbound(ev) }
+            inboundEvents.collect { ev -> mutex.withLock { handleInbound(ev) } }
         }
     }
 
@@ -63,100 +67,112 @@ class PeerTransferRepositoryImpl(
 
     override fun startOutbound(peer: PeerIdentity, sources: List<FileSource>) {
         scope.launch {
-            val current = stateFor(peer).value
-            if (current is PeerTransferState.ActiveOutbound ||
-                current is PeerTransferState.ActiveInbound ||
-                current is PeerTransferState.Reconnecting
-            ) {
-                return@launch
+            mutex.withLock {
+                val current = stateFor(peer).value
+                if (current is PeerTransferState.ActiveOutbound ||
+                    current is PeerTransferState.ActiveInbound ||
+                    current is PeerTransferState.Reconnecting
+                ) {
+                    return@withLock
+                }
+                originalSources[peer] = sources
+                cancelledFor(peer).value = emptySet()
+                launchBatch(peer, sources)
             }
-            originalSources[peer] = sources
-            cancelledFor(peer).value = emptySet()
-            launchBatch(peer, sources)
         }
     }
 
     override fun cancel(peer: PeerIdentity) {
         scope.launch {
-            activeJobs[peer]?.cancel()
-            // activeJobs[peer] is cleared by the finally block in launchBatchIn.
+            mutex.withLock {
+                activeJobs[peer]?.cancel()
+            }
         }
     }
 
     override fun retry(peer: PeerIdentity) {
         scope.launch {
-            val current = stateFor(peer).value
-            val lastPerFile = when (current) {
-                is PeerTransferState.Sent -> current.perFile
-                is PeerTransferState.Error -> current.perFile
-                is PeerTransferState.Cancelled -> current.perFile
-                else -> return@launch
+            mutex.withLock {
+                val current = stateFor(peer).value
+                val lastPerFile = when (current) {
+                    is PeerTransferState.Sent -> current.perFile
+                    is PeerTransferState.Error -> current.perFile
+                    is PeerTransferState.Cancelled -> current.perFile
+                    else -> return@withLock
+                }
+                val failedNames = lastPerFile.filterIsInstance<PerFileStatus.Failed>().map { it.name }.toSet()
+                val confirmed = confirmedFor(peer).value
+                val retryable = (originalSources[peer] ?: return@withLock).filter {
+                    it.name in failedNames && it.name !in confirmed
+                }
+                if (retryable.isEmpty()) return@withLock
+                cancelledFor(peer).value = emptySet()
+                launchBatch(peer, retryable)
             }
-            val failedNames = lastPerFile.filterIsInstance<PerFileStatus.Failed>().map { it.name }.toSet()
-            val confirmed = confirmedFor(peer).value
-            val retryable = (originalSources[peer] ?: return@launch).filter {
-                it.name in failedNames && it.name !in confirmed
-            }
-            if (retryable.isEmpty()) return@launch
-            cancelledFor(peer).value = emptySet()
-            launchBatch(peer, retryable)
         }
     }
 
     override fun retryFile(peer: PeerIdentity, name: String) {
         scope.launch {
-            val source = (originalSources[peer] ?: return@launch).firstOrNull { it.name == name } ?: return@launch
-            cancelledFor(peer).update { it - name }
-            launchBatch(peer, listOf(source))
+            mutex.withLock {
+                val source = (originalSources[peer] ?: return@withLock).firstOrNull { it.name == name }
+                    ?: return@withLock
+                cancelledFor(peer).update { it - name }
+                launchBatch(peer, listOf(source))
+            }
         }
     }
 
     override fun cancelFile(peer: PeerIdentity, name: String) {
         scope.launch {
-            val state = stateFor(peer)
-            val current = state.value as? PeerTransferState.ActiveOutbound ?: return@launch
-            val idx = current.perFile.indexOfFirst { it.name == name }
-            if (idx < 0) return@launch
-            when (val status = current.perFile[idx]) {
-                is PerFileStatus.InProgress -> {
-                    val sender = currentSenders[peer]
-                    if (sender != null) sender.cancelCurrent(name)
-                }
-                is PerFileStatus.Queued -> {
-                    cancelledFor(peer).update { it + name }
-                    state.update { s ->
-                        val active = s as? PeerTransferState.ActiveOutbound ?: return@update s
-                        val rowIdx = active.perFile.indexOfFirst { it.name == name }.takeIf { it >= 0 }
-                            ?: return@update s
-                        val updated = active.perFile.toMutableList()
-                        updated[rowIdx] = PerFileStatus.Failed(
-                            status.name,
-                            status.size,
-                            FailureReason.CancelledByUser,
-                            cancelledByUser = true,
-                        )
-                        active.copy(
-                            perFile = updated,
-                            skippedCount = updated.count { it is PerFileStatus.Failed },
-                        )
+            mutex.withLock {
+                val state = stateFor(peer)
+                val current = state.value as? PeerTransferState.ActiveOutbound ?: return@withLock
+                val idx = current.perFile.indexOfFirst { it.name == name }
+                if (idx < 0) return@withLock
+                when (val status = current.perFile[idx]) {
+                    is PerFileStatus.InProgress -> {
+                        val sender = currentSenders[peer]
+                        if (sender != null) sender.cancelCurrent(name)
                     }
+                    is PerFileStatus.Queued -> {
+                        cancelledFor(peer).update { it + name }
+                        state.update { s ->
+                            val active = s as? PeerTransferState.ActiveOutbound ?: return@update s
+                            val rowIdx = active.perFile.indexOfFirst { it.name == name }.takeIf { it >= 0 }
+                                ?: return@update s
+                            val updated = active.perFile.toMutableList()
+                            updated[rowIdx] = PerFileStatus.Failed(
+                                status.name,
+                                status.size,
+                                FailureReason.CancelledByUser,
+                                cancelledByUser = true,
+                            )
+                            active.copy(
+                                perFile = updated,
+                                skippedCount = updated.count { it is PerFileStatus.Failed },
+                            )
+                        }
+                    }
+                    else -> Unit
                 }
-                else -> Unit
             }
         }
     }
 
     override fun dismiss(peer: PeerIdentity) {
         scope.launch {
-            stateFor(peer).update { s ->
-                if (s is PeerTransferState.Sent ||
-                    s is PeerTransferState.Received ||
-                    s is PeerTransferState.Cancelled ||
-                    s is PeerTransferState.Error
-                ) {
-                    PeerTransferState.Idle(peer)
-                } else {
-                    s
+            mutex.withLock {
+                stateFor(peer).update { s ->
+                    if (s is PeerTransferState.Sent ||
+                        s is PeerTransferState.Received ||
+                        s is PeerTransferState.Cancelled ||
+                        s is PeerTransferState.Error
+                    ) {
+                        PeerTransferState.Idle(peer)
+                    } else {
+                        s
+                    }
                 }
             }
         }
@@ -164,8 +180,10 @@ class PeerTransferRepositoryImpl(
 
     override fun toggleExpanded(peer: PeerIdentity) {
         scope.launch {
-            stateFor(peer).update { s ->
-                (s as? PeerTransferState.Idle)?.copy(expanded = !s.expanded) ?: s
+            mutex.withLock {
+                stateFor(peer).update { s ->
+                    (s as? PeerTransferState.Idle)?.copy(expanded = !s.expanded) ?: s
+                }
             }
         }
     }
@@ -179,24 +197,29 @@ class PeerTransferRepositoryImpl(
     private fun cancelledFor(peer: PeerIdentity): MutableStateFlow<Set<String>> =
         cancelledFileNames.getOrPut(peer) { MutableStateFlow(emptySet()) }
 
-    private suspend fun launchBatch(peer: PeerIdentity, sources: List<FileSource>) {
+    private fun launchBatch(peer: PeerIdentity, sources: List<FileSource>) {
         activeJobs[peer]?.cancel()
-        activeJobs[peer]?.join()
         activeJobs[peer] = scope.launch {
             launchBatchIn(peer, sources)
         }
     }
 
     private suspend fun launchBatchIn(peer: PeerIdentity, sources: List<FileSource>) {
-        val sender = batchSenderFactory()
-        currentSenders[peer] = sender
+        val thisJob = currentCoroutineContext()[Job]
+        val sender = mutex.withLock {
+            batchSenderFactory().also { currentSenders[peer] = it }
+        }
         try {
             sender.run(sources, peer, { src -> src.name in cancelledFor(peer).value }) { progress ->
                 stateFor(peer).value = mapProgress(peer, progress)
             }
         } finally {
-            currentSenders[peer] = null
-            activeJobs[peer] = null
+            mutex.withLock {
+                if (activeJobs[peer] === thisJob) {
+                    currentSenders[peer] = null
+                    activeJobs[peer] = null
+                }
+            }
         }
     }
 
