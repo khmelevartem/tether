@@ -63,7 +63,6 @@ Group questions into one pass, ≤4 at a time. List what is already clear so the
 
 Mandatory before drafting:
 
-- **Repository** — `owner/repo`. Default: `gh repo view --json nameWithOwner`.
 - **Task type** — one of `feature | bugfix | refactor | infra | docs | dependency`. Applied as a label, not a body field. Reviewers read it from the label.
 - **Goal** — what changes for the user / system after this is done **and why it matters** (what problem it solves, what gets unblocked). One or two sentences covering both — the "why" is the spine the body hangs on.
 - **Product-level DoD** — what observable behaviour proves it's done. (Not "class X exists", not "test Y passes" alone; "saved name survives app restart on all 4 platforms".)
