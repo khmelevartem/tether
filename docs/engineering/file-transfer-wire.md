@@ -55,7 +55,7 @@ A failure here surfaces as `IOException` from the storage seam, mapped to `500` 
 
 ## Storage seam
 
-`UploadStorage` is the per-platform sink behind a `commonMain` interface. The route handler talks only to the interface; platforms differ only in how bytes reach durable storage and how the canonical-realisation check is implemented.
+`UploadStorage` (route-facing seam) is a `commonMain` interface implemented by `FileUploadStorage`, which delegates platform primitives — directory creation, realpath resolution, atomic file creation, and byte streaming — to `UploadStorageBackend`. The route handler talks only to `UploadStorage`; the two-layer split keeps algorithm logic in `FileUploadStorage` (commonMain) and syscall details in `JvmUploadStorageBackend` / `AppleUploadStorageBackend`.
 
 Responsibilities owned by the seam:
 
@@ -70,7 +70,7 @@ Responsibilities owned by the route handler, not the seam:
 - Lexical sanitization (Layer 1 above).
 - Tracking the active-transfer scope through the transfer-activity tracker.
 
-Per-platform actuals differ along expected axes:
+Per-platform backends differ along expected axes:
 
 - **JVM / Desktop / Android-app-private** — filesystem under a chosen root, JDK NIO for directory creation and canonicalisation.
 - **Android — MediaStore** (out of scope of this doc; tracked by its own issue) — directory creation is implicit in the URI, the canonical-check shape becomes "the resolved URI is under the chosen collection".

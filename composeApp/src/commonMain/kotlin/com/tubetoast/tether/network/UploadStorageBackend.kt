@@ -2,6 +2,12 @@ package com.tubetoast.tether.network
 
 import io.ktor.utils.io.ByteReadChannel
 
+/**
+ * Platform primitives for path-based file storage. Assumes a POSIX-style filesystem
+ * (paths are `/`-separated strings; existence and atomic creation are syscall primitives).
+ * The future Android MediaStore backend will not implement this interface — it will provide
+ * its own [UploadStorage] directly, see file-transfer-wire.md §Storage seam.
+ */
 internal interface UploadStorageBackend {
     /** Resolved real path of the downloads root. May throw if the root is unresolvable. */
     val rootRealPath: String

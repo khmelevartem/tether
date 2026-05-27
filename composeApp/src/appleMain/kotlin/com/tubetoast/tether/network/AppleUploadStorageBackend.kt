@@ -48,10 +48,13 @@ internal class AppleUploadStorageBackend(
                 attributes = null,
                 error = errorPtr.ptr,
             )
-            // Concurrent sibling may have created the directory between exists() and createDirectory().
-            if (!ok && !fm.fileExistsAtPath(path)) {
-                val msg = errorPtr.value?.localizedDescription ?: "unknown error"
-                throw IOException("FileServer: mkdir failed for $path: $msg")
+            if (!ok) {
+                // Concurrent sibling may have created the directory between exists() and createDirectory().
+                if (!fm.fileExistsAtPath(path)) {
+                    val msg = errorPtr.value?.localizedDescription ?: "unknown error"
+                    throw IOException("FileServer: mkdir failed for $path: $msg")
+                }
+                return false
             }
         }
         return true

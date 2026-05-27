@@ -6,10 +6,17 @@ import java.io.File
 import java.io.IOException
 
 internal class JvmUploadStorageBackend(
-    private val rootPath: String,
+    rootPath: String,
 ) : UploadStorageBackend {
+    // Normalise to forward-slash so commonMain path logic works on Windows too.
+    private val rootPath: String = rootPath.replace(File.separatorChar, '/')
+
     override val rootRealPath: String by lazy {
-        File(rootPath).toPath().toRealPath().toString()
+        File(rootPath)
+            .toPath()
+            .toRealPath()
+            .toString()
+            .replace(File.separatorChar, '/')
     }
 
     override fun ensureRoot() {
@@ -37,7 +44,11 @@ internal class JvmUploadStorageBackend(
     }
 
     override fun realpath(path: String): String? = try {
-        File(path).toPath().toRealPath().toString()
+        File(path)
+            .toPath()
+            .toRealPath()
+            .toString()
+            .replace(File.separatorChar, '/')
     } catch (_: Throwable) {
         null
     }
