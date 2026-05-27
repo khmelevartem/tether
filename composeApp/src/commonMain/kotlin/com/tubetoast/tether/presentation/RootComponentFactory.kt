@@ -2,11 +2,9 @@ package com.tubetoast.tether.presentation
 
 import com.arkivanov.decompose.ComponentContext
 import com.tubetoast.tether.discovery.DeviceDiscovery
-import com.tubetoast.tether.presentation.transfer.PeerTransferRepository
 
 class RootComponentFactory(
     private val discovery: DeviceDiscovery,
-    private val peerTransferRepository: PeerTransferRepository,
 ) {
     fun create(componentContext: ComponentContext): RootComponent =
         RootComponent(

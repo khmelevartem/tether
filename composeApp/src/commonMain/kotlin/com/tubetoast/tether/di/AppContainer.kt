@@ -29,7 +29,7 @@ abstract class AppContainer {
     open val fileClient: FileClient by lazy { FileClient.default(transferActivityTracker) }
     abstract val trustedDeviceStore: TrustedDeviceStore
     open val rootComponentFactory: RootComponentFactory by lazy {
-        RootComponentFactory(mdnsDiscovery, peerTransferRepository)
+        RootComponentFactory(mdnsDiscovery)
     }
     abstract val peerPreferencesStore: PeerPreferencesStore
     abstract val fileTransferPreferences: FileTransferPreferences

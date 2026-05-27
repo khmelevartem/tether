@@ -16,7 +16,7 @@ class PeerTransferComponent(
     private val onShowDetailsCallback: (PeerIdentity) -> Unit,
     coroutineScope: CoroutineScope = componentContext.coroutineScope(),
 ) : ComponentContext by componentContext {
-    private val mutableState = MutableValue<PeerTransferState>(PeerTransferState.Idle(peer))
+    private val mutableState = MutableValue<PeerTransferState>(repository.observe(peer).value)
     val state: Value<PeerTransferState> = mutableState
 
     init {

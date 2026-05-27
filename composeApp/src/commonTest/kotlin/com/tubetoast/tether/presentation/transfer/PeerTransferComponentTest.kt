@@ -19,6 +19,7 @@ class PeerTransferComponentTest {
 
     private fun buildComponent(
         repository: FakePeerTransferRepository = FakePeerTransferRepository(),
+        onShowDetailsCallback: (PeerIdentity) -> Unit = {},
         scope: kotlinx.coroutines.CoroutineScope,
     ): PeerTransferComponent {
         val lifecycle = LifecycleRegistry()
@@ -27,7 +28,7 @@ class PeerTransferComponentTest {
             componentContext = DefaultComponentContext(lifecycle),
             peer = peer,
             repository = repository,
-            onShowDetailsCallback = {},
+            onShowDetailsCallback = onShowDetailsCallback,
             coroutineScope = scope,
         )
     }
@@ -114,5 +115,15 @@ class PeerTransferComponentTest {
         component.toggleExpanded()
 
         assertEquals(listOf(peer), repository.toggledPeers)
+    }
+
+    @Test
+    fun `onShowDetails invokes callback with peer`() = runTest {
+        val captured = mutableListOf<PeerIdentity>()
+        val component = buildComponent(onShowDetailsCallback = { captured += it }, scope = backgroundScope)
+
+        component.onShowDetails()
+
+        assertEquals(listOf(peer), captured)
     }
 }
