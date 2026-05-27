@@ -14,8 +14,6 @@ Draft:
 
 > **Title:** Client-side search results caching
 >
-> **Type:** FEATURE
->
 > ## Context
 >
 > Search results page on `myorg/shop` frontend, and navigation between it and product cards.
@@ -50,7 +48,7 @@ After approval:
 ```bash
 gh issue create --title "Client-side search results caching" \
   --body-file /tmp/issue-body.md \
-  --label "size:M,frontend,performance"
+  --label "size:M,type:feature,frontend,performance"
 ```
 
 Note what the body does **not** contain: no `SearchCache` interface, no file paths as commitments, no error-handling strategy, no non-functional thresholds the user didn't state. The implementer picks the shape during `/implement`.

@@ -31,7 +31,7 @@ Do not apply for **discussion**, writing into a spec document, or creating a PR 
 3. **Draft** — in chat, English, following [TEMPLATE.md](TEMPLATE.md). No file write, no `gh` call yet.
 4. **Glossary review** — dispatch `review-glossary` on the draft body.
 5. **Approval** — show draft, wait for OK or edits.
-6. **Create** — `gh issue create --body-file /tmp/issue-body.md --label size:<S|M|L>`.
+6. **Create** — `gh issue create --body-file /tmp/issue-body.md --label size:<S|M|L>,type:<feature|bugfix|refactor|infra|docs|dependency>`.
 7. **Relationships** — link parent / blocked-by / blocks via native GitHub fields (sub-issues GraphQL, dependencies REST).
 8. **Return** the issue number + URL.
 
@@ -66,7 +66,7 @@ Group questions into one pass, ≤4 at a time. List what is already clear so the
 Mandatory before drafting:
 
 - **Repository** — `owner/repo`. Default: `gh repo view --json nameWithOwner`.
-- **Task type** — `FEATURE | BUGFIX | REFACTOR | INFRA | DOCS | DEPENDENCY`. Reviewers read this.
+- **Task type** — one of `type:feature | type:bugfix | type:refactor | type:infra | type:docs | type:dependency`. Applied as a label, not a body field. Reviewers read it from the label.
 - **Goal** — what changes for the user / system after this is done. One sentence.
 - **Why** — what problem this solves. Without this the body has no spine.
 - **Product-level DoD** — what observable behaviour proves it's done. (Not "class X exists", not "test Y passes" alone; "saved name survives app restart on all 4 platforms".)
@@ -80,7 +80,7 @@ If the user already answered something in the request — don't re-ask.
 
 ## Draft
 
-Follow [TEMPLATE.md](TEMPLATE.md). Mandatory sections: Type, Context, Goal, Entry point, DoD, Out of scope. Optional: References (similar closed issues), Hypotheses (BUGFIX only).
+Follow [TEMPLATE.md](TEMPLATE.md). Mandatory body sections: Context, Goal, Entry point, DoD, Out of scope. Optional: References (similar closed issues), Hypotheses (BUGFIX only). Type is set via the `type:<…>` label, not a body field.
 
 Mark `[?assumption: …]` wherever you filled something the user didn't state — they correct at review.
 
@@ -98,10 +98,10 @@ Save body to `/tmp/issue-body.md`. Use `--body-file`, not `--body`, to survive s
 gh issue create \
   --title "<lean title>" \
   --body-file /tmp/issue-body.md \
-  --label size:<S|M|L>
+  --label "size:<S|M|L>,type:<feature|bugfix|refactor|infra|docs|dependency>"
 ```
 
-Optional flags: `--assignee`, `--milestone`, `--project`. Apply labels only if they exist in the repo (`gh label list`).
+`size:` and `type:` labels are both mandatory. Optional flags: `--assignee`, `--milestone`, `--project`. Apply extra labels only if they exist in the repo (`gh label list`).
 
 `gh` prints the URL — keep it for relationship linking.
 
@@ -124,9 +124,11 @@ Brief (4–10 words). Reads like a changelog entry — describes the **useful in
 
 Listed in sequence, closed-issue titles should read as project history.
 
-## Size labels
+## Labels
 
-`size:S` — up to 4 hours. `size:M` — up to one day. `size:L` — up to three days. Larger than `L` → epic with sub-issues; raise this during the interview.
+**`size:`** (mandatory): `size:S` ≤ 4 h, `size:M` ≤ 1 day, `size:L` ≤ 3 days. Larger than `L` → epic with sub-issues; raise this during the interview.
+
+**`type:`** (mandatory): `type:feature`, `type:bugfix`, `type:refactor`, `type:infra`, `type:docs`, `type:dependency`. Exactly one. Reviewers and the `/implement` orchestrator branch on it.
 
 ## Examples
 

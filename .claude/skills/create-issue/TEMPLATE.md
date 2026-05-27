@@ -1,14 +1,12 @@
 # GitHub Issue Body Template
 
-The lean shape. Mandatory sections in order: **Type → Context → Goal → Entry point → Definition of Done → Out of scope**. Everything else is optional and dropped when there's nothing to say.
+The lean shape. Mandatory body sections in order: **Context → Goal → Entry point → Definition of Done → Out of scope**. Everything else is optional and dropped when there's nothing to say. Task type and size live on the issue as labels (`type:<…>`, `size:<…>`), not in the body.
 
 The body answers **what** and **why**, plus where to start looking. It does not pre-bake **how** — that's `/implement`'s job.
 
 ## Template
 
 ```markdown
-**Type:** FEATURE | BUGFIX | REFACTOR | INFRA | DOCS | DEPENDENCY
-
 ## Context
 
 One or two sentences. Which subsystem / feature this lives in. A `#N` mention of the parent epic or related issue if useful.
@@ -63,9 +61,12 @@ Brief (4–10 words). Reads as the useful increment — what exists after the ta
 
 Test: closed-issue titles listed in sequence should read as project history.
 
-## Size labels
+## Labels
 
-`size:S` ≤ 4 h, `size:M` ≤ 1 day, `size:L` ≤ 3 days. Larger → epic with sub-issues; raise during interview.
+Both mandatory; pass via `--label "size:<…>,type:<…>"` on `gh issue create`.
+
+- **`size:`** — `size:S` ≤ 4 h, `size:M` ≤ 1 day, `size:L` ≤ 3 days. Larger → epic with sub-issues; raise during interview.
+- **`type:`** — exactly one of `type:feature`, `type:bugfix`, `type:refactor`, `type:infra`, `type:docs`, `type:dependency`. Reviewers and `/implement` branch on it.
 
 ## What "product-level DoD" means
 
