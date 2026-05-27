@@ -306,4 +306,5 @@
 
 - [x] Что в поведении Claude Code меняется, когда инструкция лежит как skill (`.claude/skills/<name>/SKILL.md` с YAML frontmatter `description`) против command (plain prompt в `.claude/commands/<name>.md`)? Почему Anthropic смержил commands в skills, и какие практические следствия для проекта.
 - [x] Где проходит граница между обоснованным override ревьюверского `[REQUIRED]` блока и deflection'ом — какие признаки делают override честным (knowledge gap у ревьювера, опора на более авторитетный источник, асимметрия в пользу согласия), а какие превращают его в маскировку scope creep (накопление overrides, удобство, апелляция к «общему контексту» без конкретики).
+- [x] Какой механизм даёт skill auto-invocation, которого нет у command — что Claude Code загружает в контекст и когда (progressive disclosure: metadata всегда, body лениво при вызове), и почему промоут не «бесплатный» — каждая строка `description` сидит в контексте каждого turn'а, поэтому короткие шаблоны без natural-language триггеров оставляют как commands.
 
