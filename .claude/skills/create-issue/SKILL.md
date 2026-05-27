@@ -69,6 +69,7 @@ Mandatory before drafting:
 - **Entry point** — one landmark from recon (file, module, precedent issue, doc section). If recon turned up nothing, say so explicitly in the body — the implementer must not guess whether the author looked.
 - **Out of scope** — at least one bullet on a non-trivial task. Pre-empts scope creep.
 - **Relationships** — parent epic, blocks, blocked-by. Users routinely forget to mention.
+- **Decision criteria** — for research / decision tasks (deliverable is an ADR, a spec, a UX brief): the author's priorities and red lines. "Prefer zero new dependencies", "iOS support is non-negotiable", "must work without Material" — these are load-bearing constraints that shape the decision and belong in Context or Goal. Methodology (how to compare) stays with the executor; constraints (what would disqualify an option) come from the author.
 
 Do **not** ask for: precise file paths, exact API signatures, layering choices, error-handling strategy, non-functional thresholds unless the user volunteers them. Those are implementation-time decisions and pre-baking them turns the body into a fragile contract.
 
