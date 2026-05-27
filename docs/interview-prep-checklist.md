@@ -174,7 +174,7 @@
 ### DI
 - [ ] Hilt — `@HiltViewModel`, scopes, `@EntryPoint`
 - [ ] Koin — отличие от Hilt, service locator vs DI
-- [ ] Без фреймворка (твой опыт) — manual DI, когда оправдан в KMP
+- [x] Без фреймворка (твой опыт) — manual DI, когда оправдан в KMP
 
 ---
 
