@@ -7,8 +7,8 @@ Tests are mandatory. When implementing any functionality, write unit and/or inte
 ## Where things live
 
 - `commonTest/` — protocol and shared logic.
-- `jvmTest/` — tests shared by Android and Desktop (e.g. `FileServerTest`); run in `desktopTest` and `androidUnitTest`.
-- `desktopTest/` — Desktop-only (`FileClientTest`, `MdnsDiscoveryTest`).
+- `jvmTest/` — tests shared by Android and Desktop, using only types that have identical signatures on both targets; run in `desktopTest` and `androidUnitTest`. Tests that touch types with platform-divergent constructors (e.g. `TrustedDeviceStore` — `File` on Desktop, `DataStore<Preferences>` on Android) belong in `desktopTest` instead.
+- `desktopTest/` — Desktop-only (`FileServerTest`, `FileClientTest`, `MdnsDiscoveryTest`).
 - `appleTest/` — Apple targets (see NSRunLoop note below).
 
 ## Style
