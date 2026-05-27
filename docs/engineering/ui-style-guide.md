@@ -106,10 +106,6 @@ Rules:
 - Decorative icons (purely illustrative, accompanied by text that carries the meaning) use a null content description.
 - Do not mix Tabler Icons with platform-native system glyphs. The content description fills the platform-native accessibility role.
 
-## Brand mark
-
-The brand-mark slot is open and being redesigned — see #287. Until that lands, treat the current `BrandMark` composable as a provisional placeholder; no specific geometry, palette role, or animation curve is locked.
-
 ## Motion
 
 | Use | Duration | Easing |

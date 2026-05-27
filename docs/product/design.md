@@ -29,10 +29,6 @@ Palette is warm off-white in light theme, near-dark-earth in dark theme, with a 
 
 Tether borrows Obsidian's discipline — single visual language across platforms, restraint, dark-first — but not its palette or information density. See [ADR](../engineering/adr/adr-visual-identity.md) for the full reasoning.
 
-## Brand mark
-
-A memorable brand mark is part of the identity. The slot is open and being redesigned — see #287. Until the redesign lands, the in-app brand-mark surfaces (searching indicator, transfer progress, success / error / disconnected affirmations) use the provisional `BrandMark` composable as a placeholder.
-
 ## Key Screens
 
 ### Device list (primary screen)
@@ -40,7 +36,7 @@ A memorable brand mark is part of the identity. The slot is open and being redes
 The screen the user opens Tether to see.
 
 States:
-- **Empty / searching** — animated brand-mark indicator + hint about Wi-Fi requirement.
+- **Empty / searching** — animated searching illustration + hint about Wi-Fi requirement.
 - **Peers found** — list of devices with name, platform icon, and pairing status (paired vs. unknown).
 - **No network / Wi-Fi off** — clear instruction to turn it on; no list shown.
 
@@ -51,7 +47,7 @@ Key interactions: tap a peer to send → file picker opens. Long-press / right-c
 Visible on both sender and receiver during an active transfer.
 
 States:
-- **Sending** — file name, size, brand-mark progress indicator, ETA (tabular figures), cancel.
+- **Sending** — file name, size, progress bar, ETA (tabular figures), cancel.
 - **Receiving** — same, plus "Save to…" option (if applicable per platform).
 - **Done** — success affirmation, "Open" / "Show in folder" actions.
 - **Failed** — reason in plain language, retry action where applicable.

@@ -41,7 +41,7 @@ Run the suggested grep for each rule (paths relative to repo root); read flagged
    rg -n '\b\d+\.dp\b' composeApp/src/ --glob '!**/TetherSpacing.kt' --glob '!**/theme/**'
    ```
 
-5. **Shapes magic numbers.** `RoundedCornerShape(N.dp)` outside `TetherShapes` should be `TetherShapes.sm/md/lg`. No pill / 50% / fully-rounded surfaces. Exception: `CircleShape` on a literal circle (icon background, brand-mark internal geometry while the slot is in redesign) — `[NIT]`.
+5. **Shapes magic numbers.** `RoundedCornerShape(N.dp)` outside `TetherShapes` should be `TetherShapes.sm/md/lg`. No pill / 50% / fully-rounded surfaces. Exception: `CircleShape` on a literal circle (icon background) — `[NIT]`.
    ```bash
    rg -n '(RoundedCornerShape\(|CircleShape)' composeApp/src/ --glob '!**/TetherShapes.kt' --glob '!**/theme/**'
    ```
@@ -62,8 +62,6 @@ Run the suggested grep for each rule (paths relative to repo root); read flagged
    rg -n 'Modifier\.shadow\(' composeApp/src/
    ```
 
-9. **Brand mark.** The brand-mark slot is open (redesign tracked in #287). Until the new spec lands, do not flag geometry or state-machine changes in `BrandMark.kt` against any canonical reference — the current code is a placeholder, and any modification is acceptable from the design-system reviewer's standpoint. Token-level rules (no hardcoded hex, no Material 3, etc.) still apply inside the file as everywhere else.
-
 10. **Dark mode wiring.** If the PR introduces theme switching, `isSystemInDarkTheme()` is read at the theme root and live-updates are wired — no `remember { mutableStateOf(isDark) }` capturing a snapshot. A user-override surface in settings is out of scope (see `ui-style-guide.md § Dark mode`).
 
 11. **Previews paired light + dark.** Every `@Preview`-annotated function accepts `@PreviewParameter(Themes::class) dark: Boolean` and passes it to `PreviewSurface(darkTheme = dark) { … }`. A `@Preview` body that hardcodes `darkTheme = …` or omits the parameter ships only one theme — violation. No carve-outs. Source: `ui-style-guide.md § Previews`.
@@ -81,7 +79,7 @@ Run the suggested grep for each rule (paths relative to repo root); read flagged
 - Test coverage → `review-tests`
 - Platform parity / `expect/actual` → `review-platform`
 - Correctness / concurrency → `review-correctness`
-- Whether a rule should exist — already locked. Cite the canonical spec (style guide) where the rule lives if the author argues against it.
+- Whether a rule should exist — already locked. Cite the canonical spec (`ui-style-guide.md`) where the rule lives if the author argues against it.
 
 ## Output
 

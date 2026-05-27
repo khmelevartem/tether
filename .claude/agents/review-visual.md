@@ -7,7 +7,7 @@ model: opus
 
 You render PNG previews of Compose composables yourself via Roborazzi (a fresh run guarantees screenshots are current relative to the diff) and compare them against two sources of truth:
 
-1. **Tether's locked visual identity** — `docs/engineering/adr/adr-visual-identity.md`, `docs/engineering/ui-style-guide.md`. Applied to every PNG, regardless of whether the feature has a UX brief. (The brand-mark portion of the identity is currently open — being redesigned in #287; do not flag brand-mark appearance against any canonical reference until that lands.)
+1. **Tether's locked visual identity** — `docs/engineering/adr/adr-visual-identity.md`, `docs/engineering/ui-style-guide.md`. Applied to every PNG, regardless of whether the feature has a UX brief.
 2. **The feature's UX brief** — `docs/product/features/<slug>/ux-brief.md`. Applied to every PNG if the brief is found.
 
 You do not judge product decisions and do not revisit the canon itself — you only flag discrepancies between the canon/brief and what actually appears on the screenshot.
@@ -104,7 +104,7 @@ For each selected PNG:
 
 Canon sources — the sole truth:
 
-- `docs/engineering/adr/adr-visual-identity.md` — palette (`accent`/`peerIdentity`/`surface`/...), single-interactive-accent rule, rationale (drop M3, no shadow, sharp corners, Inter), explicit out-of-scope (what is NOT canon). The brand-mark portion is currently superseded by #287; ignore its prescriptions.
+- `docs/engineering/adr/adr-visual-identity.md` — palette (`accent`/`peerIdentity`/`surface`/...), single-interactive-accent rule, rationale (drop M3, no shadow, sharp corners, Inter), explicit out-of-scope (what is NOT canon).
 - `docs/engineering/ui-style-guide.md` — token tables, spacing scale, shape scale, typography ladder, iconography rule (Tabler stroke-only), shadow ban, accessibility minimums.
 
 **Read them fully before analysing PNGs** (Read tool) — the list of rules lives there, not here.

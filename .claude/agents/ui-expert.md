@@ -18,7 +18,6 @@ Read [`docs/engineering/ui-style-guide.md`](../../docs/engineering/ui-style-guid
 | `peerIdentity` | Peer device identity: peer-device rows, transfer receiver chip, pairing confirmation, and similar identity-display surfaces. Never a UI interactive color. |
 | Typeface | Inter Variable (bundled). Weights 400 / 600. `numeric` style for sizes/ETA/percentages. |
 | Icons | Tabler Icons (`br.com.devsrsouza.compose.icons:tabler-icons:1.1.1`). No platform-native glyphs. |
-| Brand mark | Slot open — being redesigned in #287. Until then, treat the provisional `BrandMark` composable as a placeholder; do not derive style or geometry rules from its current appearance. |
 | Shapes | `sm=6dp`, `md=10dp`, `lg=14dp`. No pill/fully-rounded surfaces. |
 | Motion | 200–300ms ease-out, stdlib only. No decorative animation. No `Modifier.shadow()`. |
 
