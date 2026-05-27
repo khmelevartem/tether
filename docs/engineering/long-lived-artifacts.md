@@ -32,6 +32,14 @@ Any copy desynchronises at the source's first change; the reader acts on a stale
 
 A short summary attached to the link («see X (covers A / B / C)», «see X — about the four rules of Y») is the same class as inline-copy: it duplicates the linked doc's structure right next to the link, and it desynchronises the same way. Trust the link; if the reader needs more than the link text to decide whether to click, the link text itself is weak — rewrite it.
 
+## Name a slot by its function, not by its proper name
+
+When a long-lived artifact (spec, brief, agent prompt, KDoc) refers to a UI element, a component, or any other artefact-tied concept — name it functionally (`progress bar`, `searching indicator`, `error illustration`), not by the proper name of the current realisation (`the •—• mark in transferring state`, `the Bélo logo's left lobe`).
+
+A functional name survives the realisation behind it being redesigned, renamed, or replaced. A proper name embedded across N artifacts requires N edits when the realisation changes, even though nothing about the slot itself shifted. The cleanup ratio for one such concept retraction can easily reach 10× the original adoption cost.
+
+If a proper name unavoidably must appear (e.g. because the artefact is specifically about it), confine the mention to one canonical document and link from elsewhere — see [Link over inline-copy](#link-over-inline-copy).
+
 ## External claims cite their source
 
 When prose describes the behaviour of an external tool, 3rd-party API, library, platform SDK, or specification — link to the authoritative doc next to the claim. Do not write from memory. External tools change; memory drifts; an unverified claim becomes permanently wrong and propagates through every artifact that references it.
