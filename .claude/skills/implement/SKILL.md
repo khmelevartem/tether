@@ -87,15 +87,17 @@ gh pr list --search "issue:#<N>" --state open --json number,isDraft,headRefName
 
 Any such gap is a reason to return to the spec/AC ambiguity gate, not to "patch it along the way".
 
-**Classification.** Based on the issue body — the `**Type:**` field, deliverable description, labels — assign the task to one of these tracks:
+**Classification.** Based on the issue's type label (`feature` / `bugfix` / `refactor` / `infra` / `docs` / `dependency`), deliverable description, and any legacy `**Type:**` body field on older issues — assign the task to one of these tracks:
 
 | Trigger | Track | Action |
 |---|---|---|
-| `**Type:** DOCS` | docs-only | delegate to `/document <N>` and exit |
-| `**Type:** FEATURE` + explicit docs-only marker (phrase "docs-only" / "only docs" / "scope: docs" in body/DoD, or label `docs-only`) | docs-only | same |
-| Issue without `**Type:**` AND deliverable **limited exclusively** to editing `.claude/` or `docs/` (no code in source sets) | docs-only | same |
-| `**Type:** INFRA` AND deliverable **limited exclusively** to editing `.claude/` files (skill prompts, agent definitions, hooks) | docs-only | same |
-| `**Type:** FEATURE` / `BUGFIX` / `REFACTOR` / `INFRA` with deliverable in source sets or build/CI/scripts (even if an ADR is also needed) | code-track | continue Steps 2–8 |
+| `docs` label | docs-only | delegate to `/document <N>` and exit |
+| `feature` + explicit docs-only marker (phrase "docs-only" / "only docs" / "scope: docs" in body/DoD, or label `docs-only`) | docs-only | same |
+| Issue without a type label AND deliverable **limited exclusively** to editing `.claude/` or `docs/` (no code in source sets) | docs-only | same |
+| `infra` AND deliverable **limited exclusively** to editing `.claude/` files (skill prompts, agent definitions, hooks) | docs-only | same |
+| `feature` / `bugfix` / `refactor` / `infra` with deliverable in source sets or build/CI/scripts (even if an ADR is also needed) | code-track | continue Steps 2–8 |
+
+Legacy issues may carry the type in a `**Type:**` body field, or under the GitHub default labels `enhancement` (= `feature`) / `bug` (= `bugfix`) / `documentation` (= `docs`) — treat all three as equivalent to the matching type label for routing.
 
 When delegating to /document: "This task is docs-only. Running `/document <N>` and exiting." `/document` will handle layer selection, consistency, review and the PR itself. **Do NOT delegate** a code-FEATURE with an incidental ADR — for such tasks Step 4 dispatches `architect` mid-flight and the ADR is written in the same PR as the code.
 

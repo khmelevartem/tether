@@ -91,7 +91,7 @@ Requires: `tether` in `PATH` (see Desktop CLI above), at least one AVD (create i
 - [CLAUDE.md](CLAUDE.md) — what an AI agent or new contributor must know: architecture invariants, git conventions, worktree discipline.
 - [docs/engineering/](docs/engineering/README.md) — architecture and code-writing rules (DI, modules, testing).
 - [.claude/skills/](.claude/skills/) — multi-agent skills and workflow orchestrations (`/implement`, `/code-review`, `/close-issue`, `/retro`, `/grooming`, …).
-- [.claude/commands/](.claude/commands/) — single-file prompt templates (`/rebase`, `/quick-issue`, `/progress-boring`).
+- [.claude/commands/](.claude/commands/) — single-file prompt templates (`/rebase`, `/progress-boring`).
 
 Tests:
 ```bash
