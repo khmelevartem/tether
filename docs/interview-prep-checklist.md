@@ -183,7 +183,7 @@
 ### Механизм
 - [x] `expect` / `actual` — как работает, ограничения
 - [x] Alternatives to expect/actual — interfaces + DI, когда что
-- [ ] Структура модулей: `commonMain` / `androidMain` / `iosMain` / `desktopMain`
+- [x] Структура модулей: `commonMain` / `androidMain` / `iosMain` / `desktopMain`
 
 ### Kotlin/Native
 - [ ] Старая memory model (заморозка, `@Frozen`) vs новая (1.7.20+)

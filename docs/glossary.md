@@ -37,6 +37,6 @@ Engineering concepts. The vocabulary [`architect`](../.claude/agents/architect.m
 - **UploadStorage** — the per-platform sink the FileServer talks to for resolving destinations, streaming bytes, enforcing the canonical-realisation check, and aborting on failure. _Avoid:_ storage backend, file sink, persistence layer. (see [file-transfer-wire.md](engineering/file-transfer-wire.md))
 - **Relative POSIX path** — the file's path inside a transfer, using `/` separators, no leading slash, no `..` segments; for a flat send it is the leaf name. _Avoid:_ filename when nesting matters, relative URL.
 - **Path sanitization** — the two-layer boundary that maps an untrusted `name` parameter to a safe on-disk destination: Layer 1 is the lexical sanitizer in the route handler, Layer 2 is the canonical-realisation check in UploadStorage. (see [file-transfer-wire.md](engineering/file-transfer-wire.md))
-- **Abort** — UploadStorage's failure-path cleanup: deletes the partial destination file and removes empty parent directories up to the downloads root. _Avoid:_ cancel, rollback.
+- **Abort** — UploadStorage's failure-path cleanup: deletes the partial destination file and removes only the empty parent directories this upload created, leaving directories shared with other in-flight uploads alone. _Avoid:_ cancel, rollback.
 - **Downloads root** — the per-device root directory into which incoming files are landed; the security boundary every received file must stay inside. _Avoid:_ destination root, downloads folder when the security property matters.
 

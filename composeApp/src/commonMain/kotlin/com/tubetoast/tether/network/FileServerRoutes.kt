@@ -42,15 +42,20 @@ internal fun dedupFilename(leafName: String, exists: (candidate: String) -> Bool
 
 private val log = KydraLog.withTag(default = "FileServerRoutes")
 
+internal data class UploadHandle(
+    val destination: String,
+    /** Parent dirs created alongside this handle, ordered child→parent for deletion. */
+    val createdDirs: List<String>,
+)
+
 internal interface UploadStorage {
     fun ensureRoot()
 
-    fun resolveDestination(relativePath: String): String
+    fun resolveDestination(relativePath: String): UploadHandle
 
-    suspend fun writeBody(body: ByteReadChannel, destination: String): Long
+    suspend fun writeBody(body: ByteReadChannel, handle: UploadHandle): Long
 
-    /** Deletes any partial destination file and removes empty parent directories up to root. */
-    fun abort(destination: String)
+    fun abort(handle: UploadHandle)
 }
 
 internal fun Application.installFileServerRoutes(
@@ -90,10 +95,10 @@ internal fun Application.installFileServerRoutes(
                 return@post
             }
             var uploadComplete = false
-            var destination: String? = null
+            var handle: UploadHandle? = null
             try {
                 val resolved = storage.resolveDestination(relativePath)
-                destination = resolved
+                handle = resolved
                 tracker.withActiveTransfer {
                     val body = call.receiveChannel()
                     val bytesWritten = storage.writeBody(body, resolved)
@@ -106,8 +111,8 @@ internal fun Application.installFileServerRoutes(
                         error("FileServer: incomplete upload — got $bytesWritten of $expected bytes")
                     }
                     uploadComplete = true
-                    log.info { "received '$relativePath' — $bytesWritten bytes → $resolved" }
-                    call.respond(HttpStatusCode.OK, mapOf("savedPath" to resolved))
+                    log.info { "received '$relativePath' — $bytesWritten bytes → ${resolved.destination}" }
+                    call.respond(HttpStatusCode.OK, mapOf("savedPath" to resolved.destination))
                 }
             } catch (e: Exception) {
                 log.error { "upload failed for '$relativePath' — ${e.message ?: "unknown error"}" }
@@ -119,7 +124,7 @@ internal fun Application.installFileServerRoutes(
                 } catch (_: Exception) {
                 }
             } finally {
-                if (!uploadComplete) destination?.let { storage.abort(it) }
+                if (!uploadComplete) handle?.let { storage.abort(it) }
             }
         }
     }

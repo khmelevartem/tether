@@ -43,7 +43,7 @@ Rules the sanitizer enforces:
 
 The sanitizer lives in `commonMain` so the sender can pre-validate before hitting the network — a sender that knows its own path is invalid should fail loudly at compose time, not by getting a 400. Reuse, not duplication: the receiver always re-runs the check, regardless of whether the sender ran it.
 
-### Layer 2 — canonical realisation, in `UploadStorage`
+### Layer 2 — canonical realisation, in the storage seam
 
 After sanitization passes, the relative path is resolved against the platform's downloads root. The storage layer guarantees that the **realised** absolute path stays inside the root — not the lexical path, the path the operating system would actually open. This catches:
 
@@ -51,31 +51,24 @@ After sanitization passes, the relative path is resolved against the platform's 
 - **Case-folding collisions** on case-insensitive volumes (macOS HFS+/APFS default, Windows). Whether two strings name the same entry is a filesystem property, not a string property.
 - **Platform-specific path normalisation** that turns a string into a different entry than the lexical reading would suggest.
 
-A failure here surfaces as `IOException` from the storage seam, mapped to `500` by the route handler, and the partial file is removed on the failure path. The check runs **before** the first byte hits the destination — opening for write after realisation, not before.
+A failure here surfaces as an I/O error from the storage seam, mapped to `500` by the route handler, and the partial file is removed on the failure path. The check runs **before** the first byte hits the destination — opening for write after realisation, not before.
 
 ## Storage seam
 
-`UploadStorage` is the per-platform sink behind a `commonMain` interface. The route handler talks only to the interface; platforms differ only in how bytes reach durable storage and how the canonical-realisation check is implemented.
+The route handler delegates file operations to a storage seam. The seam holds the shared algorithm for atomic reservation, directory-creation tracking, and rollback on abort. Platform syscall details live behind a sub-seam that the shared algorithm delegates to per platform — POSIX path operations on JVM and Apple today; a future Android MediaStore backend would not fit this sub-seam and would substitute the whole storage seam instead.
 
 Responsibilities owned by the seam:
 
-- **Resolve** a sanitised relative path to a destination identifier (an absolute path on filesystem-backed platforms; a MediaStore URI on Android when that lands).
-- **Open** the destination for writing, creating parent directories as needed.
-- **Enforce** the canonical-realisation rule before writing.
-- **Stream** the request body into the destination — no full buffering. Detect and surface short writes (`fwrite` POSIX return, `OutputStream` exceptions).
-- **Commit** the file as visible to the user on success, **abort** (delete partial bytes) on failure.
+- **Resolve** a sanitised relative path to a handle carrying the reserved absolute destination path and the list of parent directories created during the call. Resolution atomically creates an empty placeholder file at the destination before returning, so two concurrent uploads for the same leaf name are guaranteed distinct paths. The handle scopes all subsequent operations; callers hold it until commit or abort.
+- **Enforce** the canonical-realisation rule before creating the placeholder — the resolved path must stay inside the downloads root.
+- **Stream** the request body into the destination — no full buffering. Detect and surface short writes.
+- **Commit** the file as visible to the user on success, **abort** on failure: delete the partial destination file and remove only the empty parent directories the handle owns.
 
 Responsibilities owned by the route handler, not the seam:
 
 - HTTP status mapping.
 - Lexical sanitization (Layer 1 above).
 - Tracking the active-transfer scope through the transfer-activity tracker.
-
-Per-platform actuals differ along expected axes:
-
-- **JVM / Desktop / Android-app-private** — filesystem under a chosen root, JDK NIO for directory creation and canonicalisation.
-- **Android — MediaStore** (out of scope of this doc; tracked by its own issue) — directory creation is implicit in the URI, the canonical-check shape becomes "the resolved URI is under the chosen collection".
-- **Apple** — Foundation for directory creation, POSIX `realpath` for canonicalisation, low-level file I/O for streaming.
 
 ## Cross-cutting concerns
 
@@ -96,6 +89,6 @@ For each, the reason it was rejected — short, because none was close.
 ## What this doc does *not* commit to
 
 - The exact set of fields in a future "transfer manifest" if folder sends ever need pre-flight negotiation (size totals, peer free space, abort token). The current contract is per-file; a manifest, if added, gets its own endpoint, not a new field in `?name=`.
-- The MediaStore-side shape of `UploadStorage` on Android.
+- The MediaStore-side shape of the storage seam on Android.
 - Resume / partial-transfer semantics. Post-MVP; out of scope.
 - The Ktor engine carrying these routes — owned by [`adr-network-stack.md`](adr/adr-network-stack.md). The contract above must remain expressible on every engine that ADR allows.

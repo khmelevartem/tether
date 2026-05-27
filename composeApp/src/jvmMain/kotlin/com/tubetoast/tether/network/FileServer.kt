@@ -6,8 +6,6 @@ import io.ktor.server.cio.CIO
 import io.ktor.server.cio.CIOApplicationEngine
 import io.ktor.server.engine.EmbeddedServer
 import io.ktor.server.engine.embeddedServer
-import io.ktor.utils.io.ByteReadChannel
-import io.ktor.utils.io.jvm.javaio.toInputStream
 import kotlinx.coroutines.runBlocking
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.error
@@ -15,7 +13,6 @@ import ru.pocketbyte.kydra.log.info
 import ru.pocketbyte.kydra.log.withMessage
 import ru.pocketbyte.kydra.log.wrapper.withTag
 import java.io.File
-import java.io.IOException
 
 private val log = KydraLog.withTag(default = "FileServer")
 
@@ -30,7 +27,10 @@ actual class FileServer(
 
     actual fun start(): Int {
         check(server == null) { "FileServer is already running" }
-        val storage = JvmUploadStorage(downloadsDir)
+        val storage = FileUploadStorage(
+            root = downloadsDir.absolutePath,
+            backend = JvmUploadStorageBackend(downloadsDir.absolutePath),
+        )
         storage.ensureRoot()
         val srv = try {
             embeddedServer(CIO, port = port) {
@@ -53,72 +53,4 @@ actual class FileServer(
         server = null
         log.info { "stopped" }
     }
-}
-
-private class JvmUploadStorage(
-    private val root: File,
-) : UploadStorage {
-    private val rootReal by lazy { root.toPath().toRealPath() }
-
-    override fun ensureRoot() {
-        root.mkdirs()
-    }
-
-    override fun resolveDestination(relativePath: String): String {
-        val dest = resolveDestinationFile(root, relativePath)
-        val created = mkdirsTracked(dest.parentFile)
-        try {
-            val destReal = if (dest.exists()) {
-                dest.toPath().toRealPath()
-            } else {
-                // resolveDestinationFile always returns a File under root, so parentFile is non-null.
-                dest.parentFile!!
-                    .toPath()
-                    .toRealPath()
-                    .resolve(dest.name)
-            }
-            if (!destReal.startsWith(rootReal)) {
-                throw IOException("destination escapes downloads root: $dest")
-            }
-        } catch (e: Throwable) {
-            created.asReversed().forEach { it.delete() }
-            throw e
-        }
-        return dest.absolutePath
-    }
-
-    override suspend fun writeBody(body: ByteReadChannel, destination: String): Long =
-        body.toInputStream().use { input ->
-            File(destination).outputStream().use { output ->
-                input.copyTo(output, bufferSize = UPLOAD_BUFFER_SIZE)
-            }
-        }
-
-    override fun abort(destination: String) {
-        val dest = File(destination)
-        dest.delete()
-        var dir = dest.parentFile
-        while (dir != null && dir != root && dir.exists() && dir.list()?.isEmpty() == true) {
-            if (!dir.delete()) break
-            dir = dir.parentFile
-        }
-    }
-}
-
-private fun mkdirsTracked(dir: File?): List<File> {
-    if (dir == null || dir.exists()) return emptyList()
-    val toCreate = mutableListOf<File>()
-    var cur: File? = dir
-    while (cur != null && !cur.exists()) {
-        toCreate += cur
-        cur = cur.parentFile
-    }
-    dir.mkdirs()
-    return toCreate.asReversed()
-}
-
-private fun resolveDestinationFile(dir: File, relativePath: String): File {
-    val initial = File(dir, relativePath)
-    val leaf = dedupFilename(initial.name) { candidate -> File(initial.parentFile, candidate).exists() }
-    return File(initial.parentFile, leaf)
 }
