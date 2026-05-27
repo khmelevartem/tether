@@ -34,7 +34,6 @@ class JvmUploadStorageBackendTest {
 
     @Test
     fun `mkdirIfAbsent returns false when directory was created externally before the call`() {
-        // Covers the fast-path branch: dir.exists() == true before mkdir() is attempted.
         val root = Files.createTempDirectory("tether-jvm-backend-test").toFile()
         try {
             val backend = JvmUploadStorageBackend(root.absolutePath)
@@ -51,7 +50,6 @@ class JvmUploadStorageBackendTest {
         val root = Files.createTempDirectory("tether-jvm-backend-test").toFile()
         try {
             val backend = JvmUploadStorageBackend(root.absolutePath)
-            // mkdir() returns false and the dir doesn't exist afterwards → IOException
             val noParent = "${root.absolutePath}/nonexistent-parent/child"
             assertFailsWith<Exception> { backend.mkdirIfAbsent(noParent) }
         } finally {

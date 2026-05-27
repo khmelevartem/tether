@@ -2,12 +2,7 @@ package com.tubetoast.tether.network
 
 internal const val MAX_DEDUP_RETRIES = 1000
 
-/**
- * Deduplicates [leafName] against existing entries in [parentPath] and atomically
- * reserves the chosen name by creating an empty placeholder file.
- *
- * Returns the reserved leaf name, or throws if no free name can be found within [MAX_DEDUP_RETRIES] attempts.
- */
+/** Returns the reserved leaf name, or throws if no free name is found within [MAX_DEDUP_RETRIES] attempts. */
 internal fun reserveDeduplicatedFile(
     parentPath: String,
     leafName: String,
