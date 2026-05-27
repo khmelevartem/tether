@@ -31,6 +31,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.test.fail
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 // real CIO server — CIOApplicationEngine hardcodes real-thread dispatchers
 @Suppress("ktlint:tether:no-run-blocking-in-tests")
@@ -305,7 +306,9 @@ class FileServerTest {
                     // the upload did not complete with 200 OK.
                 }
 
-                delay(200.milliseconds) // let server-side catch/finally settle
+                withTimeout(5.seconds) {
+                    while (tmpDir.listFiles()?.any { it.name.startsWith("trunc") } == true) delay(50.milliseconds)
+                }
 
                 val partial = tmpDir.listFiles()?.filter { it.name.startsWith("trunc") } ?: emptyList()
                 assertTrue(

@@ -44,7 +44,7 @@ private val log = KydraLog.withTag(default = "FileServerRoutes")
 
 internal data class UploadHandle(
     val destination: String,
-    /** Parent dirs created by this resolveDestination call, ordered child→parent (deletion order). */
+    /** Parent dirs created alongside this handle, ordered child→parent for deletion. */
     val createdDirs: List<String>,
 )
 

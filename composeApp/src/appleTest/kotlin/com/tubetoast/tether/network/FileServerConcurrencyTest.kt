@@ -12,11 +12,8 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
-import io.ktor.http.content.OutgoingContent
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
-import io.ktor.utils.io.ByteWriteChannel
-import io.ktor.utils.io.writeFully
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
@@ -37,6 +34,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.test.fail
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 // real CIO server — CIOApplicationEngine hardcodes real-thread dispatchers
 @Suppress("ktlint:tether:no-run-blocking-in-tests")
@@ -142,7 +140,11 @@ class FileServerConcurrencyTest {
                 assertEquals(HttpStatusCode.OK, successResponse.status, "B upload must complete")
                 val savedPath = (successResponse.body() as Map<String, String>)["savedPath"]!!
 
-                delay(200.milliseconds) // let server-side abort settle
+                withTimeout(5.seconds) {
+                    while (NSFileManager.defaultManager.fileExistsAtPath("$dir/subdir/A.bin")) {
+                        delay(50.milliseconds)
+                    }
+                }
 
                 assertTrue(
                     NSFileManager.defaultManager.fileExistsAtPath(savedPath),
@@ -161,24 +163,6 @@ class FileServerConcurrencyTest {
         } finally {
             client.close()
             server.stop()
-        }
-    }
-}
-
-private class SlowAbortContent(
-    private val totalBytes: Long,
-) : OutgoingContent.WriteChannelContent() {
-    override val contentLength: Long = totalBytes
-    override val contentType: ContentType = ContentType.Application.OctetStream
-
-    override suspend fun writeTo(channel: ByteWriteChannel) {
-        val chunk = ByteArray(64 * 1024)
-        var sent = 0L
-        while (sent < totalBytes) {
-            val n = minOf(chunk.size.toLong(), totalBytes - sent).toInt()
-            channel.writeFully(chunk, 0, n)
-            sent += n
-            delay(20.milliseconds)
         }
     }
 }

@@ -59,11 +59,10 @@ A failure here surfaces as `IOException` from the storage seam, mapped to `500` 
 
 Responsibilities owned by the seam:
 
-- **Resolve** a sanitised relative path to a destination identifier (an absolute path on filesystem-backed platforms; a MediaStore URI on Android when that lands).
-- **Open** the destination for writing, creating parent directories as needed.
-- **Enforce** the canonical-realisation rule before writing.
+- **Resolve** a sanitised relative path to an `UploadHandle` — a value carrying the reserved absolute destination path and the list of parent directories created during the call. Resolve atomically creates an empty placeholder file at the destination before returning, so two concurrent uploads for the same leaf name are guaranteed distinct paths. The handle scopes all subsequent operations; callers hold it until commit or abort.
+- **Enforce** the canonical-realisation rule before creating the placeholder — the resolved path must stay inside the downloads root.
 - **Stream** the request body into the destination — no full buffering. Detect and surface short writes (`fwrite` POSIX return, `OutputStream` exceptions).
-- **Commit** the file as visible to the user on success, **abort** (delete partial bytes) on failure.
+- **Commit** the file as visible to the user on success, **abort** on failure: delete the partial destination file and remove only the empty parent directories the handle owns (those recorded in `UploadHandle.createdDirs`).
 
 Responsibilities owned by the route handler, not the seam:
 

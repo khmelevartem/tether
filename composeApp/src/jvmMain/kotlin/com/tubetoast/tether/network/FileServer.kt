@@ -16,8 +16,6 @@ import ru.pocketbyte.kydra.log.withMessage
 import ru.pocketbyte.kydra.log.wrapper.withTag
 import java.io.File
 import java.io.IOException
-import java.nio.file.FileAlreadyExistsException
-import java.nio.file.Files as NioFiles
 
 private val log = KydraLog.withTag(default = "FileServer")
 
@@ -57,8 +55,6 @@ actual class FileServer(
     }
 }
 
-private const val MAX_DEDUP_RETRIES = 1000
-
 private class JvmUploadStorage(
     private val root: File,
 ) : UploadStorage {
@@ -76,20 +72,15 @@ private class JvmUploadStorage(
             if (!parentReal.startsWith(rootReal)) {
                 throw IOException("destination escapes downloads root: $initial")
             }
-            repeat(MAX_DEDUP_RETRIES) {
-                val leaf = dedupFilename(initial.name) { candidate ->
-                    parentReal.resolve(candidate).toFile().exists()
-                }
-                val candidate = parentReal.resolve(leaf).toFile()
-                try {
-                    NioFiles.createFile(candidate.toPath())
-                    return UploadHandle(candidate.absolutePath, created.asReversed().map { it.absolutePath })
-                } catch (_: FileAlreadyExistsException) {
-                    // Another concurrent upload claimed this name; retry dedup.
-                }
-            }
-            throw IOException(
-                "FileServer: could not reserve destination for $relativePath after $MAX_DEDUP_RETRIES attempts",
+            val leaf = reserveDeduplicatedFile(
+                parentPath = parentReal.toString(),
+                leafName = initial.name,
+                pathExists = { candidate -> File(candidate).exists() },
+                joinPath = { parent, name -> "$parent${File.separator}$name" },
+            )
+            return UploadHandle(
+                parentReal.resolve(leaf).toFile().absolutePath,
+                created.asReversed().map { it.absolutePath },
             )
         } catch (e: Throwable) {
             created.asReversed().forEach { it.delete() }

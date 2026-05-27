@@ -26,9 +26,7 @@ import platform.Foundation.NSError
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSUserDomainMask
-import platform.posix.EEXIST
 import platform.posix.PATH_MAX
-import platform.posix.errno
 import platform.posix.fclose
 import platform.posix.fflush
 import platform.posix.fopen
@@ -81,8 +79,6 @@ actual class FileServer(
     }
 }
 
-private const val MAX_DEDUP_RETRIES = 1000
-
 private class AppleUploadStorage(
     private val root: String,
 ) : UploadStorage {
@@ -105,24 +101,13 @@ private class AppleUploadStorage(
                 throw IOException("destination escapes downloads root: $resolvedParent")
             }
 
-            repeat(MAX_DEDUP_RETRIES) {
-                val leaf = dedupFilename(leafName) { candidate ->
-                    NSFileManager.defaultManager.fileExistsAtPath("$resolvedParent/$candidate")
-                }
-                val candidatePath = "$resolvedParent/$leaf"
-                val file = fopen(candidatePath, "wbx")
-                if (file != null) {
-                    fclose(file)
-                    return UploadHandle(candidatePath, created.asReversed())
-                }
-                if (errno != EEXIST) {
-                    throw IOException("FileServer: could not create placeholder '$candidatePath'")
-                }
-                // EEXIST: another concurrent upload claimed this name; retry dedup.
-            }
-            throw IOException(
-                "FileServer: could not reserve destination for $relativePath after $MAX_DEDUP_RETRIES attempts",
+            val leaf = reserveDeduplicatedFile(
+                parentPath = resolvedParent,
+                leafName = leafName,
+                pathExists = { candidate -> NSFileManager.defaultManager.fileExistsAtPath(candidate) },
+                joinPath = { parent, name -> "$parent/$name" },
             )
+            return UploadHandle("$resolvedParent/$leaf", created.asReversed())
         } catch (e: Throwable) {
             created.asReversed().forEach { deleteIfEmpty(it) }
             throw e
