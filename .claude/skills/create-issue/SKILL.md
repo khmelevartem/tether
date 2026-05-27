@@ -74,6 +74,12 @@ Do **not** ask for: precise file paths, exact API signatures, layering choices, 
 
 If the user already answered something in the request — don't re-ask.
 
+## Unresolved blocking questions → preceding task
+
+If a principal question is unresolved and its answer would change the shape of the work (which library, which layer, which approach), the task is not ready to execute — file a preceding research task instead. Its deliverable is a *decision* (usually an ADR if architectural, a spec section if product, a UX brief if interaction); link the original task as `blocked_by` the spike.
+
+The urge to add an "Open questions" section to the body is the same signal: the body is not yet a unit of execution. Extract the question into its own task, link the dependency, leave the body lean. The body never lists questions for the implementer to answer; questions belong in tasks that resolve them.
+
 ## Draft
 
 Follow [TEMPLATE.md](TEMPLATE.md). Mandatory body sections: Context, Goal, Entry point, DoD, Out of scope. Optional: References (similar closed issues), Hypotheses (bugfix only). Type is set via a type label (`feature` / `bugfix` / `refactor` / `infra` / `docs` / `dependency`), not a body field.

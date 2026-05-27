@@ -50,6 +50,7 @@ Sections that **never** appear in the body:
 - Non-functional requirements — only if the user explicitly stated a threshold; otherwise the implementer consults `docs/engineering/`.
 - Error handling — same; an architecture concern, not an issue-body concern.
 - `**Relationships:**` block — native GitHub fields only.
+- `**Open questions:**` block — a principal unresolved question means the task is not ready; file a preceding research task and link it as `blocked_by`. See SKILL.md §Unresolved blocking questions.
 
 ## Title
 
