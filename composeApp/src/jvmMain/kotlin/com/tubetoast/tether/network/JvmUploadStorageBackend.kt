@@ -53,6 +53,7 @@ internal class JvmUploadStorageBackend(
         null
     }
 
+    // File.createNewFile is atomic and available since API 1; Files.createFile would need minSdk 26.
     override fun atomicCreateFile(path: String): Boolean = File(path).createNewFile()
 
     override suspend fun writeBody(body: ByteReadChannel, destination: String): Long =
