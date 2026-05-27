@@ -1,14 +1,16 @@
 # Issue creation examples
 
-## Example 1: single issue, feature
+Two shapes: a single lean issue and an epic + children.
 
-**User request:** "Create an issue in myorg/shop about the fact that we need to cache search results on the frontend so that navigating back does not trigger an API request."
+## Example 1 — single issue
 
-**After scouting:** the repo has `AGENTS.md` with commands `pnpm test`, `pnpm lint`, `pnpm test:e2e`. Found a similar closed issue #128 — LRU cache for recently viewed.
+User request: "Open an issue about caching search results on the client so navigating back doesn't trigger an API call."
 
-**After interview:** the user confirmed TTL of 5 minutes, no parent epic, labels `frontend,performance`.
+After recon: `CLAUDE.md` lists `pnpm test`, `pnpm lint`. Closed `#128` did a similar LRU for recently-viewed.
 
-**Draft:**
+After interview: TTL 5 min (user-confirmed), no parent epic, labels `frontend,performance`.
+
+Draft:
 
 > **Title:** Client-side search results caching
 >
@@ -16,104 +18,47 @@
 >
 > ## Context
 >
-> The front end of an online store (myorg/shop), the search results page, and navigation between it and product cards.
+> Search results page on `myorg/shop` frontend, and navigation between it and product cards.
 >
-> ## Why
+> ## Goal
 >
-> Currently, returning from a product page to the results page triggers a repeat request to `/api/search`, which feels laggy and loads the API. The user sees a loader instead of an instant display of an already-familiar list. The goal is to display the previous results instantly, refreshing them in the background (stale-while-revalidate).
+> Returning from a product page shows the previous search results instantly, with a background revalidate. No spinner on back-navigation in the first 100 ms.
 >
-> ## How it should work
+> ## Entry point
 >
-> ### Main scenario
->
-> 1. The user performs a search and sees results. The result is saved to the cache under the key `query + filters + page`.
-> 2. The user clicks on a product and navigates to its card.
-> 3. The user presses "back" — the results are displayed instantly from the cache; a revalidate request runs in the background.
-> 4. If the revalidate response differs — the list updates smoothly.
->
-> ### Edge cases
->
-> - Cache is stale (older than 5 minutes) — show skeleton, wait for API response.
-> - Filters changed — cache under a new key; do not show the old one.
-> - Revalidate error — keep the cached result, show a toast.
->
-> ## Contract
->
-> ```ts
-> // src/features/search/cache.ts (new file)
-> export interface SearchCache {
->   get(key: SearchKey): CachedResult | null
->   set(key: SearchKey, value: SearchResult): void
-> }
-> export type SearchKey = { query: string; filters: FilterSet; page: number }
-> export type CachedResult = { value: SearchResult; storedAt: number }
-> ```
->
-> Changed external contracts: none.
-> New/changed DB tables: none.
->
-> ## Technical details
->
-> ### Affected modules
->
-> - `src/features/search/api.ts` — fetch wrapper, integration point with the cache
-> - `src/features/search/cache.ts` (new) — in-memory + sessionStorage LRU
-> - `src/features/search/SearchResultsPage.tsx` — consuming the revalidate flow
->
-> ### Code landmarks
->
-> - `src/features/recentlyViewed/cache.ts` — similar LRU + sessionStorage, can be used as a reference
-> - `src/lib/cache-key.ts` — has `buildCacheKey`, use it instead of writing your own
->
-> ```bash
-> rg "sessionStorage" src/features/    # places where it is already used
-> rg "stale-while-revalidate"          # whether the pattern exists in the project
-> ```
->
-> ### Non-functional requirements
->
-> Cache size — no more than 50 recent queries, eviction by LRU. Do not cache responses with `Cache-Control: no-store`.
->
-> ### Error handling
->
-> On revalidate error — `logger.warn`, do not invalidate cache. On sessionStorage write error (quota) — fall back to in-memory only, `logger.debug`.
->
-> ## Out of scope
->
-> - Server-side edge cache for `/api/search` — separate issue (see "Consequences").
-> - Caching autocomplete `/api/search/suggest` — different surface.
-> - Refactoring `SearchResultsPage.tsx` beyond the minimum necessary integration.
+> `src/features/search/` is the surface. `src/features/recentlyViewed/cache.ts` has a similar LRU + sessionStorage idea and `src/lib/cache-key.ts` already exposes `buildCacheKey` — see `#128` for the precedent.
 >
 > ## Definition of Done
 >
-> - [ ] `pnpm test src/features/search/cache.test.ts` passes, covers: add, evict-on-overflow (>50), ttl-expiry
-> - [ ] `pnpm lint` with no new errors
-> - [ ] `pnpm test:e2e -- search-cache` — the "search → product card → back" scenario passes without a request to `/api/search` in the first 100ms
-> - [ ] Manual check: open DevTools → Network, perform a search, navigate to a product, go back — no repeat request to `/api/search`
-> - [ ] Lighthouse Performance ≥ 85 on `/search` (`pnpm lighthouse --url /search`)
+> - [ ] Back-navigation from a product page to recent search results shows the cached list before any network round-trip; revalidate happens in the background and updates the list smoothly if it differs.
+> - [ ] Stale cache (>5 min) falls back to a fresh request with the normal loading state.
+> - [ ] A change in filters or query is treated as a new key — no stale list flashes.
+> - [ ] `pnpm test` and `pnpm lint` pass.
+>
+> ## Out of scope
+>
+> - Server-side edge cache for `/api/search`.
+> - Autocomplete suggestion caching.
+> - Refactoring `SearchResultsPage.tsx` beyond what the integration needs.
 >
 > ## References
 >
-> - #128 — LRU for recently viewed (closed, pattern taken from there)
->
-> ## Consequences
->
-> - Create an issue for the server-side edge cache for `/api/search`
-> - Decide whether autocomplete results need caching — separate discussion
+> - `#128` — LRU for recently viewed (closed, similar pattern).
 
 After approval:
 
 ```bash
-gh issue create --repo myorg/shop \
-  --title "Client-side search results caching" \
+gh issue create --title "Client-side search results caching" \
   --body-file /tmp/issue-body.md \
-  --label "frontend,performance"
+  --label "size:M,frontend,performance"
 ```
 
-## Example 2: epic + sub-issues
+Note what the body does **not** contain: no `SearchCache` interface, no file paths as commitments, no error-handling strategy, no non-functional thresholds the user didn't state. The implementer picks the shape during `/implement`.
 
-If the user says "break it into subtasks", create N+1 issues: one parent (brief, overview) and N children (using the full template), then link them via `addSubIssue`.
+## Example 2 — epic + sub-issues
 
-The parent issue in this case has a **shortened** body — Context, Why, overall DoD. Contract and technical details live in the children. The label `size:L` on the parent issue is appropriate.
+User says: "break it into subtasks." Create N+1 issues: a parent (shorter — Context + Goal + epic-level DoD only) and N children (each lean per the template). After all are created, link via `addSubIssue` (see [RELATIONSHIPS.md](RELATIONSHIPS.md)).
 
-If a task clearly warrants `size:L` — that is a signal to suggest breaking it into an epic during the interview stage.
+Parent body — Context, Goal, **epic-level DoD only** (the children's combined behaviour). No per-child checklist in the parent — sub-issues API renders it. Label `size:L` on the parent is appropriate.
+
+If a task looks `size:L` upfront, raise epic-splitting during the interview.

@@ -64,7 +64,7 @@ Based on steps 2–3, identify specific systemic changes. Categories:
 | Category | When to touch |
 |----------|--------------|
 | `.claude/skills/<name>/SKILL.md` | The skill (workflow procedure or orchestration) didn't cover the needed scenario, didn't prevent a class of errors, or lacked a needed step |
-| `.claude/commands/*.md` | One of the remaining single-file templates (`rebase`, `quick-issue`, `progress-boring`) gave unclear instructions or missed a scenario |
+| `.claude/commands/*.md` | One of the remaining single-file templates (`rebase`, `progress-boring`) gave unclear instructions or missed a scenario |
 | `.claude/agents/<name>.md` | A sub-agent's brief is incomplete, allowed an out-of-scope decision, or missed a check |
 | `CLAUDE.md` | A convention / process / project structure is not recorded — the agent had to guess |
 | `docs/engineering/` | An architectural principle / pattern is recorded incorrectly, incompletely, or its examples diverge from reality |
