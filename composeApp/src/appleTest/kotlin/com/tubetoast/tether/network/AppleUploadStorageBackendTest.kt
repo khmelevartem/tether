@@ -11,6 +11,14 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
+// The concurrent-sibling branch (`createDirectory` fails because a sibling raced
+// between `fileExistsAtPath` and `createDirectory`) is not deterministically
+// reproducible without injecting a seam around the NSFileManager calls. The
+// `mkdirIfAbsent` contract for that branch is covered by the JVM equivalent
+// (where `File.mkdir() == false` is observable) and by the integration race in
+// FileServerConcurrencyTest. Mirroring the test set with the JVM backend keeps
+// the documented contract paths (newly-created, already-exists, externally-created,
+// missing-parent) explicit on both platforms.
 class AppleUploadStorageBackendTest {
     private val tempDirs = mutableListOf<String>()
 
