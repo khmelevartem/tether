@@ -15,9 +15,6 @@ internal expect fun atomicCreateFile(path: String): Boolean
  *
  * Returns the reserved leaf name, or throws [Exception] if no free name can be
  * found within [MAX_DEDUP_RETRIES] attempts.
- *
- * @param atomicCreate creates an empty file at the given path; returns `true` on success,
- * `false` if already exists. Defaults to [atomicCreateFile].
  */
 internal fun reserveDeduplicatedFile(
     parentPath: String,
