@@ -2,57 +2,11 @@
 
 How Tether extends Claude Code. Two artifact homes, both creating a `/slash-command` interface; commands are the legacy shape, skills are the recommended forward path ([Anthropic docs](https://code.claude.com/docs/en/skills.md)).
 
-## Skills index
+- `.claude/skills/<name>/SKILL.md` — multi-step orchestrations and procedures with optional supporting files.
+- `.claude/commands/<name>.md` — single-file prompt templates.
+- `.claude/agents/<name>.md` — sub-agent definitions dispatched by orchestrating skills.
 
-`.claude/skills/<name>/SKILL.md` — multi-agent orchestrations and procedures.
-
-- `check-review` — read latest PR comments, classify pointwise vs structural, fix + reply in-thread.
-- `close-issue` — finish an issue and merge its PR.
-- `code-review` — multi-agent review of a PR; fan-out + adversarial + GitHub post.
-- `document` — docs-only issue orchestrator (spec / ux-brief / tech-doc / ADR / knowledge / `.claude` prompt).
-- `create-issue` — single entry point for `gh issue create`; lean body shape (Goal / Entry point / product-level DoD / Out of scope).
-- `grooming` — close current sprint by reality + gap-analysis + draft next sprint.
-- `implement` — issue-to-PR orchestrator (coder ↔ reviewers loop, smoke, PR).
-- `progress` — RPG-themed project snapshot.
-- `retro` — retrospective on an issue + its PR.
-- `smoke-test` — runtime happy-path across platforms.
-- `sprint-pick` — what to take next from the current sprint.
-
-## Commands index
-
-`.claude/commands/<name>.md` — single-file prompt templates.
-
-- `progress-boring` — flat numbers variant of `/progress`.
-- `rebase` — pull `origin/main` and assess semantic overlap.
-
-## Agents index
-
-`.claude/agents/<name>.md` — sub-agent definitions dispatched by orchestrating skills.
-
-Writing agents:
-
-- `architect` — designs the technical system for a subsystem; writes living engineering doc + ADR.
-- `bug-reproducer` — reproduces a bug and confirms root cause before any fix is written.
-- `coder` — implements code changes; follows CLAUDE.md, DI checklist, common-first.
-- `spec-writer` — drafts product feature specs in `docs/product/features/`.
-- `tester` — writes / extends tests for KMP code per `testing.md`.
-- `ui-expert` — Compose Multiplatform UI specialist (Android / Desktop / iOS).
-- `ux-expert` — turns a spec into a cross-platform UX brief.
-
-Reviewing agents (dispatched by `code-review` / `implement` / `document`):
-
-- `review-adversarial` — probes what earlier reviewers missed; cross-checks factual claims.
-- `review-architecture` — high-level architectural decision (decomposition, layering, coupling).
-- `review-correctness` — correctness, security, concurrency, resource lifecycle.
-- `review-design-system` — Compose UI conformance to Tether design system (tokens, M3 ban, icons).
-- `review-dod` — DoD criteria from the issue are covered.
-- `review-glossary` — terminology vs `docs/glossary.md`.
-- `review-guides` — conformance to `CLAUDE.md` + `docs/engineering/*`.
-- `review-platform` — KMP source-set placement, expect/actual, platform parity.
-- `review-reuse` — duplication, doc-vs-code drift, 3rd-party-API claims.
-- `review-tests` — test coverage (edge cases for FEATURE/BUGFIX, survival for REFACTOR).
-- `review-ux` — UI code vs the feature's UX brief.
-- `review-visual` — renders Compose `@Preview` to PNG and reviews against visual identity + brief.
+Skill, command, and agent inventories are surfaced automatically to every agent invocation — no manual index is maintained here.
 
 ## Skill or command — checkable criteria
 

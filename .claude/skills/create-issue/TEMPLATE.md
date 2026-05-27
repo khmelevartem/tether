@@ -1,8 +1,8 @@
 # GitHub Issue Body Template
 
-The lean shape. Mandatory body sections in order: **Context → Goal → Entry point → Definition of Done → Out of scope**. Everything else is optional and dropped when there's nothing to say. Task type and size live on the issue as labels (`type:<…>`, `size:<…>`), not in the body.
+Mandatory body sections in order: **Context → Goal → Entry point → Definition of Done → Out of scope**. Everything else is optional and dropped when there's nothing to say. Task type and size live on the issue as labels, not in the body.
 
-The body answers **what** and **why**, plus where to start looking. It does not pre-bake **how** — that's `/implement`'s job.
+The body answers **what** and **why**, plus where to start looking. It does not pre-bake **how** — that is decided during implementation, against `docs/engineering/`.
 
 ## Template
 
@@ -13,7 +13,7 @@ One or two sentences. Which subsystem / feature this lives in. A `#N` mention of
 
 ## Goal
 
-One or two sentences: what changes for the user or the system after this is done. Phrased as the resulting capability, not the action.
+What changes for the user or the system after this is done **and why it matters** — what problem it solves, what gets unblocked, who feels the difference. Phrased as the resulting capability, not the action.
 
 ## Entry point
 
@@ -39,15 +39,15 @@ Explicit boundaries. Pre-empts "I'll fix this along the way."
 Add only when they carry information the implementer can't derive:
 
 - **References** — `#N` of closed issues with similar pattern. Found via recon.
-- **Hypotheses** — BUGFIX only, when the reporter suspects a cause. **Mark explicitly as unverified** — the implementer must confirm the root cause through a reproduction step before any fix. Use "possibly", "candidate", "hypothesis"; number the items. Without the unverified marker the first item gets treated as fact and the fix targets the wrong thing.
+- **Hypotheses** — bugfix only, when the reporter suspects a cause. **Mark explicitly as unverified** — the implementer must confirm the root cause through a reproduction step before any fix. Use "possibly", "candidate", "hypothesis"; number the items. Without the unverified marker the first item gets treated as fact and the fix targets the wrong thing.
 - **Consequences** — follow-up tasks for after this merges. One line each.
 
 Sections that **never** appear in the body:
 
-- Contract / API signatures / interface bodies — `/implement` decides shape.
+- Contract / API signatures / interface bodies — shape is decided during implementation.
 - Affected modules with package paths — landmarks go in Entry point as prose.
 - Code landmarks with `rg` / `grep` commands — Entry point line suffices.
-- Non-functional requirements — only if the user explicitly stated a threshold; otherwise `/implement` consults `docs/engineering/`.
+- Non-functional requirements — only if the user explicitly stated a threshold; otherwise the implementer consults `docs/engineering/`.
 - Error handling — same; an architecture concern, not an issue-body concern.
 - `**Relationships:**` block — native GitHub fields only.
 
@@ -63,10 +63,10 @@ Test: closed-issue titles listed in sequence should read as project history.
 
 ## Labels
 
-Both mandatory; pass via `--label "size:<…>,type:<…>"` on `gh issue create`.
+Both mandatory; pass via `--label "size:<…>,<type>"` on `gh issue create`.
 
 - **`size:`** — `size:S` ≤ 4 h, `size:M` ≤ 1 day, `size:L` ≤ 3 days. Larger → epic with sub-issues; raise during interview.
-- **`type:`** — exactly one of `type:feature`, `type:bugfix`, `type:refactor`, `type:infra`, `type:docs`, `type:dependency`. Reviewers and `/implement` branch on it.
+- **Type** — exactly one of `feature`, `bugfix`, `refactor`, `infra`, `docs`, `dependency`.
 
 ## What "product-level DoD" means
 
@@ -76,7 +76,7 @@ Both mandatory; pass via `--label "size:<…>,type:<…>"` on `gh issue create`.
 | `pnpm test src/cache.test.ts passes` | Returning from product page to search results shows the previous list instantly (no API call in first 100ms) |
 | `New endpoint `/v2/search` returns 200` | Search query returns matching results within 200ms p95 |
 
-Commands are fine where they're the cheapest evidence of behaviour (`./gradlew allTests -q passes` for a `BUGFIX` whose evidence is a failing-then-passing test). Avoid commands as a stand-in for the behaviour itself.
+Commands are fine where they're the cheapest evidence of behaviour (`./gradlew allTests -q passes` for a bugfix whose evidence is a failing-then-passing test). Avoid commands as a stand-in for the behaviour itself.
 
 ## Paired sides of a contract — in one task
 
