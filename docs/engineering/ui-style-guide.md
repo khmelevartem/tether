@@ -147,7 +147,7 @@ Previews must be self-contained: build fake state inline and pass it to a statel
 
 ## References
 
-- [adr/adr-visual-identity.md](adr/adr-visual-identity.md) — rationale and options considered (brand-mark portion superseded by #287)
+- [adr/adr-visual-identity.md](adr/adr-visual-identity.md) — rationale and options considered
 - [docs/product/design.md](../product/design.md) — product-side visual language
 - [presentation-layer.md](presentation-layer.md) — Decompose component conventions
 - [Inter typeface](https://rsms.me/inter/)
