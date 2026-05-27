@@ -51,7 +51,7 @@ After sanitization passes, the relative path is resolved against the platform's 
 - **Case-folding collisions** on case-insensitive volumes (macOS HFS+/APFS default, Windows). Whether two strings name the same entry is a filesystem property, not a string property.
 - **Platform-specific path normalisation** that turns a string into a different entry than the lexical reading would suggest.
 
-A failure here surfaces as `IOException` from the storage seam, mapped to `500` by the route handler, and the partial file is removed on the failure path. The check runs **before** the first byte hits the destination — opening for write after realisation, not before.
+A failure here surfaces as an I/O error from the storage seam, mapped to `500` by the route handler, and the partial file is removed on the failure path. The check runs **before** the first byte hits the destination — opening for write after realisation, not before.
 
 ## Storage seam
 
