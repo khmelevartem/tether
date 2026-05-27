@@ -6,25 +6,25 @@ How Tether extends Claude Code. Two artifact homes, both creating a `/slash-comm
 
 `.claude/skills/<name>/SKILL.md` — multi-agent orchestrations and procedures.
 
+- `check-review` — read latest PR comments, classify pointwise vs structural, fix + reply in-thread.
+- `close-issue` — finish an issue and merge its PR.
 - `code-review` — multi-agent review of a PR; fan-out + adversarial + GitHub post.
 - `document` — docs-only issue orchestrator (spec / ux-brief / tech-doc / ADR / knowledge / `.claude` prompt).
 - `github-issue-author` — strict-template GitHub issue creation via `gh`.
 - `grooming` — close current sprint by reality + gap-analysis + draft next sprint.
 - `implement` — issue-to-PR orchestrator (coder ↔ reviewers loop, smoke, PR).
 - `progress` — RPG-themed project snapshot.
+- `retro` — retrospective on an issue + its PR.
 - `smoke-test` — runtime happy-path across platforms.
+- `sprint-pick` — what to take next from the current sprint.
 
 ## Commands index
 
 `.claude/commands/<name>.md` — single-file prompt templates.
 
-- `check-review` — read latest PR comments and triage.
-- `close-issue` — finish an issue and merge its PR.
 - `progress-boring` — flat numbers variant of `/progress`.
 - `quick-issue` — lightweight `/gh issue create` (vs the full `github-issue-author` skill).
 - `rebase` — pull `origin/main` and assess semantic overlap.
-- `retro` — retrospective on an issue + its PR.
-- `sprint-pick` — what to take next from the current sprint.
 
 ## Agents index
 

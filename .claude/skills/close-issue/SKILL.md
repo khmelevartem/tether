@@ -1,3 +1,8 @@
+---
+name: close-issue
+description: Finish a GitHub issue and merge its PR — rebase, walk acceptance criteria, gate on manual smoke + user confirmation, ask one interview-prep comprehension question, sweep PR review comments, update docs touched by the change, record any engineering decisions made in chat, post-factum size label, squash-merge, follow-ups, optional retro. Use when the user says "close issue N", "merge the PR", "finish task N", "ship #N", or invokes `/close-issue`.
+---
+
 Complete task <issue number> and merge the PR.
 
 Work strictly step by step. Each step is a stop point: if something is not done, report it explicitly and wait for the user's confirmation or correction. Do not proceed to the next step without an explicit OK.
@@ -55,7 +60,7 @@ Ask the user explicitly:
 One question to the user to check understanding of principles actually applied in this task: architecture / code / mechanism / library / platform behavior. The goal is interview prep for Senior Android / KMP, not a merge-readiness audit.
 
 **Source of the question:**
-- First open the [interview prep checklist](../../docs/interview-prep-checklist.md) and find an uncompleted item (`- [ ]`) that thematically matches what changed in the PR. If there is a match — ask based on it.
+- First open the [interview prep checklist](../../../docs/interview-prep-checklist.md) and find an uncompleted item (`- [ ]`) that thematically matches what changed in the PR. If there is a match — ask based on it.
 - If no uncompleted item matches the context of the task — formulate your own question based on the actual implementation (what was specifically done in the PR and why).
 
 **Format:**
