@@ -11,6 +11,18 @@ Two artifacts work together:
 
 Lives at [`docs/glossary.md`](../glossary.md). Terms cross all three documentation layers: product framing, engineering rules, platform knowledge. Entry shape is declared in the glossary's own header — defer there, do not restate.
 
+## What qualifies as a term
+
+A term must **carry meaning outside the code** — something product or engineering discussions reference by name. It recurs across long-lived artifacts (specs, engineering docs, ADRs, review comments) as a concept, not as a symbol reference.
+
+What does NOT qualify, even if it recurs in the diff:
+- Kotlin type names.
+- Function / method names.
+- API / library symbol names.
+- Implementation techniques tied to a specific call site — describe them where the technique lives, not in the glossary.
+
+A symbol from the code that also names a stable engineering concept (the server, the storage, a view, a test fixture) does qualify — the entry is about the concept, the symbol name happens to match.
+
 ## How drift is caught
 
 `review-glossary` runs in every PR review wave:

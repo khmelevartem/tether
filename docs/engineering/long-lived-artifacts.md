@@ -10,6 +10,12 @@ A long-lived artifact states what is / what to do / what equals — in present t
 
 If a rule is unreadable without referring to an incident, that's a weak formulation. Rewrite the rule; do not append the incident.
 
+## Code does not belong in long-lived artifacts
+
+A long-lived artifact describes a mechanism conceptually — what something is, why it exists, what invariants hold. It does not name the classes, methods, or library calls that implement it; those live in the code, where readers can see them in context. Class names in backticks, method signatures, and concrete API calls inside prose are signs the rule is being expressed through implementation, not as a rule.
+
+If you find a code symbol in a long-lived artifact, check whether the surrounding sentence carries the same meaning with the symbol removed. Almost always it does — the symbol was leakage from the writing session, not a load-bearing reference. Remove it. Keep a code symbol only when the rule is genuinely about that symbol (e.g. a glossary entry whose subject is the symbol, or a doc whose subject is the library binding).
+
 ## Inline examples must be synthetic, not incident-rooted
 
 Either generalise the *shape* of the error (contrast «principle catches this, but not this other thing that looks similar») so the example is synthetic and covers the class — or leave the example out entirely.

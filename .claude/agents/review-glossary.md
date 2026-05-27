@@ -29,7 +29,7 @@ Sample load-bearing nouns in the prose under review:
 For each sampled term:
 
 1. **Drift.** Term has a glossary entry but the diff uses it with a meaning that contradicts the definition, or uses a near-synonym the glossary explicitly lists under `_Avoid:_` (e.g. «node» where glossary says **Peer** + `_Avoid: node_`). Flag as `[REQUIRED]` with the canonical term and the avoidance note.
-2. **Missing entry.** The prose under review introduces a domain term recurring across two or more touched artifacts (or already used elsewhere in the repo) without a glossary entry. Flag as `[REQUIRED]`; the writing agent adds the entry as part of addressing the finding.
+2. **Missing entry.** The prose under review introduces a **domain term** — a concept that carries meaning outside the code and recurs in product / engineering discussions, not a code symbol — across two or more touched artifacts (or already used elsewhere in the repo) without a glossary entry. Flag as `[REQUIRED]`; the writing agent adds the entry as part of addressing the finding. Use the admission rule from [`docs/engineering/glossary-discipline.md`](../../docs/engineering/glossary-discipline.md#what-qualifies-as-a-term): Kotlin type names, function / method names, API / library symbol names, and implementation-technique labels do NOT qualify — do not flag them.
 3. **Glossary self-edit.** If the prose under review touches `docs/glossary.md`, treat new/changed entries as diff-internal: don't flag them as «undocumented term», but verify the entry shape declared in the glossary header. Malformed entries are `[REQUIRED]`.
 
 Skip from sampling:
