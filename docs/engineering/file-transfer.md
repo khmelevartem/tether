@@ -1,6 +1,6 @@
 # File Transfer
 
-Tether's file-transfer subsystem owns one job: take a list of file sources picked on one device and land them as files on a paired peer, surviving brief network drops and reporting per-file outcomes. This document fixes the layering and the seams. The on-the-wire HTTP contract is in [file-transfer-wire.md](file-transfer-wire.md). The architectural decision that fixed the layering is in [adr/adr-transfer-state-repository.md](adr/adr-transfer-state-repository.md).
+Tether's file-transfer subsystem owns one job: take a list of file sources picked on one device and land them as files on a paired peer, surviving brief network drops and reporting per-file outcomes. This document describes the layering and the seams. The on-the-wire HTTP contract is in [file-transfer-wire.md](file-transfer-wire.md). The architectural decision behind the layering is in [adr/adr-transfer-state-repository.md](adr/adr-transfer-state-repository.md).
 
 ## Layering
 
