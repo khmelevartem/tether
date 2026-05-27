@@ -25,6 +25,20 @@ Step 8 (commit + push + final summary) is simplified on re-entry: the commit goe
 
 **After push on re-entry — reply to every addressed inline comment** via `gh api -X POST repos/<owner>/<repo>/pulls/<PR>/comments/<comment_id>/replies -f body="<reply>"`. For each comment: what was done + the commit SHA (or explicit reasoning if the comment was deliberately declined). Without a reply the reviewer cannot see the loop closed and the thread stays "hanging"; the next re-entry will read it again as unaddressed and uselessly re-run the inner loop. A reply is the "addressed" signal, not a courtesy.
 
+### Re-entry routing — by-agent attribution
+
+When a PR comment is scoped to work produced by a specific upstream agent (architectural decision, UX brief, UI implementation, spec, etc.), route the comment back to that agent first — not to the coder. The agent owns its work surface; the coder applies the resulting decision.
+
+Attribution heuristics:
+- Comment objects to a layering / placement / dependency-direction / mechanism choice → `architect`.
+- Comment objects to a spec gap, AC scope, or product framing → `spec-writer`.
+- Comment objects to a screen / interaction / state-flow decision → `ux-expert`.
+- Comment objects to UI rendering, theme, accessibility specifics → `ui-expert`.
+- Comment objects to a glossary / docs entry that the architect wrote → `architect`.
+- Comment is a pointwise correctness or style issue with no architectural element → `coder` via the existing inner-loop path.
+
+The originating agent returns its revised work as a chat summary to the orchestrator. The orchestrator then decides next steps: dispatch `coder` to apply the revision, dispatch `ui-expert` for a re-render, re-run reviewers, or escalate to the user when the revision changes scope (new top-level types, layer crossings, deleted contracts). A structural revision is not an inner-loop iteration on the coder's output; running it through the coder skips the agent who owns the decision and risks repackaging the comment incorrectly (see `## No-deflection principle` §Review transmission accuracy).
+
 ## No-deflection principle
 
 When someone — the user or a reviewer — asks a question about an artifact or demands a change, the answer must be **substantive**: either a justification for why the artifact stays as-is, or a genuine edit to the artifact itself. Intermediate actions — precautionary destruction, a half-fix, justifying via KDoc / comment / documentation instead of changing the code — are deflection. Forbidden.

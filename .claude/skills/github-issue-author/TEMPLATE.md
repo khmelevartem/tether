@@ -115,6 +115,8 @@ Without this note the implementer may treat the first hypothesis as fact and wri
 
 List of classes / modules / files / endpoints / DB tables expected to be touched. If not known precisely — state the presumed location and mark `(to confirm)`.
 
+**Pre-bake behaviour and contracts, not packages or layer placement.** File paths and module names are landmarks for the implementer to verify, not architectural commitments. Choosing the layer / package for a new top-level type, and the dependency direction between layers, is the architect's job during `/implement` (against `docs/engineering/architecture-principles.md`). Body wording: "touches the file-server boundary" — not "lives in `com.example.network.foo`". Naming a concrete package is fine for an existing type the task only modifies; for a new top-level type, leave placement to `/implement`.
+
 ### Code landmarks
 
 (optional, but greatly helps the implementing agent)

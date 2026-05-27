@@ -283,3 +283,4 @@ Full issue creation examples — see [EXAMPLES.md](EXAMPLES.md).
 - **Don't apply labels that don't exist in the repository** — first check `gh label list --repo OWNER/REPO` if unsure.
 - **Don't invent files and modules** if the user didn't mention them and they're not obvious from the repository. Better to write `(clarify during breakdown)`.
 - **Don't ignore `size:L`** — it's a signal to "split into an epic", not "write a big issue".
+- **Don't pre-commit layering in the body** — file paths and module names are landmarks, not architectural commitments. Where a new top-level type lives in the layering (which package, what depends on what) is `/implement`'s decision via the architect agent, against `docs/engineering/architecture-principles.md`. Issue bodies that fix `com.example.foo.bar.NewRepository` as the home of a new top-level type pre-empt that decision and produce churn when the assignee disagrees.

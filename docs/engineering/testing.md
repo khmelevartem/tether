@@ -4,6 +4,8 @@ Tests are mandatory. When implementing any functionality, write unit and/or inte
 
 **Behaviour fix — regression test in the same commit.** If a commit fixes an observable behaviour (bug, regression, non-feature), the same commit must include a test that would have failed without the fix. This applies equally to BUGFIX issues and to bugs found mid-flight on a FEATURE task (manual user test, review, smoke). If the regression test costs more than the fix itself — that is a signal that the testability seam needs to be improved in the same change (extract a function, move a dependency into a parameter), not deferred.
 
+**Assert at the stable external seam.** Behavioural invariants — concurrency rules, lifecycle bookkeeping, ordering, error mapping — assert at the public API of the unit under test (constructor / DI entry point used in production, exposed flows, returned values, emitted events), not at internals. Tests bound to private state, internal classes, or reflection pay a refactor tax: every layer move or rename rewrites them. Tests at the external seam survive refactors as long as the contract holds, which is the test's job to check. If a test cannot be expressed at the external seam without touching internals, the seam is wrong — fix the seam, not the test.
+
 A test lives in the most general source set across whose targets every referenced type has an identical signature; types with platform-divergent signatures (different constructor, different `expect/actual` shape) force the test into a more specific source set.
 
 ## Style
