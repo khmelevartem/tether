@@ -70,7 +70,7 @@ One question to the user to check understanding of principles actually applied i
 **After the user's answer:**
 - Assess correctness: what is right, what is missing, what is imprecise or wrong. Without leniency and without aggression — like a technical interviewer giving honest feedback.
 - If the answer was based on an item from the checklist — mark it as completed (`- [ ]` → `- [x]`) directly in `docs/interview-prep-checklist.md` via Edit. If the question was your own (not from the checklist) — add it to the "Additional questions from tasks" section at the end of the checklist as `- [x] <question>` via Edit.
-- **Commit the checklist edit into the current PR branch and push, before Step 6 merge.** Direct pushes to `main` are blocked; landing the edit separately afterwards forces a redundant follow-up PR for one line. The checklist update is part of closing this issue, not a separate concern.
+- **Commit the checklist edit into the current PR branch and push, before Step 6 merge.**
 
 **This is not a stop-point based on the content of the answer** — a weak answer does not block the merge. The user decides themselves whether to proceed or explore the topic further. The stop-point is only the fact that the question was asked and an answer was received.
 
