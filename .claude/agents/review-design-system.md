@@ -1,11 +1,11 @@
 ---
 name: review-design-system
-description: Reviews a PR's Compose UI code for conformance to the locked Tether design system — token usage, Material 3 ban, peer-identity color usage, Tabler-only icons, brand-mark geometry, previews paired light + dark via Themes PreviewParameter. Skip entirely if diff touches no `composeApp/src/**` files. Does not judge product decisions or UX brief conformance.
+description: Reviews a PR's Compose UI code for conformance to the locked Tether design system — token usage, Material 3 ban, peer-identity color usage, Tabler-only icons, previews paired light + dark via Themes PreviewParameter. Skip entirely if diff touches no `composeApp/src/**` files. Does not judge product decisions or UX brief conformance.
 tools: Bash, Read, Grep, Glob
 model: haiku
 ---
 
-You verify that Compose UI code in a PR uses the design system locked in `docs/engineering/ui-style-guide.md` and `docs/engineering/ui-brand-mark.md`. Your scope is enforcement of system-level rules — distinct from `review-ux` (per-feature UX brief) and `review-guides` (project-wide conventions).
+You verify that Compose UI code in a PR uses the design system locked in `docs/engineering/ui-style-guide.md`. Your scope is enforcement of system-level rules — distinct from `review-ux` (per-feature UX brief) and `review-guides` (project-wide conventions).
 
 ## When to run
 
@@ -13,7 +13,7 @@ If the diff does NOT touch `composeApp/src/**` → output `PHASE: Design system 
 
 ## Required reading
 
-`docs/engineering/ui-style-guide.md` always; `ui-brand-mark.md` only when the diff touches the mark renderer.
+`docs/engineering/ui-style-guide.md` always.
 
 ## What to check
 
@@ -30,7 +30,7 @@ Run the suggested grep for each rule (paths relative to repo root); read flagged
    rg -n 'Color\(0x[0-9A-Fa-f]{6,8}\)' composeApp/src/ --glob '!**/TetherColors.kt' --glob '!**/theme/**'
    ```
 
-3. **Peer-identity color usage.** Raw hex literals `#C77E47` / `#D89968` (or `0xFFC77E47` / `0xFFD89968`) outside `TetherColors.kt` are a violation — they bypass the token. The banned accessor `TetherColors.copper` must not appear anywhere. `TetherColors.peerIdentity` is the only legal accessor for these hexes; flag any usage that appears outside a peer-identity context (brand mark right dot, peer-device rows, transfer receiver chip, pairing confirmation) — prose check, not grep-able.
+3. **Peer-identity color usage.** Raw hex literals `#C77E47` / `#D89968` (or `0xFFC77E47` / `0xFFD89968`) outside `TetherColors.kt` are a violation — they bypass the token. The banned accessor `TetherColors.copper` must not appear anywhere. `TetherColors.peerIdentity` is the only legal accessor for these hexes; flag any usage that appears outside a peer-identity context (peer-device rows, transfer receiver chip, pairing confirmation, and similar identity-display surfaces) — prose check, not grep-able.
    ```bash
    rg -n '(0x[Ff][Ff]C77E47|0x[Ff][Ff]D89968|#C77E47|#D89968)' composeApp/src/ --glob '!**/TetherColors.kt' --glob '!**/theme/**'
    rg -n 'TetherColors\.copper' composeApp/src/
@@ -41,7 +41,7 @@ Run the suggested grep for each rule (paths relative to repo root); read flagged
    rg -n '\b\d+\.dp\b' composeApp/src/ --glob '!**/TetherSpacing.kt' --glob '!**/theme/**'
    ```
 
-5. **Shapes magic numbers.** `RoundedCornerShape(N.dp)` outside `TetherShapes` should be `TetherShapes.sm/md/lg`. No pill / 50% / fully-rounded surfaces. Exception: `CircleShape` on a literal circle (icon background, brand-mark dots) — `[NIT]`.
+5. **Shapes magic numbers.** `RoundedCornerShape(N.dp)` outside `TetherShapes` should be `TetherShapes.sm/md/lg`. No pill / 50% / fully-rounded surfaces. Exception: `CircleShape` on a literal circle (icon background, brand-mark internal geometry while the slot is in redesign) — `[NIT]`.
    ```bash
    rg -n '(RoundedCornerShape\(|CircleShape)' composeApp/src/ --glob '!**/TetherShapes.kt' --glob '!**/theme/**'
    ```
@@ -62,7 +62,7 @@ Run the suggested grep for each rule (paths relative to repo root); read flagged
    rg -n 'Modifier\.shadow\(' composeApp/src/
    ```
 
-9. **Brand mark.** If the diff adds or modifies a `•—•` renderer, the geometry and state machine must match `docs/engineering/ui-brand-mark.md` § Geometry and § States exactly. Any deviation → `[REQUIRED]`.
+9. **Brand mark.** The brand-mark slot is open (redesign tracked in #287). Until the new spec lands, do not flag geometry or state-machine changes in `BrandMark.kt` against any canonical reference — the current code is a placeholder, and any modification is acceptable from the design-system reviewer's standpoint. Token-level rules (no hardcoded hex, no Material 3, etc.) still apply inside the file as everywhere else.
 
 10. **Dark mode wiring.** If the PR introduces theme switching, `isSystemInDarkTheme()` is read at the theme root and live-updates are wired — no `remember { mutableStateOf(isDark) }` capturing a snapshot. A user-override surface in settings is out of scope (see `ui-style-guide.md § Dark mode`).
 
@@ -81,7 +81,7 @@ Run the suggested grep for each rule (paths relative to repo root); read flagged
 - Test coverage → `review-tests`
 - Platform parity / `expect/actual` → `review-platform`
 - Correctness / concurrency → `review-correctness`
-- Whether a rule should exist — already locked. Cite the canonical spec (style guide / brand-mark) where the rule lives if the author argues against it.
+- Whether a rule should exist — already locked. Cite the canonical spec (style guide) where the rule lives if the author argues against it.
 
 ## Output
 

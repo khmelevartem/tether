@@ -24,7 +24,7 @@ One screen — the device list. This brief specifies one thing on it: **NoLocalN
 **Layout.**
 
 - Full-screen centred layout with generous vertical spacing; no list, no search indicator.
-- Illustration region: the `•—•` mark in its **disconnected** state ([`ui-brand-mark.md` § Disconnected](../../../../engineering/ui-brand-mark.md)) — both dots filled at full opacity, dashed connecting line. Static, no animation. Visually distinct from the searching state (hollow pulsing right dot).
+- Illustration region: the brand mark in its **disconnected** state. Static, no animation. Visually distinct from the searching state.
 - Title (prominent, weight 600): "Wi-Fi is off"
 - Rationale line (secondary, weight 400): "Turn Wi-Fi on to find devices on your network."
 - Primary action button (teal accent, full-width on mobile): "Open Wi-Fi settings"
@@ -58,7 +58,7 @@ One screen — the device list. This brief specifies one thing on it: **NoLocalN
 
 **Accessibility.**
 
-- The `•—•` illustration region: semantic label "No network connection" (hidden from sighted users, announced by screen reader).
+- The brand-mark illustration region: semantic label "No network connection" (hidden from sighted users, announced by screen reader).
 - "Open Wi-Fi settings" button: label matches visible text; announces as a button that opens an external app.
 - Focus order (Desktop): illustration (skip, decorative) → title → rationale → button (if present).
 - The screen must not trap focus; back / close remains reachable via keyboard on Desktop.
@@ -71,7 +71,7 @@ One screen — the device list. This brief specifies one thing on it: **NoLocalN
 
 **Layout.** Identical structure to the mobile variant.
 
-- Same disconnected `•—•` illustration.
+- Same disconnected brand-mark illustration.
 - Title (prominent, weight 600): "You're not on a local network"
 - Rationale line (secondary, weight 400): "Connect to Wi-Fi or Ethernet to find devices."
 - Written instruction (replaces rationale when no deep-link): "Connect to Wi-Fi or Ethernet in the system network menu."
@@ -102,10 +102,10 @@ One screen — the device list. This brief specifies one thing on it: **NoLocalN
 
 1. User opens Tether. Local device has no Wi-Fi.
 2. DeviceListScreen renders immediately in NoLocalNetworkState (mobile wording).
-3. User sees: disconnected `•—•` illustration, "Wi-Fi is off", rationale, and — on Android — the "Open Wi-Fi settings" button.
+3. User sees: disconnected brand-mark illustration, "Wi-Fi is off", rationale, and — on Android — the "Open Wi-Fi settings" button.
 4. On Android: user taps the button → OS Wi-Fi settings open. On iOS/macOS/Desktop: user opens the system menu / shade themselves per the written instruction.
 5. User enables Wi-Fi, returns to Tether (via back gesture or app switcher).
-6. Within a few seconds, DeviceListScreen transitions to the searching state (animated `•—•`).
+6. Within a few seconds, DeviceListScreen transitions to the searching state (animated brand mark).
 7. Peers appear in the list as discovery finds them.
 
 **Failure in step 4:** If the Android deep-link fails silently (rare), the screen remains on NoLocalNetworkState. No error toast is shown — the state is self-describing.
@@ -140,7 +140,7 @@ The "Open Wi-Fi settings" action launches the OS Settings app as an external int
 ## Conceptual components
 
 1. **No-local-network full-screen state** — the full-screen empty state replacing the device list when the local device has no usable network. Two copy variants (mobile / desktop) sharing the same layout structure.
-2. **Disconnected brand-mark illustration** — the `•—•` mark in its disconnected state per [`ui-brand-mark.md`](../../../../engineering/ui-brand-mark.md) (both dots filled, dashed line). Static, used exclusively in the no-local-network screen.
+2. **Disconnected brand-mark illustration** — the brand mark in its disconnected state. Static, used exclusively in the no-local-network screen.
 3. **Open-settings action** — a platform-conditional teal button that triggers an OS deep-link to network settings. Renders only when the OS provides a stable deep-link; absent otherwise.
 4. **Written network instruction** — a secondary-tone instruction line that replaces the action button on platforms without a stable settings deep-link.
 

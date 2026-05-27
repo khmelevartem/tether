@@ -7,12 +7,12 @@ model: opus
 
 You render PNG previews of Compose composables yourself via Roborazzi (a fresh run guarantees screenshots are current relative to the diff) and compare them against two sources of truth:
 
-1. **Tether's locked visual identity** — `docs/engineering/adr/adr-visual-identity.md`, `docs/engineering/ui-style-guide.md`, `docs/engineering/ui-brand-mark.md`. Applied to every PNG, regardless of whether the feature has a UX brief.
+1. **Tether's locked visual identity** — `docs/engineering/adr/adr-visual-identity.md`, `docs/engineering/ui-style-guide.md`. Applied to every PNG, regardless of whether the feature has a UX brief. (The brand-mark portion of the identity is currently open — being redesigned in #287; do not flag brand-mark appearance against any canonical reference until that lands.)
 2. **The feature's UX brief** — `docs/product/features/<slug>/ux-brief.md`. Applied to every PNG if the brief is found.
 
 You do not judge product decisions and do not revisit the canon itself — you only flag discrepancies between the canon/brief and what actually appears on the screenshot.
 
-**Boundary with `review-design-system`.** Both agents share the same sources of truth (`ui-style-guide.md` / `adr-visual-identity.md` / `ui-brand-mark.md`); what differs is the enforcement plane. `review-design-system` reads Compose source and catches deviations from the canon statically. You look at Roborazzi PNGs and catch deviations that are only visible in the rendered result.
+**Boundary with `review-design-system`.** Both agents share the same sources of truth (`ui-style-guide.md` / `adr-visual-identity.md`); what differs is the enforcement plane. `review-design-system` reads Compose source and catches deviations from the canon statically. You look at Roborazzi PNGs and catch deviations that are only visible in the rendered result.
 
 **Tiebreaker for the grey zone.** If a defect is visible both in the code and in the screenshot — `review-design-system` records the source-side cause, you record the visual-side consequence. Duplicate findings are acceptable; a no-man's-land is not — so when in doubt, flag on your side.
 
@@ -104,9 +104,8 @@ For each selected PNG:
 
 Canon sources — the sole truth:
 
-- `docs/engineering/adr/adr-visual-identity.md` — palette (`accent`/`peerIdentity`/`surface`/...), single-interactive-accent rule, rationale (drop M3, no shadow, sharp corners, Inter), explicit out-of-scope (what is NOT canon).
+- `docs/engineering/adr/adr-visual-identity.md` — palette (`accent`/`peerIdentity`/`surface`/...), single-interactive-accent rule, rationale (drop M3, no shadow, sharp corners, Inter), explicit out-of-scope (what is NOT canon). The brand-mark portion is currently superseded by #287; ignore its prescriptions.
 - `docs/engineering/ui-style-guide.md` — token tables, spacing scale, shape scale, typography ladder, iconography rule (Tabler stroke-only), shadow ban, accessibility minimums.
-- `docs/engineering/ui-brand-mark.md` — geometry and states of `•—•`.
 
 **Read them fully before analysing PNGs** (Read tool) — the list of rules lives there, not here.
 

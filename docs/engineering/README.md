@@ -14,7 +14,6 @@ Product-side docs (vision, audience, features) live in [`docs/product/`](../prod
 - [File transfer wire contract](file-transfer-wire.md) — `POST /upload?name=<relative-path>` shape, two-layer path sanitization (lexical in route + canonical-realisation in `UploadStorage`), per-platform storage seam.
 - [Local-network availability](wifi-availability.md) — single common stream gating discovery and the no-local-network UI; per-platform sources (Android `NetworkCallback`, Apple `NWPathMonitor`, Desktop `NetworkInterface` polling).
 - [UI Style Guide](ui-style-guide.md) — token tables, `TetherTheme` rule, Tabler Icons usage, motion specs, accessibility checklist.
-- [UI Brand Mark](ui-brand-mark.md) — `•—•` geometry, animation states, where the mark appears, and design rationale (why a line, not a knot or arrow).
 - [Testing](testing.md) — test structure by source set, style (`runTest` / virtual time), Apple-target specifics.
 - [Logging](logging.md) — KydraLog as the single KMP façade; `Tether.<Subsystem>` naming, levels, per-platform DEBUG gating, test silence, sensitive-data policy.
 - [Persistence](persistence.md) — key-value store contract and DataStore backend.
@@ -37,7 +36,7 @@ ADRs in [`adr/`](adr/) capture the *why* behind one-time architectural choices. 
 
 - [Presentation & Navigation](adr/adr-presentation-and-navigation.md) — chose Decompose over Voyager / custom thin layer / Compose Navigation MP / Premo.
 - [macOS target — Desktop JVM (reversed from Native)](adr/adr-macos-native-vs-jvm.md) — originally chose `macosArm64` Kotlin/Native; reversed 2026-05-25 to Desktop JVM because Compose-MP macOS-native UI is unsupported.
-- [Visual Identity](adr/adr-visual-identity.md) — palette, typography, iconography, brand mark `•—•`; dropped Material 3 in favour of custom `TetherTheme`.
+- [Visual Identity](adr/adr-visual-identity.md) — palette, typography, iconography; dropped Material 3 in favour of custom `TetherTheme`. (Brand-mark portion superseded by #287 — slot open, being redesigned.)
 - [Network stack](adr/adr-network-stack.md) — chose Ktor CIO across all targets tactically; engine swaps under TLS forced upstream. Living-doc side — [`transport.md`](transport.md).
 - [Apple FileServer engine](adr/adr-apple-fileserver-engine.md) — chose Ktor CIO Native over hand-rolled HTTP for the Apple-side `FileServer.actual`.
 - [Channel encryption](adr/adr-channel-encryption.md) — chose TLS-with-paired-key-pinning + SecureTransport on Apple. Includes 2026-05-16 Amendment with implementation-plan corrections.
