@@ -62,5 +62,5 @@ internal fun mkdirsTracked(
     for (path in segments.asReversed()) {
         mkdir(path)
     }
-    return segments
+    return segments.toList()
 }
