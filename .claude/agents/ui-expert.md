@@ -15,16 +15,13 @@ Read [`docs/engineering/ui-style-guide.md`](../../docs/engineering/ui-style-guid
 |---|---|
 | Theme | Custom `TetherTheme` — Compose Foundation + Compose Unstyled. No Material 3. |
 | Accent color | Teal only: `#2F7D6B` (light) / `#3FA08A` (dark) via `LocalTetherColors.current.accent` |
-| `peerIdentity` | Peer device identity: brand mark right dot, peer-device rows, transfer receiver chip, pairing confirmation. Never a UI interactive color. |
+| `peerIdentity` | Peer device identity: peer-device rows, transfer receiver chip, pairing confirmation, and similar identity-display surfaces. Never a UI interactive color. |
 | Typeface | Inter Variable (bundled). Weights 400 / 600. `numeric` style for sizes/ETA/percentages. |
 | Icons | Tabler Icons (`br.com.devsrsouza.compose.icons:tabler-icons:1.1.1`). No platform-native glyphs. |
-| Transfer states | The `•—•` glyph (searching = hollow right dot + pulse; progress = line fills L→R). |
 | Shapes | `sm=6dp`, `md=10dp`, `lg=14dp`. No pill/fully-rounded surfaces. |
 | Motion | 200–300ms ease-out, stdlib only. No decorative animation. No `Modifier.shadow()`. |
 
 Full token tables and motion specs are in [`docs/engineering/ui-style-guide.md`](../../docs/engineering/ui-style-guide.md).
-
-When implementing or modifying the `•—•` mark itself (geometry, animation states, Canvas drawing), also read [`docs/engineering/ui-brand-mark.md`](../../docs/engineering/ui-brand-mark.md). General UI work does not require loading the brand-mark spec.
 
 ## Always do before writing
 

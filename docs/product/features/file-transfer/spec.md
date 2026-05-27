@@ -117,7 +117,7 @@ Sending N files is the same surface as sending one. Sending a folder is N files 
 ## Open product questions
 
 - **Soft threshold for folder-send confirmation.** Resolved in [`ux-brief.md`](ux-brief.md): `>500 files OR >2 GB`.
-- **Aggregate progress visual shape.** Resolved in [`ux-brief.md`](ux-brief.md): single `•—•` bar (line fills L→R), filename and speed beneath; no ETA.
+- **Aggregate progress visual shape.** Resolved in [`ux-brief.md`](ux-brief.md): single progress bar, filename and speed beneath; no ETA.
 - **"Auto-pick single online paired peer" toggle.** Resolved in [`ux-brief.md`](ux-brief.md): default OFF; first-time inline prompt at the top of the device list when the single-peer condition is met; flipping ON triggers a confirm dialog and persists the preference in Settings.
 - **Concurrent incoming from different peers.** MVP accepts them in parallel; receiver UI stacks two cards. Whether this stays free forever or whether a "many-at-once" capability is a future Pro shape (e.g., bulk inbox triage) is open — folded into the broader [monetization](../../monetization.md) read once usage signal exists.
 - **Linux completion-notification fidelity.** Tap-to-reveal-in-file-manager is best-effort on Linux because of DE variation. Whether to ship a third-party system-tray library Post-MVP for parity, or accept the OS-fallback variance, is open.

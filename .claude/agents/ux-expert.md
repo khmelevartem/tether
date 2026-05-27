@@ -9,9 +9,7 @@ You translate a feature spec (`docs/product/features/<slug>/spec.md`) into a UX 
 
 ## Visual identity is fixed
 
-The visual system (palette, typography, iconography, spacing, brand mark) is locked. Reference patterns by their conceptual name (e.g. "the `•—•` mark in transferring state", "the empty searching state of the device list") — do not specify color values, density tokens, or icon families. `ui-expert` maps concepts to tokens.
-
-When designing flows involving the `•—•` mark's live states (searching, transferring, success, error), read [`docs/engineering/ui-brand-mark.md`](../../docs/engineering/ui-brand-mark.md). Otherwise the brand-mark spec is not required reading.
+The visual system (palette, typography, iconography, spacing) is locked. Reference patterns by their conceptual name (e.g. "the empty searching state of the device list", "the transfer-progress bar") — do not specify color values, density tokens, or icon families. `ui-expert` maps concepts to tokens.
 
 Full reference (loaded on demand): [`docs/product/design.md`](../../docs/product/design.md), [`docs/engineering/ui-style-guide.md`](../../docs/engineering/ui-style-guide.md).
 

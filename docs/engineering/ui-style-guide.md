@@ -25,12 +25,12 @@ Token values for both themes:
 | `textMuted` | `#6B6B73` | `#9A9DA3` | Secondary labels, captions, timestamps |
 | `accent` | `#2F7D6B` | `#3FA08A` | Active state, progress fills, interactive accents |
 | `error` | `#B4423A` | `#E26A60` | Error text, destructive action labels |
-| `peerIdentity` | `#C77E47` | `#D89968` | Peer device identity — brand mark right dot, peer-device rows, transfer receiver chip, pairing confirmation. Never as an interactive accent. |
+| `peerIdentity` | `#C77E47` | `#D89968` | Peer device identity — peer-device rows, transfer receiver chip, pairing confirmation, and similar identity-display surfaces. Never as an interactive accent. |
 
 ### Color rules
 
 - **`accent` is the only interactive color.** Buttons, progress fills, focus rings, checked states — all use `accent`. No other color takes an interactive meaning.
-- **`peerIdentity` identifies a peer device or the far end of the tether.** Legal contexts: brand mark (right dot), peer-device rows in device list, transfer receiver chip, pairing confirmation, and similar identity-display surfaces. Never as an interactive accent — that role belongs to `accent` (teal).
+- **`peerIdentity` identifies a peer device or the far end of the tether.** Legal contexts: peer-device rows in device list, transfer receiver chip, pairing confirmation, and similar identity-display surfaces. Never as an interactive accent — that role belongs to `accent` (teal).
 - **Never hardcode color literals** outside the color token definitions. Read all colors from the current `TetherColors` instance via its composition local.
 - **Elevation is expressed by surface tiers and `border`.** Use `surfaceRaised` + a 1dp `border`-colored outline for cards/sheets instead of shadow effects. This avoids the iOS Skia blur-shadow performance cost.
 
@@ -106,19 +106,12 @@ Rules:
 - Decorative icons (purely illustrative, accompanied by text that carries the meaning) use a null content description.
 - Do not mix Tabler Icons with platform-native system glyphs. The content description fills the platform-native accessibility role.
 
-## Brand mark — `•—•`
-
-Full spec: [ui-brand-mark.md](ui-brand-mark.md).
-
-`peerIdentity` (`#C77E47` / `#D89968`) is used in the mark's right dot and in peer-identity UI contexts (see Color rules). Everywhere else, accent is teal.
-
 ## Motion
 
 | Use | Duration | Easing |
 |---|---|---|
 | State-change affirmation (peer appeared, transfer done) | 200–300ms | ease-out |
 | Enter/exit transitions | 200ms | ease-out |
-| `•—•` searching dot opacity pulse | 2000ms loop | linear |
 | Transfer progress line fill | driven by real data, no fixed duration | spring (default damping) |
 
 Rules:
@@ -154,7 +147,6 @@ Previews must be self-contained: build fake state inline and pass it to a statel
 
 ## References
 
-- [ui-brand-mark.md](ui-brand-mark.md) — `•—•` geometry, states, and design rationale
 - [adr/adr-visual-identity.md](adr/adr-visual-identity.md) — rationale and options considered
 - [docs/product/design.md](../product/design.md) — product-side visual language
 - [presentation-layer.md](presentation-layer.md) — Decompose component conventions

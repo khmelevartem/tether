@@ -128,7 +128,7 @@ The card expanded to reveal per-peer settings.
 Card swells. Transfer in progress from this device to the peer.
 
 - Peer name (top row).
-- `•—•` brand mark in transfer-progress state (line fills left-to-right, proportional to total bytes transferred).
+- Progress bar advancing proportionally to total bytes transferred.
 - Current filename (one line, center-truncated with ellipsis).
 - Progress copy: "X.X MB of Y.Y MB".
 - Transfer speed: "3.2 MB/s" (shows "Calculating…" for first ~3 s).
@@ -142,7 +142,7 @@ Card swells. Transfer in progress from this device to the peer.
 Symmetric to Active outbound. Card swells.
 
 - Peer name (top row, prefixed: "From \<peer\>").
-- `•—•` brand mark in transfer-progress state.
+- Progress bar.
 - Sender's current filename (center-truncated).
 - Progress copy: "X.X MB of Y.Y MB".
 - A [Show details →] button opens TransferDetailsScreen in its in-progress mode.
@@ -154,7 +154,7 @@ Symmetric to Active outbound. Card swells.
 Triggered when the underlying connection drops without a graceful end (neither side tapped Cancel). Applies symmetrically to both outbound and inbound.
 
 - Peer name.
-- `•—•` in its Searching state (hollow right dot, opacity oscillation) — semantically: we are searching for the peer again.
+- Animated searching indicator — semantically: we are searching for the peer again.
 - Copy: "Reconnecting to \<peer\>… (\<countdown\>s)".
 - Countdown ticks down from `RECONNECTION_TIMEOUT` (default 15 s; final value set at implementation time).
 - If connection is restored within the window: card silently resumes the Active outbound or Active inbound state.
@@ -167,7 +167,7 @@ Triggered when the underlying connection drops without a graceful end (neither s
 Replaces any inline inbound card after a successful inbound transfer completes. Persistent — does not self-dismiss.
 
 - Peer name.
-- `•—•` in success state for ~700 ms (per brand-mark spec), then settles with line fully filled.
+- Brief success affirmation, then the progress bar settles fully filled.
 - Copy: "Received \<N\> files from \<peer\> — tap to open".
 - A [Show details →] button navigates to TransferDetailsScreen for the per-file breakdown (every file shown Done).
 - Tapping the card body attempts an OS deep-link to the saved folder.
@@ -193,7 +193,7 @@ Replaces any inline inbound card after a successful inbound transfer completes. 
 Symmetric to Received. Persistent — does not self-dismiss.
 
 - Peer name.
-- `•—•` in success state for ~700 ms, then settles.
+- Brief success affirmation, then settles.
 - Copy: "Sent \<N\> files to \<peer\>".
 - A [Show details →] button navigates to TransferDetailsScreen for the per-file breakdown (every file shown Done).
 - [Dismiss ×] affordance in the trailing corner (semantic label: "Dismiss sent notification to \<peer\>").
@@ -211,7 +211,7 @@ Symmetric to Received. Persistent — does not self-dismiss.
 Persistent — does not self-dismiss.
 
 - Peer name.
-- `•—•` in error state: line truncated at failure point, right dot hollow in error tone.
+- Error indicator (illustration distinct from the progress and searching states).
 - Error copy (see error matrix below).
 - [Retry button] and [Dismiss × button] in trailing area. [Retry button] is disabled (grayed, not hidden) when the peer is offline.
 - A [Show details →] button navigates to TransferDetailsScreen for the per-file outcome breakdown (rows show their final status, even if every row is Failed).
@@ -304,10 +304,10 @@ Brief inline state. Persistent — does not self-dismiss.
   - Start: "Sending \<N\> files to \<peer\>" or "Receiving files from \<peer\>".
   - Per-file failure: "Failed to send \<filename\>" (assertive).
   - Done: "Sent \<N\> files to \<peer\>" or "Received \<N\> files from \<peer\>" (assertive).
-- `•—•` mark `contentDescription` in transfer-progress state: "Transfer in progress".
-- `•—•` mark `contentDescription` in success state: "Transfer complete".
-- `•—•` mark `contentDescription` in error state: "Transfer failed".
-- `•—•` mark `contentDescription` in reconnecting state (Searching state of the mark): "Reconnecting to peer".
+- Progress bar `contentDescription` in transfer-progress state: "Transfer in progress".
+- Status illustration `contentDescription` in success state: "Transfer complete".
+- Status illustration `contentDescription` in error state: "Transfer failed".
+- Searching indicator `contentDescription` in reconnecting state: "Reconnecting to peer".
 - [Cancel button] semantic label: "Cancel transfer to \<peer\>" or "Cancel incoming transfer from \<peer\>".
 - Reconnecting state: assertive live-region announcement: "Connection lost. Reconnecting to \<peer\>…".
 - Received state card body (when tappable): role is `button`; semantic label: "Open files received from \<peer\>".
@@ -577,8 +577,8 @@ Auto-send is configured per-peer via the expanded PeerCard (see PeerCard § Idle
 3. **Android/iOS:** MobilePickerChooserSheet appears. User taps "Photos" or "Files". System picker opens. User selects files. Sheet closes.
    **macOS/Desktop:** System file dialog opens directly. User selects files.
 4. If selection exceeds threshold (>500 files OR >2 GB): LargeSelectionConfirmDialog appears. User taps [Send button].
-5. PeerCard transitions to Active outbound. `•—•` brand mark fills left-to-right. Filename, progress copy ("X.X MB of Y.Y MB"), and speed update live. Receiver's same PeerCard transitions to Active inbound.
-6. Transfer completes. `•—•` plays success animation. Sender's PeerCard transitions to Sent state: "Sent \<N\> files to \<peer\>". Receiver's PeerCard transitions to Received state: "Received \<N\> files from \<peer\> — tap to open". Both states persist until dismissed.
+5. PeerCard transitions to Active outbound. Progress bar advances. Filename, progress copy ("X.X MB of Y.Y MB"), and speed update live. Receiver's same PeerCard transitions to Active inbound.
+6. Transfer completes. Success affirmation plays. Sender's PeerCard transitions to Sent state: "Sent \<N\> files to \<peer\>". Receiver's PeerCard transitions to Received state: "Received \<N\> files from \<peer\> — tap to open". Both states persist until dismissed.
 
 ### Flow 2 — Share-sheet entry, already paired
 
@@ -711,10 +711,10 @@ Auto-send is configured per-peer via the expanded PeerCard (see PeerCard § Idle
 
 1. **PeerCard** — inline card within DeviceListScreen's peer list; baseline (Idle collapsed row variants Cases 1–4) owned by [device-list/ux-brief.md](../device-list/ux-brief.md). File-transfer extends it with the Idle (expanded) state and the transfer-active states (Active outbound, Active inbound, Connection paused/reconnecting, Received, Sent, Error, Cancelled).
 2. **PeerCard auto-send toggle** — per-peer toggle with [i] info affordance; lives in PeerCard Idle (expanded); drives the auto-send preference for that specific peer.
-3. **Transfer progress mark** — the `•—•` brand mark in transfer-progress state (line fills left-to-right). Used in PeerCard Active states.
-4. **Transfer success mark** — the `•—•` in success state (~700 ms animation). Used in PeerCard Received/Sent states.
-5. **Transfer error mark** — the `•—•` in error state (line truncated, right dot hollow in error tone). Used in PeerCard Error state.
-6. **Transfer reconnecting mark** — the `•—•` in its Searching state (hollow right dot, opacity oscillation). Used in PeerCard Connection paused/reconnecting state to indicate the app is searching for the peer again.
+3. **Transfer progress bar** — fills as bytes flow. Used in PeerCard Active states.
+4. **Transfer success affirmation** — brief visual moment after completion. Used in PeerCard Received/Sent states.
+5. **Transfer error indicator** — illustration distinct from progress and searching. Used in PeerCard Error state.
+6. **Transfer reconnecting indicator** — animated searching illustration. Used in PeerCard Connection paused/reconnecting state to indicate the app is searching for the peer again.
 7. **Pending-outbound banner** — non-dismissible strip above peer-cards; persistent until peer chosen or [Cancel button] tapped; no self-dismiss.
 8. **iOS foreground constraint banner** — persistent non-dismissible system-style banner informing the user to keep Tether open during transfers; iOS only.
 9. **Current-file label** — one-line center-truncated filename display. Used on PeerCard Active states.
