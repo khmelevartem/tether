@@ -205,15 +205,11 @@ def top_artifacts(prs_merged: list, n: int = 5) -> list:
 
 
 def hot_battles(prs: list, n: int = 5) -> list:
-    def heat(p):
-        return p.get("comments", {}).get("totalCount", 0) + p.get("reviewThreads", {}).get("totalCount", 0)
-    return sorted(prs, key=heat, reverse=True)[:n]
+    return sorted(prs, key=lambda p: p.get("comments", {}).get("totalCount", 0) + p.get("reviewThreads", {}).get("totalCount", 0), reverse=True)[:n]
 
 
 def heavy_marches(prs: list, n: int = 5) -> list:
-    def weight(p):
-        return p.get("additions", 0) + p.get("deletions", 0)
-    return sorted(prs, key=weight, reverse=True)[:n]
+    return sorted(prs, key=lambda p: p.get("additions", 0) + p.get("deletions", 0), reverse=True)[:n]
 
 
 def _pr_to_date(pr: dict, field: str) -> date | None:
@@ -334,14 +330,13 @@ def glory_of_days(prs_merged: list, issues_by_number: dict, keywords: dict,
 
     totals = [days[k]["feature"] + days[k]["infra"] for k in sorted(days)]
     total_valor = sum(totals)
-    avg_valor = total_valor / len(totals) if totals else 0.0
     peak_val = max(totals, default=0.0)
     peak_day = sorted(days)[totals.index(peak_val)] if totals else today.isoformat()
 
     return dict(
         days=days,
         total=round(total_valor, 1),
-        avg=round(avg_valor, 2),
+        avg=round(total_valor / len(totals) if totals else 0.0, 2),
         peak_val=round(peak_val, 1),
         peak_day=peak_day,
     )
@@ -1272,11 +1267,9 @@ def main() -> None:
     mvp_chapters = load_mvp(Path(args.mvp))
     sprint_title, sprint_issues = parse_sprint(Path(args.sprint))
 
-    html_content = render_html(raw, mvp_chapters, sprint_title, sprint_issues, assets, today)
-
     out = Path(args.output)
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(html_content, encoding="utf-8")
+    out.write_text(render_html(raw, mvp_chapters, sprint_title, sprint_issues, assets, today), encoding="utf-8")
     print(f"Written: {out}")
 
 

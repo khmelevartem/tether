@@ -66,8 +66,6 @@ python3 .claude/skills/progress/build.py \
 
 ## Calculation rules
 
-These rules are `build.py`'s contract.
-
 ### Hero class
 One class per the rules in `assets/classes.json` (ordinal matching, first match wins). Justify in one line ("every fifth PR is a retro").
 
