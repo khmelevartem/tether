@@ -39,10 +39,10 @@ class RootComponentFactory(
                             scope = scope,
                         )
                     },
+                    peerPreferencesStore = peerPreferencesStore,
                 )
             },
             coroutineScope = scope,
-            peerPreferencesStore = peerPreferencesStore,
         )
     }
 }

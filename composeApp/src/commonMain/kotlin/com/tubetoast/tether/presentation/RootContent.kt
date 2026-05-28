@@ -29,8 +29,9 @@ fun RootContent(component: RootComponent, modifier: Modifier = Modifier) {
                 .safeContentPadding(),
         ) {
             val stack by component.stack.subscribeAsState()
-            val pendingFiles by component.pendingFiles.subscribeAsState()
-            val dropFeedback by component.dropFeedback.subscribeAsState()
+            val peerList = component.peerListComponent
+            val pendingFiles by peerList.pendingFiles.subscribeAsState()
+            val dropFeedback by peerList.dropFeedback.subscribeAsState()
 
             val hasPending = pendingFiles.fileCount > 0
             val pending = if (hasPending) pendingFiles else null
@@ -41,12 +42,12 @@ fun RootContent(component: RootComponent, modifier: Modifier = Modifier) {
                         component = instance.component,
                         pending = pending,
                         dropFeedback = dropFeedback,
-                        onCancelPending = component::clearPendingFiles,
+                        onCancelPending = peerList::clearPendingFiles,
                         peerCallbacksFor = { peer ->
-                            rememberPeerCallbacks(peer, instance.component, component, hasPending)
+                            rememberPeerCallbacks(peer, peerList, component, hasPending)
                         },
                         autoSendEnabledFor = { peer ->
-                            component.observeAutoSend(peer).collectAsState(initial = false).value
+                            peerList.observeAutoSend(peer).collectAsState(initial = false).value
                         },
                         // TODO(#192): wire Android FilePicker actual (ACTION_OPEN_DOCUMENT / ACTION_OPEN_DOCUMENT_TREE; ContentResolver byte streams)
                         // TODO(#193): wire Desktop FilePicker actual (JFileChooser or nativefiledialog; FileInputStream)
@@ -79,7 +80,7 @@ private fun rememberPeerCallbacks(
     )
     return PeerCardCallbacks(
         onToggleExpand = peerComponent::toggleExpanded,
-        onToggleAutoSend = { enabled -> rootComponent.setAutoSend(peer, enabled) },
+        onToggleAutoSend = { enabled -> peerListComponent.setAutoSend(peer, enabled) },
         onCancel = peerComponent::onCancel,
         onDismiss = peerComponent::onDismiss,
         onRetry = peerComponent::onRetry,
@@ -90,7 +91,7 @@ private fun rememberPeerCallbacks(
             // TODO(#194): iOS — UIApplication.shared.open(Files-app deep link); fallback hint per UX brief §State 6
         },
         onClick = if (hasPending) {
-            { rootComponent.onPeerTapped(peer) }
+            { peerListComponent.onPeerTapped(peer) }
         } else {
             null
         },

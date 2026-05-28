@@ -84,18 +84,19 @@ class RootComponentTest {
     @Test
     fun `setPendingFiles stores summary and clearPendingFiles resets to NONE`() = runTest {
         val component = buildComponent(coroutineScope = backgroundScope)
+        val peerList = component.peerListComponent
 
-        assertSame(PendingFilesSummary.NONE, component.pendingFiles.value)
+        assertSame(PendingFilesSummary.NONE, peerList.pendingFiles.value)
 
         val summary = PendingFilesSummary(fileCount = 2, totalBytes = 1024L)
-        component.setPendingFiles(summary, emptyList())
+        peerList.setPendingFiles(summary, emptyList())
 
-        assertEquals(summary, component.pendingFiles.value)
-        assertNotEquals(PendingFilesSummary.NONE, component.pendingFiles.value)
+        assertEquals(summary, peerList.pendingFiles.value)
+        assertNotEquals(PendingFilesSummary.NONE, peerList.pendingFiles.value)
 
-        component.clearPendingFiles()
+        peerList.clearPendingFiles()
 
-        assertSame(PendingFilesSummary.NONE, component.pendingFiles.value)
+        assertSame(PendingFilesSummary.NONE, peerList.pendingFiles.value)
     }
 
     @Test
@@ -104,17 +105,17 @@ class RootComponentTest {
         val component = buildComponent(devices = devices, coroutineScope = backgroundScope)
         runCurrent()
 
-        val peerList = (component.stack.value.active.instance as RootComponent.Child.DeviceListChild).component
+        val peerList = component.peerListComponent
         val peerComponent = peerList.peerTransferComponent(peer)
         assertNotNull(peerComponent)
 
         val sources = listOf(FakeFileSource("file.txt", 100L))
-        component.setPendingFiles(PendingFilesSummary(1, 100L), sources)
-        component.onPeerTapped(peer)
+        peerList.setPendingFiles(PendingFilesSummary(1, 100L), sources)
+        peerList.onPeerTapped(peer)
         runCurrent()
 
         assertIs<PeerTransferState.Sent>(peerComponent.state.value)
-        assertSame(PendingFilesSummary.NONE, component.pendingFiles.value)
+        assertSame(PendingFilesSummary.NONE, peerList.pendingFiles.value)
     }
 
     @Test
@@ -156,11 +157,11 @@ class RootComponentTest {
         val component = buildComponent(devices = devices, coroutineScope = backgroundScope)
         runCurrent()
 
-        val peerList = (component.stack.value.active.instance as RootComponent.Child.DeviceListChild).component
+        val peerList = component.peerListComponent
         val peerComponent = peerList.peerTransferComponent(peer)
         assertNotNull(peerComponent)
 
-        component.onPeerTapped(peer)
+        peerList.onPeerTapped(peer)
 
         assertIs<PeerTransferState.Idle>(peerComponent.state.value)
     }
