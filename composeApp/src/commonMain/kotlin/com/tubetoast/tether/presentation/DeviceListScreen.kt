@@ -10,7 +10,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
@@ -80,15 +84,12 @@ fun DeviceListContent(
     val sheetState = rememberModalBottomSheetState(
         initialDetent = SheetDetent.Hidden,
     )
-    // Holds the peer for which the picker sheet was opened; cleared on dismiss.
-    var sheetPeer: PeerIdentity? = androidx.compose.runtime
-        .remember {
-            androidx.compose.runtime.mutableStateOf<PeerIdentity?>(null)
-        }.value
-    val sheetPeerState = androidx.compose.runtime.remember {
-        androidx.compose.runtime.mutableStateOf<PeerIdentity?>(
-            null,
-        )
+    var triggerPeer by remember { mutableStateOf<PeerIdentity?>(null) }
+
+    LaunchedEffect(sheetState.currentDetent) {
+        if (sheetState.currentDetent == SheetDetent.Hidden) {
+            triggerPeer = null
+        }
     }
 
     Column(modifier = modifier.fillMaxSize()) {
@@ -126,13 +127,12 @@ fun DeviceListContent(
                     val peer = row.device.toPeerIdentity()
                     val tapAction: (() -> Unit)? = when {
                         pending != null -> peerCallbacksFor(peer).let { cbs -> { cbs.onClick?.invoke() } }
-                        row.transferState is PeerTransferState.Idle ->
-                            (
-                                {
-                                    sheetPeerState.value = peer
-                                    sheetState.targetDetent = SheetDetent.FullyExpanded
-                                }
-                            )
+                        row.transferState is PeerTransferState.Idle -> (
+                            {
+                                triggerPeer = peer
+                                sheetState.targetDetent = SheetDetent.FullyExpanded
+                            }
+                        )
                         else -> null
                     }
                     val cardModifier = Modifier
@@ -166,24 +166,22 @@ fun DeviceListContent(
         }
     }
 
-    sheetPeerState.value?.let { triggerPeer ->
-        MobilePickerChooserSheet(
-            sheetState = sheetState,
-            onPickPhotos = {
-                sheetPeerState.value = null
-                onPickerPick(triggerPeer, PickerKind.Photos)
-            },
-            onPickFiles = {
-                sheetPeerState.value = null
-                onPickerPick(triggerPeer, PickerKind.Files)
-            },
-            onPickFolder = {
-                sheetPeerState.value = null
-                onPickerPick(triggerPeer, PickerKind.Folder)
-            },
-            onDismiss = { sheetPeerState.value = null },
-        )
-    }
+    MobilePickerChooserSheet(
+        sheetState = sheetState,
+        onPickPhotos = {
+            triggerPeer?.let { onPickerPick(it, PickerKind.Photos) }
+            sheetState.targetDetent = SheetDetent.Hidden
+        },
+        onPickFiles = {
+            triggerPeer?.let { onPickerPick(it, PickerKind.Files) }
+            sheetState.targetDetent = SheetDetent.Hidden
+        },
+        onPickFolder = {
+            triggerPeer?.let { onPickerPick(it, PickerKind.Folder) }
+            sheetState.targetDetent = SheetDetent.Hidden
+        },
+        onDismiss = { sheetState.targetDetent = SheetDetent.Hidden },
+    )
 }
 
 @Preview(name = "DeviceList — discovering empty")
