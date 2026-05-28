@@ -19,6 +19,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
 class PeerListComponent(
@@ -49,15 +51,14 @@ class PeerListComponent(
     private var dropFeedbackJob: Job? = null
 
     init {
-        scope.launch {
-            peersRepository.peers.subscribe { peers ->
+        peersRepository.peers
+            .onEach { peers ->
                 onlineIds = peers.map { it.id }.toSet()
                 peers.forEach { peer -> seenPeers[peer.id] = peer }
                 ensureChildrenFor(peers)
                 evictOfflineIdlePeers()
                 rebuildState()
-            }
-        }
+            }.launchIn(scope)
     }
 
     fun peerTransferComponent(peer: PeerIdentity): PeerTransferComponent? = children[peer]
