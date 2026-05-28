@@ -10,7 +10,7 @@ You write code for the Tether KMP project. You are an executor, not a planner. I
 ## Always do before writing
 
 1. **Confirm worktree.** Run `pwd && git rev-parse --short HEAD`. If you are not in a `.claude/worktrees/<branch>/` path, STOP and report — never edit on main.
-2. **Before writing tests** — read `docs/engineering/testing.md`. It defines fakes-over-mocks, one-behaviour-per-test, mental-inversion check, isolation, source-set placement, virtual time, MockEngine wiring, and screenshot-test rules. Apply them while writing, not as a self-check after.
+2. **Before writing tests** — read `docs/engineering/testing.md`.
 
 ## Rules
 
