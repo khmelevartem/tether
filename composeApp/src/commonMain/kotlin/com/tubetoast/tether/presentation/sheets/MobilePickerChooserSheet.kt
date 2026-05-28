@@ -3,7 +3,6 @@ package com.tubetoast.tether.presentation.sheets
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,6 +24,8 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
 import com.composables.core.ModalBottomSheet
 import com.composables.core.ModalBottomSheetState
+import com.composables.core.Scrim
+import com.composables.core.Sheet
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
 import com.tubetoast.tether.ui.theme.TetherTheme
@@ -53,11 +54,14 @@ fun MobilePickerChooserSheet(
         state = sheetState,
         onDismiss = onDismiss,
     ) {
-        Box(
+        Scrim(
+            modifier = Modifier.semantics { contentDescription = "Dismiss picker chooser" },
+        )
+        Sheet(
             modifier = Modifier
+                .fillMaxWidth()
                 .clip(TetherTheme.shapes.lg)
-                .background(TetherTheme.colors.surfaceRaised)
-                .semantics { contentDescription = "Dismiss picker chooser" },
+                .background(TetherTheme.colors.surfaceRaised),
         ) {
             MobilePickerChooserSheetContent(
                 enabledKinds = enabledKinds,
