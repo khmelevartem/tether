@@ -27,6 +27,7 @@ These documents codify principles, not the current shape of the codebase — the
 - **Code examples on abstract types**, not on real project classes. Examples pinned to concrete names rot at every rename.
 - **Don't restate what the code already shows** (hierarchies, signatures, source set layout). The code is the one source of truth that drifts last; link to it instead of copying.
 - **Lead with the rule.** Rationale and examples follow.
+- **No engineering artifact is the default outcome** of a task. A new or extended `docs/engineering/<name>.md` is justified only when at least one rule from the task is engineering-layer (mechanism / library / lifecycle / cross-platform invariant) and not already captured by a sibling. Tasks that apply an existing pattern, fix a bug at code level, or live entirely inside the product / interaction / code layer do not produce an engineering artifact. Length is not the test; layer fit is. Rule-promotion to [`architecture-principles.md`](architecture-principles.md) is retro-driven — a separate PR after the rule bites a second time — not in-flight during the task that first hit it.
 
 A starter skeleton with common sections lives in [`_template.md`](_template.md). Copy it as a base for new subsystem docs.
 

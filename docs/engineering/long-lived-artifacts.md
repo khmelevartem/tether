@@ -16,6 +16,8 @@ A long-lived artifact describes a mechanism conceptually — what something is, 
 
 If you find a code symbol in a long-lived artifact, check whether the surrounding sentence carries the same meaning with the symbol removed. Almost always it does — the symbol was leakage from the writing session, not a load-bearing reference. Remove it. Keep a code symbol only when the rule is genuinely about that symbol (e.g. a glossary entry whose subject is the symbol, or a doc whose subject is the library binding).
 
+This applies to interfaces the same artifact is defining right now. A Rules section that says «`X.openOutput` throws on path traversal» locks the rule to a name that is one rename away from invalidating the doc. State what the seam *guarantees* — «the storage seam rejects path traversal at the boundary» — and let the code carry the verb. Same trap as runtime claims (§Runtime claims are snapshots), applied at the moment of writing rather than after drift.
+
 ## Inline examples must be synthetic, not incident-rooted
 
 Either generalise the *shape* of the error (contrast «principle catches this, but not this other thing that looks similar») so the example is synthetic and covers the class — or leave the example out entirely.

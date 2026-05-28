@@ -84,17 +84,25 @@ If the decision contradicts `architecture-principles.md`, an ADR, a feature-spec
 
 Also check the **Revisit if** section of every ADR governing the touched area. If the PR's content suggests a trigger has silently fired (an «accepted cost» the ADR listed has turned out to be blocking; a constraint behind the original choice has changed) — flag as `[REQUIRED]` to either confirm the ADR with the new evidence or reverse it in the same PR (see `docs/engineering/adr/README.md` §Reversing an ADR).
 
+**Symmetric check on new ADRs and engineering docs introduced by the diff.** When the PR adds a new `docs/engineering/adr/adr-*.md` or `docs/engineering/<name>.md`:
+
+- The ADR must clear the three-way threshold in [`adr/README.md`](../../docs/engineering/adr/README.md) §ADR threshold (hard-to-reverse + surprising-without-context + real-trade-off). If any leg is missing — flag `[REQUIRED]` to drop the ADR; the parent living doc carries the rule.
+- A new engineering living doc must host at least one rule that is genuinely engineering-layer and not already captured by a sibling (`docs/engineering/README.md` §Writing style). A doc whose rules all belong to the spec, the ux brief, the issue body, or the code itself is short-lived — flag `[REQUIRED]` to route the content to the right layer.
+- New long-lived prose must follow [`long-lived-artifacts.md`](../../docs/engineering/long-lived-artifacts.md). A Rules section that names interface methods, function calls, or specific API verbs the same diff introduces — `[REQUIRED]`. Restating runtime / code structure visible in the diff — `[REQUIRED]`. Incident framing («after #N», «originally we did X») — `[REQUIRED]`.
+- Promotion of a brand-new rule into `architecture-principles.md` during the current task — `[REQUIRED]` to demote (parent living doc instead) unless the rule has clear evidence of biting twice already; rule-promotion to principles.md is retro-driven, not in-flight.
+
 ### 6. Trade-off vs violation
 
-`[REQUIRED]` — a principle violation: layer asymmetry, reversed dependency direction, an abstraction contradicting a documented rule, a missing source set. The principle is violated — the fix is unambiguous; the author has no choice of level.
+`[REQUIRED]` — a principle violation. The principle being violated must be **citable in canon** — name the exact source: `architecture-principles.md §<section>`, a specific living doc (`presentation-layer.md`, `dependency-injection.md`, …), or a specific ADR. If you cannot point at the canon line, the finding is not `[REQUIRED]`; either downgrade to `[QUESTION]` or drop it. A principle that lives only in this prompt is not canon — your job is to enforce the project's rules, not invent them.
 
-`[QUESTION]` — a trade-off between two valid shapes where both satisfy principles but have different ergonomic / robustness / maintainability profiles. Especially in the build-tooling / `.claude/` / CI / Gradle subprojects layer, where the choice often comes down to "convenience for future contributors" vs "protection against a typo". Do not flag as `[REQUIRED]` — this is a policy choice, not a correctness issue. Name both variants explicitly, describe the trade-off, and leave the decision to the user.
+`[QUESTION]` — a trade-off between two valid shapes where both satisfy the cited canon but have different ergonomic / robustness / maintainability profiles. Especially in the build-tooling / `.claude/` / CI / Gradle subprojects layer, where the choice often comes down to "convenience for future contributors" vs "protection against a typo". Do not flag as `[REQUIRED]` — this is a policy choice, not a correctness issue. Name both variants explicitly, describe the trade-off, and leave the decision to the user.
 
 Signals that a finding is a trade-off, not a violation:
 - Both variants work and tests are green;
 - The principle being "violated" is itself phrased as "better" / "cleaner" / "less fragile", not as an absolute ("forbidden", "never", "always");
 - Both shapes coexist in adjacent modules / past PRs;
-- The switching cost is significant (breaks ergonomics for all future modules for the sake of one edge case).
+- The switching cost is significant (breaks ergonomics for all future modules for the sake of one edge case);
+- You cannot point at the canon line that the variant violates.
 
 ### 7. Scope of the architectural change
 
