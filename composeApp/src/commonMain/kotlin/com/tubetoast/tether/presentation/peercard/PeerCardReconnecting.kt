@@ -19,8 +19,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import com.tubetoast.tether.presentation.transfer.PeerTransferState
 import com.tubetoast.tether.protocol.Device
-import com.tubetoast.tether.ui.components.BrandMark
-import com.tubetoast.tether.ui.components.BrandMarkState
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
 import com.tubetoast.tether.ui.preview.TransferPreviewFixtures
@@ -57,10 +55,6 @@ fun PeerCardReconnecting(
             text = peerName,
             style = typography.titleMedium.copy(color = colors.textPrimary),
             modifier = Modifier.fillMaxWidth(),
-        )
-        BrandMark(
-            state = BrandMarkState.Searching,
-            contentDescription = "Reconnecting to peer",
         )
         BasicText(
             text = reconnectingCardCopy(state),

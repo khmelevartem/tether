@@ -12,10 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -25,13 +21,10 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Popup
 import com.tubetoast.tether.presentation.transfer.PeerTransferState
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.ui.components.ChevronToggleIcon
-import com.tubetoast.tether.ui.components.InfoIconButton
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
 import com.tubetoast.tether.ui.preview.TransferPreviewFixtures
@@ -95,7 +88,6 @@ fun PeerCardIdle(
                 peerName = peerName,
                 isAutoSendEnabled = isAutoSendEnabled,
                 onToggle = callbacks.onToggleAutoSend,
-                onInfoTap = callbacks.onShowAutoSendInfo,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = spacing.lg)
@@ -110,57 +102,21 @@ private fun AutoSendBlock(
     peerName: String,
     isAutoSendEnabled: Boolean,
     onToggle: (Boolean) -> Unit,
-    onInfoTap: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = TetherTheme.colors
-    val spacing = TetherTheme.spacing
     val typography = TetherTheme.typography
-
-    var infoVisible by remember { mutableStateOf(false) }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier = modifier.fillMaxWidth(),
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
+        BasicText(
+            text = "Auto-send",
+            style = typography.bodyMedium.copy(color = colors.textPrimary),
             modifier = Modifier.weight(1f),
-        ) {
-            BasicText(
-                text = "Auto-send",
-                style = typography.bodyMedium.copy(color = colors.textPrimary),
-            )
-            Box {
-                InfoIconButton(
-                    onClick = {
-                        infoVisible = !infoVisible
-                        onInfoTap()
-                    },
-                    contentDescription = "More information about auto-send",
-                    modifier = Modifier.padding(start = spacing.xs),
-                )
-                if (infoVisible) {
-                    Popup(
-                        offset = IntOffset(0, 0),
-                        onDismissRequest = { infoVisible = false },
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .clip(TetherTheme.shapes.md)
-                                .background(colors.surfaceRaised)
-                                .padding(spacing.md),
-                        ) {
-                            BasicText(
-                                text = "Auto-send when this is your only online device.",
-                                style = typography.bodyMedium.copy(color = colors.textPrimary),
-                            )
-                        }
-                    }
-                }
-            }
-        }
+        )
         AutoSendToggle(
             enabled = isAutoSendEnabled,
             peerName = peerName,
@@ -257,7 +213,6 @@ private fun PreviewIdleExpandedAutoSendOn(@PreviewParameter(Themes::class) dark:
 private fun previewCallbacks() = PeerCardCallbacks(
     onToggleExpand = {},
     onToggleAutoSend = {},
-    onShowAutoSendInfo = {},
     onCancel = {},
     onDismiss = {},
     onRetry = {},

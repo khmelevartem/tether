@@ -268,7 +268,6 @@ private fun PreviewActiveInbound(@PreviewParameter(Themes::class) dark: Boolean)
 private fun previewCardCallbacks() = PeerCardCallbacks(
     onToggleExpand = {},
     onToggleAutoSend = {},
-    onShowAutoSendInfo = {},
     onCancel = {},
     onDismiss = {},
     onRetry = {},

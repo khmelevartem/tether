@@ -320,7 +320,6 @@ private fun PreviewIosBanner(@PreviewParameter(Themes::class) dark: Boolean) =
 private fun previewCallbacks() = PeerCardCallbacks(
     onToggleExpand = {},
     onToggleAutoSend = {},
-    onShowAutoSendInfo = {},
     onCancel = {},
     onDismiss = {},
     onRetry = {},

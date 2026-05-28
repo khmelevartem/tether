@@ -22,8 +22,6 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import com.tubetoast.tether.presentation.transfer.PeerTransferState
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.TransferErrorReason
-import com.tubetoast.tether.ui.components.BrandMark
-import com.tubetoast.tether.ui.components.BrandMarkState
 import com.tubetoast.tether.ui.components.DismissCloseButton
 import com.tubetoast.tether.ui.components.RetryTextButton
 import com.tubetoast.tether.ui.components.ShowDetailsButton
@@ -43,8 +41,6 @@ fun PeerCardSent(
     TerminalShell(
         peerName = peerName,
         statusCopy = sentCardCopy(state),
-        brandMarkState = BrandMarkState.Success,
-        brandMarkContentDesc = "Transfer complete",
         showDetails = true,
         dismissDescription = "Dismiss sent notification to $peerName",
         onDismiss = callbacks.onDismiss,
@@ -101,11 +97,6 @@ fun PeerCardReceived(
             )
         }
 
-        BrandMark(
-            state = BrandMarkState.Success,
-            contentDescription = "Transfer complete",
-        )
-
         BasicText(
             text = receivedCardCopy(state),
             style = typography.bodyMedium.copy(color = colors.textPrimary),
@@ -151,8 +142,6 @@ fun PeerCardCancelled(
     TerminalShell(
         peerName = peerName,
         statusCopy = cancelledCardCopy(state),
-        brandMarkState = BrandMarkState.Disconnected,
-        brandMarkContentDesc = null,
         showDetails = true,
         dismissDescription = "Dismiss cancelled transfer for $peerName",
         onDismiss = callbacks.onDismiss,
@@ -206,11 +195,6 @@ fun PeerCardError(
             )
         }
 
-        BrandMark(
-            state = BrandMarkState.Error(progress = if (state.sent > 0) 0.5f else 0f),
-            contentDescription = "Transfer failed",
-        )
-
         BasicText(
             text = errorCardCopy(state),
             style = typography.bodyMedium.copy(color = colors.error),
@@ -247,8 +231,6 @@ fun PeerCardError(
 private fun TerminalShell(
     peerName: String,
     statusCopy: String,
-    brandMarkState: BrandMarkState,
-    brandMarkContentDesc: String?,
     showDetails: Boolean,
     dismissDescription: String,
     onDismiss: () -> Unit,
@@ -285,11 +267,6 @@ private fun TerminalShell(
             )
         }
 
-        BrandMark(
-            state = brandMarkState,
-            contentDescription = brandMarkContentDesc,
-        )
-
         BasicText(
             text = statusCopy,
             style = typography.bodyMedium.copy(color = colors.textPrimary),
@@ -312,7 +289,6 @@ private fun TerminalShell(
 private fun previewCallbacks() = PeerCardCallbacks(
     onToggleExpand = {},
     onToggleAutoSend = {},
-    onShowAutoSendInfo = {},
     onCancel = {},
     onDismiss = {},
     onRetry = {},

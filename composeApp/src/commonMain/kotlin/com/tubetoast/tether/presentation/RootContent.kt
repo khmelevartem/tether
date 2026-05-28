@@ -68,7 +68,6 @@ private fun rememberPeerCallbacks(
     return PeerCardCallbacks(
         onToggleExpand = peerComponent::toggleExpanded,
         onToggleAutoSend = { enabled -> rootComponent.setAutoSend(peer, enabled) },
-        onShowAutoSendInfo = {},
         onCancel = peerComponent::onCancel,
         onDismiss = peerComponent::onDismiss,
         onRetry = peerComponent::onRetry,
