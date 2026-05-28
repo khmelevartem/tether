@@ -61,7 +61,7 @@ Tether adopts **Compose Unstyled** as the bottom-sheet and modal-dialog primitiv
 ## Costs accepted
 
 - A third-party dependency sits under every sheet and modal surface. The risk is mitigated by the library's MIT license, healthy release cadence, low issue backlog, and the renderless design — components are state machines plus behaviour; the visual surface is Tether's, so a swap-out would not require rewriting screens.
-- The Kotlin and Compose Multiplatform baselines become a coupling point split across release lines: Tether's Kotlin baseline aligns with the 2.x line, Tether's Compose Multiplatform baseline aligns with the 1.x line. The version catalog holds the line choice and exact coordinate.
+- The Kotlin and Compose Multiplatform baselines become a coupling point split across release lines: Tether's Kotlin baseline aligns with the 2.x line, Tether's Compose Multiplatform baseline aligns with the 1.x line. The version catalog holds the line choice and exact coordinate. The activation order for the wiring task is: try the 1.x line first (matches our Compose Multiplatform baseline; only Kotlin minor skew, expected to link); if it does not link under our Kotlin baseline, escalate to the 2.x line plus a Compose Multiplatform bump to the matching alpha; if neither lands cleanly, fall back to ad-hoc Foundation per Option 2.
 - Contributors learn one more set of primitives. Acceptable: the API surface is small (state, expand/collapse, dismiss callbacks) and conceptually thinner than Material's component model.
 
 ## Consequences
