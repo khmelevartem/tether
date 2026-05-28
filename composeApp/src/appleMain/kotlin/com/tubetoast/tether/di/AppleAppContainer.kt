@@ -10,6 +10,7 @@ import com.tubetoast.tether.preferences.DefaultFileTransferPreferences
 import com.tubetoast.tether.preferences.DefaultPeerPreferencesStore
 import com.tubetoast.tether.preferences.FileTransferPreferences
 import com.tubetoast.tether.preferences.PeerPreferencesStore
+import com.tubetoast.tether.security.DefaultTrustedDeviceStore
 import com.tubetoast.tether.security.TrustedDeviceStore
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.ObjCObjectVar
@@ -35,7 +36,7 @@ open class AppleAppContainer(
     private val trustedDataStore = PreferenceDataStoreFactory.createWithPath {
         appSupportDir().toPath() / "tether_trusted_devices.preferences_pb"
     }
-    override val trustedDeviceStore: TrustedDeviceStore = TrustedDeviceStore(trustedDataStore)
+    override val trustedDeviceStore: TrustedDeviceStore = DefaultTrustedDeviceStore(trustedDataStore)
     override val fileServer: FileServer by lazy {
         FileServer(
             port = 0,

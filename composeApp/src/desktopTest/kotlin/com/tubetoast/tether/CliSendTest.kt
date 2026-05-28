@@ -4,8 +4,8 @@ import com.tubetoast.tether.network.FileClient
 import com.tubetoast.tether.network.FileServer
 import com.tubetoast.tether.preferences.TempDataStore
 import com.tubetoast.tether.protocol.Device
+import com.tubetoast.tether.security.DefaultTrustedDeviceStore
 import com.tubetoast.tether.security.DeviceKeyPair
-import com.tubetoast.tether.security.TrustedDeviceStore
 import kotlinx.coroutines.runBlocking
 import java.io.File
 import java.nio.file.Files
@@ -35,7 +35,7 @@ class CliSendTest {
         server = FileServer(
             port = 0,
             downloadsDir = tmpDir,
-            trustedDeviceStore = TrustedDeviceStore(tempStore.dataStore),
+            trustedDeviceStore = DefaultTrustedDeviceStore(tempStore.dataStore),
             deviceKeyPair = DeviceKeyPair(configDir),
         )
         val port = server.start()

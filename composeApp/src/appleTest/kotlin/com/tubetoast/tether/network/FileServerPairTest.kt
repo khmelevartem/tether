@@ -5,6 +5,7 @@ package com.tubetoast.tether.network
 import com.tubetoast.tether.preferences.TempDataStore
 import com.tubetoast.tether.protocol.PairRequest
 import com.tubetoast.tether.protocol.PairResponse
+import com.tubetoast.tether.security.DefaultTrustedDeviceStore
 import com.tubetoast.tether.security.DeviceKeyPair
 import com.tubetoast.tether.security.TrustedDeviceStore
 import com.tubetoast.tether.security.deviceIdFromPublicKey
@@ -36,7 +37,7 @@ class FileServerPairTest {
     private val tempPaths = mutableListOf<String>()
     private val cleanupTempStores = mutableListOf<TempDataStore>()
     private lateinit var configDir: String
-    private lateinit var store: TrustedDeviceStore
+    private lateinit var store: DefaultTrustedDeviceStore
     private lateinit var keyPair: DeviceKeyPair
     private lateinit var server: FileServer
     private lateinit var client: HttpClient
@@ -46,7 +47,7 @@ class FileServerPairTest {
     fun setup() {
         configDir = newTempDir()
         val temp = TempDataStore().also { cleanupTempStores += it }
-        store = TrustedDeviceStore(temp.dataStore)
+        store = DefaultTrustedDeviceStore(temp.dataStore)
         keyPair = DeviceKeyPair(configDir)
         server = FileServer(
             port = 0,
@@ -100,11 +101,14 @@ class FileServerPairTest {
 
     @Test
     fun pair_returns_500_when_store_fails_to_persist() {
-        val tmp = TempDataStore().also { cleanupTempStores += it }
-        val throwingStore = object : TrustedDeviceStore(tmp.dataStore) {
-            override fun saveTrustedKey(deviceId: String, publicKey: ByteArray): Unit = throw IllegalStateException(
+        val throwingStore = object : TrustedDeviceStore {
+            override suspend fun isTrusted(deviceId: String) = false
+
+            override suspend fun saveTrustedKey(deviceId: String, publicKey: ByteArray) = throw IllegalStateException(
                 "simulated DataStore write failure",
             )
+
+            override suspend fun getPublicKey(deviceId: String): ByteArray? = null
         }
         val failServer = FileServer(
             port = 0,
@@ -135,9 +139,9 @@ class FileServerPairTest {
                 contentType(ContentType.Application.Json)
                 setBody(PairRequest(publicKey = peerKey, deviceName = "AppleTestPeer"))
             }
+            val storedKey = store.getPublicKey(expectedDeviceId)
+            assertNotNull(storedKey, "deviceId derived from publicKey must be trusted after pairing")
+            assertTrue(storedKey.contentEquals(peerKey), "stored key must round-trip the initiator's bytes")
         }
-        val storedKey = store.getPublicKey(expectedDeviceId)
-        assertNotNull(storedKey, "deviceId derived from publicKey must be trusted after pairing")
-        assertTrue(storedKey.contentEquals(peerKey), "stored key must round-trip the initiator's bytes")
     }
 }

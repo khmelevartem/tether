@@ -1,6 +1,7 @@
 package com.tubetoast.tether.security
 
 import com.tubetoast.tether.preferences.TempDataStore
+import kotlinx.coroutines.test.runTest
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -12,12 +13,12 @@ import kotlin.test.assertTrue
 
 class TrustedDeviceStoreTest {
     private lateinit var temp: TempDataStore
-    private lateinit var store: TrustedDeviceStore
+    private lateinit var store: DefaultTrustedDeviceStore
 
     @BeforeTest
     fun setup() {
         temp = TempDataStore()
-        store = TrustedDeviceStore(temp.dataStore)
+        store = DefaultTrustedDeviceStore(temp.dataStore)
     }
 
     @AfterTest
@@ -26,23 +27,23 @@ class TrustedDeviceStoreTest {
     }
 
     @Test
-    fun `isTrusted returns false for unknown device`() {
+    fun `isTrusted returns false for unknown device`() = runTest {
         assertFalse(store.isTrusted("unknown-device"))
     }
 
     @Test
-    fun `isTrusted returns true after saving key`() {
+    fun `isTrusted returns true after saving key`() = runTest {
         store.saveTrustedKey("trusted-peer", byteArrayOf(7, 8, 9))
         assertTrue(store.isTrusted("trusted-peer"))
     }
 
     @Test
-    fun `getPublicKey returns null for unknown device`() {
+    fun `getPublicKey returns null for unknown device`() = runTest {
         assertNull(store.getPublicKey("no-such-device"))
     }
 
     @Test
-    fun `saveTrustedKey persists and getPublicKey returns same key`() {
+    fun `saveTrustedKey persists and getPublicKey returns same key`() = runTest {
         val key = byteArrayOf(1, 2, 3, 42)
         store.saveTrustedKey("device-1", key)
         val loaded = store.getPublicKey("device-1")
@@ -51,7 +52,7 @@ class TrustedDeviceStoreTest {
     }
 
     @Test
-    fun `overwriting key for same deviceId replaces it`() {
+    fun `overwriting key for same deviceId replaces it`() = runTest {
         val keyA = byteArrayOf(1, 2, 3)
         val keyB = byteArrayOf(4, 5, 6)
         store.saveTrustedKey("device-x", keyA)
@@ -62,7 +63,7 @@ class TrustedDeviceStoreTest {
     }
 
     @Test
-    fun `negative byte values round-trip correctly`() {
+    fun `negative byte values round-trip correctly`() = runTest {
         val key = byteArrayOf(-128, -1, 0, 1, 127)
         store.saveTrustedKey("device-neg", key)
         val loaded = store.getPublicKey("device-neg")
@@ -71,7 +72,7 @@ class TrustedDeviceStoreTest {
     }
 
     @Test
-    fun `empty key array round-trips correctly`() {
+    fun `empty key array round-trips correctly`() = runTest {
         val key = ByteArray(0)
         store.saveTrustedKey("device-empty", key)
         val loaded = store.getPublicKey("device-empty")

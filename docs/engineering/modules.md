@@ -11,16 +11,16 @@ hierarchy (configured via `applyHierarchyTemplate` in `build.gradle.kts`):
 
 ```
 composeApp/src/
-├── commonMain/      protocol, FileClient, MdnsDiscovery (expect), FileServer (expect), FileServerRoutes (UploadStorage seam), TrustedDeviceStore (expect), Platform (expect), App.kt
-├── commonTest/      DeviceTest, PairingProtocolTest
+├── commonMain/      protocol, FileClient, MdnsDiscovery (expect), FileServer (expect), FileServerRoutes (UploadStorage seam), TrustedDeviceStore (interface + DefaultTrustedDeviceStore), Platform (expect), App.kt
+├── commonTest/      DeviceTest, PairingProtocolTest, TrustedDeviceStoreTest
 ├── androidMain/     MainActivity, TetherApp, TetherForegroundService, MdnsDiscovery.android, Platform.android
 ├── iosMain/         MainViewController, Platform.ios
 ├── appleMain/       MdnsDiscovery.apple, FileServer.apple (Ktor CIO Native + POSIX storage)   ← iOS only (macOS ships via Desktop JVM, see adr-macos-native-vs-jvm.md)
 ├── jvmMain/         FileServer (JVM actual + storage), FileClientJvm, DeviceKeyPair   ← shared Android + Desktop JVM (Desktop JVM also ships macOS)
 ├── jvmTest/         (empty — FileServerTest moved to desktopTest in #9)
-├── desktopMain/     MainUi, DesktopBackend, DesktopAppContainer, MdnsDiscovery.jvm, Platform.jvm, TrustedDeviceStore.desktop  ← Desktop JVM leaf (main compilation)
+├── desktopMain/     MainUi, DesktopBackend, DesktopAppContainer, MdnsDiscovery.jvm, Platform.jvm  ← Desktop JVM leaf (main compilation)
 ├── desktopCli/      Main.kt  ← Desktop CLI runner (custom compilation, associateWith main; only place Clikt lives)
-└── desktopTest/     FileClientTest, MdnsDiscoveryTest, FileServerTest, FileServerPairTest, TrustedDeviceStoreTest, DeviceKeyPairTest, CliParseTokensTest, CliSendTest
+└── desktopTest/     FileClientTest, MdnsDiscoveryTest, FileServerTest, FileServerPairTest, TrustedDeviceStoreConcurrencyTest, DeviceKeyPairTest, CliParseTokensTest, CliSendTest
 ```
 
 Hierarchy: `jvmMain` is the intermediate parent for both `androidMain` and `desktopMain`,

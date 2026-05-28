@@ -3,6 +3,7 @@ package com.tubetoast.tether.network
 import com.tubetoast.tether.preferences.TempDataStore
 import com.tubetoast.tether.protocol.PairRequest
 import com.tubetoast.tether.protocol.PairResponse
+import com.tubetoast.tether.security.DefaultTrustedDeviceStore
 import com.tubetoast.tether.security.DeviceKeyPair
 import com.tubetoast.tether.security.TrustedDeviceStore
 import com.tubetoast.tether.security.deviceIdFromPublicKey
@@ -48,10 +49,10 @@ class FileServerPairTest {
     private fun newConfigDir(): File =
         Files.createTempDirectory("tether-pair-test").toFile().also(cleanupPaths::add)
 
-    private fun newTrustedStore(): TrustedDeviceStore {
+    private fun newTrustedStore(): DefaultTrustedDeviceStore {
         val temp = TempDataStore()
         cleanupTempStores += temp
-        return TrustedDeviceStore(temp.dataStore)
+        return DefaultTrustedDeviceStore(temp.dataStore)
     }
 
     private fun startServer(store: TrustedDeviceStore, keyPair: DeviceKeyPair): Pair<FileServer, Int> {
@@ -92,15 +93,15 @@ class FileServerPairTest {
                 contentType(ContentType.Application.Json)
                 setBody(PairRequest(publicKey = peerKey, deviceName = "PeerDevice"))
             }
+            assertTrue(
+                store.isTrusted(expectedDeviceId),
+                "deviceId derived from publicKey must be trusted after pairing",
+            )
+            assertFalse(
+                store.isTrusted("PeerDevice"),
+                "deviceName must NOT be used as trust-store key — it is unauthenticated and collidable",
+            )
         }
-        assertTrue(
-            store.isTrusted(expectedDeviceId),
-            "deviceId derived from publicKey must be trusted after pairing",
-        )
-        assertFalse(
-            store.isTrusted("PeerDevice"),
-            "deviceName must NOT be used as trust-store key — it is unauthenticated and collidable",
-        )
     }
 
     @Test
@@ -119,16 +120,16 @@ class FileServerPairTest {
                 contentType(ContentType.Application.Json)
                 setBody(PairRequest(publicKey = keyMallory, deviceName = "Phone"))
             }
+            val aliceStored = store.getPublicKey(deviceIdFromPublicKey(keyAlice))
+            val malloryStored = store.getPublicKey(deviceIdFromPublicKey(keyMallory))
+            assertNotNull(aliceStored)
+            assertNotNull(malloryStored)
+            assertTrue(aliceStored.contentEquals(keyAlice), "alice's key must be preserved")
+            assertTrue(
+                malloryStored.contentEquals(keyMallory),
+                "mallory cannot overwrite alice's trust by reusing the deviceName",
+            )
         }
-        val aliceStored = store.getPublicKey(deviceIdFromPublicKey(keyAlice))
-        val malloryStored = store.getPublicKey(deviceIdFromPublicKey(keyMallory))
-        assertNotNull(aliceStored)
-        assertNotNull(malloryStored)
-        assertTrue(aliceStored.contentEquals(keyAlice), "alice's key must be preserved")
-        assertTrue(
-            malloryStored.contentEquals(keyMallory),
-            "mallory cannot overwrite alice's trust by reusing the deviceName",
-        )
     }
 
     @Test
@@ -144,10 +145,10 @@ class FileServerPairTest {
                 setBody(PairRequest(publicKey = emptyKey, deviceName = "EmptyKeyPeer"))
             }
             assertEquals(HttpStatusCode.OK, response.status)
+            val stored = store.getPublicKey(deviceId)
+            assertNotNull(stored, "empty publicKey must still produce a deterministic deviceId entry")
+            assertEquals(0, stored.size, "stored bytes must round-trip the empty array")
         }
-        val stored = store.getPublicKey(deviceId)
-        assertNotNull(stored, "empty publicKey must still produce a deterministic deviceId entry")
-        assertEquals(0, stored.size, "stored bytes must round-trip the empty array")
     }
 
     @Test
@@ -166,10 +167,13 @@ class FileServerPairTest {
     @Test
     fun `pair returns 500 when store fails to persist`() {
         val configDir = newConfigDir()
-        val tmp = TempDataStore().also { cleanupTempStores += it }
-        val throwingStore = object : TrustedDeviceStore(tmp.dataStore) {
-            override fun saveTrustedKey(deviceId: String, publicKey: ByteArray): Unit =
+        val throwingStore = object : TrustedDeviceStore {
+            override suspend fun isTrusted(deviceId: String) = false
+
+            override suspend fun saveTrustedKey(deviceId: String, publicKey: ByteArray) =
                 throw IllegalStateException("simulated DataStore write failure")
+
+            override suspend fun getPublicKey(deviceId: String): ByteArray? = null
         }
         val (_, port) = startServer(throwingStore, DeviceKeyPair(configDir))
         runBlocking {

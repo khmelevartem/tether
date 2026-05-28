@@ -9,6 +9,7 @@ import com.tubetoast.tether.preferences.DefaultFileTransferPreferences
 import com.tubetoast.tether.preferences.DefaultPeerPreferencesStore
 import com.tubetoast.tether.preferences.FileTransferPreferences
 import com.tubetoast.tether.preferences.PeerPreferencesStore
+import com.tubetoast.tether.security.DefaultTrustedDeviceStore
 import com.tubetoast.tether.security.TrustedDeviceStore
 import okio.Path.Companion.toPath
 import java.io.File
@@ -20,14 +21,14 @@ class DesktopAppContainer(
         File(config.preferencesFilePath).also { it.parentFile?.mkdirs() }.absolutePath.toPath()
     }
     private val trustedDataStore = PreferenceDataStoreFactory.createWithPath {
-        File(config.preferencesFilePath)
-            .parentFile!!
-            .resolve("tether_trusted_devices.preferences_pb")
+        requireNotNull(File(config.preferencesFilePath).parentFile) {
+            "preferencesFilePath must have a parent directory: ${config.preferencesFilePath}"
+        }.resolve("tether_trusted_devices.preferences_pb")
             .also { it.parentFile?.mkdirs() }
             .absolutePath
             .toPath()
     }
-    override val trustedDeviceStore: TrustedDeviceStore = TrustedDeviceStore(trustedDataStore)
+    override val trustedDeviceStore: TrustedDeviceStore = DefaultTrustedDeviceStore(trustedDataStore)
     override val namePersistence: DeviceNamePersistence = config.namePersistenceOverride
         ?: DefaultDeviceNamePersistence(dataStore)
     override val mdnsDiscovery: MdnsDiscovery = MdnsDiscovery(DiscoveredDevicesStore())
