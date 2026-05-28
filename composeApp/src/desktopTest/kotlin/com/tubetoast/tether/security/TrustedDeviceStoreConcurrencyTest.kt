@@ -19,6 +19,7 @@ class TrustedDeviceStoreConcurrencyTest {
             (0 until n)
                 .map { i ->
                     async(Dispatchers.IO) {
+                        // DataStore write serialisation runs on real IO threads; virtual time cannot substitute
                         store.saveTrustedKey(
                             "device-$i",
                             byteArrayOf(i.toByte(), (i + 1).toByte(), (i + 2).toByte()),
