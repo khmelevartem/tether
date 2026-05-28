@@ -35,6 +35,8 @@ docs_share approximation: a merged PR is counted as touching docs/ when its titl
   is not available in the GraphQL shape listed above.
 """
 
+from __future__ import annotations
+
 import argparse
 import html
 import json
