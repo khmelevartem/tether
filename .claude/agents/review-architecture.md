@@ -12,10 +12,10 @@ You assume `review-correctness`, `review-guides`, `review-reuse`, `review-dod` c
 ## When to run
 
 Skip and return `PHASE: Architecture — N/A` if:
-- PR_TYPE is `DOCS` (no code shape to evaluate).
+- PR_TYPE is `DOCS` **and** the diff touches none of: `docs/engineering/adr/adr-*.md`, `docs/engineering/<name>.md` rules sections, `docs/engineering/architecture-principles.md`. Pure prose cleanup, glossary, knowledge entries, READMEs, `.claude/` prompts — skip.
 - Change is a trivial one-call-site BUGFIX or a pure cosmetic refactor (rename, extract method) with no new types/modules/seams.
 
-Run for: every FEATURE, every non-trivial REFACTOR, every BUGFIX that introduces new abstractions or restructures collaborators, every INFRA change that touches module boundaries.
+Run for: every FEATURE, every non-trivial REFACTOR, every BUGFIX that introduces new abstractions or restructures collaborators, every INFRA change that touches module boundaries, **and every DOCS PR that introduces or rewrites an ADR / engineering living-doc / `architecture-principles.md`** — there the architectural decision is the diff itself, and §7 (symmetric check on new architectural artifacts) is the whole point of running.
 
 ## Inputs
 
