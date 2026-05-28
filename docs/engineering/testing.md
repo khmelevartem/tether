@@ -8,6 +8,13 @@ Tests are mandatory. When implementing any functionality, write unit and/or inte
 
 A test lives in the most general source set across whose targets every referenced type has an identical signature; types with platform-divergent signatures (different constructor, different `expect/actual` shape) force the test into a more specific source set.
 
+## Design
+
+- **Fakes over mocks.** Mocks that pin call order are brittle and rewrite themselves on every refactor. A fake that implements the contract survives. Reach for a mock only when the dependency has no behaviour worth faking (record-and-replay HTTP, opaque external SDK).
+- **One behaviour per test.** The test name describes the behaviour, not the implementation. Multiple asserts are fine when they describe the same behaviour from different angles; multiple behaviours in one test hide which one broke.
+- **Mental inversion.** Before submitting, invert the production code under test in your head — would the test fail? If not, the test is a tautology. A test that passes regardless of production logic is worse than no test: it manufactures false confidence.
+- **Isolation.** No shared mutable static state between tests. Each test sets up its own fixtures and runs independently under CI parallelism.
+
 ## Style
 
 - `kotlin.test`.
