@@ -51,9 +51,9 @@
     "common":    { "border": "#6a5a40" }
   },
   "fonts": {
-    "_doc": "body — Lora: засечный, тёплый, читаемый при 15-16px (IM Fell English SC слишком декоративен — сливается в стенку при body-сайзах). headings — Cinzel, заголовочный антик. numbers — JetBrains Mono.",
+    "_doc": "body — IM Fell English SC: средневековый засечный, соответствует визуальному контракту RPG-листа персонажа. headings — Cinzel. numbers — JetBrains Mono.",
     "headings": "Cinzel",
-    "body":     "Lora",
+    "body":     "IM Fell English SC",
     "numbers":  "JetBrains Mono",
     "base_size_px": 16,
     "small_size_px": 13
