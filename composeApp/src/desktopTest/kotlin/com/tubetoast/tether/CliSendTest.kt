@@ -2,6 +2,7 @@ package com.tubetoast.tether
 
 import com.tubetoast.tether.network.FileClient
 import com.tubetoast.tether.network.FileServer
+import com.tubetoast.tether.preferences.TempDataStore
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.security.DeviceKeyPair
 import com.tubetoast.tether.security.TrustedDeviceStore
@@ -21,6 +22,7 @@ import kotlin.test.assertTrue
 class CliSendTest {
     private lateinit var tmpDir: File
     private lateinit var configDir: File
+    private lateinit var tempStore: TempDataStore
     private lateinit var server: FileServer
     private lateinit var client: FileClient
     private lateinit var device: Device
@@ -29,10 +31,11 @@ class CliSendTest {
     fun setup() {
         tmpDir = Files.createTempDirectory("tether-cli-test").toFile()
         configDir = Files.createTempDirectory("tether-cli-test-keys").toFile()
+        tempStore = TempDataStore()
         server = FileServer(
             port = 0,
             downloadsDir = tmpDir,
-            trustedDeviceStore = TrustedDeviceStore(configDir),
+            trustedDeviceStore = TrustedDeviceStore(tempStore.dataStore),
             deviceKeyPair = DeviceKeyPair(configDir),
         )
         val port = server.start()
@@ -44,6 +47,7 @@ class CliSendTest {
     fun teardown() {
         client.close()
         server.stop()
+        tempStore.tearDown()
         tmpDir.deleteRecursively()
         configDir.deleteRecursively()
     }

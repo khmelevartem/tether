@@ -2,6 +2,7 @@
 
 package com.tubetoast.tether.network
 
+import com.tubetoast.tether.preferences.TempDataStore
 import com.tubetoast.tether.protocol.PairRequest
 import com.tubetoast.tether.protocol.PairResponse
 import com.tubetoast.tether.security.DeviceKeyPair
@@ -33,6 +34,7 @@ import kotlin.test.assertTrue
 @Suppress("ktlint:tether:no-run-blocking-in-tests")
 class FileServerPairTest {
     private val tempPaths = mutableListOf<String>()
+    private val cleanupTempStores = mutableListOf<TempDataStore>()
     private lateinit var configDir: String
     private lateinit var store: TrustedDeviceStore
     private lateinit var keyPair: DeviceKeyPair
@@ -43,8 +45,8 @@ class FileServerPairTest {
     @BeforeTest
     fun setup() {
         configDir = newTempDir()
-        // NSUserDefaults has no per-test isolation; assertions key on publicKey-derived deviceIds, not on a fresh store.
-        store = TrustedDeviceStore()
+        val temp = TempDataStore().also { cleanupTempStores += it }
+        store = TrustedDeviceStore(temp.dataStore)
         keyPair = DeviceKeyPair(configDir)
         server = FileServer(
             port = 0,
@@ -63,6 +65,8 @@ class FileServerPairTest {
         val fm = NSFileManager.defaultManager
         tempPaths.forEach { fm.removeItemAtPath(it, error = null) }
         tempPaths.clear()
+        cleanupTempStores.forEach { it.tearDown() }
+        cleanupTempStores.clear()
     }
 
     private fun newTempDir(): String {
@@ -96,9 +100,10 @@ class FileServerPairTest {
 
     @Test
     fun pair_returns_500_when_store_fails_to_persist() {
-        val throwingStore = object : TrustedDeviceStore() {
+        val tmp = TempDataStore().also { cleanupTempStores += it }
+        val throwingStore = object : TrustedDeviceStore(tmp.dataStore) {
             override fun saveTrustedKey(deviceId: String, publicKey: ByteArray): Unit = throw IllegalStateException(
-                "simulated NSUserDefaults.synchronize() failure",
+                "simulated DataStore write failure",
             )
         }
         val failServer = FileServer(

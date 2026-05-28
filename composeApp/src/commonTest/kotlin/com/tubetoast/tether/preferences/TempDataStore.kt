@@ -12,9 +12,10 @@ import okio.Path
 import kotlin.random.Random
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class TempDataStore {
+class TempDataStore(
+    val file: Path = FileSystem.SYSTEM_TEMPORARY_DIRECTORY / "test-${Random.nextLong()}.preferences_pb",
+) {
     val scope = TestScope(UnconfinedTestDispatcher())
-    private val file: Path = FileSystem.SYSTEM_TEMPORARY_DIRECTORY / "test-${Random.nextLong()}.preferences_pb"
     val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.createWithPath(scope = scope) { file }
 
     fun tearDown() {

@@ -16,10 +16,18 @@ import java.io.File
 class DesktopAppContainer(
     config: DesktopAppConfig,
 ) : JvmAppContainer(config) {
-    override val trustedDeviceStore: TrustedDeviceStore = TrustedDeviceStore()
     private val dataStore = PreferenceDataStoreFactory.createWithPath {
         File(config.preferencesFilePath).also { it.parentFile?.mkdirs() }.absolutePath.toPath()
     }
+    private val trustedDataStore = PreferenceDataStoreFactory.createWithPath {
+        File(config.preferencesFilePath)
+            .parentFile!!
+            .resolve("tether_trusted_devices.preferences_pb")
+            .also { it.parentFile?.mkdirs() }
+            .absolutePath
+            .toPath()
+    }
+    override val trustedDeviceStore: TrustedDeviceStore = TrustedDeviceStore(trustedDataStore)
     override val namePersistence: DeviceNamePersistence = config.namePersistenceOverride
         ?: DefaultDeviceNamePersistence(dataStore)
     override val mdnsDiscovery: MdnsDiscovery = MdnsDiscovery(DiscoveredDevicesStore())

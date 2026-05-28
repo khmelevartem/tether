@@ -32,7 +32,10 @@ open class AppleAppContainer(
         appSupportDir().toPath() / "tether_preferences.preferences_pb"
     }
     override val namePersistence: DeviceNamePersistence = DefaultDeviceNamePersistence(dataStore)
-    override val trustedDeviceStore: TrustedDeviceStore = TrustedDeviceStore()
+    private val trustedDataStore = PreferenceDataStoreFactory.createWithPath {
+        appSupportDir().toPath() / "tether_trusted_devices.preferences_pb"
+    }
+    override val trustedDeviceStore: TrustedDeviceStore = TrustedDeviceStore(trustedDataStore)
     override val fileServer: FileServer by lazy {
         FileServer(
             port = 0,

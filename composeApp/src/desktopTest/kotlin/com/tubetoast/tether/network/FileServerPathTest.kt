@@ -1,5 +1,6 @@
 package com.tubetoast.tether.network
 
+import com.tubetoast.tether.preferences.TempDataStore
 import com.tubetoast.tether.security.DeviceKeyPair
 import com.tubetoast.tether.security.TrustedDeviceStore
 import io.ktor.client.HttpClient
@@ -34,6 +35,7 @@ import kotlin.time.Duration.Companion.seconds
 @Suppress("ktlint:tether:no-run-blocking-in-tests")
 class FileServerPathTest {
     private val cleanupPaths = mutableListOf<File>()
+    private val cleanupTempStores = mutableListOf<TempDataStore>()
     private var startedServer: FileServer? = null
 
     @AfterTest
@@ -42,14 +44,17 @@ class FileServerPathTest {
         startedServer = null
         cleanupPaths.forEach { it.deleteRecursively() }
         cleanupPaths.clear()
+        cleanupTempStores.forEach { it.tearDown() }
+        cleanupTempStores.clear()
     }
 
     private fun newServer(downloadsDir: File): FileServer {
         val configDir = Files.createTempDirectory("tether-path-test-keys").toFile().also(cleanupPaths::add)
+        val temp = TempDataStore().also { cleanupTempStores += it }
         val server = FileServer(
             port = 0,
             downloadsDir = downloadsDir,
-            trustedDeviceStore = TrustedDeviceStore(configDir),
+            trustedDeviceStore = TrustedDeviceStore(temp.dataStore),
             deviceKeyPair = DeviceKeyPair(configDir),
         )
         startedServer = server
