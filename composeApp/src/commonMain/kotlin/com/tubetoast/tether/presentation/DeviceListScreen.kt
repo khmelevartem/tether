@@ -105,7 +105,8 @@ fun DeviceListContent(
         }
 
         IosForegroundConstraintBanner(
-            // TODO(#follow-up): wire to iOS-only signal; always false on non-iOS platforms
+            // TODO(#194): iOS — wire visible = true while any transfer is active (UIApplication foreground state observer)
+            //              On Android / Desktop / macOS this banner is permanently hidden per UX brief Platform Deltas
             visible = showIosBanner,
             modifier = Modifier.fillMaxWidth(),
         )

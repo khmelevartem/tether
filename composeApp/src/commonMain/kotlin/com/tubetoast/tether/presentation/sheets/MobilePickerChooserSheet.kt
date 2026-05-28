@@ -39,7 +39,8 @@ enum class PickerKind { Photos, Files, Folder }
 /**
  * @param onDismiss Called when the sheet is dismissed. The call site is responsible for restoring
  *   focus to the triggering PeerCard row (brief §MobilePickerChooserSheet Accessibility).
- *   TODO(#follow-up): per-row FocusRequester management in DeviceListScreen to support this.
+ *   TODO(#191-followup): file a separate accessibility issue — per-PeerCard FocusRequester map in DeviceListScreen,
+ *   restored from onDismiss. Not blocking transfer flow; pure a11y polish.
  */
 @Composable
 fun MobilePickerChooserSheet(
