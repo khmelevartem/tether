@@ -2,11 +2,10 @@
   "_doc": "Source set'ы Tether с атмосферными именами для секции «Открытые Локации» в /progress. Локация считается открытой если LOC > 0 в её source set'е. Имена зафиксированы ради сравнимости снапшотов между запусками.",
   "locations": [
     { "source_set": "commonMain",  "name": "Великий Перекрёсток", "lore": "Сердце саги. Здесь сходятся все тропы." },
-    { "source_set": "appleMain",   "name": "Сады Купертино",       "lore": "Общий двор iOS и macOS, где растут actual-классы." },
+    { "source_set": "appleMain",   "name": "Сады Купертино",       "lore": "Двор iOS, где растут actual-классы." },
     { "source_set": "androidMain", "name": "Зелёные Кузни",        "lore": "Кузни форграунд-сервисов и NSD." },
     { "source_set": "desktopMain", "name": "Башня JVM",            "lore": "Высокий замок Compose и Ktor." },
     { "source_set": "iosMain",     "name": "Острова iOS",          "lore": "Молодая колония. Берег ещё пустынен." },
-    { "source_set": "macosMain",   "name": "Утёсы macOS Arm",      "lore": "Кремниевые скалы, видны только с Apple Silicon." },
     { "source_set": "desktopCli",  "name": "Подземелье CLI",       "lore": "Тёмные кулуары Clikt, где живёт командный язык." },
     { "source_set": "jvmMain",     "name": "Цитадель Байткода",    "lore": "Общий зал двух королевств — Андроида и Десктопа." }
   ]

@@ -22,7 +22,7 @@
 - [ ] Делегирование через `by` — `lazy`, `observable`, `vetoable`, кастомные делегаты
 
 ### Функции
-- [ ] `inline` — что делает компилятор, когда применять, оверхед лямбд
+- [x] `inline` — что делает компилятор, когда применять, оверхед лямбд
 - [ ] `reified` — почему только с `inline`, как обходит type erasure
 - [ ] Extension functions — компилируются в статический метод, не могут переопределить member
 - [ ] Scope functions (`let` / `run` / `with` / `apply` / `also`) — receiver vs argument, возвращаемое значение
