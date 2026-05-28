@@ -21,8 +21,8 @@ the `SecurityException` from `startForeground()` was fixed by adding
 `CHANGE_WIFI_MULTICAST_STATE`, but the notification still did not appear.
 
 **Current fix:** use `dataSync` type instead. It shows the notification reliably
-without hardware requirements. 6h/day cumulative limit on Android 15+ is a known
-trade-off, tracked in #59.
+without hardware requirements. 6h-per-24h rolling cap on Android 15+ is a known
+trade-off, documented below.
 
 ```xml
 <!-- AndroidManifest.xml -->
@@ -48,22 +48,35 @@ notification is visible. Emulators may not reproduce suppression behavior.
 
 ## dataSync 6h/24h cap on Android 15+
 
-**Symptom:** on API 35+, after ~6h cumulative background FGS runtime in a 24-hour period,
-the service is force-stopped by the OS. The notification disappears with no user-visible
-message; logcat shows a fatal exception with the dataSync-did-not-stop message.
+**Symptom:** on API 35+, after ~6h cumulative background FGS runtime in a 24-hour rolling
+window, the service is force-stopped by the OS. Two observable failure modes:
+
+- An already-running service that hits the cap: the notification disappears with no
+  user-visible message; logcat shows a fatal exception with a "dataSync did not stop
+  within its timeout" message.
+- A service started after the cap is already exhausted: attempting to restart the service
+  raises a start-not-allowed exception with a "Time limit already exhausted for foreground
+  service type dataSync" message (visible at the next cold start after a force-quit).
+
 ([Android 15 behavior changes — Data sync foreground services](https://developer.android.com/about/versions/15/behavior-changes-15#datasync-timeout))
 
 **Root cause:** Android 15 (API 35) introduced a 6-hour-per-24h cap on `dataSync` FGS
 runtime. The timer resets each time the user brings the app to the foreground.
 
-**Why we accept it:** alternatives are worse for Tether — `connectedDevice` is suppressed
-without active hardware (see section above), `specialUse` taxes every Play release with
-manual review. Tether's interactive use accrues minutes of background FGS time per session,
-not hours, so the cap is unlikely to trigger in practice.
+**Why we accept it:** alternatives are worse — `connectedDevice` is suppressed without
+active hardware (see section above), `specialUse` taxes every Play release with manual
+review. The 24-hour window is rolling and the timer resets on foreground; most usage
+patterns involve the user opening the app at least once every few hours to send or receive,
+which resets the cap. For a phone left backgrounded all day with no interaction, the service
+will eventually die silently — the user notices the missing notification and reopens the app,
+at which point the foreground-reset takes effect.
 
-**Detection:** `adb logcat | grep "dataSync did not stop within its timeout"`
+**Detection:**
+```
+adb logcat | grep -E "dataSync did not stop within its timeout|Time limit already exhausted"
+```
 
-**Recovery:** user reopens the app; cold start re-arms the foreground service (see sticky-Stop section).
+**Recovery:** user reopens the app; cold start re-arms the foreground service (see the "Stop button UX — sticky Stop pattern" section below).
 
 ---
 
