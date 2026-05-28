@@ -37,7 +37,7 @@ class FileServerPairTest {
     private val tempPaths = mutableListOf<String>()
     private val cleanupTempStores = mutableListOf<TempDataStore>()
     private lateinit var configDir: String
-    private lateinit var store: DefaultTrustedDeviceStore
+    private lateinit var store: TrustedDeviceStore
     private lateinit var keyPair: DeviceKeyPair
     private lateinit var server: FileServer
     private lateinit var client: HttpClient

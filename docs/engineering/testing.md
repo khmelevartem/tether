@@ -31,11 +31,22 @@ A test lives in the most general source set across whose targets every reference
 
 NSRunLoop must be pumped manually — see [`docs/knowledge/apple-platform.md`](../knowledge/apple-platform.md) for details.
 
-## Test seams for `expect` classes
+## Test seams
 
-If an `actual` implementation fundamentally cannot fail in a test without mocking a platform API (`NSUserDefaults.synchronize()` is always true in Robolectric / simulator, DataStore does not throw on demand) — declare `expect open class` with `open fun` for the methods that need to be substituted. The test declares an anonymous `object : TrustedDeviceStore(...)` with `override fun saveTrustedKey(...) = throw ...` and supplies it through the same DI entry point as the real store. This preserves the DI graph (the same type flows into `FileServer`) and avoids creating an interface wrapper for a single substitution point.
+When an implementation cannot produce an error condition without mocking a platform API (e.g. DataStore does not throw on demand), extract the dependency behind an interface and supply a throwing anonymous object in tests:
 
-Do not do this preemptively — only when the contract "the actual must throw on error" needs to be verified end-to-end (the HTTP level in our case), and the error trigger on the platform is unreachable. Example — `TrustedDeviceStore` in #9: HTTP `/pair → 500` is tested on every actual via a throwing subclass.
+```kotlin
+val throwingStore = object : TrustedDeviceStore {
+    override suspend fun isTrusted(deviceId: String) = false
+    override suspend fun saveTrustedKey(deviceId: String, publicKey: ByteArray) =
+        throw IllegalStateException("simulated write failure")
+    override suspend fun getPublicKey(deviceId: String): ByteArray? = null
+}
+```
+
+The interface flows into the production DI graph; the anonymous object replaces it in the specific test without touching the graph shape. This is the pattern used to verify the HTTP `/pair → 500` contract in `FileServerPairTest`.
+
+Do not do this preemptively — only when the error path is unreachable from the real implementation and the end-to-end contract (e.g. HTTP status) must be verified. An interface earns its place as a test seam per `architecture-principles.md §What we explicitly skip`.
 
 ## HTTP client in unit tests
 

@@ -49,7 +49,7 @@ class FileServerPairTest {
     private fun newConfigDir(): File =
         Files.createTempDirectory("tether-pair-test").toFile().also(cleanupPaths::add)
 
-    private fun newTrustedStore(): DefaultTrustedDeviceStore {
+    private fun newTrustedStore(): TrustedDeviceStore {
         val temp = TempDataStore()
         cleanupTempStores += temp
         return DefaultTrustedDeviceStore(temp.dataStore)
