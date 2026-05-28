@@ -49,9 +49,9 @@ notification is visible. Emulators may not reproduce suppression behavior.
 ## dataSync 6h/24h cap on Android 15+
 
 **Symptom:** on API 35+, after ~6h cumulative background FGS runtime in a 24-hour period,
-the system invokes `Service.onTimeout`; if the service does not self-stop within a few
-seconds, a `RemoteServiceException` is thrown and the service is killed. The notification
-disappears with no user-visible message. ([Android 15 behavior changes — Data sync foreground services](https://developer.android.com/about/versions/15/behavior-changes-15#datasync-timeout))
+the service is force-stopped by the OS. The notification disappears with no user-visible
+message; logcat shows a fatal exception with the dataSync-did-not-stop message.
+([Android 15 behavior changes — Data sync foreground services](https://developer.android.com/about/versions/15/behavior-changes-15#datasync-timeout))
 
 **Root cause:** Android 15 (API 35) introduced a 6-hour-per-24h cap on `dataSync` FGS
 runtime. The timer resets each time the user brings the app to the foreground.
