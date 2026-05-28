@@ -50,20 +50,32 @@ fun PerFileRow(
     onCancelFile: (String) -> Unit,
     onRetryFile: (String) -> Unit,
     modifier: Modifier = Modifier,
+    peerName: String = "",
+    isOnline: Boolean = true,
 ) {
     val colors = TetherTheme.colors
     val spacing = TetherTheme.spacing
     val typography = TetherTheme.typography
 
     val rowModifier = if (status is PerFileStatus.Failed && isSenderSide) {
-        modifier
-            .fillMaxWidth()
-            .clickable(
-                onClick = { onRetryFile(status.name) },
-            ).semantics {
-                role = Role.Button
-                contentDescription = "Retry ${status.name}"
-            }.padding(vertical = spacing.sm)
+        val semanticLabel = failedRowSemanticLabel(status, peerName, isOnline)
+        val peerOffline = status.reason is FailureReason.PeerUnreachable && !isOnline
+        if (peerOffline) {
+            modifier
+                .fillMaxWidth()
+                .semantics {
+                    role = Role.Button
+                    contentDescription = semanticLabel
+                }.padding(vertical = spacing.sm)
+        } else {
+            modifier
+                .fillMaxWidth()
+                .clickable(onClick = { onRetryFile(status.name) })
+                .semantics {
+                    role = Role.Button
+                    contentDescription = semanticLabel
+                }.padding(vertical = spacing.sm)
+        }
     } else {
         modifier
             .fillMaxWidth()
@@ -123,7 +135,7 @@ fun PerFileRow(
                 if (isSenderSide) {
                     RowCancelButton(
                         onClick = { onCancelFile(status.name) },
-                        contentDescription = "Cancel ${status.name}",
+                        contentDescription = "Cancel sending ${status.name}",
                     )
                 } else {
                     StatusIcon(
@@ -137,7 +149,7 @@ fun PerFileRow(
                 if (isSenderSide) {
                     RowCancelButton(
                         onClick = { onCancelFile(status.name) },
-                        contentDescription = "Cancel ${status.name}",
+                        contentDescription = "Cancel sending ${status.name}",
                     )
                 }
             }
@@ -196,6 +208,24 @@ private fun StatusIcon(
         colorFilter = ColorFilter.tint(tint),
         modifier = modifier.size(StatusIconSize),
     )
+}
+
+private fun failedRowSemanticLabel(
+    status: PerFileStatus.Failed,
+    peerName: String,
+    isOnline: Boolean,
+): String {
+    val name = status.name
+    return when {
+        status.cancelledByUser || status.reason is FailureReason.CancelledByUser ->
+            "$name, cancelled by you. Activate to retry."
+        status.reason is FailureReason.TransferCancelled ->
+            "$name, transfer cancelled. Activate to retry."
+        status.reason is FailureReason.PeerUnreachable && !isOnline ->
+            "$name, not sent. Retry unavailable — $peerName is offline."
+        else ->
+            "$name, not sent. Activate to retry."
+    }
 }
 
 private fun failedRowHelperText(status: PerFileStatus.Failed): String =

@@ -1,6 +1,7 @@
 package com.tubetoast.tether.presentation
 
 import com.arkivanov.decompose.ComponentContext
+import com.arkivanov.decompose.childContext
 import com.arkivanov.essenty.lifecycle.coroutines.coroutineScope
 import com.tubetoast.tether.discovery.DeviceDiscovery
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
@@ -30,7 +31,7 @@ class RootComponentFactory(
             },
             registryFactory = { onShowDetails ->
                 TransferRegistry(
-                    componentContext = componentContext,
+                    componentContext = componentContext.childContext("transfer_registry"),
                     peerComponentFactory = { ctx, peer ->
                         PeerTransferComponent(
                             componentContext = ctx,
@@ -46,7 +47,7 @@ class RootComponentFactory(
                     scope = scope,
                 )
             },
-            scope = scope,
+            coroutineScope = scope,
         )
     }
 }

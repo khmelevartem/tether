@@ -2,9 +2,9 @@ package com.tubetoast.tether.presentation
 
 import com.tubetoast.tether.presentation.transfer.PeerRowProjection
 import com.tubetoast.tether.presentation.transfer.PeerTransferState
-import com.tubetoast.tether.presentation.transfer.toPeerIdentity
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.PeerIdentity
+import com.tubetoast.tether.transfer.toPeerIdentity
 
 data class DeviceRow(
     val device: Device,

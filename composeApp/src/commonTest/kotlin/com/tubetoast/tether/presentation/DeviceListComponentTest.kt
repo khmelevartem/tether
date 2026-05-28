@@ -7,9 +7,9 @@ import com.arkivanov.essenty.lifecycle.resume
 import com.tubetoast.tether.discovery.FakeDeviceDiscovery
 import com.tubetoast.tether.presentation.transfer.PeerRowProjection
 import com.tubetoast.tether.presentation.transfer.PeerTransferState
-import com.tubetoast.tether.presentation.transfer.toPeerIdentity
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.PeerIdentity
+import com.tubetoast.tether.transfer.toPeerIdentity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow

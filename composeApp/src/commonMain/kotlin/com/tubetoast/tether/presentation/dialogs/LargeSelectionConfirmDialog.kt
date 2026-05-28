@@ -77,13 +77,17 @@ fun LargeSelectionConfirmDialogContent(
     val typography = TetherTheme.typography
     val shapes = TetherTheme.shapes
 
+    // Compose has no Role.AlertDialog; mergeDescendants ensures the container is a single
+    // focusable unit while Dialog() itself handles focus trapping.
+    // TODO(#follow-up): revisit if CMP adds native alertdialog role support.
     Column(
         modifier = modifier
             .fillMaxWidth()
             .clip(shapes.lg)
             .background(colors.surfaceRaised)
             .border(spacing.borderWidth, colors.border, shapes.lg)
-            .padding(horizontal = spacing.lg, vertical = spacing.xl),
+            .padding(horizontal = spacing.lg, vertical = spacing.xl)
+            .semantics(mergeDescendants = true) {},
         verticalArrangement = Arrangement.spacedBy(spacing.md),
     ) {
         BasicText(
@@ -92,8 +96,7 @@ fun LargeSelectionConfirmDialogContent(
         )
 
         BasicText(
-            text = "You're about to send $fileCount files (${ByteFormatting.formatSize(totalBytes)}) to ${peer.id}. " +
-                "This may take a while and use significant bandwidth.",
+            text = "About to send $fileCount files (${ByteFormatting.formatSize(totalBytes)}) to ${peer.id}. Continue?",
             style = typography.bodyMedium.copy(color = colors.textPrimary),
         )
 
@@ -109,10 +112,11 @@ fun LargeSelectionConfirmDialogContent(
         ) {
             CancelTextButton(
                 onClick = onDismiss,
-                contentDescription = "Cancel and return to device list",
+                contentDescription = "Cancel — discard selection",
             )
             SendButton(
                 onClick = onConfirm,
+                sendLabel = "Send $fileCount files to ${peer.id}",
                 modifier = Modifier.padding(start = spacing.md),
             )
         }
@@ -136,11 +140,7 @@ private fun DontShowAgainRow(
             .tetherMinTouchTarget()
             .semantics {
                 role = Role.Checkbox
-                contentDescription = if (checked) {
-                    "Don't show again, currently checked"
-                } else {
-                    "Don't show again, currently unchecked"
-                }
+                contentDescription = "Don't show this warning again for large selections"
             },
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(spacing.sm),
@@ -185,6 +185,7 @@ private fun CheckboxBox(
 @Composable
 private fun SendButton(
     onClick: () -> Unit,
+    sendLabel: String,
     modifier: Modifier = Modifier,
 ) {
     val colors = TetherTheme.colors
@@ -194,7 +195,7 @@ private fun SendButton(
             .clickable(onClick = onClick)
             .semantics {
                 role = Role.Button
-                contentDescription = "Send files"
+                contentDescription = sendLabel
             },
         contentAlignment = Alignment.Center,
     ) {

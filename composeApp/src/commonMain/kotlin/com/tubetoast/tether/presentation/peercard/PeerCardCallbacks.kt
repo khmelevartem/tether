@@ -9,4 +9,6 @@ data class PeerCardCallbacks(
     val onRetry: () -> Unit,
     val onShowDetails: () -> Unit,
     val onOpenFiles: () -> Unit,
+    /** Called when the card body is tapped while pending files exist. Null means the tap is a no-op. */
+    val onClick: (() -> Unit)? = null,
 )

@@ -35,6 +35,11 @@ import compose.icons.tablericons.Photo
 
 enum class PickerKind { Photos, Files, Folder }
 
+/**
+ * @param onDismiss Called when the sheet is dismissed. The call site is responsible for restoring
+ *   focus to the triggering PeerCard row (brief §MobilePickerChooserSheet Accessibility).
+ *   TODO(#follow-up): per-row FocusRequester management in DeviceListScreen to support this.
+ */
 @Composable
 fun MobilePickerChooserSheet(
     sheetState: ModalBottomSheetState,
@@ -51,7 +56,8 @@ fun MobilePickerChooserSheet(
         Box(
             modifier = Modifier
                 .clip(TetherTheme.shapes.lg)
-                .background(TetherTheme.colors.surfaceRaised),
+                .background(TetherTheme.colors.surfaceRaised)
+                .semantics { contentDescription = "Dismiss picker chooser" },
         ) {
             MobilePickerChooserSheetContent(
                 enabledKinds = enabledKinds,

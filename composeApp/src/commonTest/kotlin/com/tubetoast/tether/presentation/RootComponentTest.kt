@@ -10,12 +10,12 @@ import com.tubetoast.tether.discovery.FakeDeviceDiscovery
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.presentation.transfer.PeerTransferState
 import com.tubetoast.tether.presentation.transfer.TransferRegistry
-import com.tubetoast.tether.presentation.transfer.toPeerIdentity
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.BatchSender
 import com.tubetoast.tether.transfer.FakeConnectionMonitor
 import com.tubetoast.tether.transfer.FakeFileSource
 import com.tubetoast.tether.transfer.PeerIdentity
+import com.tubetoast.tether.transfer.toPeerIdentity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -207,6 +207,7 @@ class RootComponentTest {
             },
             discoveredDevices = devices,
             scope = coroutineScope,
+            mainDispatcher = Dispatchers.Unconfined,
         )
     }
 
@@ -237,7 +238,7 @@ class RootComponentTest {
                 )
             },
             registryFactory = registryFactory,
-            scope = coroutineScope,
+            coroutineScope = coroutineScope,
         )
     }
 

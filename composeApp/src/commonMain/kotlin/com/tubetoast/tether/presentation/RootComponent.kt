@@ -14,6 +14,7 @@ import com.tubetoast.tether.presentation.transfer.TransferRegistry
 import com.tubetoast.tether.transfer.FileSource
 import com.tubetoast.tether.transfer.PeerIdentity
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -30,9 +31,9 @@ class RootComponent(
     componentContext: ComponentContext,
     private val deviceListFactory: (ComponentContext, TransferRegistry) -> DeviceListComponent,
     registryFactory: (onShowDetails: (PeerIdentity) -> Unit) -> TransferRegistry,
-    scope: CoroutineScope = componentContext.coroutineScope(),
+    coroutineScope: CoroutineScope = componentContext.coroutineScope(),
 ) : ComponentContext by componentContext {
-    private val coroutineScope = scope
+    private val scope = coroutineScope
 
     private sealed interface Config {
         data object DeviceList : Config
@@ -61,6 +62,8 @@ class RootComponent(
 
     private val mutableDropFeedback = MutableValue(false)
     val dropFeedback: Value<Boolean> = mutableDropFeedback
+
+    private var dropFeedbackJob: Job? = null
 
     private fun createChild(config: Config, context: ComponentContext): Child =
         when (config) {
@@ -96,8 +99,9 @@ class RootComponent(
     }
 
     fun onDropRejectedDuringTransfer() {
-        mutableDropFeedback.value = true
-        coroutineScope.launch {
+        dropFeedbackJob?.cancel()
+        dropFeedbackJob = scope.launch {
+            mutableDropFeedback.value = true
             delay(DROP_FEEDBACK_DURATION_MS)
             mutableDropFeedback.value = false
         }

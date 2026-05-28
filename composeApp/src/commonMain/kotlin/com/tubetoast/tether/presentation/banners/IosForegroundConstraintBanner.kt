@@ -7,9 +7,7 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
@@ -37,7 +35,6 @@ fun IosForegroundConstraintBanner(
             .padding(horizontal = spacing.lg, vertical = spacing.sm)
             .semantics {
                 liveRegion = LiveRegionMode.Assertive
-                role = Role.Image
             },
     )
 }

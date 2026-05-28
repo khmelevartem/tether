@@ -9,11 +9,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
@@ -21,6 +26,7 @@ import com.tubetoast.tether.presentation.transfer.PeerTransferState
 import com.tubetoast.tether.presentation.transfer.PerFileRow
 import com.tubetoast.tether.presentation.transfer.TransferDetailsComponent
 import com.tubetoast.tether.presentation.transfer.aggregateStripCopy
+import com.tubetoast.tether.presentation.transfer.detailsSubtitleCopy
 import com.tubetoast.tether.transfer.PerFileStatus
 import com.tubetoast.tether.ui.components.CancelTextButton
 import com.tubetoast.tether.ui.components.DismissCloseButton
@@ -66,6 +72,13 @@ fun TransferDetailsContent(
     val failedCount = perFile.count { it is PerFileStatus.Failed }
     val sentCount = perFile.count { it is PerFileStatus.Done }
 
+    val firstItemFocusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) {
+        if (perFile.isNotEmpty()) {
+            runCatching { firstItemFocusRequester.requestFocus() }
+        }
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -73,6 +86,7 @@ fun TransferDetailsContent(
     ) {
         TopBar(
             peerName = state.peer.id,
+            subtitle = detailsSubtitleCopy(state, state.peer.id),
             showCancel = isActive,
             onBack = onBack,
             onCancelTransfer = onCancelTransfer,
@@ -91,7 +105,7 @@ fun TransferDetailsContent(
             if (failedCount > 0 && isSenderSide) {
                 RetryTextButton(
                     onClick = onRetryAll,
-                    contentDescription = "Retry all failed files",
+                    contentDescription = "Retry all $failedCount failed files",
                     modifier = Modifier
                         .padding(horizontal = spacing.lg)
                         .padding(bottom = spacing.sm),
@@ -100,17 +114,20 @@ fun TransferDetailsContent(
         }
 
         LazyColumn(
+            state = rememberLazyListState(),
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = spacing.lg),
             verticalArrangement = Arrangement.spacedBy(spacing.xs),
         ) {
             items(perFile, key = { it.name }) { fileStatus ->
+                val isFirst = perFile.first() == fileStatus
                 PerFileRow(
                     status = fileStatus,
                     isSenderSide = isSenderSide,
                     onCancelFile = onCancelFile,
                     onRetryFile = onRetryFile,
+                    modifier = if (isFirst) Modifier.focusRequester(firstItemFocusRequester) else Modifier,
                 )
             }
         }
@@ -120,6 +137,7 @@ fun TransferDetailsContent(
 @Composable
 private fun TopBar(
     peerName: String,
+    subtitle: String,
     showCancel: Boolean,
     onBack: () -> Unit,
     onCancelTransfer: () -> Unit,
@@ -138,13 +156,20 @@ private fun TopBar(
     ) {
         DismissCloseButton(
             onClick = onBack,
-            contentDescription = "Go back",
+            contentDescription = "Back to device list",
         )
-        BasicText(
-            text = peerName,
-            style = typography.titleMedium.copy(color = colors.textPrimary),
+        Column(
             modifier = Modifier.weight(1f).padding(horizontal = spacing.sm),
-        )
+        ) {
+            BasicText(
+                text = peerName,
+                style = typography.titleMedium.copy(color = colors.textPrimary),
+            )
+            BasicText(
+                text = subtitle,
+                style = typography.labelSmall.copy(color = colors.textMuted),
+            )
+        }
         if (showCancel) {
             CancelTextButton(
                 onClick = onCancelTransfer,

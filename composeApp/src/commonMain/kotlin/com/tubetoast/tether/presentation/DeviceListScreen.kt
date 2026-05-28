@@ -11,9 +11,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
@@ -31,8 +28,9 @@ import com.tubetoast.tether.presentation.peercard.PeerCard
 import com.tubetoast.tether.presentation.peercard.PeerCardCallbacks
 import com.tubetoast.tether.presentation.sheets.MobilePickerChooserSheet
 import com.tubetoast.tether.presentation.sheets.PickerKind
-import com.tubetoast.tether.presentation.transfer.toPeerIdentity
+import com.tubetoast.tether.presentation.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.PeerIdentity
+import com.tubetoast.tether.transfer.toPeerIdentity
 import com.tubetoast.tether.ui.components.BrandMark
 import com.tubetoast.tether.ui.components.BrandMarkState
 import com.tubetoast.tether.ui.preview.PreviewFixtures
@@ -44,28 +42,22 @@ import com.tubetoast.tether.ui.theme.TetherTheme
 @Composable
 fun DeviceListScreen(
     component: DeviceListComponent,
-    rootComponent: RootComponent,
+    pending: PendingFilesSummary?,
+    dropFeedback: Boolean,
+    onCancelPending: () -> Unit,
+    peerCallbacksFor: (PeerIdentity) -> PeerCardCallbacks,
+    onPickerPick: (PeerIdentity, PickerKind) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by component.state.subscribeAsState()
-    val pendingFiles by rootComponent.pendingFiles.subscribeAsState()
-    val dropFeedback by rootComponent.dropFeedback.subscribeAsState()
-
-    val hasPending = pendingFiles.fileCount > 0
 
     DeviceListContent(
         rows = state.rows,
-        pending = if (hasPending) pendingFiles else null,
+        pending = pending,
         dropFeedback = dropFeedback,
-        onCancelPending = rootComponent::clearPendingFiles,
-        onPeerTap = { peer ->
-            if (hasPending) {
-                rootComponent.onPeerTapped(peer)
-            } else {
-                rootComponent.showTransferDetails(peer)
-            }
-        },
-        onPickerPick = {},
+        onCancelPending = onCancelPending,
+        peerCallbacksFor = peerCallbacksFor,
+        onPickerPick = onPickerPick,
         modifier = modifier,
     )
 }
@@ -76,8 +68,8 @@ fun DeviceListContent(
     pending: PendingFilesSummary?,
     dropFeedback: Boolean,
     onCancelPending: () -> Unit,
-    onPeerTap: (PeerIdentity) -> Unit,
-    onPickerPick: (PickerKind) -> Unit,
+    peerCallbacksFor: (PeerIdentity) -> PeerCardCallbacks,
+    onPickerPick: (PeerIdentity, PickerKind) -> Unit,
     modifier: Modifier = Modifier,
     showIosBanner: Boolean = false,
 ) {
@@ -85,10 +77,19 @@ fun DeviceListContent(
     val colors = TetherTheme.colors
     val typography = TetherTheme.typography
 
-    var sheetOpen by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(
         initialDetent = SheetDetent.Hidden,
     )
+    // Holds the peer for which the picker sheet was opened; cleared on dismiss.
+    var sheetPeer: PeerIdentity? = androidx.compose.runtime
+        .remember {
+            androidx.compose.runtime.mutableStateOf<PeerIdentity?>(null)
+        }.value
+    val sheetPeerState = androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf<PeerIdentity?>(
+            null,
+        )
+    }
 
     Column(modifier = modifier.fillMaxSize()) {
         if (pending != null) {
@@ -101,6 +102,7 @@ fun DeviceListContent(
         }
 
         IosForegroundConstraintBanner(
+            // TODO(#follow-up): wire to iOS-only signal; always false on non-iOS platforms
             visible = showIosBanner,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -123,9 +125,14 @@ fun DeviceListContent(
                 items(rows, key = { it.device.id }) { row ->
                     val peer = row.device.toPeerIdentity()
                     val tapAction: (() -> Unit)? = when {
-                        pending != null -> ({ onPeerTap(peer) })
-                        row.transferState is com.tubetoast.tether.presentation.transfer.PeerTransferState.Idle ->
-                            ({ sheetOpen = true })
+                        pending != null -> peerCallbacksFor(peer).let { cbs -> { cbs.onClick?.invoke() } }
+                        row.transferState is PeerTransferState.Idle ->
+                            (
+                                {
+                                    sheetPeerState.value = peer
+                                    sheetState.targetDetent = SheetDetent.FullyExpanded
+                                }
+                            )
                         else -> null
                     }
                     val cardModifier = Modifier
@@ -134,9 +141,8 @@ fun DeviceListContent(
                         .then(
                             if (tapAction != null) {
                                 Modifier
-                                    .clickable(
-                                        onClick = tapAction,
-                                    ).semantics {
+                                    .clickable(onClick = tapAction)
+                                    .semantics {
                                         role = Role.Button
                                         contentDescription = if (pending != null) {
                                             "Send to ${row.device.name}"
@@ -152,10 +158,7 @@ fun DeviceListContent(
                         state = row.transferState,
                         isOnline = row.isOnline,
                         device = row.device,
-                        callbacks = peerCardCallbacks(
-                            peer = peer,
-                            onPeerTap = onPeerTap,
-                        ),
+                        callbacks = peerCallbacksFor(peer),
                         modifier = cardModifier,
                     )
                 }
@@ -163,39 +166,25 @@ fun DeviceListContent(
         }
     }
 
-    if (sheetOpen) {
+    sheetPeerState.value?.let { triggerPeer ->
         MobilePickerChooserSheet(
             sheetState = sheetState,
             onPickPhotos = {
-                sheetOpen = false
-                onPickerPick(PickerKind.Photos)
+                sheetPeerState.value = null
+                onPickerPick(triggerPeer, PickerKind.Photos)
             },
             onPickFiles = {
-                sheetOpen = false
-                onPickerPick(PickerKind.Files)
+                sheetPeerState.value = null
+                onPickerPick(triggerPeer, PickerKind.Files)
             },
             onPickFolder = {
-                sheetOpen = false
-                onPickerPick(PickerKind.Folder)
+                sheetPeerState.value = null
+                onPickerPick(triggerPeer, PickerKind.Folder)
             },
-            onDismiss = { sheetOpen = false },
+            onDismiss = { sheetPeerState.value = null },
         )
     }
 }
-
-private fun peerCardCallbacks(
-    peer: PeerIdentity,
-    onPeerTap: (PeerIdentity) -> Unit,
-): PeerCardCallbacks = PeerCardCallbacks(
-    onToggleExpand = {},
-    onToggleAutoSend = {},
-    onShowAutoSendInfo = {},
-    onCancel = { onPeerTap(peer) },
-    onDismiss = { onPeerTap(peer) },
-    onRetry = { onPeerTap(peer) },
-    onShowDetails = { onPeerTap(peer) },
-    onOpenFiles = {},
-)
 
 @Preview(name = "DeviceList — discovering empty")
 @Composable
@@ -206,8 +195,8 @@ private fun PreviewDiscovering(@PreviewParameter(Themes::class) dark: Boolean) =
             pending = null,
             dropFeedback = false,
             onCancelPending = {},
-            onPeerTap = {},
-            onPickerPick = {},
+            peerCallbacksFor = { previewCallbacks() },
+            onPickerPick = { _, _ -> },
         )
     }
 
@@ -226,8 +215,8 @@ private fun PreviewSingleDevice(@PreviewParameter(Themes::class) dark: Boolean) 
             pending = null,
             dropFeedback = false,
             onCancelPending = {},
-            onPeerTap = {},
-            onPickerPick = {},
+            peerCallbacksFor = { previewCallbacks() },
+            onPickerPick = { _, _ -> },
         )
     }
 
@@ -250,8 +239,8 @@ private fun PreviewMultipleDevices(@PreviewParameter(Themes::class) dark: Boolea
             pending = null,
             dropFeedback = false,
             onCancelPending = {},
-            onPeerTap = {},
-            onPickerPick = {},
+            peerCallbacksFor = { previewCallbacks() },
+            onPickerPick = { _, _ -> },
         )
     }
 
@@ -270,8 +259,8 @@ private fun PreviewPendingBanner(@PreviewParameter(Themes::class) dark: Boolean)
             pending = PendingFilesSummary(3, 52_428_800L),
             dropFeedback = false,
             onCancelPending = {},
-            onPeerTap = {},
-            onPickerPick = {},
+            peerCallbacksFor = { previewCallbacks() },
+            onPickerPick = { _, _ -> },
         )
     }
 
@@ -290,8 +279,8 @@ private fun PreviewDropFlash(@PreviewParameter(Themes::class) dark: Boolean) =
             pending = PendingFilesSummary(5, 104_857_600L),
             dropFeedback = true,
             onCancelPending = {},
-            onPeerTap = {},
-            onPickerPick = {},
+            peerCallbacksFor = { previewCallbacks() },
+            onPickerPick = { _, _ -> },
         )
     }
 
@@ -311,7 +300,19 @@ private fun PreviewIosBanner(@PreviewParameter(Themes::class) dark: Boolean) =
             dropFeedback = false,
             showIosBanner = true,
             onCancelPending = {},
-            onPeerTap = {},
-            onPickerPick = {},
+            peerCallbacksFor = { previewCallbacks() },
+            onPickerPick = { _, _ -> },
         )
     }
+
+private fun previewCallbacks() = PeerCardCallbacks(
+    onToggleExpand = {},
+    onToggleAutoSend = {},
+    onShowAutoSendInfo = {},
+    onCancel = {},
+    onDismiss = {},
+    onRetry = {},
+    onShowDetails = {},
+    onOpenFiles = {},
+    onClick = null,
+)

@@ -6,10 +6,12 @@ import com.arkivanov.essenty.lifecycle.resume
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.FakeFileSource
 import com.tubetoast.tether.transfer.fakeBatchSender
-import kotlinx.coroutines.CoroutineScope
+import com.tubetoast.tether.transfer.toPeerIdentity
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -26,7 +28,7 @@ class TransferRegistryTest {
 
     @Test
     fun `get returns stable instance across calls`() = runTest {
-        val registry = buildRegistry(backgroundScope)
+        val registry = buildRegistry()
 
         val first = registry.get(peerA)
         val second = registry.get(peerA)
@@ -37,7 +39,7 @@ class TransferRegistryTest {
     @Test
     fun `get registers peer in rows with correct online status`() = runTest {
         val devices = MutableStateFlow(listOf(deviceA))
-        val registry = buildRegistry(backgroundScope, devices)
+        val registry = buildRegistry(devices)
         runCurrent()
 
         registry.get(peerA)
@@ -49,7 +51,7 @@ class TransferRegistryTest {
     @Test
     fun `peer disappears while state is Idle is evicted from rows`() = runTest {
         val devices = MutableStateFlow(listOf(deviceA))
-        val registry = buildRegistry(backgroundScope, devices)
+        val registry = buildRegistry(devices)
         runCurrent()
 
         registry.get(peerA)
@@ -64,7 +66,7 @@ class TransferRegistryTest {
     @Test
     fun `peer disappears while state is non-Idle persists in rows`() = runTest {
         val devices = MutableStateFlow(listOf(deviceA))
-        val registry = buildRegistry(backgroundScope, devices)
+        val registry = buildRegistry(devices)
         runCurrent()
 
         val peerComponent = registry.get(peerA)
@@ -78,9 +80,30 @@ class TransferRegistryTest {
     }
 
     @Test
+    fun `peer evicted after dismissing terminal state while offline`() = runTest {
+        val devices = MutableStateFlow(listOf(deviceA))
+        val registry = buildRegistry(devices)
+        runCurrent()
+
+        val peerComponent = registry.get(peerA)
+        peerComponent.startOutbound(listOf(FakeFileSource("file.txt", 10L)))
+        runCurrent()
+        assertIs<PeerTransferState.Sent>(registry.rows.value[peerA]?.state)
+
+        devices.value = emptyList()
+        runCurrent()
+        assertNotNull(registry.rows.value[peerA]) // still present: non-Idle while offline
+
+        peerComponent.onDismiss() // transitions to Idle
+        runCurrent()
+
+        assertNull(registry.rows.value[peerA]) // evicted now that state is Idle and peer is offline
+    }
+
+    @Test
     fun `rows state reflects component state`() = runTest {
         val devices = MutableStateFlow(listOf(deviceA))
-        val registry = buildRegistry(backgroundScope, devices)
+        val registry = buildRegistry(devices)
         runCurrent()
 
         val peerComponent = registry.get(peerA)
@@ -92,8 +115,7 @@ class TransferRegistryTest {
         assertIs<PeerTransferState.Sent>(registry.rows.value[peerA]?.state)
     }
 
-    private fun buildRegistry(
-        scope: CoroutineScope,
+    private fun TestScope.buildRegistry(
         devices: MutableStateFlow<List<Device>> = MutableStateFlow(emptyList()),
     ): TransferRegistry {
         val lifecycle = LifecycleRegistry().also { it.resume() }
@@ -107,11 +129,12 @@ class TransferRegistryTest {
                     batchSenderFactory = fakeBatchSender(),
                     inboundEvents = MutableSharedFlow(),
                     onShowDetailsCallback = {},
-                    scope = scope,
+                    scope = backgroundScope,
                 )
             },
             discoveredDevices = devices,
-            scope = scope,
+            scope = backgroundScope,
+            mainDispatcher = StandardTestDispatcher(testScheduler),
         )
     }
 }

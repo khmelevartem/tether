@@ -10,10 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -57,20 +53,27 @@ fun PeerCardSent(
     )
 }
 
+/**
+ * @param deepLinkHint Platform-specific copy shown when the OS deep-link to the saved folder fails.
+ *   Defaults to the Desktop JVM copy; per-platform wiring is deferred — see TODO below.
+ * @param showDeepLinkHint Whether to render the hint. Defaults to false; set to true by the call
+ *   site on deep-link failure once the OS deep-link mechanism is wired per platform.
+ *   TODO(#follow-up): wire per-platform deep-link attempt and pass showDeepLinkHint = true on failure.
+ */
 @Composable
 fun PeerCardReceived(
     state: PeerTransferState.Received,
     device: Device,
     callbacks: PeerCardCallbacks,
     modifier: Modifier = Modifier,
+    deepLinkHint: String = "Open file manager → Downloads → Tether",
+    showDeepLinkHint: Boolean = false,
 ) {
     val colors = TetherTheme.colors
     val spacing = TetherTheme.spacing
     val typography = TetherTheme.typography
     val shapes = TetherTheme.shapes
     val peerName = device.name
-
-    var showDeepLinkHint by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier
@@ -107,10 +110,8 @@ fun PeerCardReceived(
             style = typography.bodyMedium.copy(color = colors.textPrimary),
             modifier = if (state.partialReason == null) {
                 Modifier
-                    .clickable {
-                        callbacks.onOpenFiles()
-                        showDeepLinkHint = true
-                    }.semantics {
+                    .clickable { callbacks.onOpenFiles() }
+                    .semantics {
                         role = Role.Button
                         contentDescription = "Open files received from $peerName"
                     }
@@ -121,7 +122,7 @@ fun PeerCardReceived(
 
         if (showDeepLinkHint) {
             BasicText(
-                text = "Open file manager → Downloads → Tether",
+                text = deepLinkHint,
                 style = typography.labelSmall.copy(color = colors.textMuted),
             )
         }

@@ -18,7 +18,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
@@ -57,6 +59,7 @@ fun PeerCardActiveOutbound(
         sentBytes = state.sentBytes,
         totalBytes = state.totalBytes,
         bytesPerSec = state.bytesPerSec,
+        isInbound = false,
         trailingContent = {
             if (state.skippedCount > 0) {
                 SkipCountBadge(count = state.skippedCount)
@@ -92,6 +95,7 @@ fun PeerCardActiveInbound(
         sentBytes = state.receivedBytes,
         totalBytes = state.totalBytes,
         bytesPerSec = state.bytesPerSec,
+        isInbound = true,
         trailingContent = {},
         cancelDescription = "Cancel incoming transfer from $peerName",
         onCancel = callbacks.onCancel,
@@ -110,6 +114,7 @@ private fun ActiveCardShell(
     sentBytes: Long,
     totalBytes: Long?,
     bytesPerSec: Long?,
+    isInbound: Boolean,
     trailingContent: @Composable () -> Unit,
     cancelDescription: String,
     onCancel: () -> Unit,
@@ -134,7 +139,8 @@ private fun ActiveCardShell(
             .clip(shapes.md)
             .background(colors.surfaceRaised)
             .border(spacing.borderWidth, colors.border, shapes.md)
-            .padding(horizontal = spacing.lg, vertical = spacing.md),
+            .padding(horizontal = spacing.lg, vertical = spacing.md)
+            .semantics { liveRegion = LiveRegionMode.Polite },
         verticalArrangement = Arrangement.spacedBy(spacing.sm),
     ) {
         Row(
@@ -163,7 +169,11 @@ private fun ActiveCardShell(
 
         CurrentFileLabel(
             fileName = currentFile,
-            contentDescription = "Currently sending: $currentFile",
+            contentDescription = if (isInbound) {
+                "Currently receiving: $currentFile"
+            } else {
+                "Currently sending: $currentFile"
+            },
             modifier = Modifier.fillMaxWidth(),
         )
 
