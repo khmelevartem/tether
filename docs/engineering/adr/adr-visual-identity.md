@@ -166,4 +166,4 @@ UI stays single-accent (teal only). The two-tone is icon-level only.
 - [adr-presentation-and-navigation.md](adr-presentation-and-navigation.md) — Decompose presentation layer
 - [Inter typeface](https://rsms.me/inter/) — OFL-1.1
 - [Tabler Icons](https://tabler.io/icons) — MIT license
-- [Compose Unstyled / composables:core](https://composeunstyled.com/)
+- [Compose Unstyled / composables:core](https://composables.com/compose-unstyled)
