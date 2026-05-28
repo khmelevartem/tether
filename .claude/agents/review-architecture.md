@@ -86,10 +86,10 @@ Also check the **Revisit if** section of every ADR governing the touched area. I
 
 **Symmetric check on new ADRs and engineering docs introduced by the diff.** When the PR adds a new `docs/engineering/adr/adr-*.md` or `docs/engineering/<name>.md`:
 
-- The ADR must clear the three-way threshold in [`adr/README.md`](../../docs/engineering/adr/README.md) §ADR threshold (hard-to-reverse + surprising-without-context + real-trade-off). If any leg is missing — flag `[REQUIRED]` to drop the ADR; the parent living doc carries the rule.
-- A new engineering living doc must host at least one rule that is genuinely engineering-layer and not already captured by a sibling (`docs/engineering/README.md` §Writing style). A doc whose rules all belong to the spec, the ux brief, the issue body, or the code itself is short-lived — flag `[REQUIRED]` to route the content to the right layer.
-- New long-lived prose must follow [`long-lived-artifacts.md`](../../docs/engineering/long-lived-artifacts.md). A Rules section that names interface methods, function calls, or specific API verbs the same diff introduces — `[REQUIRED]`. Restating runtime / code structure visible in the diff — `[REQUIRED]`. Incident framing («after #N», «originally we did X») — `[REQUIRED]`.
-- Promotion of a brand-new rule into `architecture-principles.md` during the current task — `[REQUIRED]` to demote (parent living doc instead) unless the rule has clear evidence of biting twice already; rule-promotion to principles.md is retro-driven, not in-flight.
+- The ADR must clear the threshold in [`adr/README.md`](../../docs/engineering/adr/README.md) §ADR threshold. If not — flag `[REQUIRED]` to drop the ADR; the parent living doc carries the rule.
+- A new engineering living doc must satisfy [`docs/engineering/README.md`](../../docs/engineering/README.md) §Writing style — including the warrant test. If not — flag `[REQUIRED]` and route the content to the right layer.
+- New long-lived prose must follow [`long-lived-artifacts.md`](../../docs/engineering/long-lived-artifacts.md). Any violation in prose this diff introduces — `[REQUIRED]`.
+- Promotion of a brand-new rule into `architecture-principles.md` during the current task — `[REQUIRED]` to demote (parent living doc instead); rule-promotion is retro-driven per [`docs/engineering/README.md`](../../docs/engineering/README.md) §Writing style.
 
 ### 6. Trade-off vs violation
 

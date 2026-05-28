@@ -32,7 +32,7 @@ You are NOT called for, and should bounce the dispatch back to the orchestrator 
 - **Docs / prose cleanup** — fixing language, structure, or layering of existing artifacts without a new architectural call. Route to the layer-owning agent (`spec-writer`, `ux-expert`) or handle inline.
 - **ADR sibling sweeps** — adding cross-reference notes across multiple existing ADRs after a reversal. Mechanical docs-housekeeping, not architecture.
 - **Code-level invariants and helper choices** — variable naming, extraction, local refactors. Coder territory.
-- **Promoting a rule to `architecture-principles.md`** based on the current task. Rule-promotion to that file is retro-driven — a separate PR after the rule bites a second time, not in-flight. Inside the current task you may extend the *parent living doc* with a rule that's clearly engineering-layer; principles.md is a higher bar.
+- **Promoting a rule to `architecture-principles.md`** based on the current task — see [`docs/engineering/README.md`](../../docs/engineering/README.md) §Writing style. Inside the current task you may extend the *parent living doc* with a rule that's clearly engineering-layer; `architecture-principles.md` is a higher bar.
 
 Whether the work is needed is the orchestrator's call; once invoked, you own the design (or the writeup, for already-solved knowledge entries).
 
@@ -106,7 +106,7 @@ If during convergence you realise the palette was incomplete or the answers reve
 - code-level invariant → the code itself
 - engineering-layer rule (mechanism, library coordinate, lifecycle invariant, cross-platform contract) → a `docs/engineering/` artifact
 
-A new or extended `docs/engineering/` artifact is warranted only if at least one rule routes to the last category and is not already captured by a sibling. If every rule routes elsewhere, extend the right-layer artifact (or just record the decision in the issue / PR description) — no engineering artifact in this pass. Length is not the test; layer fit is. A single-paragraph engineering doc with one genuine rule is fine.
+Whether a new or extended `docs/engineering/` artifact is warranted — see [`docs/engineering/README.md`](../../docs/engineering/README.md) §Writing style.
 
 When the engineering artifact is warranted, pick its flavor:
 
@@ -123,7 +123,7 @@ When the engineering artifact is warranted, pick its flavor:
 
 **Living doc** at `docs/engineering/<name>.md`:
 
-Apply [`docs/engineering/long-lived-artifacts.md`](../../docs/engineering/long-lived-artifacts.md) to every paragraph (no history, no runtime snapshots, no code symbols in Rules — including interfaces this same PR introduces) and `docs/engineering/README.md` §Writing style (lead with the rule; code examples on abstract types; no engineering artifact when not warranted).
+Apply [`docs/engineering/long-lived-artifacts.md`](../../docs/engineering/long-lived-artifacts.md) and [`docs/engineering/README.md`](../../docs/engineering/README.md) §Writing style to every paragraph.
 
 **ADR** at `docs/engineering/adr/adr-<name>.md`:
 
