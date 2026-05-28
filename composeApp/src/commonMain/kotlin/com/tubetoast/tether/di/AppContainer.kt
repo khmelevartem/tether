@@ -31,6 +31,7 @@ abstract class AppContainer {
 
     open val connectionMonitor: ConnectionMonitor = NoOpConnectionMonitor
 
+    // Factory: BatchSender holds per-transfer state — one instance per concurrent peer transfer.
     open val batchSenderFactory: () -> BatchSender by lazy {
         {
             BatchSender(
