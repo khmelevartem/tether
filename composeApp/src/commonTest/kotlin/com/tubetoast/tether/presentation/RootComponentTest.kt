@@ -205,7 +205,6 @@ class RootComponentTest {
                     coroutineScope = coroutineScope,
                 )
             },
-            coroutineScope = coroutineScope,
         )
     }
 

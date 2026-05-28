@@ -1,21 +1,19 @@
 package com.tubetoast.tether.presentation
 
 import com.arkivanov.decompose.ComponentContext
+import com.arkivanov.decompose.childContext
 import com.arkivanov.decompose.router.stack.ChildStack
 import com.arkivanov.decompose.router.stack.StackNavigation
 import com.arkivanov.decompose.router.stack.childStack
 import com.arkivanov.decompose.router.stack.pop
 import com.arkivanov.decompose.router.stack.pushNew
 import com.arkivanov.decompose.value.Value
-import com.arkivanov.essenty.lifecycle.coroutines.coroutineScope
 import com.tubetoast.tether.presentation.transfer.TransferDetailsComponent
 import com.tubetoast.tether.transfer.PeerIdentity
-import kotlinx.coroutines.CoroutineScope
 
 class RootComponent(
     componentContext: ComponentContext,
     private val peerListFactory: (ComponentContext, onShowDetails: (PeerIdentity) -> Unit) -> PeerListComponent,
-    coroutineScope: CoroutineScope = componentContext.coroutineScope(),
 ) : ComponentContext by componentContext {
     private sealed interface Config {
         data object DeviceList : Config
@@ -27,10 +25,8 @@ class RootComponent(
 
     private val navigation = StackNavigation<Config>()
 
-    private var _peerListComponent: PeerListComponent? = null
-
-    val peerListComponent: PeerListComponent
-        get() = requireNotNull(_peerListComponent) { "PeerListComponent not yet created" }
+    val peerListComponent: PeerListComponent =
+        peerListFactory(childContext("peer_list"), ::showTransferDetails)
 
     val stack: Value<ChildStack<*, Child>> = childStack(
         source = navigation,
@@ -42,22 +38,21 @@ class RootComponent(
 
     private fun createChild(config: Config, context: ComponentContext): Child =
         when (config) {
-            Config.DeviceList -> {
-                val plc = peerListFactory(context, ::showTransferDetails)
-                _peerListComponent = plc
-                Child.DeviceListChild(plc)
-            }
+            Config.DeviceList -> Child.DeviceListChild(peerListComponent)
             is Config.TransferDetails -> {
-                val peerComponent = requireNotNull(_peerListComponent?.peerTransferComponent(config.peer)) {
-                    "No PeerTransferComponent for ${config.peer} — navigate to device list first"
+                val peerComponent = peerListComponent.peerTransferComponent(config.peer)
+                if (peerComponent == null) {
+                    navigation.pop()
+                    Child.DeviceListChild(peerListComponent)
+                } else {
+                    Child.TransferDetailsChild(
+                        TransferDetailsComponent(
+                            componentContext = context,
+                            peerComponent = peerComponent,
+                            onBack = { navigation.pop() },
+                        ),
+                    )
                 }
-                Child.TransferDetailsChild(
-                    TransferDetailsComponent(
-                        componentContext = context,
-                        peerComponent = peerComponent,
-                        onBack = { navigation.pop() },
-                    ),
-                )
             }
         }
 
