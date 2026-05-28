@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
 
 class RootComponent(
     componentContext: ComponentContext,
-    private val deviceListFactory: (ComponentContext, TransferRegistry) -> DeviceListComponent,
+    private val deviceListFactory: (ComponentContext, TransferRegistry) -> PeerListComponent,
     registryFactory: (onShowDetails: (PeerIdentity) -> Unit) -> TransferRegistry,
     coroutineScope: CoroutineScope = componentContext.coroutineScope(),
     private val peerPreferencesStore: PeerPreferencesStore? = null,
@@ -112,7 +112,7 @@ class RootComponent(
 
     sealed interface Child {
         data class DeviceListChild(
-            val component: DeviceListComponent,
+            val component: PeerListComponent,
         ) : Child
 
         data class TransferDetailsChild(

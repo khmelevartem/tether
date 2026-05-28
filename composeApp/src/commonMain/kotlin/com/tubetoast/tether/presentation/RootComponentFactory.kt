@@ -5,6 +5,7 @@ import com.arkivanov.decompose.childContext
 import com.arkivanov.essenty.lifecycle.coroutines.coroutineScope
 import com.tubetoast.tether.discovery.DeviceDiscovery
 import com.tubetoast.tether.preferences.PeerPreferencesStore
+import com.tubetoast.tether.presentation.peer.PeersRepository
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.presentation.transfer.TransferRegistry
 import com.tubetoast.tether.transfer.BatchSender
@@ -22,13 +23,14 @@ class RootComponentFactory(
 ) {
     fun create(componentContext: ComponentContext): RootComponent {
         val scope: CoroutineScope = componentContext.coroutineScope()
+        val peersRepository = PeersRepository(discovery = discovery, scope = scope)
         return RootComponent(
             componentContext = componentContext,
             deviceListFactory = { ctx, registry ->
-                DeviceListComponent(
+                PeerListComponent(
                     componentContext = ctx,
-                    discovery = discovery,
-                    registryRows = registry.rows,
+                    peersRepository = peersRepository,
+                    peerTransferComponentFactory = { _, peer -> registry.get(peer.id) },
                 )
             },
             registryFactory = { onShowDetails ->

@@ -30,6 +30,7 @@ import com.composables.core.rememberModalBottomSheetState
 import com.tubetoast.tether.foundation.IsMobileChooserPlatform
 import com.tubetoast.tether.presentation.banners.ForegroundConstraintBanner
 import com.tubetoast.tether.presentation.banners.PendingOutboundBanner
+import com.tubetoast.tether.presentation.peer.Peer
 import com.tubetoast.tether.presentation.peercard.PeerCard
 import com.tubetoast.tether.presentation.peercard.PeerCardCallbacks
 import com.tubetoast.tether.presentation.sheets.MobilePickerChooserSheet
@@ -47,7 +48,7 @@ import com.tubetoast.tether.ui.theme.TetherTheme
 
 @Composable
 fun DeviceListScreen(
-    component: DeviceListComponent,
+    component: PeerListComponent,
     pending: PendingFilesSummary?,
     dropFeedback: Boolean,
     onCancelPending: () -> Unit,
@@ -72,7 +73,7 @@ fun DeviceListScreen(
 
 @Composable
 fun DeviceListContent(
-    rows: List<DeviceRow>,
+    rows: List<PeerRow>,
     pending: PendingFilesSummary?,
     dropFeedback: Boolean,
     onCancelPending: () -> Unit,
@@ -130,8 +131,8 @@ fun DeviceListContent(
             }
         } else {
             LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(rows, key = { it.device.id }) { row ->
-                    val peer = row.device.toPeerIdentity()
+                items(rows, key = { it.peer.device.id }) { row ->
+                    val peer = row.peer.id
                     val tapAction: (() -> Unit)? = when {
                         pending != null -> peerCallbacksFor(peer).let { cbs -> { cbs.onClick?.invoke() } }
                         row.transferState is PeerTransferState.Idle && showMobileChooser -> (
@@ -158,9 +159,9 @@ fun DeviceListContent(
                                     .semantics {
                                         role = Role.Button
                                         contentDescription = if (pending != null) {
-                                            "Send to ${row.device.name}"
+                                            "Send to ${row.peer.device.name}"
                                         } else {
-                                            "Pick files to send to ${row.device.name}"
+                                            "Pick files to send to ${row.peer.device.name}"
                                         }
                                     }
                             } else {
@@ -169,8 +170,8 @@ fun DeviceListContent(
                         )
                     PeerCard(
                         state = row.transferState,
-                        isOnline = row.isOnline,
-                        device = row.device,
+                        isOnline = row.peer.isOnline,
+                        device = row.peer.device,
                         callbacks = peerCallbacksFor(peer),
                         modifier = cardModifier,
                         isAutoSendEnabled = autoSendEnabledFor(peer),
@@ -216,12 +217,12 @@ private fun PreviewDiscovering(@PreviewParameter(Themes::class) dark: Boolean) =
 @Composable
 private fun PreviewSingleDevice(@PreviewParameter(Themes::class) dark: Boolean) =
     PreviewSurface(darkTheme = dark) {
+        val device = PreviewFixtures.singleDevice.first()
         DeviceListContent(
             rows = listOf(
-                DeviceRow(
-                    device = PreviewFixtures.singleDevice.first(),
+                PeerRow(
+                    peer = Peer(id = device.toPeerIdentity(), device = device),
                     transferState = TransferPreviewFixtures.idleCollapsed,
-                    isOnline = true,
                 ),
             ),
             pending = null,
@@ -238,14 +239,13 @@ private fun PreviewMultipleDevices(@PreviewParameter(Themes::class) dark: Boolea
     PreviewSurface(darkTheme = dark) {
         DeviceListContent(
             rows = PreviewFixtures.multipleDevices.mapIndexed { index, device ->
-                DeviceRow(
-                    device = device,
+                PeerRow(
+                    peer = Peer(id = device.toPeerIdentity(), device = device, isOnline = index != 2),
                     transferState = when (index) {
                         0 -> TransferPreviewFixtures.activeOutbound
                         1 -> TransferPreviewFixtures.idleCollapsed
                         else -> TransferPreviewFixtures.sentFull
                     },
-                    isOnline = index != 2,
                 )
             },
             pending = null,
@@ -260,12 +260,12 @@ private fun PreviewMultipleDevices(@PreviewParameter(Themes::class) dark: Boolea
 @Composable
 private fun PreviewPendingBanner(@PreviewParameter(Themes::class) dark: Boolean) =
     PreviewSurface(darkTheme = dark) {
+        val device = PreviewFixtures.singleDevice.first()
         DeviceListContent(
             rows = listOf(
-                DeviceRow(
-                    device = PreviewFixtures.singleDevice.first(),
+                PeerRow(
+                    peer = Peer(id = device.toPeerIdentity(), device = device),
                     transferState = TransferPreviewFixtures.idleCollapsed,
-                    isOnline = true,
                 ),
             ),
             pending = PendingFilesSummary(3, 52_428_800L),
@@ -280,12 +280,12 @@ private fun PreviewPendingBanner(@PreviewParameter(Themes::class) dark: Boolean)
 @Composable
 private fun PreviewDropFlash(@PreviewParameter(Themes::class) dark: Boolean) =
     PreviewSurface(darkTheme = dark) {
+        val device = PreviewFixtures.singleDevice.first()
         DeviceListContent(
             rows = listOf(
-                DeviceRow(
-                    device = PreviewFixtures.singleDevice.first(),
+                PeerRow(
+                    peer = Peer(id = device.toPeerIdentity(), device = device),
                     transferState = TransferPreviewFixtures.activeOutbound,
-                    isOnline = true,
                 ),
             ),
             pending = PendingFilesSummary(5, 104_857_600L),
@@ -300,12 +300,12 @@ private fun PreviewDropFlash(@PreviewParameter(Themes::class) dark: Boolean) =
 @Composable
 private fun PreviewIosBanner(@PreviewParameter(Themes::class) dark: Boolean) =
     PreviewSurface(darkTheme = dark) {
+        val device = PreviewFixtures.singleDevice.first()
         DeviceListContent(
             rows = listOf(
-                DeviceRow(
-                    device = PreviewFixtures.singleDevice.first(),
+                PeerRow(
+                    peer = Peer(id = device.toPeerIdentity(), device = device),
                     transferState = TransferPreviewFixtures.activeInbound,
-                    isOnline = true,
                 ),
             ),
             pending = null,

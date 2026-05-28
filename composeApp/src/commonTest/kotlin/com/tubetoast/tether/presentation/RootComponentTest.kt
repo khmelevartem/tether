@@ -1,12 +1,12 @@
 package com.tubetoast.tether.presentation
 
 import com.arkivanov.decompose.DefaultComponentContext
-import com.arkivanov.decompose.value.MutableValue
 import com.arkivanov.essenty.backhandler.BackDispatcher
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.resume
 import com.arkivanov.essenty.statekeeper.StateKeeperDispatcher
 import com.tubetoast.tether.discovery.FakeDeviceDiscovery
+import com.tubetoast.tether.presentation.peer.PeersRepository
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.presentation.transfer.PeerTransferState
 import com.tubetoast.tether.presentation.transfer.TransferRegistry
@@ -227,13 +227,17 @@ class RootComponentTest {
         } else {
             context
         }
+        val peersRepository = PeersRepository(
+            discovery = FakeDeviceDiscovery(),
+            scope = coroutineScope,
+        )
         return RootComponent(
             componentContext = ctx,
-            deviceListFactory = { childCtx, _ ->
-                DeviceListComponent(
+            deviceListFactory = { childCtx, registry ->
+                PeerListComponent(
                     componentContext = childCtx,
-                    discovery = FakeDeviceDiscovery(),
-                    registryRows = MutableValue(emptyMap()),
+                    peersRepository = peersRepository,
+                    peerTransferComponentFactory = { _, peer -> registry.get(peer.id) },
                     coroutineScope = coroutineScope,
                 )
             },
