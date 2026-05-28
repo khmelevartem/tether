@@ -11,7 +11,6 @@ import com.arkivanov.decompose.value.Value
 import com.arkivanov.essenty.lifecycle.coroutines.coroutineScope
 import com.tubetoast.tether.preferences.PeerPreferencesStore
 import com.tubetoast.tether.presentation.transfer.TransferDetailsComponent
-import com.tubetoast.tether.presentation.transfer.TransferRegistry
 import com.tubetoast.tether.transfer.FileSource
 import com.tubetoast.tether.transfer.PeerIdentity
 import kotlinx.coroutines.CoroutineScope
@@ -23,8 +22,7 @@ import kotlinx.coroutines.launch
 
 class RootComponent(
     componentContext: ComponentContext,
-    private val deviceListFactory: (ComponentContext, TransferRegistry) -> PeerListComponent,
-    registryFactory: (onShowDetails: (PeerIdentity) -> Unit) -> TransferRegistry,
+    private val peerListFactory: (ComponentContext, onShowDetails: (PeerIdentity) -> Unit) -> PeerListComponent,
     coroutineScope: CoroutineScope = componentContext.coroutineScope(),
     private val peerPreferencesStore: PeerPreferencesStore? = null,
 ) : ComponentContext by componentContext {
@@ -40,7 +38,7 @@ class RootComponent(
 
     private val navigation = StackNavigation<Config>()
 
-    val registry: TransferRegistry = registryFactory(::showTransferDetails)
+    private var peerListComponent: PeerListComponent? = null
 
     val stack: Value<ChildStack<*, Child>> = childStack(
         source = navigation,
@@ -62,14 +60,23 @@ class RootComponent(
 
     private fun createChild(config: Config, context: ComponentContext): Child =
         when (config) {
-            Config.DeviceList -> Child.DeviceListChild(deviceListFactory(context, registry))
-            is Config.TransferDetails -> Child.TransferDetailsChild(
-                TransferDetailsComponent(
-                    componentContext = context,
-                    peerComponent = registry.get(config.peer),
-                    onBack = { navigation.pop() },
-                ),
-            )
+            Config.DeviceList -> {
+                val plc = peerListFactory(context, ::showTransferDetails)
+                peerListComponent = plc
+                Child.DeviceListChild(plc)
+            }
+            is Config.TransferDetails -> {
+                val peerComponent = requireNotNull(peerListComponent?.peerTransferComponent(config.peer)) {
+                    "No PeerTransferComponent for ${config.peer} — navigate to device list first"
+                }
+                Child.TransferDetailsChild(
+                    TransferDetailsComponent(
+                        componentContext = context,
+                        peerComponent = peerComponent,
+                        onBack = { navigation.pop() },
+                    ),
+                )
+            }
         }
 
     fun setPendingFiles(summary: PendingFilesSummary, sources: List<FileSource>) {
@@ -85,7 +92,7 @@ class RootComponent(
     fun onPeerTapped(peer: PeerIdentity) {
         val sources = mutablePendingSources.value
         if (sources.isEmpty()) return
-        registry.get(peer).startOutbound(sources)
+        peerListComponent?.peerTransferComponent(peer)?.startOutbound(sources)
         clearPendingFiles()
     }
 

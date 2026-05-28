@@ -1,13 +1,11 @@
 package com.tubetoast.tether.presentation
 
 import com.arkivanov.decompose.ComponentContext
-import com.arkivanov.decompose.childContext
 import com.arkivanov.essenty.lifecycle.coroutines.coroutineScope
 import com.tubetoast.tether.discovery.DeviceDiscovery
 import com.tubetoast.tether.preferences.PeerPreferencesStore
 import com.tubetoast.tether.presentation.peer.PeersRepository
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
-import com.tubetoast.tether.presentation.transfer.TransferRegistry
 import com.tubetoast.tether.transfer.BatchSender
 import com.tubetoast.tether.transfer.ReceiveEvent
 import com.tubetoast.tether.transfer.ReconnectionTimeout
@@ -26,20 +24,14 @@ class RootComponentFactory(
         val peersRepository = PeersRepository(discovery = discovery, scope = scope)
         return RootComponent(
             componentContext = componentContext,
-            deviceListFactory = { ctx, registry ->
+            peerListFactory = { ctx, onShowDetails ->
                 PeerListComponent(
                     componentContext = ctx,
                     peersRepository = peersRepository,
-                    peerTransferComponentFactory = { _, peer -> registry.get(peer.id) },
-                )
-            },
-            registryFactory = { onShowDetails ->
-                TransferRegistry(
-                    componentContext = componentContext.childContext("transfer_registry"),
-                    peerComponentFactory = { ctx, peer ->
+                    peerTransferComponentFactory = { childCtx, peer ->
                         PeerTransferComponent(
-                            componentContext = ctx,
-                            peer = peer,
+                            componentContext = childCtx,
+                            peer = peer.id,
                             batchSenderFactory = batchSenderFactory,
                             inboundEvents = inboundEvents,
                             onShowDetailsCallback = onShowDetails,
@@ -47,8 +39,6 @@ class RootComponentFactory(
                             scope = scope,
                         )
                     },
-                    discoveredDevices = discovery.discoveredDevices,
-                    scope = scope,
                 )
             },
             coroutineScope = scope,

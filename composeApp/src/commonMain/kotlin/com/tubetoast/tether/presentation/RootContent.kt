@@ -42,7 +42,9 @@ fun RootContent(component: RootComponent, modifier: Modifier = Modifier) {
                         pending = pending,
                         dropFeedback = dropFeedback,
                         onCancelPending = component::clearPendingFiles,
-                        peerCallbacksFor = { peer -> rememberPeerCallbacks(peer, component, hasPending) },
+                        peerCallbacksFor = { peer ->
+                            rememberPeerCallbacks(peer, instance.component, component, hasPending)
+                        },
                         autoSendEnabledFor = { peer ->
                             component.observeAutoSend(peer).collectAsState(initial = false).value
                         },
@@ -61,10 +63,20 @@ fun RootContent(component: RootComponent, modifier: Modifier = Modifier) {
 @Composable
 private fun rememberPeerCallbacks(
     peer: PeerIdentity,
+    peerListComponent: PeerListComponent,
     rootComponent: RootComponent,
     hasPending: Boolean,
 ): PeerCardCallbacks {
-    val peerComponent = rootComponent.registry.get(peer)
+    val peerComponent = peerListComponent.peerTransferComponent(peer) ?: return PeerCardCallbacks(
+        onToggleExpand = {},
+        onToggleAutoSend = {},
+        onCancel = {},
+        onDismiss = {},
+        onRetry = {},
+        onShowDetails = {},
+        onOpenFiles = {},
+        onClick = null,
+    )
     return PeerCardCallbacks(
         onToggleExpand = peerComponent::toggleExpanded,
         onToggleAutoSend = { enabled -> rootComponent.setAutoSend(peer, enabled) },
