@@ -93,23 +93,24 @@ fun TransferDetailsContent(
         )
 
         if (perFile.isNotEmpty()) {
-            AggregateStrip(
-                sentCount = sentCount,
-                totalCount = perFile.size,
-                failedCount = failedCount,
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = spacing.lg, vertical = spacing.sm),
-            )
-
-            if (failedCount > 0 && isSenderSide) {
-                RetryTextButton(
-                    onClick = onRetryAll,
-                    contentDescription = "Retry all $failedCount failed files",
-                    modifier = Modifier
-                        .padding(horizontal = spacing.lg)
-                        .padding(bottom = spacing.sm),
+            ) {
+                AggregateStrip(
+                    sentCount = sentCount,
+                    totalCount = perFile.size,
+                    failedCount = failedCount,
+                    modifier = Modifier.weight(1f),
                 )
+                if (failedCount > 0 && isSenderSide) {
+                    RetryTextButton(
+                        onClick = onRetryAll,
+                        contentDescription = "Retry all $failedCount failed files",
+                    )
+                }
             }
         }
 

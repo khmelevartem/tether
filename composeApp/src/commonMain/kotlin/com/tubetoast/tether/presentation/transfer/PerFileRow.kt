@@ -35,13 +35,13 @@ import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
 import com.tubetoast.tether.ui.preview.TransferPreviewFixtures
 import com.tubetoast.tether.ui.theme.TetherTheme
-import com.tubetoast.tether.ui.theme.tetherMinTouchTarget
 import compose.icons.TablerIcons
 import compose.icons.tablericons.AlertCircle
 import compose.icons.tablericons.Check
 import compose.icons.tablericons.Clock
 
 private val StatusIconSize = 20.dp
+private val TrailingSlotSize = 28.dp
 private val ProgressBarHeight = 3.dp
 
 @Composable
@@ -67,7 +67,7 @@ fun PerFileRow(
                 .semantics {
                     role = Role.Button
                     contentDescription = semanticLabel
-                }.padding(vertical = spacing.sm)
+                }.padding(vertical = spacing.xs)
         } else {
             modifier
                 .fillMaxWidth()
@@ -75,12 +75,12 @@ fun PerFileRow(
                 .semantics {
                     role = Role.Button
                     contentDescription = semanticLabel
-                }.padding(vertical = spacing.sm)
+                }.padding(vertical = spacing.xs)
         }
     } else {
         modifier
             .fillMaxWidth()
-            .padding(vertical = spacing.sm)
+            .padding(vertical = spacing.xs)
     }
 
     Row(
@@ -115,15 +115,10 @@ fun PerFileRow(
         }
 
         status.size?.let { bytes ->
-            Box(
-                modifier = Modifier.tetherMinTouchTarget(),
-                contentAlignment = Alignment.CenterEnd,
-            ) {
-                BasicText(
-                    text = ByteFormatting.formatSize(bytes),
-                    style = typography.numeric.copy(color = colors.textMuted),
-                )
-            }
+            BasicText(
+                text = ByteFormatting.formatSize(bytes),
+                style = typography.numeric.copy(color = colors.textMuted),
+            )
         }
 
         TrailingSlot {
@@ -168,7 +163,7 @@ fun PerFileRow(
 @Composable
 private fun TrailingSlot(content: @Composable () -> Unit) {
     Box(
-        modifier = Modifier.tetherMinTouchTarget(),
+        modifier = Modifier.size(TrailingSlotSize),
         contentAlignment = Alignment.Center,
         content = { content() },
     )
