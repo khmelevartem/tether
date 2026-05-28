@@ -35,6 +35,7 @@ import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
 import com.tubetoast.tether.ui.preview.TransferPreviewFixtures
 import com.tubetoast.tether.ui.theme.TetherTheme
+import com.tubetoast.tether.ui.theme.tetherMinTouchTarget
 import compose.icons.TablerIcons
 import compose.icons.tablericons.AlertCircle
 import compose.icons.tablericons.Check
@@ -88,26 +89,11 @@ fun PerFileRow(
         horizontalArrangement = Arrangement.spacedBy(spacing.sm),
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                BasicText(
-                    text = status.name,
-                    style = typography.bodyMedium.copy(color = colors.textPrimary),
-                    modifier = Modifier.weight(1f),
-                    maxLines = 1,
-                )
-                status.size?.let { bytes ->
-                    BasicText(
-                        text = ByteFormatting.formatSize(bytes),
-                        style = typography.numeric.copy(color = colors.textMuted),
-                        modifier = Modifier.padding(start = spacing.sm),
-                    )
-                }
-            }
-
+            BasicText(
+                text = status.name,
+                style = typography.bodyMedium.copy(color = colors.textPrimary),
+                maxLines = 1,
+            )
             when (status) {
                 is PerFileStatus.InProgress -> FileProgressBar(
                     progress = if (status.size != null && status.size > 0) {
@@ -119,49 +105,57 @@ fun PerFileRow(
                         .fillMaxWidth()
                         .padding(top = spacing.xs),
                 )
-                is PerFileStatus.Failed -> {
-                    BasicText(
-                        text = failedRowHelperText(status),
-                        style = typography.labelSmall.copy(color = colors.error),
-                        modifier = Modifier.padding(top = spacing.xs),
-                    )
-                }
+                is PerFileStatus.Failed -> BasicText(
+                    text = failedRowHelperText(status),
+                    style = typography.labelSmall.copy(color = colors.error),
+                    modifier = Modifier.padding(top = spacing.xs),
+                )
                 else -> Unit
             }
         }
 
-        when (status) {
-            is PerFileStatus.Queued -> {
-                if (isSenderSide) {
-                    RowCancelButton(
-                        onClick = { onCancelFile(status.name) },
-                        contentDescription = "Cancel sending ${status.name}",
-                    )
-                } else {
-                    StatusIcon(
-                        icon = TablerIcons.Clock,
-                        tint = colors.textMuted,
-                        contentDescription = "Queued",
-                    )
-                }
+        status.size?.let { bytes ->
+            Box(
+                modifier = Modifier.tetherMinTouchTarget(),
+                contentAlignment = Alignment.CenterEnd,
+            ) {
+                BasicText(
+                    text = ByteFormatting.formatSize(bytes),
+                    style = typography.numeric.copy(color = colors.textMuted),
+                )
             }
-            is PerFileStatus.InProgress -> {
-                if (isSenderSide) {
-                    RowCancelButton(
-                        onClick = { onCancelFile(status.name) },
-                        contentDescription = "Cancel sending ${status.name}",
-                    )
+        }
+
+        TrailingSlot {
+            when (status) {
+                is PerFileStatus.Queued -> {
+                    if (isSenderSide) {
+                        RowCancelButton(
+                            onClick = { onCancelFile(status.name) },
+                            contentDescription = "Cancel sending ${status.name}",
+                        )
+                    } else {
+                        StatusIcon(
+                            icon = TablerIcons.Clock,
+                            tint = colors.textMuted,
+                            contentDescription = "Queued",
+                        )
+                    }
                 }
-            }
-            is PerFileStatus.Done -> {
-                StatusIcon(
+                is PerFileStatus.InProgress -> {
+                    if (isSenderSide) {
+                        RowCancelButton(
+                            onClick = { onCancelFile(status.name) },
+                            contentDescription = "Cancel sending ${status.name}",
+                        )
+                    }
+                }
+                is PerFileStatus.Done -> StatusIcon(
                     icon = TablerIcons.Check,
                     tint = colors.accent,
                     contentDescription = "Sent",
                 )
-            }
-            is PerFileStatus.Failed -> {
-                StatusIcon(
+                is PerFileStatus.Failed -> StatusIcon(
                     icon = TablerIcons.AlertCircle,
                     tint = colors.error,
                     contentDescription = "Failed",
@@ -169,6 +163,15 @@ fun PerFileRow(
             }
         }
     }
+}
+
+@Composable
+private fun TrailingSlot(content: @Composable () -> Unit) {
+    Box(
+        modifier = Modifier.tetherMinTouchTarget(),
+        contentAlignment = Alignment.Center,
+        content = { content() },
+    )
 }
 
 @Composable
