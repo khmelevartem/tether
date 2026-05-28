@@ -79,7 +79,7 @@ One class per the rules in `assets/classes.json` (ordinal matching, first match 
 Per `assets/keywords.json`. Used in the Chronicle of Deeds, Seal of Debt, hero class.
 
 ### MVP (Main Quest)
-7 chapters from the roadmap with epic subtitles. Each gets a completion % (see §MVP chapters above). Progress bars: `gold.primary` → `gold.dim` for >0%, `text.muted_dim` for 0%.
+7 chapters from the roadmap with epic subtitles. Each gets a completion % (see §MVP chapters above). Progress bars: `gold.primary` fill for >0%, `text.muted_dim` for 0%.
 
 ### Artifacts (top-5 PRs)
 Weight: `commits·2 + comments + review_threads·3 + (additions+deletions)/200`. Top-5 with rarity-colour frames per `assets/palette.json#artifact_rarity`. Inside each card: commits, discussions (`comments + review_threads`), `+/−` lines.
@@ -91,7 +91,7 @@ Weight: `commits·2 + comments + review_threads·3 + (additions+deletions)/200`.
 Tables `#PR | title | value`, monospace numbers right-aligned. No RPG translation in values — pure statistics.
 
 ### Seal of Debt — planned vs improvised
-**Cutoff:** count only issues created **after** the date `sprint-01.md` was filed in git. Retro-PRs are not counted.
+**Planned** = issues referenced in any `## Composition` section across `docs/sprints/sprint-*.md`. **Cutoff:** count only issues created **after** the date `sprint-01.md` was filed in git. Retro-PRs are not counted.
 
 - `planned ∩ closed` after cutoff — "By the Sprint Scroll"
 - `closed − planned` after cutoff — "Random Encounters"

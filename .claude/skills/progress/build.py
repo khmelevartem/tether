@@ -243,12 +243,11 @@ def balance_of_week(prs_merged: list, keywords: dict, today: date) -> dict:
     return dict(current=round(current, 1), prev=round(prev, 1), delta=round(delta, 1))
 
 
-def seal_of_debt(issues: list, prs: list, cutoff: date, keywords: dict) -> dict:
+def seal_of_debt(issues: list, sprints_dir: Path, cutoff: date, keywords: dict) -> dict:
     planned_numbers: set[int] = set()
-    for p in prs:
-        m = re.match(r"#(\d+):", p.get("title", ""))
-        if m:
-            planned_numbers.add(int(m.group(1)))
+    for sprint_file in sorted(sprints_dir.glob("sprint-*.md")):
+        _, nums = parse_sprint(sprint_file)
+        planned_numbers.update(nums)
 
     post_cutoff = [
         i for i in issues
@@ -1163,6 +1162,7 @@ def render_html(
     sprint_issues: list[int],
     assets: dict,
     today: date,
+    sprints_dir: Path,
 ) -> str:
     prs_all = raw["prs"]
     issues = raw["issues"]
@@ -1182,7 +1182,7 @@ def render_html(
     top5 = top_artifacts(merged)
     glory = glory_of_days(merged, issues_by_number, kw, cutoff, today)
     spread = artifact_spread(merged, issues_by_number)
-    debt = seal_of_debt(issues, prs_all, cutoff, kw)
+    debt = seal_of_debt(issues, sprints_dir, cutoff, kw)
     graph = build_graph_data(issues, blocked_by, assets["schools"]["schools"])
 
     font_h = pal("fonts.headings")
@@ -1265,11 +1265,13 @@ def main() -> None:
     assets = load_assets(assets_dir)
     raw = load_raw(Path(args.raw_data))
     mvp_chapters = load_mvp(Path(args.mvp))
-    sprint_title, sprint_issues = parse_sprint(Path(args.sprint))
+    sprint_path = Path(args.sprint)
+    sprint_title, sprint_issues = parse_sprint(sprint_path)
+    sprints_dir = sprint_path.parent
 
     out = Path(args.output)
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(render_html(raw, mvp_chapters, sprint_title, sprint_issues, assets, today), encoding="utf-8")
+    out.write_text(render_html(raw, mvp_chapters, sprint_title, sprint_issues, assets, today, sprints_dir), encoding="utf-8")
     print(f"Written: {out}")
 
 
