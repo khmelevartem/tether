@@ -23,7 +23,7 @@ fun RootContent(component: RootComponent, modifier: Modifier = Modifier) {
             val stack by component.stack.subscribeAsState()
             Children(stack = stack) { child ->
                 when (val instance = child.instance) {
-                    is RootComponent.Child.DeviceListChild -> DeviceListScreen(instance.component)
+                    is RootComponent.Child.DeviceListChild -> DeviceListScreen(instance.component, component)
                     is RootComponent.Child.TransferDetailsChild -> TransferDetailsScreen(instance.component)
                 }
             }
