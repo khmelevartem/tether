@@ -4,24 +4,36 @@ import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.decompose.router.stack.ChildStack
 import com.arkivanov.decompose.router.stack.StackNavigation
 import com.arkivanov.decompose.router.stack.childStack
+import com.arkivanov.decompose.router.stack.pop
 import com.arkivanov.decompose.router.stack.pushNew
 import com.arkivanov.decompose.value.MutableValue
 import com.arkivanov.decompose.value.Value
+import com.arkivanov.essenty.lifecycle.coroutines.coroutineScope
 import com.tubetoast.tether.presentation.transfer.TransferDetailsComponent
+import com.tubetoast.tether.presentation.transfer.TransferRegistry
 import com.tubetoast.tether.transfer.FileSource
 import com.tubetoast.tether.transfer.PeerIdentity
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
-class PendingFilesSummary {
+data class PendingFilesSummary(
+    val fileCount: Int,
+    val totalBytes: Long,
+) {
     companion object {
-        val NONE = PendingFilesSummary()
+        val NONE = PendingFilesSummary(0, 0L)
     }
 }
 
 class RootComponent(
     componentContext: ComponentContext,
-    private val deviceListFactory: (ComponentContext) -> DeviceListComponent,
-    private val transferDetailsFactory: (ComponentContext, PeerIdentity) -> TransferDetailsComponent,
+    private val deviceListFactory: (ComponentContext, TransferRegistry) -> DeviceListComponent,
+    registryFactory: (onShowDetails: (PeerIdentity) -> Unit) -> TransferRegistry,
+    scope: CoroutineScope = componentContext.coroutineScope(),
 ) : ComponentContext by componentContext {
+    private val coroutineScope = scope
+
     private sealed interface Config {
         data object DeviceList : Config
 
@@ -32,6 +44,8 @@ class RootComponent(
 
     private val navigation = StackNavigation<Config>()
 
+    val registry: TransferRegistry = registryFactory(::showTransferDetails)
+
     val stack: Value<ChildStack<*, Child>> = childStack(
         source = navigation,
         serializer = null,
@@ -40,32 +54,53 @@ class RootComponent(
         childFactory = ::createChild,
     )
 
-    private val _pendingFiles = MutableValue(PendingFilesSummary.NONE)
-    val pendingFiles: Value<PendingFilesSummary> = _pendingFiles
+    private val mutablePendingFiles = MutableValue(PendingFilesSummary.NONE)
+    val pendingFiles: Value<PendingFilesSummary> = mutablePendingFiles
+
+    private val mutablePendingSources = MutableValue<List<FileSource>>(emptyList())
+
+    private val mutableDropFeedback = MutableValue(false)
+    val dropFeedback: Value<Boolean> = mutableDropFeedback
 
     private fun createChild(config: Config, context: ComponentContext): Child =
         when (config) {
-            Config.DeviceList -> Child.DeviceListChild(deviceListFactory(context))
+            Config.DeviceList -> Child.DeviceListChild(deviceListFactory(context, registry))
             is Config.TransferDetails -> Child.TransferDetailsChild(
-                transferDetailsFactory(context, config.peer),
+                TransferDetailsComponent(
+                    componentContext = context,
+                    peerComponent = registry.get(config.peer),
+                    onBack = { navigation.pop() },
+                ),
             )
         }
 
-    @Suppress("UNUSED_PARAMETER") // TODO(#191): sources will be consumed when the UI reader lands.
     fun setPendingFiles(summary: PendingFilesSummary, sources: List<FileSource>) {
-        _pendingFiles.value = summary
+        mutablePendingFiles.value = summary
+        mutablePendingSources.value = sources
     }
 
     fun clearPendingFiles() {
-        _pendingFiles.value = PendingFilesSummary.NONE
+        mutablePendingFiles.value = PendingFilesSummary.NONE
+        mutablePendingSources.value = emptyList()
+    }
+
+    fun onPeerTapped(peer: PeerIdentity) {
+        val sources = mutablePendingSources.value
+        if (sources.isEmpty()) return
+        registry.get(peer).startOutbound(sources)
+        clearPendingFiles()
     }
 
     fun showTransferDetails(peer: PeerIdentity) {
         navigation.pushNew(Config.TransferDetails(peer))
     }
 
-    // TODO(#191): UI feedback when user drops files during an active transfer.
     fun onDropRejectedDuringTransfer() {
+        mutableDropFeedback.value = true
+        coroutineScope.launch {
+            delay(DROP_FEEDBACK_DURATION_MS)
+            mutableDropFeedback.value = false
+        }
     }
 
     sealed interface Child {
@@ -76,5 +111,9 @@ class RootComponent(
         data class TransferDetailsChild(
             val component: TransferDetailsComponent,
         ) : Child
+    }
+
+    private companion object {
+        const val DROP_FEEDBACK_DURATION_MS = 3_000L
     }
 }

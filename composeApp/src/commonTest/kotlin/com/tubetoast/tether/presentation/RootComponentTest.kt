@@ -1,31 +1,41 @@
 package com.tubetoast.tether.presentation
 
 import com.arkivanov.decompose.DefaultComponentContext
+import com.arkivanov.decompose.value.MutableValue
 import com.arkivanov.essenty.backhandler.BackDispatcher
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.resume
 import com.arkivanov.essenty.statekeeper.StateKeeperDispatcher
 import com.tubetoast.tether.discovery.FakeDeviceDiscovery
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
-import com.tubetoast.tether.presentation.transfer.TransferDetailsComponent
+import com.tubetoast.tether.presentation.transfer.PeerTransferState
+import com.tubetoast.tether.presentation.transfer.TransferRegistry
+import com.tubetoast.tether.presentation.transfer.toPeerIdentity
+import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.BatchSender
 import com.tubetoast.tether.transfer.FakeConnectionMonitor
+import com.tubetoast.tether.transfer.FakeFileSource
 import com.tubetoast.tether.transfer.PeerIdentity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.builtins.serializer
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
-import kotlin.test.assertNotSame
+import kotlin.test.assertNotEquals
 import kotlin.test.assertSame
 import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class RootComponentTest {
+    private val deviceA = Device(name = "DeviceA", host = "192.168.1.1", port = 8080)
+    private val peer = deviceA.toPeerIdentity()
+
     @Test
     fun `initial stack contains single DeviceListChild`() = runTest {
         val component = buildComponent(coroutineScope = backgroundScope)
@@ -36,7 +46,6 @@ class RootComponentTest {
 
     @Test
     fun `showTransferDetails pushes TransferDetailsChild then back pops to DeviceListChild`() = runTest {
-        val peer = PeerIdentity("peer-1")
         val backDispatcher = BackDispatcher()
         val component = buildComponent(
             backDispatcher = backDispatcher,
@@ -74,26 +83,138 @@ class RootComponentTest {
     }
 
     @Test
-    fun `setPendingFiles stores summary and clearPendingFiles restores NONE`() = runTest {
+    fun `setPendingFiles stores summary and clearPendingFiles resets to NONE`() = runTest {
         val component = buildComponent(coroutineScope = backgroundScope)
 
         assertSame(PendingFilesSummary.NONE, component.pendingFiles.value)
 
-        val summary = PendingFilesSummary()
+        val summary = PendingFilesSummary(fileCount = 2, totalBytes = 1024L)
         component.setPendingFiles(summary, emptyList())
 
-        assertSame(summary, component.pendingFiles.value)
-        assertNotSame(PendingFilesSummary.NONE, component.pendingFiles.value)
+        assertEquals(summary, component.pendingFiles.value)
+        assertNotEquals(PendingFilesSummary.NONE, component.pendingFiles.value)
 
         component.clearPendingFiles()
 
         assertSame(PendingFilesSummary.NONE, component.pendingFiles.value)
     }
 
+    @Test
+    fun `onPeerTapped with pending sources routes startOutbound and clears pending`() = runTest {
+        val ctx = defaultContext()
+        val component = buildComponent(
+            context = ctx,
+            registryFactory = buildRegistryFactory(ctx, backgroundScope, MutableStateFlow(listOf(deviceA))),
+            coroutineScope = backgroundScope,
+        )
+        runCurrent()
+
+        val sources = listOf(FakeFileSource("file.txt", 100L))
+        component.setPendingFiles(PendingFilesSummary(1, 100L), sources)
+        component.onPeerTapped(peer)
+        runCurrent()
+
+        assertIs<PeerTransferState.Sent>(
+            component.registry
+                .get(peer)
+                .state.value,
+        )
+        assertSame(PendingFilesSummary.NONE, component.pendingFiles.value)
+    }
+
+    @Test
+    fun `showTransferDetails pushes TransferDetailsChild onto stack`() = runTest {
+        val ctx = defaultContext()
+        val component = buildComponent(
+            context = ctx,
+            registryFactory = buildRegistryFactory(ctx, backgroundScope, MutableStateFlow(listOf(deviceA))),
+            coroutineScope = backgroundScope,
+        )
+        runCurrent()
+
+        component.showTransferDetails(peer)
+
+        assertEquals(2, component.stack.value.items.size)
+        assertIs<RootComponent.Child.TransferDetailsChild>(component.stack.value.active.instance)
+    }
+
+    @Test
+    fun `transferDetailsComponent onBack pops back to DeviceListChild`() = runTest {
+        val ctx = defaultContext()
+        val backDispatcher = BackDispatcher()
+        val component = buildComponent(
+            context = ctx,
+            backDispatcher = backDispatcher,
+            registryFactory = buildRegistryFactory(ctx, backgroundScope, MutableStateFlow(listOf(deviceA))),
+            coroutineScope = backgroundScope,
+        )
+        runCurrent()
+
+        component.showTransferDetails(peer)
+        val detailsChild = component.stack.value.active.instance
+        assertIs<RootComponent.Child.TransferDetailsChild>(detailsChild)
+
+        detailsChild.component.onBack()
+
+        assertEquals(1, component.stack.value.items.size)
+        assertIs<RootComponent.Child.DeviceListChild>(component.stack.value.active.instance)
+    }
+
+    @Test
+    fun `onPeerTapped without pending sources is a no-op`() = runTest {
+        val ctx = defaultContext()
+        val component = buildComponent(
+            context = ctx,
+            registryFactory = buildRegistryFactory(ctx, backgroundScope, MutableStateFlow(listOf(deviceA))),
+            coroutineScope = backgroundScope,
+        )
+        runCurrent()
+
+        component.onPeerTapped(peer)
+
+        assertIs<PeerTransferState.Idle>(
+            component.registry
+                .get(peer)
+                .state.value,
+        )
+    }
+
+    private fun buildRegistryFactory(
+        ctx: DefaultComponentContext,
+        coroutineScope: CoroutineScope,
+        devices: MutableStateFlow<List<Device>> = MutableStateFlow(emptyList()),
+    ): (onShowDetails: (PeerIdentity) -> Unit) -> TransferRegistry = { onShowDetails ->
+        TransferRegistry(
+            componentContext = ctx,
+            peerComponentFactory = { childCtx, peer ->
+                PeerTransferComponent(
+                    componentContext = childCtx,
+                    peer = peer,
+                    batchSenderFactory = {
+                        BatchSender(
+                            sendOne = { src, onProgress ->
+                                onProgress(src.sizeBytes ?: 0L, src.sizeBytes)
+                            },
+                            connectionMonitor = FakeConnectionMonitor(),
+                            progressThrottle = 100.milliseconds,
+                            dispatcher = Dispatchers.Unconfined,
+                        )
+                    },
+                    inboundEvents = MutableSharedFlow(),
+                    onShowDetailsCallback = onShowDetails,
+                    scope = coroutineScope,
+                )
+            },
+            discoveredDevices = devices,
+            scope = coroutineScope,
+        )
+    }
+
     private fun buildComponent(
         context: DefaultComponentContext = defaultContext(),
         backDispatcher: BackDispatcher? = null,
         coroutineScope: CoroutineScope,
+        registryFactory: ((PeerIdentity) -> Unit) -> TransferRegistry = buildRegistryFactory(context, coroutineScope),
     ): RootComponent {
         val ctx = if (backDispatcher != null) {
             DefaultComponentContext(
@@ -107,36 +228,16 @@ class RootComponentTest {
         }
         return RootComponent(
             componentContext = ctx,
-            deviceListFactory = { childCtx ->
+            deviceListFactory = { childCtx, _ ->
                 DeviceListComponent(
                     componentContext = childCtx,
                     discovery = FakeDeviceDiscovery(),
+                    registryRows = MutableValue(emptyMap()),
                     coroutineScope = coroutineScope,
                 )
             },
-            transferDetailsFactory = { childCtx, peer ->
-                val monitor = FakeConnectionMonitor()
-                val peerComponent = PeerTransferComponent(
-                    componentContext = childCtx,
-                    peer = peer,
-                    batchSenderFactory = {
-                        BatchSender(
-                            sendOne = { _, _ -> },
-                            connectionMonitor = monitor,
-                            progressThrottle = 100.milliseconds,
-                            dispatcher = Dispatchers.Unconfined,
-                        )
-                    },
-                    inboundEvents = MutableSharedFlow(),
-                    onShowDetailsCallback = {},
-                    scope = coroutineScope,
-                )
-                TransferDetailsComponent(
-                    componentContext = childCtx,
-                    peerComponent = peerComponent,
-                    onBack = {},
-                )
-            },
+            registryFactory = registryFactory,
+            scope = coroutineScope,
         )
     }
 

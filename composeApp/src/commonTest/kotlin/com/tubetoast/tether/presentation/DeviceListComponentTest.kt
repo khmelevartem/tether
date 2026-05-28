@@ -1,10 +1,15 @@
 package com.tubetoast.tether.presentation
 
 import com.arkivanov.decompose.DefaultComponentContext
+import com.arkivanov.decompose.value.MutableValue
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.resume
 import com.tubetoast.tether.discovery.FakeDeviceDiscovery
+import com.tubetoast.tether.presentation.transfer.PeerRowProjection
+import com.tubetoast.tether.presentation.transfer.PeerTransferState
+import com.tubetoast.tether.presentation.transfer.toPeerIdentity
 import com.tubetoast.tether.protocol.Device
+import com.tubetoast.tether.transfer.PeerIdentity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,6 +17,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DeviceListComponentTest {
@@ -48,9 +54,29 @@ class DeviceListComponentTest {
         assertEquals(listOf(deviceA), component.state.value.devices)
     }
 
+    @Test
+    fun `rows reflect registry projections`() = runTest {
+        val flow = MutableStateFlow(listOf(deviceA))
+        val registryRows = MutableValue<Map<PeerIdentity, PeerRowProjection>>(emptyMap())
+        val component = buildComponent(flow = flow, registryRows = registryRows, coroutineScope = backgroundScope)
+        runCurrent()
+
+        val transferState = PeerTransferState.Idle(deviceA.toPeerIdentity())
+        registryRows.value = mapOf(
+            deviceA.toPeerIdentity() to PeerRowProjection(state = transferState, isOnline = true),
+        )
+
+        val row = component.state.value.rows
+            .first()
+        assertEquals(deviceA, row.device)
+        assertIs<PeerTransferState.Idle>(row.transferState)
+        assertEquals(true, row.isOnline)
+    }
+
     private fun buildComponent(
         initial: List<Device> = emptyList(),
         flow: MutableStateFlow<List<Device>> = MutableStateFlow(initial),
+        registryRows: MutableValue<Map<PeerIdentity, PeerRowProjection>> = MutableValue(emptyMap()),
         coroutineScope: CoroutineScope,
     ): DeviceListComponent {
         val lifecycle = LifecycleRegistry()
@@ -59,6 +85,7 @@ class DeviceListComponentTest {
         return DeviceListComponent(
             componentContext = context,
             discovery = FakeDeviceDiscovery(flow),
+            registryRows = registryRows,
             coroutineScope = coroutineScope,
         )
     }

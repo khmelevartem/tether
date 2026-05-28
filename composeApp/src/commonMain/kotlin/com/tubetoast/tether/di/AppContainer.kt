@@ -11,6 +11,12 @@ import com.tubetoast.tether.preferences.FileTransferPreferences
 import com.tubetoast.tether.preferences.PeerPreferencesStore
 import com.tubetoast.tether.presentation.RootComponentFactory
 import com.tubetoast.tether.security.TrustedDeviceStore
+import com.tubetoast.tether.transfer.BatchSender
+import com.tubetoast.tether.transfer.ConnectionMonitor
+import com.tubetoast.tether.transfer.PeerUnreachableException
+import com.tubetoast.tether.transfer.ReceiveEvent
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 
 abstract class AppContainer {
     protected abstract val namePersistence: DeviceNamePersistence
@@ -21,7 +27,27 @@ abstract class AppContainer {
     open val transferActivityTracker: TransferActivityTracker = DefaultTransferActivityTracker()
     open val fileClient: FileClient by lazy { FileClient.default(transferActivityTracker) }
     abstract val trustedDeviceStore: TrustedDeviceStore
-    open val rootComponentFactory: RootComponentFactory by lazy { RootComponentFactory(mdnsDiscovery) }
     abstract val peerPreferencesStore: PeerPreferencesStore
     abstract val fileTransferPreferences: FileTransferPreferences
+
+    open val inboundEvents: SharedFlow<ReceiveEvent> = MutableSharedFlow()
+
+    open val connectionMonitor: ConnectionMonitor = NoOpConnectionMonitor
+
+    open val batchSenderFactory: () -> BatchSender by lazy {
+        {
+            BatchSender(
+                sendOne = { _, _ -> throw PeerUnreachableException() },
+                connectionMonitor = connectionMonitor,
+            )
+        }
+    }
+
+    open val rootComponentFactory: RootComponentFactory by lazy {
+        RootComponentFactory(
+            discovery = mdnsDiscovery,
+            batchSenderFactory = batchSenderFactory,
+            inboundEvents = inboundEvents,
+        )
+    }
 }
