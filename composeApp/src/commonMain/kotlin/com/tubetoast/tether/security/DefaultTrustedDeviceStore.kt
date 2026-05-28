@@ -23,8 +23,7 @@ class DefaultTrustedDeviceStore(
         }
     }
 
-    // Write-side errors propagate so /pair returns 500 instead of falsely
-    // claiming we trust a peer we failed to persist.
+    // Read errors are swallowed so a corrupted entry behaves as "untrusted" and the peer re-pairs.
     override suspend fun getPublicKey(deviceId: String): ByteArray? {
         val value = try {
             dataStore.data.first()[stringPreferencesKey("trust:$deviceId")]

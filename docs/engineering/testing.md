@@ -33,18 +33,7 @@ NSRunLoop must be pumped manually — see [`docs/knowledge/apple-platform.md`](.
 
 ## Test seams
 
-When an implementation cannot produce an error condition without mocking a platform API (e.g. DataStore does not throw on demand), extract the dependency behind an interface and supply a throwing anonymous object in tests:
-
-```kotlin
-val throwingStore = object : TrustedDeviceStore {
-    override suspend fun isTrusted(deviceId: String) = false
-    override suspend fun saveTrustedKey(deviceId: String, publicKey: ByteArray) =
-        throw IllegalStateException("simulated write failure")
-    override suspend fun getPublicKey(deviceId: String): ByteArray? = null
-}
-```
-
-The interface flows into the production DI graph; the anonymous object replaces it in the specific test without touching the graph shape. This is the pattern used to verify the HTTP `/pair → 500` contract in `FileServerPairTest`.
+When an implementation cannot produce an error condition without mocking a platform API (e.g. DataStore does not throw on demand), extract the dependency behind an interface and supply a throwing anonymous object in tests. The interface flows into the production DI graph; the anonymous object replaces it in the specific test without touching the graph shape.
 
 Do not do this preemptively — only when the error path is unreachable from the real implementation and the end-to-end contract (e.g. HTTP status) must be verified. An interface earns its place as a test seam per `architecture-principles.md §What we explicitly skip`.
 
