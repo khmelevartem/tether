@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 """
-build.py — renders a single self-contained HTML progress snapshot for the Tether project.
-
 Raw-data dir (--raw-data) must contain:
   prs.json          Array of PR objects from GraphQL repository.pullRequests.
                     Required per node: number, title, state, createdAt, mergedAt,
@@ -33,7 +31,7 @@ Assets dir defaults to <script_dir>/assets; reads palette.json, classes.json, ke
 Exit codes: 0 success, 1 runtime error, 2 missing required input file.
 
 docs_share approximation: a merged PR is counted as touching docs/ when its title contains
-  "doc", "readme", "adr", "spec", or "engineering" (case-insensitive). Per-file path data
+  any keyword from assets/keywords.json#docs_keywords (case-insensitive). Per-file path data
   is not available in the GraphQL shape listed above.
 """
 
@@ -49,6 +47,11 @@ from pathlib import Path
 _palette: dict = {}
 
 
+def _to_script_json(obj) -> str:
+    # `</` would end the enclosing <script> block if present in string values.
+    return json.dumps(obj).replace("</", "<\\/")
+
+
 def _load_palette(assets_dir: Path) -> None:
     global _palette
     with open(assets_dir / "palette.json") as f:
@@ -56,7 +59,6 @@ def _load_palette(assets_dir: Path) -> None:
 
 
 def pal(dotted: str) -> str:
-    """Look up a dotted key like 'gold.primary' in the loaded palette."""
     parts = dotted.split(".")
     node = _palette
     for p in parts:
@@ -149,7 +151,7 @@ def compute_shares(prs_merged: list, keywords: dict) -> dict:
 
     infra = sum(1 for p in prs_merged if categorise(p["title"], keywords) == "infra")
     retro = sum(1 for p in prs_merged if categorise(p["title"], keywords) == "retro")
-    docs_kw = {"doc", "readme", "adr", "spec", "engineering"}
+    docs_kw = keywords.get("docs_keywords", [])
     docs = sum(1 for p in prs_merged if any(k in p["title"].lower() for k in docs_kw))
     return dict(
         infra_share=infra / total,
@@ -609,8 +611,8 @@ def render_locations(loc: dict, locations_data: dict) -> str:
         not_opened = ", ".join(_e(e["name"]) for e in closed_locs)
         cards_html += f'<div style="color:{txt_m};font-size:12px;margin:8px 0;clear:both;">Not opened: {not_opened}</div>'
 
-    chart_labels = json.dumps([e["name"] for e, _ in sorted(opened, key=lambda x: -x[1])])
-    chart_data = json.dumps([lines for _, lines in sorted(opened, key=lambda x: -x[1])])
+    chart_labels = _to_script_json([e["name"] for e, _ in sorted(opened, key=lambda x: -x[1])])
+    chart_data = _to_script_json([lines for _, lines in sorted(opened, key=lambda x: -x[1])])
     chart_id = "loc_chart"
 
     chart_html = f"""
@@ -776,9 +778,9 @@ def render_quest_map(graph: dict, schools_data: dict) -> str:
 </div>"""
 
     schools = schools_data["schools"]
-    schools_js = json.dumps([{"id": s["id"], "name": s["name"]} for s in schools])
-    nodes_js = json.dumps(nodes)
-    edges_js = json.dumps(edges)
+    schools_js = _to_script_json([{"id": s["id"], "name": s["name"]} for s in schools])
+    nodes_js = _to_script_json(nodes)
+    edges_js = _to_script_json(edges)
     free_fill = gn["free"]["fill"]
     blocked_fill = gn["blocked"]["fill"]
     orphan_fill = gn["orphan"]["fill"]
@@ -834,6 +836,7 @@ def render_quest_map(graph: dict, schools_data: dict) -> str:
 </div>
 <script>
 (function(){{
+  const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   const W_BOX = document.getElementById('quest_map_box').clientWidth || 800;
   const H = 560, PAD = 40;
   const schools = {schools_js};
@@ -885,9 +888,9 @@ def render_quest_map(graph: dict, schools_data: dict) -> str:
     .on('mouseenter', (event, d) => {{
       const tt = document.getElementById('qm_tooltip');
       const school = schools.find(s => s.id === d.school);
-      tt.innerHTML = '<b style="color:{gold_p};">#' + d.id + '</b><br>' +
-        d.title + '<br><span style="color:{txt_m};">' + (school ? school.name : d.school) +
-        ' · ' + d.state + (d.orphan ? ' · lone' : d.blocked ? ' · in chains' : '') + '</span>';
+      tt.innerHTML = '<b style="color:{gold_p};">#' + esc(d.id) + '</b><br>' +
+        esc(d.title) + '<br><span style="color:{txt_m};">' + esc(school ? school.name : d.school) +
+        ' · ' + esc(d.state) + (d.orphan ? ' · lone' : d.blocked ? ' · in chains' : '') + '</span>';
       const box = document.getElementById('quest_map_box').getBoundingClientRect();
       tt.style.left = (event.clientX - box.left + 12) + 'px';
       tt.style.top = (event.clientY - box.top + 12) + 'px';
@@ -1011,9 +1014,9 @@ def render_glory_of_days(glory: dict) -> str:
     font_h = pal("fonts.headings")
 
     days_sorted = sorted(glory["days"].keys())
-    labels = json.dumps(days_sorted)
-    feat_data = json.dumps([round(glory["days"][d]["feature"], 2) for d in days_sorted])
-    infra_data = json.dumps([round(glory["days"][d]["infra"], 2) for d in days_sorted])
+    labels = _to_script_json(days_sorted)
+    feat_data = _to_script_json([round(glory["days"][d]["feature"], 2) for d in days_sorted])
+    infra_data = _to_script_json([round(glory["days"][d]["infra"], 2) for d in days_sorted])
     feat_color = _palette["valor_day"]["feature"]
     infra_color = _palette["valor_day"]["infra"]
     line_color = _palette["valor_day"]["line"]
@@ -1086,9 +1089,9 @@ def render_artifact_spread(spread: dict) -> str:
     labels = ["S", "M", "L", "unlabeled"]
     colors = [pal("gold.primary"), pal("gold.secondary"), pal("gold.tertiary"), pal("text.muted_dim")]
     data = [spread.get(l, 0) for l in labels]
-    labels_js = json.dumps(labels)
-    data_js = json.dumps(data)
-    colors_js = json.dumps(colors)
+    labels_js = _to_script_json(labels)
+    data_js = _to_script_json(data)
+    colors_js = _to_script_json(colors)
 
     content = f"""
 <div style="max-width:360px;margin:0 auto;">

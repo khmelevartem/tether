@@ -1,5 +1,5 @@
 {
-  "_doc": "Title-эвристики для категоризации PR / issue в feature vs infra. Используются в Хронике Подвигов (PR-по-неделям split), Печати Долга (planned vs unplanned), классификации фичей. Slash-command pattern (`/foo`) — сильный infra-сигнал: правка скиллов/команд почти всегда мета-работа. Полисемные существительные (`progress`, `document`) из feature_keywords исключены — они часто являются именами skill'ов и создают мис-классификацию.",
+  "_doc": "Title-эвристики для категоризации PR / issue в feature vs infra / docs. Используются в Хронике Подвигов (PR-по-неделям split), Печати Долга (planned vs unplanned), классификации фичей. Slash-command pattern (`/foo`) — сильный infra-сигнал: правка скиллов/команд почти всегда мета-работа. Полисемные существительные (`progress`, `document`) из feature_keywords исключены — они часто являются именами skill'ов и создают мис-классификацию. docs_keywords: слова в заголовке PR, по которым он считается документационным (для docs_share).",
   "slash_command_pattern": "title contains \\B/[a-z][a-z0-9-]+ → infra",
   "infra_keywords": [
     "retro", "skill", "agent", "sprint", "ci", "gradle", "workflow",
@@ -13,5 +13,6 @@
     "device name", "foreground", "wakelock", "wifi", "ktor", "timeout"
   ],
   "default_category": "feature",
-  "rule": "if title starts with 'retro' OR matches slash_command_pattern OR matches any infra_keyword → infra; else if matches any feature_keyword → feature; else default_category."
+  "rule": "if title starts with 'retro' OR matches slash_command_pattern OR matches any infra_keyword → infra; else if matches any feature_keyword → feature; else default_category.",
+  "docs_keywords": ["doc", "readme", "adr", "spec", "engineering"]
 }

@@ -66,7 +66,7 @@ python3 .claude/skills/progress/build.py \
 
 ## Calculation rules
 
-These rules are `build.py`'s contract. A human reader of this file needs to know what the script does without reading the Python.
+These rules are `build.py`'s contract.
 
 ### Hero class
 One class per the rules in `assets/classes.json` (ordinal matching, first match wins). Justify in one line ("every fifth PR is a retro").
@@ -143,6 +143,9 @@ Linking PR ↔ issue by the `#N:` prefix in the PR title. If the PR is a retro /
 `valor(day D) = Σ valor(task)` for PRs with `mergedAt::date == D`, split into `valor_feature` and `valor_infra`.
 
 Rendered as a Chart.js stacked area chart by day (from sprint cutoff to `--today`). Two stacked areas: feature (`gold.primary`) and infra (`gold.dim`). Below: three cards — total valour / average daily valour / most glorious day.
+
+### Artifact Spread
+Doughnut of merged PRs by size: S / M / L / unlabeled. Size derived from the `size:S|M|L` label on the linked issue (via `#N:` title prefix); PRs without a matching issue or label → "unlabeled".
 
 ### Balance of the Week — feature share over the last 7 days
 
