@@ -29,7 +29,7 @@ Until this ADR landed, [docs/product/security.md](../../product/security.md) lis
 
 ## Decision
 
-**Option A.** After pairing, transport between two paired Tether devices is TLS over TCP. Each peer presents a self-signed EC P-256 certificate whose public key is the keypair already exchanged during pairing. Each peer verifies the other end's certificate by matching `SubjectPublicKeyInfo` against the value stored in `TrustedDeviceStore`. The OS trust store (Android `AndroidCAStore`, JDK `cacerts`, Apple Keychain root certificates) is not consulted at any point in the verification path — trust is established exclusively by the pinned SPKI.
+**Option A.** After pairing, transport between two paired Tether devices is TLS over TCP. Each peer presents a self-signed EC P-256 certificate whose public key is the keypair already exchanged during pairing. Each peer verifies the other end's certificate by matching `SubjectPublicKeyInfo` against the value stored in the trust store. The OS trust store (Android `AndroidCAStore`, JDK `cacerts`, Apple Keychain root certificates) is not consulted at any point in the verification path — trust is established exclusively by the pinned SPKI.
 
 On JVM / Android — Ktor CIO server with `sslConnector`, Java `SSLContext` on the client side, custom `X509TrustManager` enforcing the SPKI pin. Standard, in-tree.
 
@@ -75,7 +75,7 @@ commonMain
   ├─ network/FileServer (expect class)                      [unchanged surface]
   ├─ network/FileClient (expect class)                      [unchanged surface]
   ├─ security/DeviceKeyPair (expect class)                  [from #116]
-  ├─ security/TrustedDeviceStore                            [from #9; SPKI pinset source]
+  ├─ security/trust store                                   [from #9; SPKI pinset source]
   └─ security/TlsIdentity (new, expect class)
        — wraps DeviceKeyPair into a self-signed X.509 cert,
          cached for the lifetime of the keypair.
@@ -94,7 +94,7 @@ appleMain
   │     │   + kSSLSessionOptionBreakOnClientAuth + SSLHandshake loop.
   │     ├─ After handshake pause: SSLCopyPeerTrust → leaf cert →
   │     │   SecCertificateCopyKey → SecKeyCopyExternalRepresentation →
-  │     │   wrap raw P-256 point in SPKI DER → match TrustedDeviceStore.
+  │     │   wrap raw P-256 point in SPKI DER → match against trust store.
   │     ├─ Continue handshake. Then feed SSLRead chunks into a
   │     │   ByteWriteChannel; parse the request via ktor-http-cio's
   │     │   parseRequest(ByteReadChannel); dispatch on (method, uri)
@@ -122,9 +122,9 @@ What we lose either way is the Ktor *routing DSL* — replaced by a small route 
 
 1. **First launch.** `DeviceKeyPair` generates / loads the keypair (#116 behaviour).
 2. **TlsIdentity build.** On first call, `TlsIdentity` produces a self-signed X.509 cert valid 100 years from the keypair (cert validity is meaningless under pinning; expiry would only force regeneration without security benefit). Cached.
-3. **Pairing.** [#10](https://github.com/khmelevartem/tether/issues/10) handshake exchanges `DeviceKeyPair.publicKey` between peers. After confirmation, both sides store the peer's SPKI in `TrustedDeviceStore`.
-4. **Connection.** Both server and client sides drive the same flow: present own cert, break on peer-auth, extract peer SPKI, match against `TrustedDeviceStore.lookup(peerId)`. On match — continue. On mismatch — close.
-5. **Forget.** Removing a peer from `TrustedDeviceStore` makes all future handshakes to that peer fail closed. There is no fallback path; this is the product invariant.
+3. **Pairing.** [#10](https://github.com/khmelevartem/tether/issues/10) handshake exchanges `DeviceKeyPair.publicKey` between peers. After confirmation, both sides store the peer's SPKI in the trust store.
+4. **Connection.** Both server and client sides drive the same flow: present own cert, break on peer-auth, extract peer SPKI, look up in the trust store by `peerId`. On match — continue. On mismatch — close.
+5. **Forget.** Removing a peer from the trust store makes all future handshakes to that peer fail closed. There is no fallback path; this is the product invariant.
 
 ### TLS parameters
 
@@ -193,7 +193,7 @@ The original ADR cites [KTOR-7262](https://youtrack.jetbrains.com/issue/KTOR-726
 Consequence: the current `commonMain` `HttpClient(CIO)` in [`FileClient.kt`](../../../composeApp/src/commonMain/kotlin/com/tubetoast/tether/network/FileClient.kt), when reused as-is from Apple targets, will throw on the first HTTPS request. **Apple `FileClient` needs its own actual** with a TLS-capable client path. Two viable options:
 
 - **Option C1 — SecureTransport-wrapped raw TCP client + `ktor-http-cio` parser on the response.** Symmetric with the Apple server: reuse the SSLContext / SSLRead / SSLWrite plumbing already needed for the server side, build a tiny client over it. Maximises code reuse with the server. Cost: hand-rolling streaming-body upload on top of a raw `ByteWriteChannel`.
-- **Option C2 — Ktor `Darwin` engine (`HttpClient(Darwin)`).** Apple-specific client engine built on `NSURLSession`. TLS is provided by the system stack; SPKI pinning is implemented via `engine { handleChallenge { session, task, challenge, completionHandler -> … } }` — the standard `URLAuthenticationChallenge` flow, extracting `SecTrust` and comparing leaf SPKI against `TrustedDeviceStore`. Cost: ~30–50 lines of ObjC-style delegate code, divergence from the server's SecureTransport surface (two TLS mental models on Apple). Benefit: enables future `URLSessionConfiguration.background` for iOS-as-sender background uploads (see [ios-background-networking.md](../../knowledge/ios-background-networking.md)) without further engine swaps. The current FileClient already streams from disk-backed `ByteReadChannel`s, so the "body must be a file on disk" caveat of background mode does not bite the existing flow.
+- **Option C2 — Ktor `Darwin` engine (`HttpClient(Darwin)`).** Apple-specific client engine built on `NSURLSession`. TLS is provided by the system stack; SPKI pinning is implemented via `engine { handleChallenge { session, task, challenge, completionHandler -> … } }` — the standard `URLAuthenticationChallenge` flow, extracting `SecTrust` and comparing leaf SPKI against the trust store. Cost: ~30–50 lines of ObjC-style delegate code, divergence from the server's SecureTransport surface (two TLS mental models on Apple). Benefit: enables future `URLSessionConfiguration.background` for iOS-as-sender background uploads (see [ios-background-networking.md](../../knowledge/ios-background-networking.md)) without further engine swaps. The current FileClient already streams from disk-backed `ByteReadChannel`s, so the "body must be a file on disk" caveat of background mode does not bite the existing flow.
 
 **Decision deferred** to the [#140](https://github.com/khmelevartem/tether/issues/140) pre-flight: a small spike that verifies SPKI pinning round-trip through Darwin's `handleChallenge` against a JVM peer is the cheapest tie-breaker. Default if the spike is green: C2 (Darwin). If red or ergonomically painful: C1 (SecureTransport-wrapped). Decision recorded back into this ADR before #140 proceeds.
 
@@ -203,7 +203,7 @@ Original implementation scheme lists `FileClient.apple.kt` as a new file. `FileC
 
 ### Correction 4 — mutual-TLS handshake on SecureTransport is unverified by POC
 
-The POC [#138](https://github.com/khmelevartem/tether/pull/138) exercised only one-way pinning (`kSSLSessionOptionBreakOnServerAuth`). The production target is mutual TLS — both peers verify each other's SPKI against `TrustedDeviceStore`. The SecureTransport sequence for that uses `kSSLSessionOptionBreakOnClientAuth` plus a multi-step `SSLHandshake` resume loop, and has **not** been empirically verified against a JVM peer with `SSLContext.setNeedClientAuth(true)`.
+The POC [#138](https://github.com/khmelevartem/tether/pull/138) exercised only one-way pinning (`kSSLSessionOptionBreakOnServerAuth`). The production target is mutual TLS — both peers verify each other's SPKI against the trust store. The SecureTransport sequence for that uses `kSSLSessionOptionBreakOnClientAuth` plus a multi-step `SSLHandshake` resume loop, and has **not** been empirically verified against a JVM peer with `SSLContext.setNeedClientAuth(true)`.
 
 **#140 pre-flight addition:** add a "mutual TLS handshake" spike (JVM server with client-cert-required ↔ Apple Native client; Apple Native server with client-auth-break ↔ JVM client with custom `KeyManager`) before committing to the architecture. Same shape as the existing `ktor-http-cio` pre-flight. If the mutual-handshake sequencing turns out non-trivial, the workaround would be to drop mutual TLS to one-way pinning + an application-layer challenge-response (cheaper than fighting SecureTransport's auth-break semantics) — but only if forced.
 
@@ -212,7 +212,7 @@ The POC [#138](https://github.com/khmelevartem/tether/pull/138) exercised only o
 - Apple server side: SecureTransport + `ktor-http-cio` parser + small route table — unchanged, still the path.
 - `ktor-http-cio` standalone availability for `iosArm64` 3.1.3 — independently verified, artifact is published on Maven Central.
 - Cipher-suite restriction (`TLS_ECDHE_ECDSA_WITH_AES_{128,256}_GCM_*`), no SNI, no client cert chain — unchanged.
-- Pinning by SPKI via `TrustedDeviceStore`, OS trust store never consulted — unchanged.
+- Pinning by SPKI via the trust store, OS trust store never consulted — unchanged.
 
 ### Acknowledgement
 
