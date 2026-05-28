@@ -228,7 +228,7 @@
 ## Блок 8 — Тестирование
 
 - [ ] `JUnit5` + `MockK` — базовые тесты ViewModel и UseCase
-- [ ] `Fake` vs `Mock` — когда что, архитектурные последствия
+- [x] `Fake` vs `Mock` — когда что, архитектурные последствия
 - [ ] `Turbine` — тестирование Flow, задержки, cancellation
 - [ ] `Compose Testing` — семантическое дерево, `assertIsDisplayed`, `performClick`
 - [ ] `TestCoroutineDispatcher` / `UnconfinedTestDispatcher` — контроль времени в тестах

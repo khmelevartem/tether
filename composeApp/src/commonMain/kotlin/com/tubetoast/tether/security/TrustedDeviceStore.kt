@@ -1,11 +1,10 @@
 package com.tubetoast.tether.security
 
-// `open` so tests can substitute a throwing implementation to exercise the
-// /pair → 500 contract per platform. The actual classes remain platform-specific.
-expect open class TrustedDeviceStore {
-    open fun isTrusted(deviceId: String): Boolean
+interface TrustedDeviceStore {
+    // Read methods are the planned pin-check surface for the TLS channel (see adr-channel-encryption.md).
+    suspend fun isTrusted(deviceId: String): Boolean
 
-    open fun saveTrustedKey(deviceId: String, publicKey: ByteArray)
+    suspend fun saveTrustedKey(deviceId: String, publicKey: ByteArray)
 
-    open fun getPublicKey(deviceId: String): ByteArray?
+    suspend fun getPublicKey(deviceId: String): ByteArray?
 }

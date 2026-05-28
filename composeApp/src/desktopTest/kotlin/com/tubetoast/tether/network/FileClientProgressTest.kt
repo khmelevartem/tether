@@ -1,9 +1,10 @@
 package com.tubetoast.tether.network
 
+import com.tubetoast.tether.preferences.TempDataStore
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.protocol.SendResult
+import com.tubetoast.tether.security.DefaultTrustedDeviceStore
 import com.tubetoast.tether.security.DeviceKeyPair
-import com.tubetoast.tether.security.TrustedDeviceStore
 import kotlinx.coroutines.runBlocking
 import java.io.File
 import java.nio.file.Files
@@ -19,6 +20,7 @@ import kotlin.test.assertTrue
 class FileClientProgressTest {
     private lateinit var tmpDir: File
     private lateinit var configDir: File
+    private lateinit var tempStore: TempDataStore
     private lateinit var server: FileServer
     private lateinit var client: FileClient
     private lateinit var device: Device
@@ -27,10 +29,11 @@ class FileClientProgressTest {
     fun setup() {
         tmpDir = Files.createTempDirectory("tether-progress-test").toFile()
         configDir = Files.createTempDirectory("tether-progress-test-keys").toFile()
+        tempStore = TempDataStore()
         server = FileServer(
             port = 0,
             downloadsDir = tmpDir,
-            trustedDeviceStore = TrustedDeviceStore(configDir),
+            trustedDeviceStore = DefaultTrustedDeviceStore(tempStore.dataStore),
             deviceKeyPair = DeviceKeyPair(configDir),
         )
         val port = server.start()
@@ -42,6 +45,7 @@ class FileClientProgressTest {
     fun teardown() {
         client.close()
         server.stop()
+        tempStore.tearDown()
         tmpDir.deleteRecursively()
         configDir.deleteRecursively()
     }

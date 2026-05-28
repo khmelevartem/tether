@@ -1,7 +1,6 @@
 package com.tubetoast.tether.network
 
 import android.content.Context
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import com.tubetoast.tether.TetherApp
 import com.tubetoast.tether.protocol.PairRequest
 import com.tubetoast.tether.security.DeviceKeyPair
@@ -16,7 +15,6 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.runBlocking
-import okio.Path.Companion.toOkioPath
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -46,13 +44,14 @@ class FileServerAndroidPairTest {
     @Suppress("ktlint:tether:no-run-blocking-in-tests")
     @Test
     fun `pair returns 500 when Android store fails to persist`() {
-        val testDataStore = PreferenceDataStoreFactory.createWithPath {
-            keyPairDir.resolve("test-trusted.preferences_pb").toOkioPath()
-        }
-        val throwingStore = object : TrustedDeviceStore(testDataStore) {
-            override fun saveTrustedKey(deviceId: String, publicKey: ByteArray): Unit = throw IllegalStateException(
+        val throwingStore = object : TrustedDeviceStore {
+            override suspend fun isTrusted(deviceId: String) = false
+
+            override suspend fun saveTrustedKey(deviceId: String, publicKey: ByteArray) = throw IllegalStateException(
                 "simulated DataStore write failure",
             )
+
+            override suspend fun getPublicKey(deviceId: String): ByteArray? = null
         }
         val srv = FileServer(
             port = 0,

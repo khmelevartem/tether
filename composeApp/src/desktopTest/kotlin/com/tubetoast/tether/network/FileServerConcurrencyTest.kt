@@ -1,7 +1,8 @@
 package com.tubetoast.tether.network
 
+import com.tubetoast.tether.preferences.TempDataStore
+import com.tubetoast.tether.security.DefaultTrustedDeviceStore
 import com.tubetoast.tether.security.DeviceKeyPair
-import com.tubetoast.tether.security.TrustedDeviceStore
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
@@ -33,6 +34,7 @@ import kotlin.time.Duration.Companion.seconds
 @Suppress("ktlint:tether:no-run-blocking-in-tests")
 class FileServerConcurrencyTest {
     private val cleanupPaths = mutableListOf<File>()
+    private val cleanupTempStores = mutableListOf<TempDataStore>()
     private var startedServer: FileServer? = null
 
     @AfterTest
@@ -41,14 +43,17 @@ class FileServerConcurrencyTest {
         startedServer = null
         cleanupPaths.forEach { it.deleteRecursively() }
         cleanupPaths.clear()
+        cleanupTempStores.forEach { it.tearDown() }
+        cleanupTempStores.clear()
     }
 
     private fun newServer(downloadsDir: File): FileServer {
         val configDir = Files.createTempDirectory("tether-concurrency-test-keys").toFile().also(cleanupPaths::add)
+        val temp = TempDataStore().also { cleanupTempStores += it }
         val server = FileServer(
             port = 0,
             downloadsDir = downloadsDir,
-            trustedDeviceStore = TrustedDeviceStore(configDir),
+            trustedDeviceStore = DefaultTrustedDeviceStore(temp.dataStore),
             deviceKeyPair = DeviceKeyPair(configDir),
         )
         startedServer = server

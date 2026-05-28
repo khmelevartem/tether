@@ -13,6 +13,7 @@ import com.tubetoast.tether.preferences.DefaultFileTransferPreferences
 import com.tubetoast.tether.preferences.DefaultPeerPreferencesStore
 import com.tubetoast.tether.preferences.FileTransferPreferences
 import com.tubetoast.tether.preferences.PeerPreferencesStore
+import com.tubetoast.tether.security.DefaultTrustedDeviceStore
 import com.tubetoast.tether.security.TrustedDeviceStore
 import okio.Path.Companion.toOkioPath
 
@@ -39,7 +40,7 @@ class AndroidAppContainer(
                 it.parentFile?.mkdirs()
             }.toOkioPath()
     }
-    override val trustedDeviceStore: TrustedDeviceStore = TrustedDeviceStore(trustedDataStore)
+    override val trustedDeviceStore: TrustedDeviceStore = DefaultTrustedDeviceStore(trustedDataStore)
     override val namePersistence: DeviceNamePersistence = DefaultDeviceNamePersistence(dataStore)
     override val mdnsDiscovery: MdnsDiscovery = MdnsDiscovery(application, DiscoveredDevicesStore())
     override val peerPreferencesStore: PeerPreferencesStore = DefaultPeerPreferencesStore(dataStore)
