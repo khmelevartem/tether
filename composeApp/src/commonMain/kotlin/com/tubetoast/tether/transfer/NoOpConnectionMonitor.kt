@@ -1,7 +1,5 @@
-package com.tubetoast.tether.di
+package com.tubetoast.tether.transfer
 
-import com.tubetoast.tether.transfer.ConnectionDrop
-import com.tubetoast.tether.transfer.ConnectionMonitor
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlin.time.Duration

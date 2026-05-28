@@ -28,7 +28,7 @@ import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.composables.core.SheetDetent
 import com.composables.core.rememberModalBottomSheetState
 import com.tubetoast.tether.foundation.IsMobileChooserPlatform
-import com.tubetoast.tether.presentation.banners.IosForegroundConstraintBanner
+import com.tubetoast.tether.presentation.banners.ForegroundConstraintBanner
 import com.tubetoast.tether.presentation.banners.PendingOutboundBanner
 import com.tubetoast.tether.presentation.peercard.PeerCard
 import com.tubetoast.tether.presentation.peercard.PeerCardCallbacks
@@ -80,7 +80,7 @@ fun DeviceListContent(
     onPickerPick: (PeerIdentity, PickerKind) -> Unit,
     modifier: Modifier = Modifier,
     autoSendEnabledFor: @Composable (PeerIdentity) -> Boolean = { false },
-    showIosBanner: Boolean = false,
+    showForegroundBanner: Boolean = false,
     showMobileChooser: Boolean = IsMobileChooserPlatform,
 ) {
     val spacing = TetherTheme.spacing
@@ -108,10 +108,10 @@ fun DeviceListContent(
             )
         }
 
-        IosForegroundConstraintBanner(
+        ForegroundConstraintBanner(
             // TODO(#194): iOS — wire visible = true while any transfer is active (UIApplication foreground state observer)
             //              On Android / Desktop / macOS this banner is permanently hidden per UX brief Platform Deltas
-            visible = showIosBanner,
+            visible = showForegroundBanner,
             modifier = Modifier.fillMaxWidth(),
         )
 
@@ -310,7 +310,7 @@ private fun PreviewIosBanner(@PreviewParameter(Themes::class) dark: Boolean) =
             ),
             pending = null,
             dropFeedback = false,
-            showIosBanner = true,
+            showForegroundBanner = true,
             onCancelPending = {},
             peerCallbacksFor = { previewCallbacks() },
             onPickerPick = { _, _ -> },

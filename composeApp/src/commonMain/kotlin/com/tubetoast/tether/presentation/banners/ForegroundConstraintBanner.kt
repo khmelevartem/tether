@@ -16,7 +16,7 @@ import com.tubetoast.tether.ui.preview.Themes
 import com.tubetoast.tether.ui.theme.TetherTheme
 
 @Composable
-fun IosForegroundConstraintBanner(
+fun ForegroundConstraintBanner(
     visible: Boolean,
     modifier: Modifier = Modifier,
 ) {
@@ -39,9 +39,9 @@ fun IosForegroundConstraintBanner(
     )
 }
 
-@Preview(name = "IosForegroundConstraintBanner — visible")
+@Preview(name = "ForegroundConstraintBanner — visible")
 @Composable
 private fun PreviewVisible(@PreviewParameter(Themes::class) dark: Boolean) =
     PreviewSurface(darkTheme = dark) {
-        IosForegroundConstraintBanner(visible = true)
+        ForegroundConstraintBanner(visible = true)
     }

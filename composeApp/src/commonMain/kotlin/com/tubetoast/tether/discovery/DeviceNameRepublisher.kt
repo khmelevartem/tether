@@ -1,7 +1,6 @@
-package com.tubetoast.tether.di
+package com.tubetoast.tether.discovery
 
 import com.tubetoast.tether.config.DeviceNameStore
-import com.tubetoast.tether.discovery.DeviceDiscovery
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.drop

@@ -1,6 +1,6 @@
 @file:OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 
-package com.tubetoast.tether.di
+package com.tubetoast.tether.discovery
 
 import com.tubetoast.tether.config.DeviceNameStore
 import com.tubetoast.tether.config.InMemoryDeviceNamePersistence

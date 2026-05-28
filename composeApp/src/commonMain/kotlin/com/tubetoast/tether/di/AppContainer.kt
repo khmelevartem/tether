@@ -2,6 +2,7 @@ package com.tubetoast.tether.di
 
 import com.tubetoast.tether.config.DeviceNamePersistence
 import com.tubetoast.tether.config.DeviceNameStore
+import com.tubetoast.tether.discovery.DeviceNameRepublisher
 import com.tubetoast.tether.discovery.MdnsDiscovery
 import com.tubetoast.tether.network.DefaultTransferActivityTracker
 import com.tubetoast.tether.network.FileClient
@@ -13,10 +14,8 @@ import com.tubetoast.tether.presentation.RootComponentFactory
 import com.tubetoast.tether.security.TrustedDeviceStore
 import com.tubetoast.tether.transfer.BatchSender
 import com.tubetoast.tether.transfer.ConnectionMonitor
+import com.tubetoast.tether.transfer.NoOpConnectionMonitor
 import com.tubetoast.tether.transfer.PeerUnreachableException
-import com.tubetoast.tether.transfer.ReceiveEvent
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
 
 abstract class AppContainer {
     protected abstract val namePersistence: DeviceNamePersistence
@@ -29,8 +28,6 @@ abstract class AppContainer {
     abstract val trustedDeviceStore: TrustedDeviceStore
     abstract val peerPreferencesStore: PeerPreferencesStore
     abstract val fileTransferPreferences: FileTransferPreferences
-
-    open val inboundEvents: SharedFlow<ReceiveEvent> = MutableSharedFlow()
 
     open val connectionMonitor: ConnectionMonitor = NoOpConnectionMonitor
 
@@ -47,7 +44,6 @@ abstract class AppContainer {
         RootComponentFactory(
             discovery = mdnsDiscovery,
             batchSenderFactory = batchSenderFactory,
-            inboundEvents = inboundEvents,
             peerPreferencesStore = peerPreferencesStore,
         )
     }
