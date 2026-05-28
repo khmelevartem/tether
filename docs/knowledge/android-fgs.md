@@ -46,6 +46,27 @@ notification is visible. Emulators may not reproduce suppression behavior.
 
 ---
 
+## dataSync 6h/day cap on Android 15+
+
+**Symptom:** on API 35+, after ~6h cumulative FGS runtime in a single UTC day, the system
+throws `ForegroundServiceDidNotStopInTimeException`, kills the service, and removes the
+notification. No user-visible message.
+
+**Root cause:** Android 15 (API 35) introduced a cumulative per-UTC-day cap on `dataSync`
+FGS runtime to discourage long-running background workloads under that subtype.
+
+**Why we accept it:** alternatives are worse for Tether — `connectedDevice` is suppressed
+without active hardware (see section above), `specialUse` taxes every Play release with
+manual review. Interactive use accrues minutes per day of FGS time, not hours, so the cap
+is unlikely to trigger in practice.
+
+**Detection:** `adb logcat | grep ForegroundServiceDidNotStopInTimeException`
+
+**Recovery:** user reopens the app — cold start re-invokes `startService` from
+`MainActivity.onCreate` (see sticky-Stop section).
+
+---
+
 ## bindService(flags=0) is not a reliable "is service running?" check
 
 **Symptom:** service is not running but `bindService(intent, conn, 0)` returns `true`,
