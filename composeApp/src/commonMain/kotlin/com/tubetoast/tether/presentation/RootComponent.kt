@@ -21,15 +21,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 
-data class PendingFilesSummary(
-    val fileCount: Int,
-    val totalBytes: Long,
-) {
-    companion object {
-        val NONE = PendingFilesSummary(0, 0L)
-    }
-}
-
 class RootComponent(
     componentContext: ComponentContext,
     private val deviceListFactory: (ComponentContext, TransferRegistry) -> DeviceListComponent,
