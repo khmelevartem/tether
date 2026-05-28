@@ -17,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -50,9 +51,10 @@ fun DeviceListScreen(
     pending: PendingFilesSummary?,
     dropFeedback: Boolean,
     onCancelPending: () -> Unit,
-    peerCallbacksFor: (PeerIdentity) -> PeerCardCallbacks,
+    peerCallbacksFor: @Composable (PeerIdentity) -> PeerCardCallbacks,
     onPickerPick: (PeerIdentity, PickerKind) -> Unit,
     modifier: Modifier = Modifier,
+    autoSendEnabledFor: @Composable (PeerIdentity) -> Boolean = { false },
 ) {
     val state by component.state.subscribeAsState()
 
@@ -62,6 +64,7 @@ fun DeviceListScreen(
         dropFeedback = dropFeedback,
         onCancelPending = onCancelPending,
         peerCallbacksFor = peerCallbacksFor,
+        autoSendEnabledFor = autoSendEnabledFor,
         onPickerPick = onPickerPick,
         modifier = modifier,
     )
@@ -73,9 +76,10 @@ fun DeviceListContent(
     pending: PendingFilesSummary?,
     dropFeedback: Boolean,
     onCancelPending: () -> Unit,
-    peerCallbacksFor: (PeerIdentity) -> PeerCardCallbacks,
+    peerCallbacksFor: @Composable (PeerIdentity) -> PeerCardCallbacks,
     onPickerPick: (PeerIdentity, PickerKind) -> Unit,
     modifier: Modifier = Modifier,
+    autoSendEnabledFor: @Composable (PeerIdentity) -> Boolean = { false },
     showIosBanner: Boolean = false,
     showMobileChooser: Boolean = IsMobileChooserPlatform,
 ) {
@@ -149,6 +153,7 @@ fun DeviceListContent(
                         .then(
                             if (tapAction != null) {
                                 Modifier
+                                    .clip(TetherTheme.shapes.md)
                                     .clickable(onClick = tapAction)
                                     .semantics {
                                         role = Role.Button
@@ -168,6 +173,7 @@ fun DeviceListContent(
                         device = row.device,
                         callbacks = peerCallbacksFor(peer),
                         modifier = cardModifier,
+                        isAutoSendEnabled = autoSendEnabledFor(peer),
                     )
                 }
             }

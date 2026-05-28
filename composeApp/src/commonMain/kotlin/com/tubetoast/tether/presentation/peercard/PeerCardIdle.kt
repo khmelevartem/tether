@@ -12,6 +12,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -21,7 +25,9 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Popup
 import com.tubetoast.tether.presentation.transfer.PeerTransferState
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.ui.components.ChevronToggleIcon
@@ -111,37 +117,54 @@ private fun AutoSendBlock(
     val spacing = TetherTheme.spacing
     val typography = TetherTheme.typography
 
-    Column(modifier = modifier) {
+    var infoVisible by remember { mutableStateOf(false) }
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = modifier.fillMaxWidth(),
+    ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.weight(1f),
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f),
-            ) {
-                BasicText(
-                    text = "Auto-send to this device when it's your only online device",
-                    style = typography.bodyMedium.copy(color = colors.textPrimary),
-                    modifier = Modifier.weight(1f),
-                )
+            BasicText(
+                text = "Auto-send",
+                style = typography.bodyMedium.copy(color = colors.textPrimary),
+            )
+            Box {
                 InfoIconButton(
-                    onClick = onInfoTap,
+                    onClick = {
+                        infoVisible = !infoVisible
+                        onInfoTap()
+                    },
                     contentDescription = "More information about auto-send",
                     modifier = Modifier.padding(start = spacing.xs),
                 )
+                if (infoVisible) {
+                    Popup(
+                        offset = IntOffset(0, 0),
+                        onDismissRequest = { infoVisible = false },
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .clip(TetherTheme.shapes.md)
+                                .background(colors.surfaceRaised)
+                                .padding(spacing.md),
+                        ) {
+                            BasicText(
+                                text = "Auto-send when this is your only online device.",
+                                style = typography.bodyMedium.copy(color = colors.textPrimary),
+                            )
+                        }
+                    }
+                }
             }
-            AutoSendToggle(
-                enabled = isAutoSendEnabled,
-                peerName = peerName,
-                onToggle = onToggle,
-            )
         }
-        BasicText(
-            text = "Sends immediately — no device-list tap required.",
-            style = typography.labelSmall.copy(color = colors.textMuted),
-            modifier = Modifier.padding(top = spacing.xs),
+        AutoSendToggle(
+            enabled = isAutoSendEnabled,
+            peerName = peerName,
+            onToggle = onToggle,
         )
     }
 }

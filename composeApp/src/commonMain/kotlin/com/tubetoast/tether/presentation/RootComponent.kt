@@ -9,6 +9,7 @@ import com.arkivanov.decompose.router.stack.pushNew
 import com.arkivanov.decompose.value.MutableValue
 import com.arkivanov.decompose.value.Value
 import com.arkivanov.essenty.lifecycle.coroutines.coroutineScope
+import com.tubetoast.tether.preferences.PeerPreferencesStore
 import com.tubetoast.tether.presentation.transfer.TransferDetailsComponent
 import com.tubetoast.tether.presentation.transfer.TransferRegistry
 import com.tubetoast.tether.transfer.FileSource
@@ -16,6 +17,8 @@ import com.tubetoast.tether.transfer.PeerIdentity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 
 data class PendingFilesSummary(
@@ -32,6 +35,7 @@ class RootComponent(
     private val deviceListFactory: (ComponentContext, TransferRegistry) -> DeviceListComponent,
     registryFactory: (onShowDetails: (PeerIdentity) -> Unit) -> TransferRegistry,
     coroutineScope: CoroutineScope = componentContext.coroutineScope(),
+    private val peerPreferencesStore: PeerPreferencesStore? = null,
 ) : ComponentContext by componentContext {
     private val scope = coroutineScope
 
@@ -96,6 +100,14 @@ class RootComponent(
 
     fun showTransferDetails(peer: PeerIdentity) {
         navigation.pushNew(Config.TransferDetails(peer))
+    }
+
+    fun observeAutoSend(peer: PeerIdentity): Flow<Boolean> =
+        peerPreferencesStore?.observeAutoSend(peer) ?: flowOf(false)
+
+    fun setAutoSend(peer: PeerIdentity, enabled: Boolean) {
+        val store = peerPreferencesStore ?: return
+        scope.launch { store.setAutoSend(peer, enabled) }
     }
 
     fun onDropRejectedDuringTransfer() {

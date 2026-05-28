@@ -48,6 +48,7 @@ abstract class AppContainer {
             discovery = mdnsDiscovery,
             batchSenderFactory = batchSenderFactory,
             inboundEvents = inboundEvents,
+            peerPreferencesStore = peerPreferencesStore,
         )
     }
 }

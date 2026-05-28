@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeContentPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import com.arkivanov.decompose.extensions.compose.stack.Children
@@ -41,7 +42,10 @@ fun RootContent(component: RootComponent, modifier: Modifier = Modifier) {
                         pending = pending,
                         dropFeedback = dropFeedback,
                         onCancelPending = component::clearPendingFiles,
-                        peerCallbacksFor = { peer -> buildPeerCallbacks(peer, component, hasPending) },
+                        peerCallbacksFor = { peer -> rememberPeerCallbacks(peer, component, hasPending) },
+                        autoSendEnabledFor = { peer ->
+                            component.observeAutoSend(peer).collectAsState(initial = false).value
+                        },
                         // TODO(#192): wire Android FilePicker actual (ACTION_OPEN_DOCUMENT / ACTION_OPEN_DOCUMENT_TREE; ContentResolver byte streams)
                         // TODO(#193): wire Desktop FilePicker actual (JFileChooser or nativefiledialog; FileInputStream)
                         // TODO(#194): wire iOS FilePicker actual (UIDocumentPickerViewController; NSURL → openReadChannel)
@@ -54,7 +58,8 @@ fun RootContent(component: RootComponent, modifier: Modifier = Modifier) {
     }
 }
 
-private fun buildPeerCallbacks(
+@Composable
+private fun rememberPeerCallbacks(
     peer: PeerIdentity,
     rootComponent: RootComponent,
     hasPending: Boolean,
@@ -62,7 +67,7 @@ private fun buildPeerCallbacks(
     val peerComponent = rootComponent.registry.get(peer)
     return PeerCardCallbacks(
         onToggleExpand = peerComponent::toggleExpanded,
-        onToggleAutoSend = {},
+        onToggleAutoSend = { enabled -> rootComponent.setAutoSend(peer, enabled) },
         onShowAutoSendInfo = {},
         onCancel = peerComponent::onCancel,
         onDismiss = peerComponent::onDismiss,
