@@ -11,17 +11,8 @@
     <!-- Foreground service hosting Ktor FileServer + NSD discovery so the Android peer
          stays reachable while the app is backgrounded. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <!-- dataSync FGS type hosts Tether's Ktor file server + mDNS discovery.
-         Rejected alternatives:
-           - connectedDevice: silently suppresses the notification on Android 14+ without an active
-             BT/NFC/USB hardware link; CHANGE_WIFI_MULTICAST_STATE does not satisfy the runtime check.
-             See docs/knowledge/android-fgs.md.
-           - specialUse: requires per-release Google Play manual justification review.
-           - WorkManager periodic restart: inherits the dataSync cap and adds a notification gap.
-         Accepted cost: API 35+ enforces a ~6h/day cumulative cap on dataSync FGS time. On expiry
-         the system throws ForegroundServiceDidNotStopInTimeException and silently kills the service;
-         the notification disappears with no user message. Interactive use accrues minutes, not hours,
-         of FGS time per day, so the cap is unlikely to bite for MVP. -->
+    <!-- dataSync chosen for Tether's Ktor file server + mDNS hosting.
+         See docs/knowledge/android-fgs.md for rejected alternatives, accepted trade-offs, and citations. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
