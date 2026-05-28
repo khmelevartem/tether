@@ -1196,11 +1196,11 @@ def render_html(
     body_sections = (
         render_header(today)
         + render_character_sheet(lx, shares, cls_name, cls_lore, balance, merged, issues, sprint_title)
+        + render_current_chapter(sprint_title, sprint_issues, issues_by_number)
         + render_mvp(mvp_chapters)
         + render_locations(loc, assets["locations"])
         + render_artifacts(top5)
         + render_hot_heavy(prs_all)
-        + render_current_chapter(sprint_title, sprint_issues, issues_by_number)
         + render_quest_map(graph, assets["schools"])
         + render_seal_of_debt(debt)
         + f'<div class="two-col" style="margin-top:48px;">'
