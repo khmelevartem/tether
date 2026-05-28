@@ -91,7 +91,7 @@ Weight: `commits·2 + comments + review_threads·3 + (additions+deletions)/200`.
 Tables `#PR | title | value`, monospace numbers right-aligned. No RPG translation in values — pure statistics.
 
 ### Seal of Debt — planned vs improvised
-**Planned** = issues referenced in any `## Composition` section across `docs/sprints/sprint-*.md`. **Cutoff:** count only issues created **after** the date `sprint-01.md` was filed in git. Retro-PRs are not counted.
+**Planned** = issues referenced in any `## Состав` section across `docs/sprints/sprint-*.md`. **Cutoff:** count only issues created **after** the date `sprint-01.md` was filed in git. Retro-PRs are not counted.
 
 - `planned ∩ closed` after cutoff — "By the Sprint Scroll"
 - `closed − planned` after cutoff — "Random Encounters"

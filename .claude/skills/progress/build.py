@@ -42,6 +42,7 @@ import html
 import json
 import math
 import re
+import subprocess
 import sys
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -113,6 +114,20 @@ def load_assets(assets_dir: Path) -> dict:
     return result
 
 
+def _git_added_date(path: Path) -> date | None:
+    try:
+        r = subprocess.run(
+            ["git", "log", "--diff-filter=A", "--follow", "--format=%aI", "--", str(path)],
+            capture_output=True, text=True, check=True,
+        )
+        lines = [line for line in r.stdout.splitlines() if line.strip()]
+        if not lines:
+            return None
+        return date.fromisoformat(lines[-1][:10])
+    except (subprocess.CalledProcessError, FileNotFoundError, ValueError):
+        return None
+
+
 def parse_sprint(sprint_path: Path) -> tuple[str, list[int]]:
     _require(sprint_path)
     text = sprint_path.read_text()
@@ -120,7 +135,7 @@ def parse_sprint(sprint_path: Path) -> tuple[str, list[int]]:
     h1 = re.search(r"^#\s+(.+)", text, re.MULTILINE)
     title = h1.group(1).strip() if h1 else sprint_path.stem
 
-    composition = re.search(r"##\s+Composition(.*?)(?=^##\s|\Z)", text, re.DOTALL | re.MULTILINE)
+    composition = re.search(r"##\s+(?:Composition|Состав)(.*?)(?=^##\s|\Z)", text, re.DOTALL | re.MULTILINE)
     numbers: list[int] = []
     if composition:
         numbers = [int(m) for m in re.findall(r"#(\d+)", composition.group(1))]
@@ -146,31 +161,45 @@ def merged_prs(prs: list) -> list:
     return [p for p in prs if p.get("state") == "MERGED"]
 
 
-def compute_shares(prs_merged: list, keywords: dict) -> dict:
+def compute_shares(prs_merged: list, keywords: dict, sprint_cutoff: date | None = None) -> dict:
     total = len(prs_merged)
     if total == 0:
-        return dict(infra_share=0.0, docs_share=0.0, retro_share=0.0)
+        return dict(infra_share=0.0, docs_share=0.0, retro_share=0.0, retro_share_sprint=0.0)
 
     infra = sum(1 for p in prs_merged if categorise(p["title"], keywords) == "infra")
     retro = sum(1 for p in prs_merged if categorise(p["title"], keywords) == "retro")
     docs_kw = keywords.get("docs_keywords", [])
     docs = sum(1 for p in prs_merged if any(k in p["title"].lower() for k in docs_kw))
+
+    sprint_prs = [
+        p for p in prs_merged
+        if sprint_cutoff and p.get("mergedAt")
+        and date.fromisoformat(p["mergedAt"][:10]) >= sprint_cutoff
+    ]
+    sprint_total = len(sprint_prs)
+    sprint_retro = sum(1 for p in sprint_prs if categorise(p["title"], keywords) == "retro")
+    retro_share_sprint = sprint_retro / sprint_total if sprint_total else 0.0
+
     return dict(
         infra_share=infra / total,
         docs_share=docs / total,
         retro_share=retro / total,
+        retro_share_sprint=retro_share_sprint,
     )
 
 
 def hero_class(shares: dict, classes_data: dict) -> tuple[str, str]:
-    inf = shares["infra_share"]
-    doc = shares["docs_share"]
-    ret = shares["retro_share"]
+    scope = {
+        "infra_share": shares["infra_share"],
+        "docs_share": shares["docs_share"],
+        "retro_share": shares["retro_share"],
+        "retro_share_sprint": shares.get("retro_share_sprint", 0.0),
+    }
     for rule in classes_data["rules"]:
         pred = rule["predicate"]
         if pred == "default":
             return rule["class"], rule["lore"]
-        if eval(pred, {"infra_share": inf, "docs_share": doc, "retro_share": ret}):  # noqa: S307
+        if eval(pred, scope):  # noqa: S307
             return rule["class"], rule["lore"]
     return classes_data["rules"][-1]["class"], classes_data["rules"][-1]["lore"]
 
@@ -1126,7 +1155,7 @@ def render_html(
 
     kw = assets["keywords"]
     merged = merged_prs(prs_all)
-    shares = compute_shares(merged, kw)
+    shares = compute_shares(merged, kw, raw.get("active_sprint_cutoff"))
     cls_name, cls_lore = hero_class(shares, assets["classes"])
     lx = level_xp(merged, issues)
     balance = balance_of_week(merged, kw, today)
@@ -1387,6 +1416,7 @@ def main() -> None:
     sprint_path = Path(args.sprint)
     sprint_title, sprint_issues = parse_sprint(sprint_path)
     sprints_dir = sprint_path.parent
+    raw["active_sprint_cutoff"] = _git_added_date(sprint_path)
 
     out = Path(args.output)
     out.parent.mkdir(parents=True, exist_ok=True)
