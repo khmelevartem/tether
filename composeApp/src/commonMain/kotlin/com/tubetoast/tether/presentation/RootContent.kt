@@ -12,6 +12,11 @@ import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.tubetoast.tether.presentation.peercard.PeerCardCallbacks
 import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.ui.theme.TetherTheme
+import ru.pocketbyte.kydra.log.KydraLog
+import ru.pocketbyte.kydra.log.info
+import ru.pocketbyte.kydra.log.wrapper.withTag
+
+private val log = KydraLog.withTag(default = "RootContent")
 
 @Composable
 fun RootContent(component: RootComponent, modifier: Modifier = Modifier) {
@@ -38,7 +43,7 @@ fun RootContent(component: RootComponent, modifier: Modifier = Modifier) {
                         onCancelPending = component::clearPendingFiles,
                         peerCallbacksFor = { peer -> buildPeerCallbacks(peer, component, hasPending) },
                         // TODO(#follow-up): wire platform picker
-                        onPickerPick = { _, _ -> },
+                        onPickerPick = { peer, kind -> log.info { "onPickerPick($peer, $kind)" } },
                     )
                     is RootComponent.Child.TransferDetailsChild -> TransferDetailsScreen(instance.component)
                 }
