@@ -26,6 +26,7 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.composables.core.SheetDetent
 import com.composables.core.rememberModalBottomSheetState
+import com.tubetoast.tether.foundation.IsMobileChooserPlatform
 import com.tubetoast.tether.presentation.banners.IosForegroundConstraintBanner
 import com.tubetoast.tether.presentation.banners.PendingOutboundBanner
 import com.tubetoast.tether.presentation.peercard.PeerCard
@@ -76,6 +77,7 @@ fun DeviceListContent(
     onPickerPick: (PeerIdentity, PickerKind) -> Unit,
     modifier: Modifier = Modifier,
     showIosBanner: Boolean = false,
+    showMobileChooser: Boolean = IsMobileChooserPlatform,
 ) {
     val spacing = TetherTheme.spacing
     val colors = TetherTheme.colors
@@ -127,10 +129,15 @@ fun DeviceListContent(
                     val peer = row.device.toPeerIdentity()
                     val tapAction: (() -> Unit)? = when {
                         pending != null -> peerCallbacksFor(peer).let { cbs -> { cbs.onClick?.invoke() } }
-                        row.transferState is PeerTransferState.Idle -> (
+                        row.transferState is PeerTransferState.Idle && showMobileChooser -> (
                             {
                                 triggerPeer = peer
                                 sheetState.targetDetent = SheetDetent.FullyExpanded
+                            }
+                        )
+                        row.transferState is PeerTransferState.Idle -> (
+                            {
+                                onPickerPick(peer, PickerKind.Files)
                             }
                         )
                         else -> null
