@@ -22,7 +22,16 @@ Issue number `<N>`.
 The skill is idempotent per issue. At each invocation, first check `gh pr list --search "issue:#<N>" --state open`:
 
 - **No PR** → start Step 1.
-- **PR exists and is open** → you are in a pull-request feedback iteration. Read **all** human comments on the PR (`gh api repos/<owner>/<repo>/pulls/<PR>/comments` + `gh pr view <PR> --comments`) and for each determine its status: addressed in commits after it — or not. **Creation date does not determine relevance** — filtering comments by `created_at > <date-of-previous-run>` is forbidden, because an unaddressed comment remains relevant regardless of how old it is. **Counted is not read** — returning a `length`/count without fetching the `body` of each comment does not count as reading; while unaddressed comments remain outstanding, the consistency wave (Step 4) and review wave (Step 5) must not run, otherwise both will process a diff that needs to be redone. The run **must** include on a fresh diff (`docs/` + `.claude/`): Step 4 (consistency pass) → Step 5 (review wave).
+- **PR exists and is open** → you are in a pull-request feedback iteration. **Before anything else, gate on main drift:**
+
+  ```bash
+  git fetch origin main --quiet
+  git merge-base --is-ancestor origin/main HEAD && echo up-to-date || echo behind
+  ```
+
+  If `behind` → run `/rebase` and adjust to whatever it brought before classifying comments or running reviewers. Doc-track work is especially vulnerable to canon drift — an in-flight rule promotion or canon hoist on main can invalidate the very edits the current PR makes (e.g. adding a glossary entry that a freshly-merged rule now declares unnecessary). If `up-to-date` → skip.
+
+  Then read **all** human comments on the PR (`gh api repos/<owner>/<repo>/pulls/<PR>/comments` + `gh pr view <PR> --comments`) and for each determine its status: addressed in commits after it — or not. **Creation date does not determine relevance** — filtering comments by `created_at > <date-of-previous-run>` is forbidden, because an unaddressed comment remains relevant regardless of how old it is. **Counted is not read** — returning a `length`/count without fetching the `body` of each comment does not count as reading; while unaddressed comments remain outstanding, the consistency wave (Step 4) and review wave (Step 5) must not run, otherwise both will process a diff that needs to be redone. The run **must** include on a fresh diff (`docs/` + `.claude/`): Step 4 (consistency pass) → Step 5 (review wave).
 
 Step 6 (commit + present + push) is simplified on re-entry: the commit goes into the existing branch, force-push is not needed, do not create a new PR.
 
@@ -98,7 +107,7 @@ Decide which artifact layers this issue needs. Read the issue body, comments, li
 | **spec** | Type FEATURE AND `docs/product/features/<slug>/spec.md` is missing, `(stub)`, or has blocking open questions | `docs/product/features/<slug>/spec.md` | `spec-writer` |
 | **ux-brief** | FEATURE with user-facing UI (screen / component / navigation) AND `ux-brief.md` is missing or stale relative to spec changes | `docs/product/features/<slug>/ux-brief.md` | `ux-expert` |
 | **tech-doc** | Subsystem with a non-trivial mechanism (protocol / library choice / cross-platform invariant) not covered by `docs/engineering/<name>.md`, or the existing one is outdated | `docs/engineering/<name>.md` | `architect` |
-| **ADR** | Architectural choice with ≥3 considered options, the decision history has value (cannot be reconstructed from code + living docs) | `docs/engineering/adr/adr-<name>.md` | `architect` |
+| **ADR** | Architectural choice that clears the three-way threshold in [`adr/README.md`](../../../docs/engineering/adr/README.md) §ADR threshold (hard-to-reverse + surprising-without-context + real-trade-off) | `docs/engineering/adr/adr-<name>.md` | `architect` |
 | **knowledge** | Solved problem / platform quirk / workaround worth capturing for the next person (the kind currently in `docs/knowledge/`: Android FGS gotchas, Apple platform quirks, Ktor CIO traps, mDNS-Bonjour interactions, …). Trigger usually from a retro or a closed BUGFIX — issue says "record this behaviour" | `docs/knowledge/<name>.md` | `architect` |
 | **.claude prompt** | Deliverable — editing a skill prompt (`.claude/skills/<name>/SKILL.md`), agent definition (`.claude/agents/<name>.md`), slash command (`.claude/commands/<name>.md`), hook (`.claude/scripts/*`, `.claude/settings.json`). Also includes INFRA / typeless tasks that change agent or slash-command behaviour | `.claude/skills/<...>` / `.claude/agents/<...>` / `.claude/commands/<...>` | orchestrator (inline) |
 
@@ -152,9 +161,10 @@ If the PR establishes or extends canon, tell each reviewer to apply the new rule
 - `review-guides` — conformance to CLAUDE.md §Code style and [`docs/engineering/long-lived-artifacts.md`](../../../docs/engineering/long-lived-artifacts.md) for all touched prose. For `docs/engineering/` artifacts additionally apply `docs/engineering/README.md` writing-style rules (rule-first, code examples on abstract types, no restating code). For `docs/product/features/<slug>/spec.md` apply `docs/product/features/_template.md`. For ADRs apply `docs/engineering/adr/_template.md` shape. For `.claude/` prompt edits apply sibling-skill/agent/command tone consistency.
 - `review-reuse` — no duplication of existing specs / briefs / living docs / knowledge, no contradictions with neighbours, no doc-vs-code drift.
 - `review-glossary` — load-bearing terms in the produced artifacts match [`docs/glossary.md`](../../../docs/glossary.md); new domain terms get an entry.
+- `review-architecture` — **only when the diff introduces or rewrites an ADR, an engineering living-doc, or `architecture-principles.md`**. The agent runs its §7 symmetric check (ADR threshold, parent-living-doc invariant, Decision-vs-State formulation, rejected-alternative coverage). Skip for pure spec / ux-brief / knowledge / glossary / `.claude` prompt edits.
 - `review-adversarial` — runs after the above with their combined findings as input; probes what was missed, what factual claims were not verified.
 
-The other reviewers (`review-correctness`, `review-tests`, `review-platform`, `review-design-system`, `review-ux`, `review-visual`, `review-architecture`) **do not run** — there is no code, no UI implementation to check against the brief. UX-brief structural completeness is covered by `review-guides` (it knows the routing `ux-brief.md → ux-expert.md §Output`).
+The other reviewers (`review-correctness`, `review-tests`, `review-platform`, `review-design-system`, `review-ux`, `review-visual`) **do not run** — there is no code, no UI implementation to check against the brief. UX-brief structural completeness is covered by `review-guides` (it knows the routing `ux-brief.md → ux-expert.md §Output`).
 
 Iteration: aggregate `[REQUIRED]` findings, re-dispatch the responsible sub-agent (which produced the artifact the finding targets) with the findings as input — for `.claude` prompt edits, apply the fixes inline since there is no sub-agent. Pass findings close to the reviewer's wording; do not soften or narrow.
 

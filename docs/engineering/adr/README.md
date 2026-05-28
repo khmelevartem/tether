@@ -8,6 +8,16 @@ Start a new ADR from [`_template.md`](_template.md) — it captures the canonica
 
 Write an ADR when a non-trivial choice will be questioned by future contributors (library, framework, structural pattern). Skip it for naming or style — those belong in living docs.
 
+## ADR threshold — three-way test
+
+Create an ADR only when all three hold:
+
+1. **Hard to reverse** — changing your mind later costs real work (migration, data shape change, cross-platform replumbing).
+2. **Surprising without context** — a future reader will wonder why the choice was made; the code alone does not answer.
+3. **Real trade-off** — there were genuine alternatives and one was picked for specific reasons; this is not the obvious application of an existing pattern.
+
+If any of the three is missing, the decision lives in the parent living doc (or the issue / PR description) without an ADR. Tasks that *apply* an existing ADR — wiring up the pattern it already prescribes — never produce a new ADR; if a constraint behind the existing ADR has changed, that's a Revisit-if event on the existing ADR, not a sibling.
+
 ## What the Decision section must (not) say
 
 The Decision section names the *choice*, not the *state*. Drift-prone formulations:
