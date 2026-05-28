@@ -90,6 +90,10 @@ Never hardcode `dp` literals in composables — always read values from the curr
 
 No pill/fully-rounded shapes (`CircleShape` on anything larger than 8dp tall) unless it is a pure icon button with circular affordance.
 
+## Sheets and modals
+
+Bottom-sheet and modal-dialog surfaces compose on Compose Unstyled primitives, restyled under the app theme via caller-supplied tokens. See [adr/adr-sheet-modal-primitives.md](adr/adr-sheet-modal-primitives.md) for the rationale and rejected alternatives.
+
 ## Iconography — Tabler Icons
 
 Dependency coordinate (add to version catalog and `composeApp/build.gradle.kts`):
@@ -148,6 +152,7 @@ Previews must be self-contained: build fake state inline and pass it to a statel
 ## References
 
 - [adr/adr-visual-identity.md](adr/adr-visual-identity.md) — rationale and options considered
+- [adr/adr-sheet-modal-primitives.md](adr/adr-sheet-modal-primitives.md) — bottom-sheet and modal-dialog primitive library
 - [docs/product/design.md](../product/design.md) — product-side visual language
 - [presentation-layer.md](presentation-layer.md) — Decompose component conventions
 - [Inter typeface](https://rsms.me/inter/)
