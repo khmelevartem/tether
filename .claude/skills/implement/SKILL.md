@@ -18,7 +18,16 @@ Issue number `<N>`.
 The skill is idempotent per issue. At each invocation, first check `gh pr list --search "issue:#<N>" --state open`:
 
 - **No PR** → start Step 1.
-- **PR exists and is open** → you are in a pull-request feedback iteration. **First** re-check the docs-only detection (Step 1 classification) on the current state of the issue + PR diff: if the task is docs-only, delegate re-entry to `/document <N>` and exit (`/document` is itself idempotent and will pick up this PR). Otherwise stay in the code-track re-entry.
+- **PR exists and is open** → you are in a pull-request feedback iteration. **Before anything else, gate on main drift:**
+
+  ```bash
+  git fetch origin main --quiet
+  git merge-base --is-ancestor origin/main HEAD && echo up-to-date || echo behind
+  ```
+
+  If `behind` → run `/rebase` and adjust to whatever it brought before classifying comments or running reviewers. Otherwise iterating on stale canon — incoming PRs may have shifted rules under your feet, and the review wave will run against a main that no longer matches the project's current canon. If `up-to-date` → skip.
+
+  Then re-check the docs-only detection (Step 1 classification) on the current state of the issue + PR diff: if the task is docs-only, delegate re-entry to `/document <N>` and exit (`/document` is itself idempotent and will pick up this PR). Otherwise stay in the code-track re-entry.
 - **Code-track re-entry.** The current feature branch may have new reviewer comments or commits since the last run. Read **all** human comments on the PR (`gh api repos/<owner>/<repo>/pulls/<PR>/comments` + `gh pr view <PR> --comments`) and for each determine its status: addressed in commits after it — or not. **Creation date does not determine relevance** — filtering comments by `created_at > <date-of-previous-run>` is forbidden, because an unaddressed comment remains relevant regardless of how old it is. The run **must** include on a fresh diff: Step 4 (inner loop reviewers) → Step 5 (simplify) → Step 6 (full review wave A + adversarial) → Step 7 (smoke, scoped to diff). Nothing from the re-entry discipline may be skipped — otherwise review iterations run at lower quality than the initial implementation.
 
 Step 8 (commit + push + final summary) is simplified on re-entry: the commit goes into the existing branch, force-push is not needed, do not create a new PR.
