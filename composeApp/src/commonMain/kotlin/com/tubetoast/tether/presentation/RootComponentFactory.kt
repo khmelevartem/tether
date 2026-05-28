@@ -34,7 +34,7 @@ class RootComponentFactory(
                             peer = peer.id,
                             batchSenderFactory = batchSenderFactory,
                             inboundEvents = inboundEvents,
-                            onShowDetailsCallback = onShowDetails,
+                            onShowDetails = onShowDetails,
                             reconnectionTimeout = ReconnectionTimeout.DEFAULT,
                             scope = scope,
                         )

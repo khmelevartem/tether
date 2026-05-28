@@ -28,10 +28,11 @@ class PeerTransferComponent(
     val peer: PeerIdentity,
     private val batchSenderFactory: () -> BatchSender,
     private val inboundEvents: Flow<ReceiveEvent>,
-    private val onShowDetailsCallback: (PeerIdentity) -> Unit,
+    onShowDetails: (PeerIdentity) -> Unit,
     private val reconnectionTimeout: Duration = ReconnectionTimeout.DEFAULT,
     private val scope: CoroutineScope,
 ) : ComponentContext by componentContext {
+    private val showDetailsCallback = onShowDetails
     private val mutableState = MutableValue<PeerTransferState>(PeerTransferState.Idle(peer))
     val state: Value<PeerTransferState> = mutableState
     private var activeJob: Job? = null
@@ -142,7 +143,7 @@ class PeerTransferComponent(
         }
     }
 
-    fun onShowDetails() = onShowDetailsCallback(peer)
+    fun onShowDetails() = showDetailsCallback(peer)
 
     private fun launchBatch(sources: List<FileSource>) {
         activeJob = scope.launch {

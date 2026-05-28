@@ -224,7 +224,7 @@ class PeerListComponentTest {
                     peer = peer.id,
                     batchSenderFactory = fakeBatchSender(),
                     inboundEvents = MutableSharedFlow(),
-                    onShowDetailsCallback = {},
+                    onShowDetails = {},
                     scope = coroutineScope,
                 )
             },

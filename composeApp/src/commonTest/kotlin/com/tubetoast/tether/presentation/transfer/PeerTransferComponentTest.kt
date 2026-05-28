@@ -56,7 +56,7 @@ class PeerTransferComponentTest {
                 )
             },
             inboundEvents = events,
-            onShowDetailsCallback = {},
+            onShowDetails = {},
             scope = scope,
         )
     }

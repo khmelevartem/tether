@@ -198,7 +198,7 @@ class RootComponentTest {
                             peer = peer.id,
                             batchSenderFactory = fakeBatchSender(),
                             inboundEvents = MutableSharedFlow(),
-                            onShowDetailsCallback = onShowDetails,
+                            onShowDetails = onShowDetails,
                             scope = coroutineScope,
                         )
                     },

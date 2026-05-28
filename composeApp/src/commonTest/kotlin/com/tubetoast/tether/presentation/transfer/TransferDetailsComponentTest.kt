@@ -51,7 +51,7 @@ class TransferDetailsComponentTest {
                 )
             },
             inboundEvents = MutableSharedFlow(),
-            onShowDetailsCallback = {},
+            onShowDetails = {},
             scope = scope,
         )
     }
