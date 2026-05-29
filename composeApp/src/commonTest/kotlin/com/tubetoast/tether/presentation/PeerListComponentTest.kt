@@ -4,6 +4,8 @@ import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.resume
 import com.tubetoast.tether.discovery.FakeDeviceDiscovery
+import com.tubetoast.tether.presentation.peer.FakePeersRepository
+import com.tubetoast.tether.presentation.peer.Peer
 import com.tubetoast.tether.presentation.peer.PeersRepository
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.presentation.transfer.PeerTransferState
@@ -222,6 +224,71 @@ class PeerListComponentTest {
         )
     }
 
+    @Test
+    fun `offline peer in emit has isOnline false in row`() = runTest {
+        val peerA = Peer(id = deviceA.toPeerIdentity(), device = deviceA, isOnline = false)
+        val peerFlow = MutableStateFlow(listOf(peerA))
+        val component = buildComponentWithPeers(peerFlow = peerFlow, coroutineScope = backgroundScope)
+        runCurrent()
+
+        assertEquals(1, component.state.value.rows.size)
+        assertEquals(
+            false,
+            component.state.value.rows
+                .first()
+                .peer.isOnline,
+        )
+    }
+
+    @Test
+    fun `offline idle peer evicted from children and row persists while still in emit`() = runTest {
+        val peerOnline = Peer(id = deviceA.toPeerIdentity(), device = deviceA, isOnline = true)
+        val peerFlow = MutableStateFlow(listOf(peerOnline))
+        val component = buildComponentWithPeers(peerFlow = peerFlow, coroutineScope = backgroundScope)
+        runCurrent()
+
+        assertNotNull(component.peerTransferComponent(deviceA.toPeerIdentity()))
+
+        val peerOfflineIdle = peerOnline.copy(isOnline = false)
+        peerFlow.value = listOf(peerOfflineIdle)
+        runCurrent()
+
+        assertNull(component.peerTransferComponent(deviceA.toPeerIdentity()))
+        assertEquals(1, component.state.value.rows.size)
+        assertEquals(
+            false,
+            component.state.value.rows
+                .first()
+                .peer.isOnline,
+        )
+    }
+
+    @Test
+    fun `offline non-idle peer child survives and row persists with isOnline false`() = runTest {
+        val peerOnline = Peer(id = deviceA.toPeerIdentity(), device = deviceA, isOnline = true)
+        val peerFlow = MutableStateFlow(listOf(peerOnline))
+        val component = buildComponentWithPeers(peerFlow = peerFlow, coroutineScope = backgroundScope)
+        runCurrent()
+
+        val peerComponent = component.peerTransferComponent(deviceA.toPeerIdentity())
+        assertNotNull(peerComponent)
+        peerComponent.startOutbound(listOf(FakeFileSource("file.txt", 10L)))
+        runCurrent()
+
+        val peerOffline = peerOnline.copy(isOnline = false)
+        peerFlow.value = listOf(peerOffline)
+        runCurrent()
+
+        assertNotNull(component.peerTransferComponent(deviceA.toPeerIdentity()))
+        assertEquals(1, component.state.value.rows.size)
+        assertEquals(
+            false,
+            component.state.value.rows
+                .first()
+                .peer.isOnline,
+        )
+    }
+
     private fun buildComponent(
         initial: List<Device> = emptyList(),
         flow: MutableStateFlow<List<Device>> = MutableStateFlow(initial),
@@ -237,6 +304,30 @@ class PeerListComponentTest {
         return PeerListComponent(
             componentContext = context,
             peersRepository = peersRepository,
+            peerTransferComponentFactory = { childCtx, peer ->
+                PeerTransferComponent(
+                    componentContext = childCtx,
+                    peer = peer,
+                    batchSenderFactory = fakeBatchSender(),
+                    inboundEvents = MutableSharedFlow(),
+                    onShowDetails = {},
+                    scope = coroutineScope,
+                )
+            },
+            coroutineScope = coroutineScope,
+        )
+    }
+
+    private fun buildComponentWithPeers(
+        peerFlow: MutableStateFlow<List<Peer>>,
+        coroutineScope: CoroutineScope,
+    ): PeerListComponent {
+        val lifecycle = LifecycleRegistry()
+        val context = DefaultComponentContext(lifecycle)
+        lifecycle.resume()
+        return PeerListComponent(
+            componentContext = context,
+            peersRepository = FakePeersRepository(peerFlow),
             peerTransferComponentFactory = { childCtx, peer ->
                 PeerTransferComponent(
                     componentContext = childCtx,

@@ -29,7 +29,7 @@ class PeerListComponent(
     init {
         peersRepository.peers
             .onEach { peers ->
-                val onlineIds = peers.map { it.id }.toSet()
+                val onlineIds = peers.filter { it.isOnline }.map { it.id }.toSet()
                 peers.forEach { peer ->
                     if (peer.id !in children) {
                         children[peer.id] = peerTransferComponentFactory(childContext(peer.id.id), peer)

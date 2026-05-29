@@ -9,12 +9,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class PeersRepository(
+open class PeersRepository(
     discovery: DeviceDiscovery,
     scope: CoroutineScope,
 ) {
     private val _peers = MutableStateFlow<List<Peer>>(emptyList())
-    val peers: StateFlow<List<Peer>> = _peers.asStateFlow()
+    open val peers: StateFlow<List<Peer>> = _peers.asStateFlow()
 
     init {
         scope.launch {
