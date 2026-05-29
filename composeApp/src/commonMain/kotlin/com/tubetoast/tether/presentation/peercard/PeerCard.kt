@@ -1,12 +1,49 @@
 package com.tubetoast.tether.presentation.peercard
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import com.arkivanov.decompose.extensions.compose.subscribeAsState
+import com.tubetoast.tether.presentation.peer.Peer
+import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.presentation.transfer.PeerTransferState
 import com.tubetoast.tether.protocol.Device
 
 @Composable
 fun PeerCard(
+    component: PeerTransferComponent,
+    peer: Peer,
+    modifier: Modifier = Modifier,
+) {
+    val state by component.state.subscribeAsState()
+    val isAutoSendEnabled by component.observeAutoSend().collectAsState(initial = false)
+    val callbacks = PeerCardCallbacks(
+        onToggleExpand = component::toggleExpanded,
+        onToggleAutoSend = component::setAutoSend,
+        onCancel = component::onCancel,
+        onDismiss = component::onDismiss,
+        onRetry = component::onRetry,
+        onShowDetails = component::onShowDetails,
+        onOpenFiles = {
+            // TODO(#192): Android — Intent.ACTION_VIEW to FileProvider URI for received folder
+            // TODO(#193): Desktop — Desktop.open() / xdg-open / Finder reveal
+            // TODO(#194): iOS — UIApplication.shared.open(Files-app deep link); fallback hint per UX brief §State 6
+        },
+        onClick = component::onCardClick,
+    )
+    PeerCardContent(
+        state = state,
+        isOnline = peer.isOnline,
+        device = peer.device,
+        callbacks = callbacks,
+        modifier = modifier,
+        isAutoSendEnabled = isAutoSendEnabled,
+    )
+}
+
+@Composable
+fun PeerCardContent(
     state: PeerTransferState,
     isOnline: Boolean,
     device: Device,
