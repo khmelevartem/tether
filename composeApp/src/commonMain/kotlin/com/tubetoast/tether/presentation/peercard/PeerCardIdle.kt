@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -16,7 +15,9 @@ import androidx.compose.ui.unit.dp
 import com.tubetoast.tether.presentation.transfer.PeerTransferState
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.ui.components.AutoSendToggle
+import com.tubetoast.tether.ui.components.BodyText
 import com.tubetoast.tether.ui.components.ChevronToggleIcon
+import com.tubetoast.tether.ui.components.TitleText
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
 import com.tubetoast.tether.ui.preview.TransferPreviewFixtures
@@ -32,7 +33,6 @@ fun PeerCardIdle(
     modifier: Modifier = Modifier,
 ) {
     val spacing = TetherTheme.spacing
-    val typography = TetherTheme.typography
     val colors = TetherTheme.colors
     val peerName = device.name
 
@@ -49,15 +49,10 @@ fun PeerCardIdle(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                BasicText(
-                    text = peerName,
-                    style = typography.titleMedium.copy(color = colors.textPrimary),
-                )
-                BasicText(
+                TitleText(text = peerName)
+                BodyText(
                     text = if (isOnline) "Online" else "Paired — offline",
-                    style = typography.bodyMedium.copy(
-                        color = if (isOnline) colors.accent else colors.textMuted,
-                    ),
+                    color = if (isOnline) colors.accent else colors.textMuted,
                     modifier = Modifier.padding(top = spacing.xs),
                 )
             }

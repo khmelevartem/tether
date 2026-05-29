@@ -3,7 +3,6 @@ package com.tubetoast.tether.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,10 +33,7 @@ fun SkipCountBadge(
             .background(colors.surfaceRaised)
             .padding(horizontal = spacing.sm, vertical = spacing.xs),
     ) {
-        BasicText(
-            text = "$count $noun skipped",
-            style = TetherTheme.typography.labelSmall.copy(color = colors.textMuted),
-        )
+        LabelText(text = "$count $noun skipped")
     }
 }
 

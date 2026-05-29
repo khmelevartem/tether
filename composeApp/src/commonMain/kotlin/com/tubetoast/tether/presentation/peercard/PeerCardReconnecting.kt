@@ -2,7 +2,6 @@ package com.tubetoast.tether.presentation.peercard
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -14,6 +13,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import com.tubetoast.tether.presentation.transfer.PeerTransferState
 import com.tubetoast.tether.protocol.Device
+import com.tubetoast.tether.ui.components.BodyText
+import com.tubetoast.tether.ui.components.TitleText
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
 import com.tubetoast.tether.ui.preview.TransferPreviewFixtures
@@ -25,9 +26,7 @@ fun PeerCardReconnecting(
     device: Device,
     modifier: Modifier = Modifier,
 ) {
-    val colors = TetherTheme.colors
     val spacing = TetherTheme.spacing
-    val typography = TetherTheme.typography
     val peerName = device.name
     val announcement = "Connection lost. Reconnecting to $peerName…"
 
@@ -39,15 +38,8 @@ fun PeerCardReconnecting(
         verticalArrangement = Arrangement.spacedBy(spacing.md),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        BasicText(
-            text = peerName,
-            style = typography.titleMedium.copy(color = colors.textPrimary),
-            modifier = Modifier.fillMaxWidth(),
-        )
-        BasicText(
-            text = reconnectingCardCopy(state),
-            style = typography.bodyMedium.copy(color = colors.textMuted),
-        )
+        TitleText(text = peerName, modifier = Modifier.fillMaxWidth())
+        BodyText(text = reconnectingCardCopy(state), color = TetherTheme.colors.textMuted)
     }
 }
 

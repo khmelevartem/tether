@@ -26,6 +26,7 @@ import com.composables.core.ModalBottomSheet
 import com.composables.core.ModalBottomSheetState
 import com.composables.core.Scrim
 import com.composables.core.Sheet
+import com.tubetoast.tether.ui.components.TitleText
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
 import com.tubetoast.tether.ui.theme.TetherTheme
@@ -82,18 +83,15 @@ fun MobilePickerChooserSheetContent(
     onPickFolder: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = TetherTheme.colors
     val spacing = TetherTheme.spacing
-    val typography = TetherTheme.typography
 
     Column(
         modifier = modifier
             .fillMaxWidth()
             .padding(vertical = spacing.lg),
     ) {
-        BasicText(
+        TitleText(
             text = "Send from…",
-            style = typography.titleMedium.copy(color = colors.textPrimary),
             modifier = Modifier
                 .padding(horizontal = spacing.lg)
                 .padding(bottom = spacing.md),

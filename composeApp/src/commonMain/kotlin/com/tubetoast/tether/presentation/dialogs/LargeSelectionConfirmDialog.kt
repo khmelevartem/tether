@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -24,8 +23,10 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.tubetoast.tether.transfer.ByteFormatting
 import com.tubetoast.tether.transfer.PeerIdentity
+import com.tubetoast.tether.ui.components.BodyText
 import com.tubetoast.tether.ui.components.CancelTextButton
 import com.tubetoast.tether.ui.components.Checkbox
+import com.tubetoast.tether.ui.components.TitleText
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
 import com.tubetoast.tether.ui.theme.TetherTheme
@@ -70,7 +71,6 @@ fun LargeSelectionConfirmDialogContent(
 ) {
     val colors = TetherTheme.colors
     val spacing = TetherTheme.spacing
-    val typography = TetherTheme.typography
     val shapes = TetherTheme.shapes
 
     // Compose has no Role.AlertDialog; mergeDescendants ensures the container is a single
@@ -86,14 +86,10 @@ fun LargeSelectionConfirmDialogContent(
             .semantics(mergeDescendants = true) {},
         verticalArrangement = Arrangement.spacedBy(spacing.md),
     ) {
-        BasicText(
-            text = "Large selection",
-            style = typography.titleMedium.copy(color = colors.textPrimary),
-        )
+        TitleText(text = "Large selection")
 
-        BasicText(
+        BodyText(
             text = "About to send $fileCount files (${ByteFormatting.formatSize(totalBytes)}) to ${peer.id}. Continue?",
-            style = typography.bodyMedium.copy(color = colors.textPrimary),
         )
 
         Checkbox(
@@ -137,9 +133,9 @@ private fun SendButton(
             },
         contentAlignment = Alignment.Center,
     ) {
-        BasicText(
+        BodyText(
             text = "Send",
-            style = TetherTheme.typography.bodyMedium.copy(color = colors.accent),
+            color = colors.accent,
         )
     }
 }

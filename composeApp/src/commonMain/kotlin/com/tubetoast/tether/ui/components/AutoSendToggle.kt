@@ -3,7 +3,6 @@ package com.tubetoast.tether.ui.components
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -11,7 +10,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
-import com.tubetoast.tether.ui.theme.TetherTheme
 
 /**
  * A labelled toggle row for the auto-send setting.
@@ -30,17 +28,13 @@ fun AutoSendToggle(
     label: String = "Auto-send",
     accessibilityHint: String? = null,
 ) {
-    val colors = TetherTheme.colors
-    val typography = TetherTheme.typography
-
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier = modifier.fillMaxWidth(),
     ) {
-        BasicText(
+        BodyText(
             text = label,
-            style = typography.bodyMedium.copy(color = colors.textPrimary),
             modifier = Modifier.weight(1f),
         )
 

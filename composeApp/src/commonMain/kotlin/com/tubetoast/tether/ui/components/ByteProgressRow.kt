@@ -1,6 +1,5 @@
 package com.tubetoast.tether.ui.components
 
-import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
@@ -10,7 +9,6 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import com.tubetoast.tether.transfer.ByteFormatting
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
-import com.tubetoast.tether.ui.theme.TetherTheme
 
 @Composable
 fun ByteProgressRow(
@@ -27,9 +25,8 @@ fun ByteProgressRow(
     } else {
         Modifier
     }
-    BasicText(
+    NumericText(
         text = text,
-        style = TetherTheme.typography.numeric.copy(color = TetherTheme.colors.textPrimary),
         modifier = modifier.then(semanticsModifier),
     )
 }

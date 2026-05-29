@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -38,6 +37,7 @@ import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.presentation.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.toPeerIdentity
+import com.tubetoast.tether.ui.components.BodyText
 import com.tubetoast.tether.ui.components.BrandMark
 import com.tubetoast.tether.ui.components.BrandMarkState
 import com.tubetoast.tether.ui.preview.PreviewFixtures
@@ -65,8 +65,6 @@ fun PeerListContent(
     showMobileChooser: Boolean = IsMobileChooserPlatform,
 ) {
     val spacing = TetherTheme.spacing
-    val colors = TetherTheme.colors
-    val typography = TetherTheme.typography
 
     val sheetState = rememberModalBottomSheetState(
         initialDetent = SheetDetent.Hidden,
@@ -87,9 +85,9 @@ fun PeerListContent(
                 verticalArrangement = Arrangement.Center,
             ) {
                 BrandMark(state = BrandMarkState.Searching)
-                BasicText(
+                BodyText(
                     text = "Ищем устройства в сети…",
-                    style = typography.bodyMedium.copy(color = colors.textMuted),
+                    color = TetherTheme.colors.textMuted,
                     modifier = Modifier.padding(top = spacing.lg),
                 )
             }
@@ -214,8 +212,6 @@ private fun PreviewPendingState(@PreviewParameter(Themes::class) dark: Boolean) 
 @Composable
 private fun PeerListContentPreview(rows: List<PeerRow>) {
     val spacing = TetherTheme.spacing
-    val colors = TetherTheme.colors
-    val typography = TetherTheme.typography
 
     Column(modifier = Modifier.fillMaxSize()) {
         if (rows.isEmpty()) {
@@ -225,9 +221,9 @@ private fun PeerListContentPreview(rows: List<PeerRow>) {
                 verticalArrangement = Arrangement.Center,
             ) {
                 BrandMark(state = BrandMarkState.Searching)
-                BasicText(
+                BodyText(
                     text = "Ищем устройства в сети…",
-                    style = typography.bodyMedium.copy(color = colors.textMuted),
+                    color = TetherTheme.colors.textMuted,
                     modifier = Modifier.padding(top = spacing.lg),
                 )
             }

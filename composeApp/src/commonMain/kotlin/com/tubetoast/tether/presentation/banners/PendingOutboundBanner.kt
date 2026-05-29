@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -16,6 +15,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import com.tubetoast.tether.presentation.PendingFilesSummary
 import com.tubetoast.tether.transfer.ByteFormatting
+import com.tubetoast.tether.ui.components.BodyText
 import com.tubetoast.tether.ui.components.CancelTextButton
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
@@ -30,7 +30,6 @@ fun PendingOutboundBanner(
 ) {
     val colors = TetherTheme.colors
     val spacing = TetherTheme.spacing
-    val typography = TetherTheme.typography
     val backgroundColor = if (dropFeedback) colors.error.copy(alpha = 0.12f) else colors.accent.copy(alpha = 0.10f)
     val noun = if (summary.fileCount == 1) "file" else "files"
     val sizeLabel = ByteFormatting.formatSize(summary.totalBytes)
@@ -45,9 +44,8 @@ fun PendingOutboundBanner(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        BasicText(
+        BodyText(
             text = text,
-            style = typography.bodyMedium.copy(color = colors.textPrimary),
             modifier = Modifier.weight(1f),
         )
         CancelTextButton(

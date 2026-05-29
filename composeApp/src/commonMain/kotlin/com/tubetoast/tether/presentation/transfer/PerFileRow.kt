@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,6 +29,9 @@ import androidx.compose.ui.unit.dp
 import com.tubetoast.tether.transfer.ByteFormatting
 import com.tubetoast.tether.transfer.FailureReason
 import com.tubetoast.tether.transfer.PerFileStatus
+import com.tubetoast.tether.ui.components.BodyText
+import com.tubetoast.tether.ui.components.LabelText
+import com.tubetoast.tether.ui.components.NumericText
 import com.tubetoast.tether.ui.components.RowCancelButton
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
@@ -56,7 +58,6 @@ fun PerFileRow(
 ) {
     val colors = TetherTheme.colors
     val spacing = TetherTheme.spacing
-    val typography = TetherTheme.typography
 
     val rowModifier = if (status is PerFileStatus.Failed && isSenderSide) {
         val semanticLabel = failedRowSemanticLabel(status, peerName, isOnline)
@@ -89,11 +90,7 @@ fun PerFileRow(
         horizontalArrangement = Arrangement.spacedBy(spacing.sm),
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            BasicText(
-                text = status.name,
-                style = typography.bodyMedium.copy(color = colors.textPrimary),
-                maxLines = 1,
-            )
+            BodyText(text = status.name, maxLines = 1)
             when (status) {
                 is PerFileStatus.InProgress -> FileProgressBar(
                     progress = if (status.size != null && status.size > 0) {
@@ -105,9 +102,9 @@ fun PerFileRow(
                         .fillMaxWidth()
                         .padding(top = spacing.xs),
                 )
-                is PerFileStatus.Failed -> BasicText(
+                is PerFileStatus.Failed -> LabelText(
                     text = failedRowHelperText(status),
-                    style = typography.labelSmall.copy(color = colors.error),
+                    color = colors.error,
                     modifier = Modifier.padding(top = spacing.xs),
                 )
                 else -> Unit
@@ -115,9 +112,9 @@ fun PerFileRow(
         }
 
         status.size?.let { bytes ->
-            BasicText(
+            NumericText(
                 text = ByteFormatting.formatSize(bytes),
-                style = typography.numeric.copy(color = colors.textMuted),
+                color = colors.textMuted,
             )
         }
 

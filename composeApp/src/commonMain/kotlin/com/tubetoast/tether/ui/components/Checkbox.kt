@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,8 +46,6 @@ fun Checkbox(
     label: String,
     modifier: Modifier = Modifier,
 ) {
-    val colors = TetherTheme.colors
-    val typography = TetherTheme.typography
     val spacing = TetherTheme.spacing
 
     Row(
@@ -64,10 +61,7 @@ fun Checkbox(
         horizontalArrangement = Arrangement.spacedBy(spacing.sm),
     ) {
         CheckboxBox(checked = checked)
-        BasicText(
-            text = label,
-            style = typography.bodyMedium.copy(color = colors.textPrimary),
-        )
+        BodyText(text = label)
     }
 }
 

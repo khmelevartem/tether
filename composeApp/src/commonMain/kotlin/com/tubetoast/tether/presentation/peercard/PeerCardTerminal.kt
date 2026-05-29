@@ -4,7 +4,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -17,9 +16,12 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import com.tubetoast.tether.presentation.transfer.PeerTransferState
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.TransferErrorReason
+import com.tubetoast.tether.ui.components.BodyText
 import com.tubetoast.tether.ui.components.DismissCloseButton
+import com.tubetoast.tether.ui.components.LabelText
 import com.tubetoast.tether.ui.components.RetryTextButton
 import com.tubetoast.tether.ui.components.ShowDetailsButton
+import com.tubetoast.tether.ui.components.TitleText
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
 import com.tubetoast.tether.ui.preview.TransferPreviewFixtures
@@ -61,8 +63,6 @@ fun PeerCardReceived(
     deepLinkHint: String = "Open file manager → Downloads → Tether",
     showDeepLinkHint: Boolean = false,
 ) {
-    val colors = TetherTheme.colors
-    val typography = TetherTheme.typography
     val peerName = device.name
 
     PeerCardShell(modifier = modifier) {
@@ -71,20 +71,15 @@ fun PeerCardReceived(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            BasicText(
-                text = peerName,
-                style = typography.titleMedium.copy(color = colors.textPrimary),
-                modifier = Modifier.weight(1f),
-            )
+            TitleText(text = peerName, modifier = Modifier.weight(1f))
             DismissCloseButton(
                 onClick = callbacks.onDismiss,
                 contentDescription = "Dismiss received notification from $peerName",
             )
         }
 
-        BasicText(
+        BodyText(
             text = receivedCardCopy(state),
-            style = typography.bodyMedium.copy(color = colors.textPrimary),
             modifier = if (state.partialReason == null) {
                 Modifier
                     .clickable { callbacks.onOpenFiles() }
@@ -98,10 +93,7 @@ fun PeerCardReceived(
         )
 
         if (showDeepLinkHint) {
-            BasicText(
-                text = deepLinkHint,
-                style = typography.labelSmall.copy(color = colors.textMuted),
-            )
+            LabelText(text = deepLinkHint)
         }
 
         Row(
@@ -144,7 +136,6 @@ fun PeerCardError(
     modifier: Modifier = Modifier,
 ) {
     val colors = TetherTheme.colors
-    val typography = TetherTheme.typography
     val peerName = device.name
     val retryEnabled = isOnline && state.reason != TransferErrorReason.ReceiverSuspended
     val retryDesc = if (retryEnabled) {
@@ -159,27 +150,17 @@ fun PeerCardError(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            BasicText(
-                text = peerName,
-                style = typography.titleMedium.copy(color = colors.textPrimary),
-                modifier = Modifier.weight(1f),
-            )
+            TitleText(text = peerName, modifier = Modifier.weight(1f))
             DismissCloseButton(
                 onClick = callbacks.onDismiss,
                 contentDescription = "Dismiss error for $peerName",
             )
         }
 
-        BasicText(
-            text = errorCardCopy(state),
-            style = typography.bodyMedium.copy(color = colors.error),
-        )
+        BodyText(text = errorCardCopy(state), color = colors.error)
 
         if (!isOnline && state.reason != TransferErrorReason.ReceiverSuspended) {
-            BasicText(
-                text = "$peerName is offline",
-                style = typography.labelSmall.copy(color = colors.textMuted),
-            )
+            LabelText(text = "$peerName is offline")
         }
 
         Row(
@@ -212,30 +193,20 @@ private fun TerminalShell(
     onShowDetails: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = TetherTheme.colors
-    val typography = TetherTheme.typography
-
     PeerCardShell(modifier = modifier) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            BasicText(
-                text = peerName,
-                style = typography.titleMedium.copy(color = colors.textPrimary),
-                modifier = Modifier.weight(1f),
-            )
+            TitleText(text = peerName, modifier = Modifier.weight(1f))
             DismissCloseButton(
                 onClick = onDismiss,
                 contentDescription = dismissDescription,
             )
         }
 
-        BasicText(
-            text = statusCopy,
-            style = typography.bodyMedium.copy(color = colors.textPrimary),
-        )
+        BodyText(text = statusCopy)
 
         if (showDetails) {
             Row(

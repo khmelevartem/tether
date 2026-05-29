@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -29,6 +28,7 @@ import com.tubetoast.tether.ui.components.CancelTextButton
 import com.tubetoast.tether.ui.components.CurrentFileLabel
 import com.tubetoast.tether.ui.components.ShowDetailsButton
 import com.tubetoast.tether.ui.components.SkipCountBadge
+import com.tubetoast.tether.ui.components.TitleText
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
 import com.tubetoast.tether.ui.preview.TransferPreviewFixtures
@@ -119,10 +119,6 @@ private fun ActiveCardShell(
     showDetailsDescription: String,
     modifier: Modifier = Modifier,
 ) {
-    val spacing = TetherTheme.spacing
-    val typography = TetherTheme.typography
-    val colors = TetherTheme.colors
-
     val animatedProgress by animateFloatAsState(
         targetValue = progress,
         animationSpec = spring(stiffness = Spring.StiffnessLow),
@@ -138,9 +134,8 @@ private fun ActiveCardShell(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             val displayName = if (titlePrefix != null) "$titlePrefix$peerName" else peerName
-            BasicText(
+            TitleText(
                 text = displayName,
-                style = typography.titleMedium.copy(color = colors.textPrimary),
                 modifier = Modifier.weight(1f),
             )
             CancelTextButton(

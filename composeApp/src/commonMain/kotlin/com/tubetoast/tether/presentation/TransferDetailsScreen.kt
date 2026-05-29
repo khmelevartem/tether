@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -28,9 +27,12 @@ import com.tubetoast.tether.presentation.transfer.TransferDetailsComponent
 import com.tubetoast.tether.presentation.transfer.aggregateStripCopy
 import com.tubetoast.tether.presentation.transfer.detailsSubtitleCopy
 import com.tubetoast.tether.transfer.PerFileStatus
+import com.tubetoast.tether.ui.components.BodyText
 import com.tubetoast.tether.ui.components.CancelTextButton
 import com.tubetoast.tether.ui.components.DismissCloseButton
+import com.tubetoast.tether.ui.components.LabelText
 import com.tubetoast.tether.ui.components.RetryTextButton
+import com.tubetoast.tether.ui.components.TitleText
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
 import com.tubetoast.tether.ui.preview.TransferPreviewFixtures
@@ -61,7 +63,6 @@ fun TransferDetailsContent(
 ) {
     val colors = TetherTheme.colors
     val spacing = TetherTheme.spacing
-    val typography = TetherTheme.typography
 
     val perFile = perFileList(state)
     val isSenderSide = state is PeerTransferState.ActiveOutbound ||
@@ -145,8 +146,6 @@ private fun TopBar(
     modifier: Modifier = Modifier,
 ) {
     val spacing = TetherTheme.spacing
-    val typography = TetherTheme.typography
-    val colors = TetherTheme.colors
 
     Row(
         modifier = modifier
@@ -162,14 +161,8 @@ private fun TopBar(
         Column(
             modifier = Modifier.weight(1f).padding(horizontal = spacing.sm),
         ) {
-            BasicText(
-                text = peerName,
-                style = typography.titleMedium.copy(color = colors.textPrimary),
-            )
-            BasicText(
-                text = subtitle,
-                style = typography.labelSmall.copy(color = colors.textMuted),
-            )
+            TitleText(text = peerName)
+            LabelText(text = subtitle)
         }
         if (showCancel) {
             CancelTextButton(
@@ -187,9 +180,9 @@ private fun AggregateStrip(
     failedCount: Int,
     modifier: Modifier = Modifier,
 ) {
-    BasicText(
+    BodyText(
         text = aggregateStripCopy(sent = sentCount, total = totalCount, failed = failedCount),
-        style = TetherTheme.typography.bodyMedium.copy(color = TetherTheme.colors.textMuted),
+        color = TetherTheme.colors.textMuted,
         modifier = modifier,
     )
 }
