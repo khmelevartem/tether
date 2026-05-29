@@ -1,25 +1,16 @@
 package com.tubetoast.tether.presentation.banners
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import com.tubetoast.tether.presentation.PendingFilesSummary
 import com.tubetoast.tether.transfer.ByteFormatting
-import com.tubetoast.tether.ui.components.BodyText
+import com.tubetoast.tether.ui.components.Banner
+import com.tubetoast.tether.ui.components.BannerSeverity
 import com.tubetoast.tether.ui.components.TetherButton
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
-import com.tubetoast.tether.ui.theme.TetherTheme
 
 @Composable
 fun PendingOutboundBanner(
@@ -28,26 +19,15 @@ fun PendingOutboundBanner(
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = TetherTheme.colors
-    val spacing = TetherTheme.spacing
-    val backgroundColor = if (dropFeedback) colors.error.copy(alpha = 0.12f) else colors.accent.copy(alpha = 0.10f)
     val noun = if (summary.fileCount == 1) "file" else "files"
     val sizeLabel = ByteFormatting.formatSize(summary.totalBytes)
     val text = "Ready to send ${summary.fileCount} $noun ($sizeLabel). Pick a device below."
 
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(backgroundColor)
-            .padding(horizontal = spacing.lg, vertical = spacing.sm)
-            .semantics { liveRegion = LiveRegionMode.Assertive },
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
+    Banner(
+        text = text,
+        severity = if (dropFeedback) BannerSeverity.Error else BannerSeverity.Info,
+        modifier = modifier,
     ) {
-        BodyText(
-            text = text,
-            modifier = Modifier.weight(1f),
-        )
         TetherButton(
             label = "Cancel",
             onClick = onCancel,
