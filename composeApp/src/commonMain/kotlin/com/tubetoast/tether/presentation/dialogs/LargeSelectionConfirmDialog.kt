@@ -1,30 +1,19 @@
 package com.tubetoast.tether.presentation.dialogs
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.tubetoast.tether.transfer.ByteFormatting
 import com.tubetoast.tether.transfer.PeerIdentity
-import com.tubetoast.tether.ui.components.BodyText
+import com.tubetoast.tether.ui.components.ButtonVariant
 import com.tubetoast.tether.ui.components.Checkbox
-import com.tubetoast.tether.ui.components.TetherButton
-import com.tubetoast.tether.ui.components.TitleText
+import com.tubetoast.tether.ui.components.ConfirmAction
+import com.tubetoast.tether.ui.components.ConfirmDialogContent
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
-import com.tubetoast.tether.ui.theme.TetherTheme
 
 @Composable
 fun LargeSelectionConfirmDialog(
@@ -63,53 +52,29 @@ fun LargeSelectionConfirmDialogContent(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = TetherTheme.colors
-    val spacing = TetherTheme.spacing
-    val shapes = TetherTheme.shapes
-
-    // Compose has no Role.AlertDialog; mergeDescendants ensures the container is a single
-    // focusable unit while Dialog() itself handles focus trapping.
-    // TODO(#follow-up): revisit if CMP adds native alertdialog role support.
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(shapes.lg)
-            .background(colors.surfaceRaised)
-            .border(spacing.borderWidth, colors.border, shapes.lg)
-            .padding(horizontal = spacing.lg, vertical = spacing.xl)
-            .semantics(mergeDescendants = true) {},
-        verticalArrangement = Arrangement.spacedBy(spacing.md),
-    ) {
-        TitleText(text = "Large selection")
-
-        BodyText(
-            text = "About to send $fileCount files (${ByteFormatting.formatSize(totalBytes)}) to ${peer.id}. Continue?",
-        )
-
-        Checkbox(
-            checked = dontShowAgain,
-            onCheckedChange = onDontShowAgainToggle,
-            label = "Don't show again",
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TetherButton(
-                label = "Cancel",
-                onClick = onDismiss,
-                contentDescription = "Cancel — discard selection",
+    ConfirmDialogContent(
+        title = "Large selection",
+        body = "About to send $fileCount files (${ByteFormatting.formatSize(totalBytes)}) to ${peer.id}. Continue?",
+        primary = ConfirmAction(
+            label = "Send",
+            contentDescription = "Send $fileCount files to ${peer.id}",
+            onClick = onConfirm,
+        ),
+        secondary = ConfirmAction(
+            label = "Cancel",
+            contentDescription = "Cancel — discard selection",
+            onClick = onDismiss,
+            variant = ButtonVariant.Secondary,
+        ),
+        modifier = modifier,
+        extras = {
+            Checkbox(
+                checked = dontShowAgain,
+                onCheckedChange = onDontShowAgainToggle,
+                label = "Don't show again",
             )
-            TetherButton(
-                label = "Send",
-                onClick = onConfirm,
-                contentDescription = "Send $fileCount files to ${peer.id}",
-                modifier = Modifier.padding(start = spacing.md),
-            )
-        }
-    }
+        },
+    )
 }
 
 @Preview(name = "LargeSelectionConfirmDialog — unchecked")
