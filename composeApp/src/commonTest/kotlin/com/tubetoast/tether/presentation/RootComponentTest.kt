@@ -28,6 +28,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class RootComponentTest {
@@ -98,7 +99,7 @@ class RootComponentTest {
     }
 
     @Test
-    fun `onPeerTapped with pending sources routes startOutbound and clears pending`() = runTest {
+    fun `onCardClick with pending sources routes startOutbound and clears pending`() = runTest {
         val devices = MutableStateFlow(listOf(deviceA))
         val repo = PendingFilesRepository()
         val component = buildComponent(
@@ -108,17 +109,35 @@ class RootComponentTest {
         )
         runCurrent()
 
-        val peerList = component.peerListComponent
-        val peerComponent = peerList.peerTransferComponent(peer)
+        val peerComponent = component.peerListComponent.peerTransferComponent(peer)
         assertNotNull(peerComponent)
 
         val sources = listOf(FakeFileSource("file.txt", 100L))
         repo.setPending(PendingFilesSummary(1, 100L), sources)
-        peerList.onPeerTapped(peer)
+        peerComponent.onCardClick()
         runCurrent()
 
         assertIs<PeerTransferState.Sent>(peerComponent.state.value)
         assertNull(repo.summary.value)
+    }
+
+    @Test
+    fun `onCardClick without pending sources invokes onOpenPicker`() = runTest {
+        val devices = MutableStateFlow(listOf(deviceA))
+        var pickerInvoked = false
+        val component = buildComponent(
+            devices = devices,
+            onPickerPick = { pickerInvoked = true },
+            coroutineScope = backgroundScope,
+        )
+        runCurrent()
+
+        val peerComponent = component.peerListComponent.peerTransferComponent(peer)
+        assertNotNull(peerComponent)
+
+        peerComponent.onCardClick()
+
+        assertTrue(pickerInvoked)
     }
 
     @Test
@@ -170,26 +189,12 @@ class RootComponentTest {
         assertIs<RootComponent.Child.TransferDetailsChild>(active)
     }
 
-    @Test
-    fun `onPeerTapped without pending sources is a no-op`() = runTest {
-        val devices = MutableStateFlow(listOf(deviceA))
-        val component = buildComponent(devices = devices, coroutineScope = backgroundScope)
-        runCurrent()
-
-        val peerList = component.peerListComponent
-        val peerComponent = peerList.peerTransferComponent(peer)
-        assertNotNull(peerComponent)
-
-        peerList.onPeerTapped(peer)
-
-        assertIs<PeerTransferState.Idle>(peerComponent.state.value)
-    }
-
     private fun buildComponent(
         context: DefaultComponentContext = defaultContext(),
         backDispatcher: BackDispatcher? = null,
         devices: MutableStateFlow<List<Device>> = MutableStateFlow(emptyList()),
         pendingFilesRepository: PendingFilesRepository = PendingFilesRepository(),
+        onPickerPick: () -> Unit = {},
         coroutineScope: CoroutineScope,
     ): RootComponent {
         val ctx = if (backDispatcher != null) {
@@ -219,17 +224,18 @@ class RootComponentTest {
                 PeerListComponent(
                     componentContext = childCtx,
                     peersRepository = peersRepository,
-                    peerTransferComponentFactory = { peerCtx, peer ->
+                    peerTransferComponentFactory = { peerCtx, peerModel ->
                         PeerTransferComponent(
                             componentContext = peerCtx,
-                            peer = peer.id,
+                            peer = peerModel.id,
                             batchSenderFactory = fakeBatchSender(),
                             inboundEvents = MutableSharedFlow(),
                             onShowDetails = onShowDetails,
                             scope = coroutineScope,
+                            pendingFilesRepository = pendingFilesRepository,
+                            onOpenPicker = onPickerPick,
                         )
                     },
-                    pendingFilesRepository = pendingFilesRepository,
                     coroutineScope = coroutineScope,
                 )
             },

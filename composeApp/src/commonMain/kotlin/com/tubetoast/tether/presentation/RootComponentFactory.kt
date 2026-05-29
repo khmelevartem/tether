@@ -8,6 +8,7 @@ import com.tubetoast.tether.presentation.peer.PeersRepository
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.presentation.transfer.PendingFilesRepository
 import com.tubetoast.tether.transfer.BatchSender
+import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.ReconnectionTimeout
 
 class RootComponentFactory(
@@ -15,6 +16,7 @@ class RootComponentFactory(
     private val batchSenderFactory: () -> BatchSender,
     private val pendingFilesRepository: PendingFilesRepository,
     private val peerPreferencesStore: PeerPreferencesStore? = null,
+    private val onPickerPick: (PeerIdentity) -> Unit = {},
 ) {
     fun create(componentContext: ComponentContext): RootComponent =
         RootComponent(
@@ -32,10 +34,11 @@ class RootComponentFactory(
                             onShowDetails = onShowDetails,
                             reconnectionTimeout = ReconnectionTimeout.DEFAULT,
                             scope = childCtx.coroutineScope(),
+                            pendingFilesRepository = pendingFilesRepository,
+                            peerPreferencesStore = peerPreferencesStore,
+                            onOpenPicker = { onPickerPick(peer.id) },
                         )
                     },
-                    pendingFilesRepository = pendingFilesRepository,
-                    peerPreferencesStore = peerPreferencesStore,
                 )
             },
         )

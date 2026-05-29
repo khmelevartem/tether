@@ -3,6 +3,7 @@ package com.tubetoast.tether.presentation.transfer
 import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.resume
+import com.tubetoast.tether.presentation.PendingFilesSummary
 import com.tubetoast.tether.transfer.BatchSender
 import com.tubetoast.tether.transfer.FailureReason
 import com.tubetoast.tether.transfer.FakeConnectionMonitor
@@ -25,6 +26,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -36,6 +38,8 @@ class PeerTransferComponentTest {
         monitor: FakeConnectionMonitor = FakeConnectionMonitor(),
         pauseChannel: Channel<Unit>? = null,
         sendOneOverride: (suspend (FileSource, (Long, Long?) -> Unit) -> Unit)? = null,
+        pendingFilesRepository: PendingFilesRepository? = null,
+        onOpenPicker: () -> Unit = {},
         scope: kotlinx.coroutines.CoroutineScope,
     ): PeerTransferComponent {
         val lifecycle = LifecycleRegistry()
@@ -58,6 +62,8 @@ class PeerTransferComponentTest {
             inboundEvents = events,
             onShowDetails = {},
             scope = scope,
+            pendingFilesRepository = pendingFilesRepository,
+            onOpenPicker = onOpenPicker,
         )
     }
 
@@ -370,5 +376,36 @@ class PeerTransferComponentTest {
         val state = component.state.value
         assertIs<PeerTransferState.Sent>(state)
         assertEquals(PartialOutcome.ConnectionLost, state.partialReason)
+    }
+
+    @Test
+    fun `onCardClick with pending sources starts outbound and clears repo`() = runTest {
+        val repo = PendingFilesRepository()
+        val component = buildComponent(
+            pendingFilesRepository = repo,
+            scope = backgroundScope,
+        )
+
+        val sources = listOf(FakeFileSource("file.txt", 100L))
+        repo.setPending(PendingFilesSummary(1, 100L), sources)
+
+        component.onCardClick()
+        runCurrent()
+
+        assertIs<PeerTransferState.Sent>(component.state.value)
+        assertNull(repo.summary.value)
+    }
+
+    @Test
+    fun `onCardClick without pending sources invokes onOpenPicker`() = runTest {
+        var pickerInvoked = false
+        val component = buildComponent(
+            onOpenPicker = { pickerInvoked = true },
+            scope = backgroundScope,
+        )
+
+        component.onCardClick()
+
+        assertTrue(pickerInvoked)
     }
 }

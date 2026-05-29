@@ -4,6 +4,7 @@ import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.decompose.value.MutableValue
 import com.arkivanov.decompose.value.Value
 import com.arkivanov.decompose.value.update
+import com.tubetoast.tether.preferences.PeerPreferencesStore
 import com.tubetoast.tether.transfer.BatchOutcome
 import com.tubetoast.tether.transfer.BatchProgress
 import com.tubetoast.tether.transfer.BatchSender
@@ -20,6 +21,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.time.Duration
@@ -32,6 +34,9 @@ class PeerTransferComponent(
     onShowDetails: (PeerIdentity) -> Unit,
     private val reconnectionTimeout: Duration = ReconnectionTimeout.DEFAULT,
     private val scope: CoroutineScope,
+    private val pendingFilesRepository: PendingFilesRepository? = null,
+    private val peerPreferencesStore: PeerPreferencesStore? = null,
+    private val onOpenPicker: () -> Unit = {},
 ) : ComponentContext by componentContext {
     private val showDetailsCallback = onShowDetails
     private val mutableState = MutableValue<PeerTransferState>(PeerTransferState.Idle(peer))
@@ -59,6 +64,24 @@ class PeerTransferComponent(
         originalSources = sources
         cancelledFileNames.value = emptySet()
         launchBatch(sources)
+    }
+
+    fun onCardClick() {
+        val sources = pendingFilesRepository?.sources?.value.orEmpty()
+        if (sources.isNotEmpty()) {
+            startOutbound(sources)
+            pendingFilesRepository?.clear()
+        } else {
+            onOpenPicker()
+        }
+    }
+
+    fun observeAutoSend(): Flow<Boolean> =
+        peerPreferencesStore?.observeAutoSend(peer) ?: flowOf(false)
+
+    fun setAutoSend(enabled: Boolean) {
+        val store = peerPreferencesStore ?: return
+        scope.launch { store.setAutoSend(peer, enabled) }
     }
 
     fun onCancel() {

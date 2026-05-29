@@ -7,26 +7,19 @@ import com.arkivanov.decompose.value.MutableValue
 import com.arkivanov.decompose.value.Value
 import com.arkivanov.decompose.value.update
 import com.arkivanov.essenty.lifecycle.coroutines.coroutineScope
-import com.tubetoast.tether.preferences.PeerPreferencesStore
 import com.tubetoast.tether.presentation.peer.Peer
 import com.tubetoast.tether.presentation.peer.PeersRepository
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.presentation.transfer.PeerTransferState
-import com.tubetoast.tether.presentation.transfer.PendingFilesRepository
 import com.tubetoast.tether.transfer.PeerIdentity
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.launch
 
 class PeerListComponent(
     componentContext: ComponentContext,
     private val peersRepository: PeersRepository,
     private val peerTransferComponentFactory: (ComponentContext, Peer) -> PeerTransferComponent,
-    private val pendingFilesRepository: PendingFilesRepository,
-    private val peerPreferencesStore: PeerPreferencesStore? = null,
     coroutineScope: CoroutineScope = componentContext.coroutineScope(),
 ) : ComponentContext by componentContext {
     private val scope = coroutineScope
@@ -51,21 +44,6 @@ class PeerListComponent(
     }
 
     fun peerTransferComponent(peer: PeerIdentity): PeerTransferComponent? = children[peer]
-
-    fun onPeerTapped(peer: PeerIdentity) {
-        val sources = pendingFilesRepository.sources.value
-        if (sources.isEmpty()) return
-        children[peer]?.startOutbound(sources)
-        pendingFilesRepository.clear()
-    }
-
-    fun observeAutoSend(peer: PeerIdentity): Flow<Boolean> =
-        peerPreferencesStore?.observeAutoSend(peer) ?: flowOf(false)
-
-    fun setAutoSend(peer: PeerIdentity, enabled: Boolean) {
-        val store = peerPreferencesStore ?: return
-        scope.launch { store.setAutoSend(peer, enabled) }
-    }
 
     private fun ensureChildrenFor(peers: List<Peer>) {
         peers.forEach { peer ->

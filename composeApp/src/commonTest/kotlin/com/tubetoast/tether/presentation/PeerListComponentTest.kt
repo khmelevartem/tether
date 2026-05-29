@@ -7,7 +7,6 @@ import com.tubetoast.tether.discovery.FakeDeviceDiscovery
 import com.tubetoast.tether.presentation.peer.PeersRepository
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.presentation.transfer.PeerTransferState
-import com.tubetoast.tether.presentation.transfer.PendingFilesRepository
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.FakeFileSource
 import com.tubetoast.tether.transfer.fakeBatchSender
@@ -229,7 +228,6 @@ class PeerListComponentTest {
                     scope = coroutineScope,
                 )
             },
-            pendingFilesRepository = PendingFilesRepository(),
             coroutineScope = coroutineScope,
         )
     }
