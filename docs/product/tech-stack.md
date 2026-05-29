@@ -15,7 +15,7 @@
 | Component | Technology | Why |
 |-----------|-----------|-----|
 | Shared code | Kotlin Multiplatform | One codebase across Android, iOS, macOS, Windows, Linux. Cross-platform parity is part of the product (see [vision.md](vision.md)) |
-| UI | Compose Multiplatform | Single UI tree across all supported KMP UI targets (Android, iOS, Desktop JVM). macOS UI is delivered through the Desktop JVM tree — see [adr-macos-native-vs-jvm.md](../engineering/adr/adr-macos-native-vs-jvm.md) |
+| UI | Compose Multiplatform | Single UI tree across all supported KMP UI targets (Android, iOS, Desktop JVM); why Compose-MP over native UI — [adr-compose-multiplatform-ui.md](../engineering/adr/adr-compose-multiplatform-ui.md). macOS UI is delivered through the Desktop JVM tree — see [adr-macos-native-vs-jvm.md](../engineering/adr/adr-macos-native-vs-jvm.md) |
 | HTTP server | Ktor (CIO engine) | Single engine across JVM (Android + Desktop) and Native (iOS). Rationale in [adr-network-stack.md](../engineering/adr/adr-network-stack.md); Apple engine choice in [adr-apple-fileserver-engine.md](../engineering/adr/adr-apple-fileserver-engine.md) |
 | HTTP client | Ktor (CIO) | Shared client across all targets; common API, no per-platform glue. See [adr-network-stack.md](../engineering/adr/adr-network-stack.md) |
 | Service discovery | mDNS, per-platform | Android NSD on Android, JmDNS on Windows / Linux, JNA-Bonjour on macOS, NSNetServiceBrowser + NSNetService on iOS. mDNS is the primary mechanism — installed and reachable on all OSes by default. Layered fallbacks for hotspot and multicast-hostile networks live in [adr-hotspot-discovery.md](../engineering/adr/adr-hotspot-discovery.md) |

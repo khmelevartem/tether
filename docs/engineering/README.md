@@ -35,6 +35,7 @@ A starter skeleton with common sections lives in [`_template.md`](_template.md).
 
 ADRs in [`adr/`](adr/) capture the *why* behind one-time architectural choices. Living docs above; ADRs are append-only history. See [`adr/README.md`](adr/README.md) for conventions.
 
+- [Compose Multiplatform UI](adr/adr-compose-multiplatform-ui.md) — chose Compose-MP as the single rendering layer on every platform over per-platform native UI (SwiftUI/UIKit, native Android) or a Compose+SwiftUI hybrid.
 - [Presentation & Navigation](adr/adr-presentation-and-navigation.md) — chose Decompose over Voyager / custom thin layer / Compose Navigation MP / Premo.
 - [macOS target — Desktop JVM (reversed from Native)](adr/adr-macos-native-vs-jvm.md) — originally chose `macosArm64` Kotlin/Native; reversed 2026-05-25 to Desktop JVM because Compose-MP macOS-native UI is unsupported.
 - [Visual Identity](adr/adr-visual-identity.md) — palette, typography, iconography; dropped Material 3 in favour of custom `TetherTheme`.

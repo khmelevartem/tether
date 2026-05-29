@@ -48,6 +48,14 @@ If a domain entity has an `id`, every layer operates on the entity by id — loo
 
 When state has a designated owner (store, repository, service), other layers do not keep their own parallel copy. Adapters translate between native shapes and the owner's API on the fly; long-lived mirror maps drift, because every event has to remember to update both, and readers that hit the mirror see stale data.
 
+## Every node is both client and server
+
+Every running Tether instance is symmetric on the transport: it hosts an HTTP server and is an HTTP client to its peers. Any device can send to any device; there is no designated host, no asymmetry between a "server" device and a "client" device.
+
+This is a product invariant, not an implementation convenience. The product is peer-to-peer ([vision.md](../product/vision.md)): two people on the same network connect their devices directly. A client/server split would require electing a host — which contradicts the discovery model (every peer announces and is discoverable on equal footing) and the home-network use case (no fixed machine is "the server"). The server role and the client role both run on every node at once; neither is optional.
+
+The network-stack ADR ([adr/adr-network-stack.md](adr/adr-network-stack.md)) takes this symmetry as a premise for its engine choice; this principle is the canonical home for the invariant itself.
+
 ## Named classes over anonymous objects
 
 When you need to implement an interface — even with a trivial body that's just data (e.g. a config interface filled with constants) — **prefer a named class in its own file** over `object : Interface { ... }` inline.
