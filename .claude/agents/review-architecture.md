@@ -28,7 +28,7 @@ Always read:
 - `docs/engineering/architecture-principles.md` — the load-bearing rules and the explicitly-skipped ceremonies.
 - `docs/engineering/modules.md` — module boundaries and ownership.
 
-Read on demand:
+Read upfront and strictly comply when the diff falls into the matching area:
 - `docs/engineering/presentation-layer.md` — if diff touches presentation/UI/Decompose.
 - `docs/engineering/dependency-injection.md` — if diff adds/restructures wiring.
 - The feature spec in `docs/product/features/<slug>/` — if linked from the issue. The spec sometimes fixes architectural choices; deviations must be deliberate.

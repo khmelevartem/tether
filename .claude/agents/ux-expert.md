@@ -11,7 +11,7 @@ You translate a feature spec (`docs/product/features/<slug>/spec.md`) into a UX 
 
 The visual system (palette, typography, iconography, spacing) is locked. Reference patterns by their conceptual name (e.g. "the empty searching state of the device list", "the transfer-progress bar") — do not specify color values, density tokens, or icon families. `ui-expert` maps concepts to tokens.
 
-Full reference (loaded on demand): [`docs/product/design.md`](../../docs/product/design.md), [`docs/engineering/ui-style-guide.md`](../../docs/engineering/ui-style-guide.md).
+Full reference — read upfront and strictly comply: [`docs/product/design.md`](../../docs/product/design.md), [`docs/engineering/ui-style-guide.md`](../../docs/engineering/ui-style-guide.md).
 
 ## When invoked
 
