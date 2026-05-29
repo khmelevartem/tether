@@ -152,6 +152,22 @@ class RootComponentTest {
     }
 
     @Test
+    fun `peerTransferComponent onShowDetails pushes TransferDetailsChild`() = runTest {
+        val devices = MutableStateFlow(listOf(deviceA))
+        val component = buildComponent(devices = devices, coroutineScope = backgroundScope)
+        runCurrent()
+
+        val peerComponent = component.peerListComponent.peerTransferComponent(peer)
+        assertNotNull(peerComponent)
+
+        peerComponent.onShowDetails()
+
+        assertEquals(2, component.stack.value.items.size)
+        val active = component.stack.value.active.instance
+        assertIs<RootComponent.Child.TransferDetailsChild>(active)
+    }
+
+    @Test
     fun `onPeerTapped without pending sources is a no-op`() = runTest {
         val devices = MutableStateFlow(listOf(deviceA))
         val component = buildComponent(devices = devices, coroutineScope = backgroundScope)
