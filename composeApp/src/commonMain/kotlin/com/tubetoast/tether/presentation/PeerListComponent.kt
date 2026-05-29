@@ -27,8 +27,9 @@ class PeerListComponent(
     private val _state = MutableValue(PeerListState.empty())
     val state: Value<PeerListState> = _state
 
-    // Retains components by peer identity so childContext keys are never reused within
-    // a single PeerListComponent lifetime — Decompose forbids duplicate StateKeeper keys.
+    // TODO(#318): drop this lifecycle registry once transfer state lives in a domain
+    // repository — the component then has nothing to retain and Decompose contexts can be
+    // destroyed on eviction.
     private val components = mutableMapOf<PeerIdentity, PeerTransferComponent>()
 
     init {
