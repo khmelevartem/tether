@@ -18,6 +18,7 @@ import com.tubetoast.tether.transfer.TransferErrorReason
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -27,7 +28,7 @@ class PeerTransferComponent(
     componentContext: ComponentContext,
     val peer: PeerIdentity,
     private val batchSenderFactory: () -> BatchSender,
-    private val inboundEvents: Flow<ReceiveEvent>,
+    private val inboundEvents: Flow<ReceiveEvent> = MutableSharedFlow(),
     onShowDetails: (PeerIdentity) -> Unit,
     private val reconnectionTimeout: Duration = ReconnectionTimeout.DEFAULT,
     private val scope: CoroutineScope,
