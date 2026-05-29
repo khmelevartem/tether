@@ -49,15 +49,18 @@ notification is visible. Emulators may not reproduce suppression behavior.
 ## dataSync 6h/24h cap on Android 15+
 
 **Symptom:** on API 35+, after ~6h cumulative background FGS runtime in a 24-hour rolling
-window, the service is force-stopped by the OS — the notification disappears with no
-user-visible message; logcat shows a fatal exception with a "dataSync did not stop within
-its timeout" message.
-([Android 15 behavior changes — Data sync foreground services](https://developer.android.com/about/versions/15/behavior-changes-15#datasync-timeout))
+window, the OS kills the service and the notification disappears with no user-visible
+message. Logcat shows a fatal exception with a "dataSync did not stop within its timeout"
+message. ([Android 15 behavior changes — Data sync foreground services](https://developer.android.com/about/versions/15/behavior-changes-15#datasync-timeout))
 
-The OS also defines a start-time failure ("Time limit already exhausted") for apps that
-try to restart a `dataSync` FGS while still under the cap. Tether does not hit this: the
-only restart path runs during a foreground transition, which itself resets the timer
-before the service start is attempted.
+The service runs `START_STICKY`, so the OS auto-restarts it after the kill. Each restart
+attempt during the still-exhausted window crashes the process with a fatal "Time limit
+already exhausted for foreground service type dataSync" exception out of `startForeground()`
+in `onCreate`. Observed in practice as two restart-and-crash cycles within ~30min of the
+initial kill before the OS gives up. The user does not see these crashes (no Activity is
+up), but they surface in crash analytics. A user-initiated cold start hours later succeeds
+because foregrounding the app resets the timer before the start is attempted. See #310
+for the planned graceful-handling fix.
 
 **Root cause:** Android 15 (API 35) introduced a 6-hour-per-24h cap on `dataSync` FGS
 runtime. The timer resets each time the user brings the app to the foreground.
@@ -72,7 +75,7 @@ at which point the foreground-reset takes effect.
 
 **Detection:**
 ```
-adb logcat | grep "dataSync did not stop within its timeout"
+adb logcat | grep -E "dataSync did not stop within its timeout|Time limit already exhausted"
 ```
 
 **Recovery:** user reopens the app; cold start re-arms the foreground service (see the "Stop button UX — sticky Stop pattern" section below).
