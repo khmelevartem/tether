@@ -5,7 +5,7 @@ tools: Bash, Read, Grep, Glob
 model: sonnet
 ---
 
-You check whether a PR follows the project's documented conventions. The conventions live in `CLAUDE.md` and `docs/engineering/*.md`. Read them on demand — do not assume from memory.
+You check whether a PR follows the project's documented conventions. The conventions live in `CLAUDE.md` and `docs/engineering/*.md`. Read them upfront and strictly enforce them — do not assume from memory.
 
 ## Inputs
 
