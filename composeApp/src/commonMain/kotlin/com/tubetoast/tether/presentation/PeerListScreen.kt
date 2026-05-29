@@ -24,7 +24,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
-import com.arkivanov.decompose.value.MutableValue
 import com.composables.core.SheetDetent
 import com.composables.core.rememberModalBottomSheetState
 import com.tubetoast.tether.foundation.IsMobileChooserPlatform
@@ -34,9 +33,7 @@ import com.tubetoast.tether.presentation.peercard.PeerCard
 import com.tubetoast.tether.presentation.peercard.PeerCardCallbacks
 import com.tubetoast.tether.presentation.peercard.PeerCardContent
 import com.tubetoast.tether.presentation.sheets.MobilePickerChooserSheet
-import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.presentation.transfer.PeerTransferState
-import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.toPeerIdentity
 import com.tubetoast.tether.ui.designsystem.BodyText
 import com.tubetoast.tether.ui.designsystem.BrandMark
@@ -56,17 +53,13 @@ fun PeerListScreen(component: PeerListComponent, modifier: Modifier = Modifier) 
             component = component.bannersComponent,
             modifier = Modifier.fillMaxWidth(),
         )
-        PeerListContent(
-            rows = state.rows,
-            peerComponentFor = component::peerTransferComponent,
-        )
+        PeerListContent(rows = state.rows)
     }
 }
 
 @Composable
 fun PeerListContent(
     rows: List<PeerRow>,
-    peerComponentFor: (PeerIdentity) -> PeerTransferComponent?,
     modifier: Modifier = Modifier,
     showMobileChooser: Boolean = IsMobileChooserPlatform,
 ) {
@@ -100,42 +93,29 @@ fun PeerListContent(
         } else {
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 items(rows, key = { it.peer.device.id }) { row ->
-                    val peerComponent = peerComponentFor(row.peer.id)
-                    val transferState by (
-                        peerComponent?.state ?: MutableValue(PeerTransferState.Idle(row.peer.id))
-                    ).subscribeAsState()
-                    val tapAction: (() -> Unit)? = when {
-                        transferState is PeerTransferState.Idle && showMobileChooser -> (
-                            {
-                                triggerClick = peerComponent?.let { it::onCardClick }
-                                sheetState.targetDetent = SheetDetent.FullyExpanded
-                            }
-                        )
-                        peerComponent != null -> peerComponent::onCardClick
-                        else -> null
+                    val peerComponent = row.transferComponent
+                    val transferState by peerComponent.state.subscribeAsState()
+                    val tapAction: () -> Unit = if (transferState is PeerTransferState.Idle && showMobileChooser) {
+                        {
+                            triggerClick = peerComponent::onCardClick
+                            sheetState.targetDetent = SheetDetent.FullyExpanded
+                        }
+                    } else {
+                        peerComponent::onCardClick
                     }
                     val cardModifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = spacing.lg, vertical = spacing.sm)
-                        .then(
-                            if (tapAction != null) {
-                                Modifier
-                                    .clip(TetherTheme.shapes.md)
-                                    .clickable(onClick = tapAction)
-                                    .semantics {
-                                        role = Role.Button
-                                        contentDescription = "Tap to interact with ${row.peer.device.name}"
-                                    }
-                            } else {
-                                Modifier
-                            },
-                        )
-                    if (peerComponent != null) {
-                        PeerCard(
-                            component = peerComponent,
-                            modifier = cardModifier,
-                        )
-                    }
+                        .clip(TetherTheme.shapes.md)
+                        .clickable(onClick = tapAction)
+                        .semantics {
+                            role = Role.Button
+                            contentDescription = "Tap to interact with ${row.peer.device.name}"
+                        }
+                    PeerCard(
+                        component = peerComponent,
+                        modifier = cardModifier,
+                    )
                 }
             }
         }
@@ -159,11 +139,16 @@ fun PeerListContent(
     )
 }
 
+private data class PeerCardPreviewSpec(
+    val peer: Peer,
+    val transferState: PeerTransferState,
+)
+
 @Preview(name = "PeerList — discovering empty")
 @Composable
 private fun PreviewDiscovering(@PreviewParameter(Themes::class) dark: Boolean) =
     PreviewSurface(darkTheme = dark) {
-        PeerListContentPreview(rows = emptyList())
+        PeerListContentPreview(specs = emptyList())
     }
 
 @Preview(name = "PeerList — single device")
@@ -172,8 +157,8 @@ private fun PreviewSingleDevice(@PreviewParameter(Themes::class) dark: Boolean) 
     PreviewSurface(darkTheme = dark) {
         val device = PreviewFixtures.singleDevice.first()
         PeerListContentPreview(
-            rows = listOf(
-                PeerRow(
+            specs = listOf(
+                PeerCardPreviewSpec(
                     peer = Peer(id = device.toPeerIdentity(), device = device),
                     transferState = TransferPreviewFixtures.idleCollapsed,
                 ),
@@ -186,8 +171,8 @@ private fun PreviewSingleDevice(@PreviewParameter(Themes::class) dark: Boolean) 
 private fun PreviewMultipleDevices(@PreviewParameter(Themes::class) dark: Boolean) =
     PreviewSurface(darkTheme = dark) {
         PeerListContentPreview(
-            rows = PreviewFixtures.multipleDevices.mapIndexed { index, device ->
-                PeerRow(
+            specs = PreviewFixtures.multipleDevices.mapIndexed { index, device ->
+                PeerCardPreviewSpec(
                     peer = Peer(id = device.toPeerIdentity(), device = device, isOnline = index != 2),
                     transferState = when (index) {
                         0 -> TransferPreviewFixtures.activeOutbound
@@ -205,8 +190,8 @@ private fun PreviewPendingState(@PreviewParameter(Themes::class) dark: Boolean) 
     PreviewSurface(darkTheme = dark) {
         val device = PreviewFixtures.singleDevice.first()
         PeerListContentPreview(
-            rows = listOf(
-                PeerRow(
+            specs = listOf(
+                PeerCardPreviewSpec(
                     peer = Peer(id = device.toPeerIdentity(), device = device),
                     transferState = TransferPreviewFixtures.idleCollapsed,
                 ),
@@ -215,11 +200,11 @@ private fun PreviewPendingState(@PreviewParameter(Themes::class) dark: Boolean) 
     }
 
 @Composable
-private fun PeerListContentPreview(rows: List<PeerRow>) {
+private fun PeerListContentPreview(specs: List<PeerCardPreviewSpec>) {
     val spacing = TetherTheme.spacing
 
     Column(modifier = Modifier.fillMaxSize()) {
-        if (rows.isEmpty()) {
+        if (specs.isEmpty()) {
             Column(
                 modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -234,11 +219,11 @@ private fun PeerListContentPreview(rows: List<PeerRow>) {
             }
         } else {
             LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(rows, key = { it.peer.device.id }) { row ->
+                items(specs, key = { it.peer.device.id }) { spec ->
                     PeerCardContent(
-                        state = row.transferState,
-                        isOnline = row.peer.isOnline,
-                        device = row.peer.device,
+                        state = spec.transferState,
+                        isOnline = spec.peer.isOnline,
+                        device = spec.peer.device,
                         callbacks = previewCallbacks(),
                         modifier = Modifier
                             .fillMaxWidth()

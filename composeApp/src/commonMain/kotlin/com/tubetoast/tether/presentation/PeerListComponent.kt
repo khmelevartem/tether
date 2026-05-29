@@ -27,33 +27,34 @@ class PeerListComponent(
     private val _state = MutableValue(PeerListState.empty())
     val state: Value<PeerListState> = _state
 
-    private val children = mutableMapOf<PeerIdentity, PeerTransferComponent>()
+    // Retains components by peer identity so childContext keys are never reused within
+    // a single PeerListComponent lifetime — Decompose forbids duplicate StateKeeper keys.
+    private val components = mutableMapOf<PeerIdentity, PeerTransferComponent>()
 
     init {
         peersRepository.peers
             .onEach { peers ->
-                val onlineIds = peers.filter { it.isOnline }.map { it.id }.toSet()
+                val emitIds = peers.map { it.id }.toSet()
                 peers.forEach { peer ->
-                    if (peer.id !in children) {
-                        children[peer.id] = peerTransferComponentFactory(childContext(peer.id.id), peer)
+                    if (peer.id !in components) {
+                        components[peer.id] = peerTransferComponentFactory(childContext(peer.id.id), peer)
                     }
                 }
-                children.keys
-                    .filter { id -> id !in onlineIds && children[id]?.state?.value is PeerTransferState.Idle }
-                    .forEach { id -> children.remove(id) }
+                components.keys
+                    .filter { id -> id !in emitIds && components[id]?.state?.value is PeerTransferState.Idle }
+                    .forEach { id -> components.remove(id) }
                 _state.update {
                     PeerListState(
                         rows = peers.map { peer ->
-                            PeerRow(
-                                peer = peer,
-                                // snapshot refreshed each emit; Compose subscribes to peerComponent.state per cell
-                                transferState = children[peer.id]?.state?.value ?: PeerTransferState.Idle(peer.id),
-                            )
+                            PeerRow(peer = peer, transferComponent = components.getValue(peer.id))
                         },
                     )
                 }
             }.launchIn(coroutineScope)
     }
 
-    fun peerTransferComponent(peer: PeerIdentity): PeerTransferComponent? = children[peer]
+    fun peerTransferComponent(peer: PeerIdentity): PeerTransferComponent? =
+        _state.value.rows
+            .firstOrNull { it.peer.id == peer }
+            ?.transferComponent
 }

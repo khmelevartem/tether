@@ -1,11 +1,11 @@
 package com.tubetoast.tether.presentation
 
 import com.tubetoast.tether.presentation.peer.Peer
-import com.tubetoast.tether.presentation.transfer.PeerTransferState
+import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 
 data class PeerRow(
     val peer: Peer,
-    val transferState: PeerTransferState,
+    val transferComponent: PeerTransferComponent,
 )
 
 data class PeerListState(

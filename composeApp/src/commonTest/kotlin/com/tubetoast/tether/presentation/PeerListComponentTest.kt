@@ -75,7 +75,7 @@ class PeerListComponentTest {
     }
 
     @Test
-    fun `offline peer with active transfer is not in rows but child survives`() = runTest {
+    fun `offline peer with active transfer is not in rows when absent from emit`() = runTest {
         val flow = MutableStateFlow(listOf(deviceA))
         val component = buildComponent(flow = flow, coroutineScope = backgroundScope)
         runCurrent()
@@ -92,11 +92,12 @@ class PeerListComponentTest {
             component.state.value.rows
                 .firstOrNull { it.peer.id == deviceA.toPeerIdentity() },
         )
-        assertNotNull(component.peerTransferComponent(deviceA.toPeerIdentity()))
+        // component is not accessible via rows (absent from emit), even though it is non-Idle
+        assertNull(component.peerTransferComponent(deviceA.toPeerIdentity()))
     }
 
     @Test
-    fun `offline idle peer is evicted from rows`() = runTest {
+    fun `offline idle peer absent from emit is evicted`() = runTest {
         val flow = MutableStateFlow(listOf(deviceA))
         val component = buildComponent(flow = flow, coroutineScope = backgroundScope)
         runCurrent()
@@ -124,26 +125,24 @@ class PeerListComponentTest {
 
         flow.value = emptyList()
         runCurrent()
-        assertNotNull(component.peerTransferComponent(deviceA.toPeerIdentity()))
+        assertNull(component.peerTransferComponent(deviceA.toPeerIdentity()))
 
+        // Dismiss transitions state to Idle; re-emitting triggers eviction of the idle component.
         peerComponent.onDismiss()
         runCurrent()
 
-        // Re-emit to trigger eviction poll — eviction only runs on peers emit.
         flow.value = listOf(deviceA)
         runCurrent()
-        flow.value = emptyList()
-        runCurrent()
 
-        assertNull(component.peerTransferComponent(deviceA.toPeerIdentity()))
-        assertNull(
+        assertNotNull(component.peerTransferComponent(deviceA.toPeerIdentity()))
+        assertNotNull(
             component.state.value.rows
                 .firstOrNull { it.peer.id == deviceA.toPeerIdentity() },
         )
     }
 
     @Test
-    fun `peer returns in next emit and row reappears with existing child`() = runTest {
+    fun `peer returns in next emit and row reappears`() = runTest {
         val flow = MutableStateFlow(listOf(deviceA))
         val component = buildComponent(flow = flow, coroutineScope = backgroundScope)
         runCurrent()
@@ -163,11 +162,11 @@ class PeerListComponentTest {
             component.state.value.rows
                 .firstOrNull { it.peer.id == deviceA.toPeerIdentity() },
         )
-        assertEquals(peerComponent, component.peerTransferComponent(deviceA.toPeerIdentity()))
+        assertNotNull(component.peerTransferComponent(deviceA.toPeerIdentity()))
     }
 
     @Test
-    fun `row transferState snapshot refreshes on peers emit`() = runTest {
+    fun `row carries live transfer component`() = runTest {
         val flow = MutableStateFlow<List<Device>>(emptyList())
         val component = buildComponent(flow = flow, coroutineScope = backgroundScope)
 
@@ -177,7 +176,7 @@ class PeerListComponentTest {
         assertIs<PeerTransferState.Idle>(
             component.state.value.rows
                 .first()
-                .transferState,
+                .transferComponent.state.value,
         )
 
         val peerComponent = component.peerTransferComponent(deviceA.toPeerIdentity())
@@ -185,17 +184,10 @@ class PeerListComponentTest {
         peerComponent.startOutbound(listOf(FakeFileSource("file.txt", 10L)))
         runCurrent()
 
-        // Force a re-emission so the snapshot in PeerRow picks up the updated child state.
-        // The child is Sent (non-Idle), so it survives the eviction pass when the peer leaves.
-        flow.value = emptyList()
-        runCurrent()
-        flow.value = listOf(deviceA)
-        runCurrent()
-
         assertIs<PeerTransferState.Sent>(
             component.state.value.rows
                 .first()
-                .transferState,
+                .transferComponent.state.value,
         )
     }
 
@@ -243,7 +235,7 @@ class PeerListComponentTest {
     }
 
     @Test
-    fun `offline idle peer evicted from children and row persists while still in emit`() = runTest {
+    fun `offline idle peer in emit retains component and row`() = runTest {
         val peerOnline = Peer(id = deviceA.toPeerIdentity(), device = deviceA, isOnline = true)
         val peerFlow = MutableStateFlow(listOf(peerOnline))
         val component = buildComponentWithPeers(peerFlow = peerFlow, coroutineScope = backgroundScope)
@@ -255,7 +247,7 @@ class PeerListComponentTest {
         peerFlow.value = listOf(peerOfflineIdle)
         runCurrent()
 
-        assertNull(component.peerTransferComponent(deviceA.toPeerIdentity()))
+        assertNotNull(component.peerTransferComponent(deviceA.toPeerIdentity()))
         assertEquals(1, component.state.value.rows.size)
         assertEquals(
             false,
@@ -266,7 +258,7 @@ class PeerListComponentTest {
     }
 
     @Test
-    fun `offline non-idle peer child survives and row persists with isOnline false`() = runTest {
+    fun `offline non-idle peer in emit retains component and row`() = runTest {
         val peerOnline = Peer(id = deviceA.toPeerIdentity(), device = deviceA, isOnline = true)
         val peerFlow = MutableStateFlow(listOf(peerOnline))
         val component = buildComponentWithPeers(peerFlow = peerFlow, coroutineScope = backgroundScope)
