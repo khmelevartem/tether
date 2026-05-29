@@ -1,18 +1,13 @@
 package com.tubetoast.tether.presentation.peercard
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -67,20 +62,10 @@ fun PeerCardReceived(
     showDeepLinkHint: Boolean = false,
 ) {
     val colors = TetherTheme.colors
-    val spacing = TetherTheme.spacing
     val typography = TetherTheme.typography
-    val shapes = TetherTheme.shapes
     val peerName = device.name
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(shapes.md)
-            .background(colors.surfaceRaised)
-            .border(spacing.borderWidth, colors.border, shapes.md)
-            .padding(horizontal = spacing.lg, vertical = spacing.md),
-        verticalArrangement = Arrangement.spacedBy(spacing.sm),
-    ) {
+    PeerCardShell(modifier = modifier) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -159,9 +144,7 @@ fun PeerCardError(
     modifier: Modifier = Modifier,
 ) {
     val colors = TetherTheme.colors
-    val spacing = TetherTheme.spacing
     val typography = TetherTheme.typography
-    val shapes = TetherTheme.shapes
     val peerName = device.name
     val retryEnabled = isOnline && state.reason != TransferErrorReason.ReceiverSuspended
     val retryDesc = if (retryEnabled) {
@@ -170,15 +153,7 @@ fun PeerCardError(
         "Retry not available — $peerName is offline"
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(shapes.md)
-            .background(colors.surfaceRaised)
-            .border(spacing.borderWidth, colors.border, shapes.md)
-            .padding(horizontal = spacing.lg, vertical = spacing.md),
-        verticalArrangement = Arrangement.spacedBy(spacing.sm),
-    ) {
+    PeerCardShell(modifier = modifier) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -238,19 +213,9 @@ private fun TerminalShell(
     modifier: Modifier = Modifier,
 ) {
     val colors = TetherTheme.colors
-    val spacing = TetherTheme.spacing
     val typography = TetherTheme.typography
-    val shapes = TetherTheme.shapes
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(shapes.md)
-            .background(colors.surfaceRaised)
-            .border(spacing.borderWidth, colors.border, shapes.md)
-            .padding(horizontal = spacing.lg, vertical = spacing.md),
-        verticalArrangement = Arrangement.spacedBy(spacing.sm),
-    ) {
+    PeerCardShell(modifier = modifier) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,

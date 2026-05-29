@@ -1,16 +1,11 @@
 package com.tubetoast.tether.presentation.peercard
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
@@ -33,23 +28,16 @@ fun PeerCardReconnecting(
     val colors = TetherTheme.colors
     val spacing = TetherTheme.spacing
     val typography = TetherTheme.typography
-    val shapes = TetherTheme.shapes
     val peerName = device.name
     val announcement = "Connection lost. Reconnecting to $peerName…"
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(shapes.md)
-            .background(colors.surfaceRaised)
-            .border(spacing.borderWidth, colors.border, shapes.md)
-            .padding(horizontal = spacing.lg, vertical = spacing.md)
-            .semantics {
-                liveRegion = LiveRegionMode.Assertive
-                contentDescription = announcement
-            },
-        horizontalAlignment = Alignment.CenterHorizontally,
+    PeerCardShell(
+        modifier = modifier.semantics {
+            liveRegion = LiveRegionMode.Assertive
+            contentDescription = announcement
+        },
         verticalArrangement = Arrangement.spacedBy(spacing.md),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         BasicText(
             text = peerName,

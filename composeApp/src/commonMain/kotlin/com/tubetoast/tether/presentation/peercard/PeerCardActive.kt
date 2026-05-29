@@ -4,14 +4,11 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -122,10 +119,9 @@ private fun ActiveCardShell(
     showDetailsDescription: String,
     modifier: Modifier = Modifier,
 ) {
-    val colors = TetherTheme.colors
     val spacing = TetherTheme.spacing
     val typography = TetherTheme.typography
-    val shapes = TetherTheme.shapes
+    val colors = TetherTheme.colors
 
     val animatedProgress by animateFloatAsState(
         targetValue = progress,
@@ -133,15 +129,8 @@ private fun ActiveCardShell(
         label = "transferProgress",
     )
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(shapes.md)
-            .background(colors.surfaceRaised)
-            .border(spacing.borderWidth, colors.border, shapes.md)
-            .padding(horizontal = spacing.lg, vertical = spacing.md)
-            .semantics { liveRegion = LiveRegionMode.Polite },
-        verticalArrangement = Arrangement.spacedBy(spacing.sm),
+    PeerCardShell(
+        modifier = modifier.semantics { liveRegion = LiveRegionMode.Polite },
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
