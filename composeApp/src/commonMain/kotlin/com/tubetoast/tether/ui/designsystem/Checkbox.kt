@@ -1,4 +1,4 @@
-package com.tubetoast.tether.ui.components
+package com.tubetoast.tether.ui.designsystem
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background

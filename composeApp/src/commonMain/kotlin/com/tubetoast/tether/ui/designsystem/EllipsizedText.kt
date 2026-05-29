@@ -1,4 +1,4 @@
-package com.tubetoast.tether.ui.components
+package com.tubetoast.tether.ui.designsystem
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.text.BasicText
@@ -8,9 +8,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -20,18 +22,21 @@ import com.tubetoast.tether.ui.preview.Themes
 import com.tubetoast.tether.ui.theme.TetherTheme
 
 @Composable
-fun CurrentFileLabel(
-    fileName: String,
+fun EllipsizedText(
+    text: String,
     modifier: Modifier = Modifier,
+    style: TextStyle = TetherTheme.typography.bodyMedium,
     contentDescription: String? = null,
 ) {
-    val style = TetherTheme.typography.bodyMedium.copy(color = TetherTheme.colors.textPrimary)
+    val resolvedStyle = style.copy(
+        color = if (style.color == Color.Unspecified) TetherTheme.colors.textPrimary else style.color,
+    )
     val textMeasurer = rememberTextMeasurer()
     var availableWidth by remember { mutableStateOf(Int.MAX_VALUE) }
 
-    val displayText = remember(fileName, availableWidth, style) {
-        middleEllipsize(fileName, availableWidth) { candidate ->
-            val result = textMeasurer.measure(candidate, style, maxLines = 1)
+    val displayText = remember(text, availableWidth, resolvedStyle) {
+        middleEllipsize(text, availableWidth) { candidate ->
+            val result = textMeasurer.measure(candidate, resolvedStyle, maxLines = 1)
             result.size.width <= availableWidth
         }
     }
@@ -48,7 +53,7 @@ fun CurrentFileLabel(
     ) {
         BasicText(
             text = displayText,
-            style = style,
+            style = resolvedStyle,
             maxLines = 1,
             overflow = TextOverflow.Clip,
         )
@@ -79,19 +84,19 @@ internal fun middleEllipsize(text: String, availableWidth: Int, fits: (String) -
     return result
 }
 
-@Preview(name = "CurrentFileLabel — short name")
+@Preview(name = "EllipsizedText — short")
 @Composable
-private fun PreviewCurrentFileLabelShort(@PreviewParameter(Themes::class) dark: Boolean) =
+private fun PreviewEllipsizedTextShort(@PreviewParameter(Themes::class) dark: Boolean) =
     PreviewSurface(darkTheme = dark) {
-        CurrentFileLabel(
-            fileName = "photo.jpg",
+        EllipsizedText(
+            text = "photo.jpg",
             contentDescription = "Currently sending: photo.jpg",
         )
     }
 
-@Preview(name = "CurrentFileLabel — long name")
+@Preview(name = "EllipsizedText — long")
 @Composable
-private fun PreviewCurrentFileLabelLong(@PreviewParameter(Themes::class) dark: Boolean) =
+private fun PreviewEllipsizedTextLong(@PreviewParameter(Themes::class) dark: Boolean) =
     PreviewSurface(darkTheme = dark) {
-        CurrentFileLabel(fileName = "very_long_document_name_that_might_overflow_the_available_width.pdf")
+        EllipsizedText(text = "very_long_document_name_that_might_overflow_the_available_width.pdf")
     }

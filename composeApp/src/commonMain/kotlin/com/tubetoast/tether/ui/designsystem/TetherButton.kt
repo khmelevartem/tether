@@ -1,4 +1,4 @@
-package com.tubetoast.tether.ui.components
+package com.tubetoast.tether.ui.designsystem
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box

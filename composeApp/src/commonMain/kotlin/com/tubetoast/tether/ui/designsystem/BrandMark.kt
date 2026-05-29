@@ -1,4 +1,4 @@
-package com.tubetoast.tether.ui.components
+package com.tubetoast.tether.ui.designsystem
 
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing

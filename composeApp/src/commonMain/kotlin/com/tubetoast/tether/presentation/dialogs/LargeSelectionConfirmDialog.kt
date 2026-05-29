@@ -8,10 +8,10 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.tubetoast.tether.transfer.ByteFormatting
 import com.tubetoast.tether.transfer.PeerIdentity
-import com.tubetoast.tether.ui.components.ButtonVariant
-import com.tubetoast.tether.ui.components.Checkbox
-import com.tubetoast.tether.ui.components.ConfirmAction
-import com.tubetoast.tether.ui.components.ConfirmDialogContent
+import com.tubetoast.tether.ui.designsystem.ButtonVariant
+import com.tubetoast.tether.ui.designsystem.Checkbox
+import com.tubetoast.tether.ui.designsystem.ConfirmAction
+import com.tubetoast.tether.ui.designsystem.ConfirmDialogContent
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
 

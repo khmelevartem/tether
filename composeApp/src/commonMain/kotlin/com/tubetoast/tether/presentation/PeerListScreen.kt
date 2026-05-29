@@ -37,9 +37,9 @@ import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.presentation.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.toPeerIdentity
-import com.tubetoast.tether.ui.components.BodyText
-import com.tubetoast.tether.ui.components.BrandMark
-import com.tubetoast.tether.ui.components.BrandMarkState
+import com.tubetoast.tether.ui.designsystem.BodyText
+import com.tubetoast.tether.ui.designsystem.BrandMark
+import com.tubetoast.tether.ui.designsystem.BrandMarkState
 import com.tubetoast.tether.ui.preview.PreviewFixtures
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes

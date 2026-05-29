@@ -6,9 +6,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import com.tubetoast.tether.presentation.PendingFilesSummary
 import com.tubetoast.tether.transfer.ByteFormatting
-import com.tubetoast.tether.ui.components.Banner
-import com.tubetoast.tether.ui.components.BannerSeverity
-import com.tubetoast.tether.ui.components.TetherButton
+import com.tubetoast.tether.ui.designsystem.Banner
+import com.tubetoast.tether.ui.designsystem.BannerSeverity
+import com.tubetoast.tether.ui.designsystem.TetherButton
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
 

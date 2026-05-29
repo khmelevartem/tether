@@ -26,11 +26,11 @@ import androidx.compose.ui.unit.dp
 import com.tubetoast.tether.transfer.ByteFormatting
 import com.tubetoast.tether.transfer.FailureReason
 import com.tubetoast.tether.transfer.PerFileStatus
-import com.tubetoast.tether.ui.components.BodyText
-import com.tubetoast.tether.ui.components.LabelText
-import com.tubetoast.tether.ui.components.NumericText
-import com.tubetoast.tether.ui.components.ProgressBar
-import com.tubetoast.tether.ui.components.RowCancelButton
+import com.tubetoast.tether.ui.designsystem.BodyText
+import com.tubetoast.tether.ui.designsystem.LabelText
+import com.tubetoast.tether.ui.designsystem.NumericText
+import com.tubetoast.tether.ui.designsystem.ProgressBar
+import com.tubetoast.tether.ui.designsystem.RowCancelButton
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
 import com.tubetoast.tether.ui.preview.TransferPreviewFixtures

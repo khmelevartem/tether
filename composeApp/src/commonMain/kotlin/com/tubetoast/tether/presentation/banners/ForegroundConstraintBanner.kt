@@ -4,8 +4,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
-import com.tubetoast.tether.ui.components.Banner
-import com.tubetoast.tether.ui.components.BannerSeverity
+import com.tubetoast.tether.ui.designsystem.Banner
+import com.tubetoast.tether.ui.designsystem.BannerSeverity
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
 

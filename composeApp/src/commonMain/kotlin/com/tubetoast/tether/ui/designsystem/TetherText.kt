@@ -1,4 +1,4 @@
-package com.tubetoast.tether.ui.components
+package com.tubetoast.tether.ui.designsystem
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.text.BasicText

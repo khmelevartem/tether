@@ -14,10 +14,10 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
 import com.tubetoast.tether.presentation.transfer.PeerTransferState
 import com.tubetoast.tether.protocol.Device
-import com.tubetoast.tether.ui.components.AutoSendToggle
-import com.tubetoast.tether.ui.components.BodyText
-import com.tubetoast.tether.ui.components.ChevronToggleIcon
-import com.tubetoast.tether.ui.components.TitleText
+import com.tubetoast.tether.ui.designsystem.BodyText
+import com.tubetoast.tether.ui.designsystem.ChevronToggleIcon
+import com.tubetoast.tether.ui.designsystem.TitleText
+import com.tubetoast.tether.ui.feature.AutoSendToggle
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
 import com.tubetoast.tether.ui.preview.TransferPreviewFixtures

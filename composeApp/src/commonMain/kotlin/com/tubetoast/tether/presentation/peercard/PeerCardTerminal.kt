@@ -16,11 +16,11 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import com.tubetoast.tether.presentation.transfer.PeerTransferState
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.TransferErrorReason
-import com.tubetoast.tether.ui.components.BodyText
-import com.tubetoast.tether.ui.components.DismissCloseButton
-import com.tubetoast.tether.ui.components.LabelText
-import com.tubetoast.tether.ui.components.TetherButton
-import com.tubetoast.tether.ui.components.TitleText
+import com.tubetoast.tether.ui.designsystem.BodyText
+import com.tubetoast.tether.ui.designsystem.DismissCloseButton
+import com.tubetoast.tether.ui.designsystem.LabelText
+import com.tubetoast.tether.ui.designsystem.TetherButton
+import com.tubetoast.tether.ui.designsystem.TitleText
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
 import com.tubetoast.tether.ui.preview.TransferPreviewFixtures
