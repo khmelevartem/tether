@@ -211,6 +211,7 @@ class PeerListComponentTest {
         val component = buildComponent(emptyList(), coroutineScope = backgroundScope)
 
         component.onDropDuringActiveTransfer()
+        runCurrent()
 
         assertTrue(component.dropFeedback.value)
         advanceTimeBy(3_100L)
@@ -223,10 +224,12 @@ class PeerListComponentTest {
         val component = buildComponent(emptyList(), coroutineScope = backgroundScope)
 
         component.onDropDuringActiveTransfer()
+        runCurrent()
         advanceTimeBy(2_500L)
         assertTrue(component.dropFeedback.value)
 
         component.onDropDuringActiveTransfer()
+        runCurrent()
         advanceTimeBy(2_500L)
         assertTrue(component.dropFeedback.value, "flag should still be true — second call restarted the window")
 
