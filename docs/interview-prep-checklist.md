@@ -93,7 +93,7 @@
 ## Блок 3 — Android Core
 
 ### Lifecycle
-- [ ] Activity / Fragment lifecycle — rotation, process death, multi-window
+- [x] Activity / Fragment lifecycle — rotation, process death, multi-window
 - [ ] `onSaveInstanceState` vs `ViewModel` — что переживает что
 - [ ] `savedStateHandle` в ViewModel — как работает при process death
 - [ ] Разница `onStop` vs `onPause` в multi-window
