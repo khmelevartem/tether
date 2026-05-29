@@ -47,7 +47,7 @@ import com.tubetoast.tether.ui.preview.TransferPreviewFixtures
 import com.tubetoast.tether.ui.theme.TetherTheme
 
 @Composable
-fun DeviceListScreen(
+fun PeerListScreen(
     component: PeerListComponent,
     pending: PendingFilesSummary?,
     dropFeedback: Boolean,
@@ -59,7 +59,7 @@ fun DeviceListScreen(
 ) {
     val state by component.state.subscribeAsState()
 
-    DeviceListContent(
+    PeerListContent(
         rows = state.rows,
         pending = pending,
         dropFeedback = dropFeedback,
@@ -72,7 +72,7 @@ fun DeviceListScreen(
 }
 
 @Composable
-fun DeviceListContent(
+fun PeerListContent(
     rows: List<PeerRow>,
     pending: PendingFilesSummary?,
     dropFeedback: Boolean,
@@ -199,11 +199,11 @@ fun DeviceListContent(
     )
 }
 
-@Preview(name = "DeviceList — discovering empty")
+@Preview(name = "PeerList — discovering empty")
 @Composable
 private fun PreviewDiscovering(@PreviewParameter(Themes::class) dark: Boolean) =
     PreviewSurface(darkTheme = dark) {
-        DeviceListContent(
+        PeerListContent(
             rows = emptyList(),
             pending = null,
             dropFeedback = false,
@@ -213,12 +213,12 @@ private fun PreviewDiscovering(@PreviewParameter(Themes::class) dark: Boolean) =
         )
     }
 
-@Preview(name = "DeviceList — single device")
+@Preview(name = "PeerList — single device")
 @Composable
 private fun PreviewSingleDevice(@PreviewParameter(Themes::class) dark: Boolean) =
     PreviewSurface(darkTheme = dark) {
         val device = PreviewFixtures.singleDevice.first()
-        DeviceListContent(
+        PeerListContent(
             rows = listOf(
                 PeerRow(
                     peer = Peer(id = device.toPeerIdentity(), device = device),
@@ -233,11 +233,11 @@ private fun PreviewSingleDevice(@PreviewParameter(Themes::class) dark: Boolean) 
         )
     }
 
-@Preview(name = "DeviceList — multiple devices")
+@Preview(name = "PeerList — multiple devices")
 @Composable
 private fun PreviewMultipleDevices(@PreviewParameter(Themes::class) dark: Boolean) =
     PreviewSurface(darkTheme = dark) {
-        DeviceListContent(
+        PeerListContent(
             rows = PreviewFixtures.multipleDevices.mapIndexed { index, device ->
                 PeerRow(
                     peer = Peer(id = device.toPeerIdentity(), device = device, isOnline = index != 2),
@@ -256,12 +256,12 @@ private fun PreviewMultipleDevices(@PreviewParameter(Themes::class) dark: Boolea
         )
     }
 
-@Preview(name = "DeviceList — pending banner")
+@Preview(name = "PeerList — pending banner")
 @Composable
 private fun PreviewPendingBanner(@PreviewParameter(Themes::class) dark: Boolean) =
     PreviewSurface(darkTheme = dark) {
         val device = PreviewFixtures.singleDevice.first()
-        DeviceListContent(
+        PeerListContent(
             rows = listOf(
                 PeerRow(
                     peer = Peer(id = device.toPeerIdentity(), device = device),
@@ -276,12 +276,12 @@ private fun PreviewPendingBanner(@PreviewParameter(Themes::class) dark: Boolean)
         )
     }
 
-@Preview(name = "DeviceList — drop rejected flash")
+@Preview(name = "PeerList — drop rejected flash")
 @Composable
 private fun PreviewDropFlash(@PreviewParameter(Themes::class) dark: Boolean) =
     PreviewSurface(darkTheme = dark) {
         val device = PreviewFixtures.singleDevice.first()
-        DeviceListContent(
+        PeerListContent(
             rows = listOf(
                 PeerRow(
                     peer = Peer(id = device.toPeerIdentity(), device = device),
@@ -296,12 +296,12 @@ private fun PreviewDropFlash(@PreviewParameter(Themes::class) dark: Boolean) =
         )
     }
 
-@Preview(name = "DeviceList — iOS banner")
+@Preview(name = "PeerList — iOS banner")
 @Composable
 private fun PreviewIosBanner(@PreviewParameter(Themes::class) dark: Boolean) =
     PreviewSurface(darkTheme = dark) {
         val device = PreviewFixtures.singleDevice.first()
-        DeviceListContent(
+        PeerListContent(
             rows = listOf(
                 PeerRow(
                     peer = Peer(id = device.toPeerIdentity(), device = device),

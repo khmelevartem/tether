@@ -38,7 +38,7 @@ fun RootContent(component: RootComponent, modifier: Modifier = Modifier) {
 
             Children(stack = stack) { child ->
                 when (val instance = child.instance) {
-                    is RootComponent.Child.DeviceListChild -> DeviceListScreen(
+                    is RootComponent.Child.PeerListChild -> PeerListScreen(
                         component = instance.component,
                         pending = pending,
                         dropFeedback = dropFeedback,

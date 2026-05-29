@@ -33,15 +33,15 @@ class RootComponentTest {
     private val peer = deviceA.toPeerIdentity()
 
     @Test
-    fun `initial stack contains single DeviceListChild`() = runTest {
+    fun `initial stack contains single PeerListChild`() = runTest {
         val component = buildComponent(coroutineScope = backgroundScope)
 
         assertEquals(1, component.stack.value.items.size)
-        assertIs<RootComponent.Child.DeviceListChild>(component.stack.value.active.instance)
+        assertIs<RootComponent.Child.PeerListChild>(component.stack.value.active.instance)
     }
 
     @Test
-    fun `showTransferDetails pushes TransferDetailsChild then back pops to DeviceListChild`() = runTest {
+    fun `showTransferDetails pushes TransferDetailsChild then back pops to PeerListChild`() = runTest {
         val devices = MutableStateFlow(listOf(deviceA))
         val backDispatcher = BackDispatcher()
         val component = buildComponent(
@@ -59,11 +59,11 @@ class RootComponentTest {
         backDispatcher.back()
 
         assertEquals(1, component.stack.value.items.size)
-        assertIs<RootComponent.Child.DeviceListChild>(component.stack.value.active.instance)
+        assertIs<RootComponent.Child.PeerListChild>(component.stack.value.active.instance)
     }
 
     @Test
-    fun `childStack initialises to DeviceListChild even when supplied StateKeeper bundle is non-empty`() = runTest {
+    fun `childStack initialises to PeerListChild even when supplied StateKeeper bundle is non-empty`() = runTest {
         // serializer = null means childStack writes nothing to StateKeeper and reads nothing back.
         // This pins the contract: a non-empty bundle from a prior process is ignored — even one
         // carrying entries under the very key Decompose would use if a real serializer were wired.
@@ -78,7 +78,7 @@ class RootComponentTest {
         val component = buildComponent(context = restoredContext, coroutineScope = backgroundScope)
 
         assertEquals(1, component.stack.value.items.size)
-        assertIs<RootComponent.Child.DeviceListChild>(component.stack.value.active.instance)
+        assertIs<RootComponent.Child.PeerListChild>(component.stack.value.active.instance)
     }
 
     @Test
@@ -131,7 +131,7 @@ class RootComponentTest {
     }
 
     @Test
-    fun `transferDetailsComponent onBack pops back to DeviceListChild`() = runTest {
+    fun `transferDetailsComponent onBack pops back to PeerListChild`() = runTest {
         val devices = MutableStateFlow(listOf(deviceA))
         val backDispatcher = BackDispatcher()
         val component = buildComponent(
@@ -148,7 +148,7 @@ class RootComponentTest {
         detailsChild.component.onBack()
 
         assertEquals(1, component.stack.value.items.size)
-        assertIs<RootComponent.Child.DeviceListChild>(component.stack.value.active.instance)
+        assertIs<RootComponent.Child.PeerListChild>(component.stack.value.active.instance)
     }
 
     @Test

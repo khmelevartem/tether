@@ -16,7 +16,7 @@ class RootComponent(
     private val peerListFactory: (ComponentContext, onShowDetails: (PeerIdentity) -> Unit) -> PeerListComponent,
 ) : ComponentContext by componentContext {
     private sealed interface Config {
-        data object DeviceList : Config
+        data object PeerList : Config
 
         data class TransferDetails(
             val peer: PeerIdentity,
@@ -31,19 +31,19 @@ class RootComponent(
     val stack: Value<ChildStack<*, Child>> = childStack(
         source = navigation,
         serializer = null,
-        initialConfiguration = Config.DeviceList,
+        initialConfiguration = Config.PeerList,
         handleBackButton = true,
         childFactory = ::createChild,
     )
 
     private fun createChild(config: Config, context: ComponentContext): Child =
         when (config) {
-            Config.DeviceList -> Child.DeviceListChild(peerListComponent)
+            Config.PeerList -> Child.PeerListChild(peerListComponent)
             is Config.TransferDetails -> {
                 val peerComponent = peerListComponent.peerTransferComponent(config.peer)
                 if (peerComponent == null) {
                     navigation.pop()
-                    Child.DeviceListChild(peerListComponent)
+                    Child.PeerListChild(peerListComponent)
                 } else {
                     Child.TransferDetailsChild(
                         TransferDetailsComponent(
@@ -61,7 +61,7 @@ class RootComponent(
     }
 
     sealed interface Child {
-        data class DeviceListChild(
+        data class PeerListChild(
             val component: PeerListComponent,
         ) : Child
 
