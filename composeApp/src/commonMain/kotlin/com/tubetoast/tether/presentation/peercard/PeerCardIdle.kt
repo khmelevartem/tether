@@ -2,37 +2,26 @@ package com.tubetoast.tether.presentation.peercard
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
-import androidx.compose.ui.unit.dp
 import com.tubetoast.tether.presentation.transfer.PeerTransferState
 import com.tubetoast.tether.protocol.Device
+import com.tubetoast.tether.ui.components.AutoSendToggle
 import com.tubetoast.tether.ui.components.ChevronToggleIcon
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
 import com.tubetoast.tether.ui.preview.TransferPreviewFixtures
 import com.tubetoast.tether.ui.theme.TetherTheme
-import com.tubetoast.tether.ui.theme.tetherMinTouchTarget
-import compose.icons.TablerIcons
-import compose.icons.tablericons.ToggleLeft
-import compose.icons.tablericons.ToggleRight
 
 @Composable
 fun PeerCardIdle(
@@ -84,77 +73,16 @@ fun PeerCardIdle(
         }
 
         if (state.expanded) {
-            AutoSendBlock(
-                peerName = peerName,
-                isAutoSendEnabled = isAutoSendEnabled,
+            AutoSendToggle(
+                enabled = isAutoSendEnabled,
                 onToggle = callbacks.onToggleAutoSend,
+                accessibilityHint = "when $peerName is the only online device",
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = spacing.lg)
                     .padding(bottom = spacing.md),
             )
         }
-    }
-}
-
-@Composable
-private fun AutoSendBlock(
-    peerName: String,
-    isAutoSendEnabled: Boolean,
-    onToggle: (Boolean) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val colors = TetherTheme.colors
-    val typography = TetherTheme.typography
-
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-        modifier = modifier.fillMaxWidth(),
-    ) {
-        BasicText(
-            text = "Auto-send",
-            style = typography.bodyMedium.copy(color = colors.textPrimary),
-            modifier = Modifier.weight(1f),
-        )
-        AutoSendToggle(
-            enabled = isAutoSendEnabled,
-            peerName = peerName,
-            onToggle = onToggle,
-        )
-    }
-}
-
-@Composable
-private fun AutoSendToggle(
-    enabled: Boolean,
-    peerName: String,
-    onToggle: (Boolean) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val colors = TetherTheme.colors
-    val state = if (enabled) "On" else "Off"
-
-    Box(
-        modifier = modifier
-            .tetherMinTouchTarget()
-            .clickable { onToggle(!enabled) }
-            .semantics {
-                role = Role.Switch
-                contentDescription = "Auto-send to $peerName when it's the only online device, currently $state"
-            },
-        contentAlignment = Alignment.Center,
-    ) {
-        val icon = if (enabled) TablerIcons.ToggleRight else TablerIcons.ToggleLeft
-        val tint = if (enabled) colors.accent else colors.textMuted
-        androidx.compose.foundation.Image(
-            painter = androidx.compose.ui.graphics.vector
-                .rememberVectorPainter(icon),
-            contentDescription = null,
-            colorFilter = androidx.compose.ui.graphics.ColorFilter
-                .tint(tint),
-            modifier = Modifier.size(28.dp),
-        )
     }
 }
 
