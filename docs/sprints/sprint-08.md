@@ -6,13 +6,13 @@
 
 | # | Issue | Название | Тип | Размер | Итог |
 | - | ----- | -------- | --- | ------ | ---- |
-| 1 | [#191](https://github.com/khmelevartem/tether/issues/191) | Transfer UI: TransferScreen, dialogs и DeviceList pending-banner с превью | feature | L | 🟡 в работе, закрывается внутри окна sprint-08 |
+| 1 | [#191](https://github.com/khmelevartem/tether/issues/191) | Transfer UI: TransferScreen, dialogs и DeviceList pending-banner с превью | feature | L | 🟡 в работе, переносится в sprint-09 — UI-полотно не успело по объёму |
 | 2 | [#258](https://github.com/khmelevartem/tether/issues/258) | FileServer: closed concurrent-upload races (silent overwrite + abort vs concurrent write) | bug | M | ✅ закрыт ([a9a281f](https://github.com/khmelevartem/tether/commit/a9a281f), [PR #282](https://github.com/khmelevartem/tether/pull/282)) |
 | 3 | [#244](https://github.com/khmelevartem/tether/issues/244) | Визуальное воплощение BrandMark — от скелета к дизайну | feature | M | 🟡 декомпозирован: spec расчищен ([2fcd035](https://github.com/khmelevartem/tether/commit/2fcd035), [PR #288](https://github.com/khmelevartem/tether/pull/288)), визуальная реализация выделена в [#287](https://github.com/khmelevartem/tether/issues/287) |
 | 4 | [#274](https://github.com/khmelevartem/tether/issues/274) | Промоутить command→skill: close-issue, retro, check-review, sprint-pick | infra | M | ✅ закрыт ([6ff8e00](https://github.com/khmelevartem/tether/commit/6ff8e00), [PR #280](https://github.com/khmelevartem/tether/pull/280); follow-up [5564df4](https://github.com/khmelevartem/tether/commit/5564df4), [PR #281](https://github.com/khmelevartem/tether/pull/281)) |
 | 5 | [#247](https://github.com/khmelevartem/tether/issues/247) | Translate all docs and .claude/ content to English | infra | L | ✅ закрыт ([1ffddee](https://github.com/khmelevartem/tether/commit/1ffddee)) |
 
-**Итого:** 4/5 закрыты внутри окна, #244 раздвоен (spec в этом спринте, визуал в #287).
+**Итого:** 3/5 закрыты внутри окна, #244 раздвоен (spec в этом спринте, визуал в #287), #191 переносится в sprint-09.
 
 ## Дополнительные результаты
 

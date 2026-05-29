@@ -1,25 +1,29 @@
 ## Цель спринта
 
-Закрыть file-transfer surface на всех платформах поверх UI-каркаса из #191: реальные sender'ы на Android / Desktop / iOS и видимый receiver. Параллельно — закрыть Android FGS-гейт перед MVP.
+Дозакрыть transfer UI-полотно (#191 carryover) и параллельно поднять reliability-слой перед MVP: Android FGS-тип, app-layer keepalive, hotspot Phase A. Sender wiring и receiver UI ждут окончания #191 — едут следующим спринтом.
 
 ## Состав
 
 | # | Issue | Название | Тип | Размер |
 | - | ----- | -------- | --- | ------ |
-| 1 | [#192](https://github.com/khmelevartem/tether/issues/192) | Android sender wiring: SAF picker, share-sheet и MediaStore receiver | feature | M |
-| 2 | [#193](https://github.com/khmelevartem/tether/issues/193) | Desktop sender wiring: AWT file picker на EDT и drag-and-drop по окну | feature | M |
-| 3 | [#194](https://github.com/khmelevartem/tether/issues/194) | iOS sender wiring: UIDocumentPickerViewController и bookmark-based FileSource | feature | M |
-| 4 | [#195](https://github.com/khmelevartem/tether/issues/195) | Receiver UI: FileServer events, PeerCard inbound states, платформенные уведомления | feature | M |
-| 5 | [#59](https://github.com/khmelevartem/tether/issues/59) | Android FGS: оценить лимит dataSync 6h/сутки на Android 15+ и выбрать тип сервиса | infra | M |
+| 1 | [#191](https://github.com/khmelevartem/tether/issues/191) | Transfer UI: TransferScreen, dialogs и DeviceList pending-banner с превью | feature | L |
+| 2 | [#59](https://github.com/khmelevartem/tether/issues/59) | Android FGS: оценить лимит dataSync 6h/сутки на Android 15+ и выбрать тип сервиса | infra | M |
+| 3 | [#251](https://github.com/khmelevartem/tether/issues/251) | TrustedDeviceStore: migrate to DataStore backend in commonMain | enhancement | M |
+| 4 | [#310](https://github.com/khmelevartem/tether/issues/310) | Survive Android 15+ dataSync FGS quota auto-restart crash loop | bugfix | S |
+| 5 | [#164](https://github.com/khmelevartem/tether/issues/164) | Application-layer keepalive на активной передаче FileServer | feature | M |
+| 6 | [#176](https://github.com/khmelevartem/tether/issues/176) | Hotspot transfer Phase A: `/hello` rendezvous + Desktop multi-interface mDNS | feature | M |
+| 7 | [#173](https://github.com/khmelevartem/tether/issues/173) | Trim docs/product/tech-stack.md — убрать ADR-контент, оставить product summary | docs | S |
 
 ## Следствия
 
-- После #192 / #193 / #194 sender реально работает на всех трёх платформах — TransferScreen из #191 перестаёт быть пустым каркасом, появляются настоящие выборы файлов и share-sheet входы.
-- После #195 receiver виден на DeviceListScreen: PeerCard свеллит при входящем, показывает прогресс, имена файлов, [Cancel]; платформенные уведомления (Android FGS, Desktop tray, iOS local) — на месте. Разблокируется wake-lock parity #304.
-- После #59 Android FGS-тип зафиксирован под Android 15+ — либо подтверждена устойчивость `dataSync` при типичном использовании, либо выбран `connectedDevice` / `specialUse`. Снимается риск тихой смерти сервиса через 6h.
+- После #191 разблокируется sender-wiring волна #192 / #193 / #194 и receiver UI #195 — все они становятся тонкими потребителями TransferScreen и dialogs.
+- После #59 + #310 Android FGS на API 35+ ведёт себя предсказуемо: либо `dataSync` подтверждён под типичную нагрузку, либо выбран `connectedDevice` / `specialUse`; auto-restart crash loop при срабатывании 6h-квоты больше не засоряет краш-аналитику.
+- После #251 `TrustedDeviceStore` уезжает в commonMain, `expect/actual` персистентности больше нет; ADR adr-persistence-key-value полностью реализован.
+- После #164 закрыта последняя дыра screen-off transfer: app-layer keepalive держит NAT idle и Wi-Fi power-save под контролем, watchdog корректно отменяет передачу при потере встречной стороны.
+- После #176 работает Desktop-host hotspot и асимметричная видимость в home Wi-Fi; разблокируется Phase B (Android-host hotspot, fallback layers).
 
 ## Порядок мерджа
 
-#195 → #59 → #192 → #193 → #194
+#251 → #59 → #310 → #164 → #176 → #173 → #191
 
-#195 первым — расширяет `FileServer` контракт (events + cancelInbound), от которого sender wiring не зависит, но любая правка `FileServer` в одном из sender PR'ов потребует rebase. #59 — изолированный Android Manifest + FGS-тип, не пересекается с transfer surface. #192 / #193 / #194 — параллельные source set'ы (androidMain / desktopMain / iosMain), мерджатся в любом порядке.
+#251 и #59 — изолированные, без UI. #310 идёт после #59 (fix поверх выбранного FGS-типа). #164 и #176 — network-слой, не пересекаются с UI #191; между собой не конфликтуют. #173 — docs-only. #191 последним — самый широкий diff по presentation-слою, любой merge после него — тяжёлый rebase.
