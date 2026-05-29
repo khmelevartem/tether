@@ -1,5 +1,6 @@
 package com.tubetoast.tether.network
 
+import android.app.ForegroundServiceStartNotAllowedException
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -46,7 +47,7 @@ class TetherForegroundService : LifecycleService() {
 
     override fun onCreate() {
         super.onCreate()
-        startForegroundCompat()
+        if (!startForegroundCompat()) return
 
         val container = (application as AppContainerProvider).container
         val fileServer = container.fileServer
@@ -129,7 +130,8 @@ class TetherForegroundService : LifecycleService() {
         super.onDestroy()
     }
 
-    private fun startForegroundCompat() {
+    /** Returns false if the OS refused promotion due to quota exhaustion; caller must not start servers. */
+    private fun startForegroundCompat(): Boolean {
         ensureChannel()
         val stopIntent = Intent(this, TetherForegroundService::class.java).setAction(ACTION_STOP)
         val stopPendingIntent = PendingIntent.getService(
@@ -150,14 +152,31 @@ class TetherForegroundService : LifecycleService() {
                 stopPendingIntent,
             ).build()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(
-                NOTIFICATION_ID,
-                notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
-            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                try {
+                    startForeground(
+                        NOTIFICATION_ID,
+                        notification,
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
+                    )
+                } catch (e: ForegroundServiceStartNotAllowedException) {
+                    // OS auto-restarted via START_STICKY inside the still-exhausted dataSync cap window.
+                    // Stop cleanly; the OS will retry and succeed once the user foregrounds the app.
+                    log.warn { "dataSync FGS quota exhausted; aborting start, OS will retry after foreground reset" }
+                    stopSelf()
+                    return false
+                }
+            } else {
+                startForeground(
+                    NOTIFICATION_ID,
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
+                )
+            }
         } else {
             startForeground(NOTIFICATION_ID, notification)
         }
+        return true
     }
 
     private fun ensureChannel() {
