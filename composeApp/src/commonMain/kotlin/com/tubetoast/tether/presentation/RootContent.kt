@@ -30,11 +30,10 @@ fun RootContent(component: RootComponent, modifier: Modifier = Modifier) {
         ) {
             val stack by component.stack.subscribeAsState()
             val peerList = component.peerListComponent
-            val pendingFiles by peerList.pendingFiles.subscribeAsState()
+            val pending by component.pendingFilesRepository.summary.collectAsState()
             val dropFeedback by peerList.dropFeedback.subscribeAsState()
 
-            val hasPending = pendingFiles.fileCount > 0
-            val pending = if (hasPending) pendingFiles else null
+            val hasPending = pending != null
 
             Children(stack = stack) { child ->
                 when (val instance = child.instance) {
@@ -42,7 +41,7 @@ fun RootContent(component: RootComponent, modifier: Modifier = Modifier) {
                         component = instance.component,
                         pending = pending,
                         dropFeedback = dropFeedback,
-                        onCancelPending = peerList::clearPendingFiles,
+                        onCancelPending = component.pendingFilesRepository::clear,
                         peerCallbacksFor = { peer ->
                             rememberPeerCallbacks(peer, peerList, component, hasPending)
                         },

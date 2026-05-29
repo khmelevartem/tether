@@ -12,6 +12,7 @@ import com.tubetoast.tether.preferences.FileTransferPreferences
 import com.tubetoast.tether.preferences.PeerPreferencesStore
 import com.tubetoast.tether.presentation.RootComponentFactory
 import com.tubetoast.tether.presentation.peer.PeersRepository
+import com.tubetoast.tether.presentation.transfer.PendingFilesRepository
 import com.tubetoast.tether.security.TrustedDeviceStore
 import com.tubetoast.tether.transfer.BatchSender
 import com.tubetoast.tether.transfer.ConnectionMonitor
@@ -37,6 +38,8 @@ abstract class AppContainer {
 
     open val peersRepository: PeersRepository by lazy { PeersRepository(mdnsDiscovery, appScope) }
 
+    open val pendingFilesRepository: PendingFilesRepository by lazy { PendingFilesRepository() }
+
     open val connectionMonitor: ConnectionMonitor = NoOpConnectionMonitor
 
     // Factory: BatchSender holds per-transfer state — one instance per concurrent peer transfer.
@@ -53,6 +56,7 @@ abstract class AppContainer {
         RootComponentFactory(
             peersRepository = peersRepository,
             batchSenderFactory = batchSenderFactory,
+            pendingFilesRepository = pendingFilesRepository,
             peerPreferencesStore = peerPreferencesStore,
         )
     }

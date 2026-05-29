@@ -12,7 +12,7 @@ import com.tubetoast.tether.presentation.peer.Peer
 import com.tubetoast.tether.presentation.peer.PeersRepository
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.presentation.transfer.PeerTransferState
-import com.tubetoast.tether.transfer.FileSource
+import com.tubetoast.tether.presentation.transfer.PendingFilesRepository
 import com.tubetoast.tether.transfer.PeerIdentity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -27,6 +27,7 @@ class PeerListComponent(
     componentContext: ComponentContext,
     private val peersRepository: PeersRepository,
     private val peerTransferComponentFactory: (ComponentContext, Peer) -> PeerTransferComponent,
+    private val pendingFilesRepository: PendingFilesRepository,
     private val peerPreferencesStore: PeerPreferencesStore? = null,
     coroutineScope: CoroutineScope = componentContext.coroutineScope(),
 ) : ComponentContext by componentContext {
@@ -39,11 +40,6 @@ class PeerListComponent(
     private val subscriptions = mutableMapOf<PeerIdentity, Cancellation>()
     private val seenPeers = mutableMapOf<PeerIdentity, Peer>()
     private var onlineIds: Set<PeerIdentity> = emptySet()
-
-    private val mutablePendingFiles = MutableValue(PendingFilesSummary.NONE)
-    val pendingFiles: Value<PendingFilesSummary> = mutablePendingFiles
-
-    private val mutablePendingSources = MutableValue<List<FileSource>>(emptyList())
 
     private val mutableDropFeedback = MutableValue(false)
     val dropFeedback: Value<Boolean> = mutableDropFeedback
@@ -63,21 +59,19 @@ class PeerListComponent(
 
     fun peerTransferComponent(peer: PeerIdentity): PeerTransferComponent? = children[peer]
 
-    fun setPendingFiles(summary: PendingFilesSummary, sources: List<FileSource>) {
-        mutablePendingFiles.value = summary
-        mutablePendingSources.value = sources
-    }
-
-    fun clearPendingFiles() {
-        mutablePendingFiles.value = PendingFilesSummary.NONE
-        mutablePendingSources.value = emptyList()
-    }
-
     fun onPeerTapped(peer: PeerIdentity) {
-        val sources = mutablePendingSources.value
+        val sources = pendingFilesRepository.sources.value
         if (sources.isEmpty()) return
         children[peer]?.startOutbound(sources)
-        clearPendingFiles()
+        pendingFilesRepository.clear()
+    }
+
+    fun observeAutoSend(peer: PeerIdentity): Flow<Boolean> =
+        peerPreferencesStore?.observeAutoSend(peer) ?: flowOf(false)
+
+    fun setAutoSend(peer: PeerIdentity, enabled: Boolean) {
+        val store = peerPreferencesStore ?: return
+        scope.launch { store.setAutoSend(peer, enabled) }
     }
 
     fun onDropDuringActiveTransfer() {
@@ -87,14 +81,6 @@ class PeerListComponent(
             delay(DROP_FEEDBACK_DURATION_MS)
             mutableDropFeedback.value = false
         }
-    }
-
-    fun observeAutoSend(peer: PeerIdentity): Flow<Boolean> =
-        peerPreferencesStore?.observeAutoSend(peer) ?: flowOf(false)
-
-    fun setAutoSend(peer: PeerIdentity, enabled: Boolean) {
-        val store = peerPreferencesStore ?: return
-        scope.launch { store.setAutoSend(peer, enabled) }
     }
 
     private fun ensureChildrenFor(peers: List<Peer>) {

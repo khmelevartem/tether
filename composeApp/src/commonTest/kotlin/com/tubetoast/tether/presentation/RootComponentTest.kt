@@ -9,6 +9,7 @@ import com.tubetoast.tether.discovery.FakeDeviceDiscovery
 import com.tubetoast.tether.presentation.peer.PeersRepository
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.presentation.transfer.PeerTransferState
+import com.tubetoast.tether.presentation.transfer.PendingFilesRepository
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.FakeFileSource
 import com.tubetoast.tether.transfer.fakeBatchSender
@@ -25,7 +26,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
-import kotlin.test.assertSame
+import kotlin.test.assertNull
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class RootComponentTest {
@@ -64,9 +65,6 @@ class RootComponentTest {
 
     @Test
     fun `childStack initialises to PeerListChild even when supplied StateKeeper bundle is non-empty`() = runTest {
-        // serializer = null means childStack writes nothing to StateKeeper and reads nothing back.
-        // This pins the contract: a non-empty bundle from a prior process is ignored — even one
-        // carrying entries under the very key Decompose would use if a real serializer were wired.
         val priorDispatcher = StateKeeperDispatcher()
         priorDispatcher.register("sentinel", String.serializer()) { "saved" }
         val nonEmptySavedState = priorDispatcher.save()
@@ -82,27 +80,31 @@ class RootComponentTest {
     }
 
     @Test
-    fun `setPendingFiles stores summary and clearPendingFiles resets to NONE`() = runTest {
-        val component = buildComponent(coroutineScope = backgroundScope)
-        val peerList = component.peerListComponent
+    fun `setPending stores summary and clear resets to null`() = runTest {
+        val repo = PendingFilesRepository()
 
-        assertSame(PendingFilesSummary.NONE, peerList.pendingFiles.value)
+        assertNull(repo.summary.value)
 
         val summary = PendingFilesSummary(fileCount = 2, totalBytes = 1024L)
-        peerList.setPendingFiles(summary, emptyList())
+        repo.setPending(summary, emptyList())
 
-        assertEquals(summary, peerList.pendingFiles.value)
-        assertNotEquals(PendingFilesSummary.NONE, peerList.pendingFiles.value)
+        assertEquals(summary, repo.summary.value)
+        assertNotEquals(null, repo.summary.value)
 
-        peerList.clearPendingFiles()
+        repo.clear()
 
-        assertSame(PendingFilesSummary.NONE, peerList.pendingFiles.value)
+        assertNull(repo.summary.value)
     }
 
     @Test
     fun `onPeerTapped with pending sources routes startOutbound and clears pending`() = runTest {
         val devices = MutableStateFlow(listOf(deviceA))
-        val component = buildComponent(devices = devices, coroutineScope = backgroundScope)
+        val repo = PendingFilesRepository()
+        val component = buildComponent(
+            devices = devices,
+            pendingFilesRepository = repo,
+            coroutineScope = backgroundScope,
+        )
         runCurrent()
 
         val peerList = component.peerListComponent
@@ -110,12 +112,12 @@ class RootComponentTest {
         assertNotNull(peerComponent)
 
         val sources = listOf(FakeFileSource("file.txt", 100L))
-        peerList.setPendingFiles(PendingFilesSummary(1, 100L), sources)
+        repo.setPending(PendingFilesSummary(1, 100L), sources)
         peerList.onPeerTapped(peer)
         runCurrent()
 
         assertIs<PeerTransferState.Sent>(peerComponent.state.value)
-        assertSame(PendingFilesSummary.NONE, peerList.pendingFiles.value)
+        assertNull(repo.summary.value)
     }
 
     @Test
@@ -186,6 +188,7 @@ class RootComponentTest {
         context: DefaultComponentContext = defaultContext(),
         backDispatcher: BackDispatcher? = null,
         devices: MutableStateFlow<List<Device>> = MutableStateFlow(emptyList()),
+        pendingFilesRepository: PendingFilesRepository = PendingFilesRepository(),
         coroutineScope: CoroutineScope,
     ): RootComponent {
         val ctx = if (backDispatcher != null) {
@@ -204,6 +207,7 @@ class RootComponentTest {
         )
         return RootComponent(
             componentContext = ctx,
+            pendingFilesRepository = pendingFilesRepository,
             peerListFactory = { childCtx, onShowDetails ->
                 PeerListComponent(
                     componentContext = childCtx,
@@ -218,6 +222,7 @@ class RootComponentTest {
                             scope = coroutineScope,
                         )
                     },
+                    pendingFilesRepository = pendingFilesRepository,
                     coroutineScope = coroutineScope,
                 )
             },

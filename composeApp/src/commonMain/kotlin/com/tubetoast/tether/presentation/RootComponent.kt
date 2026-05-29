@@ -8,12 +8,14 @@ import com.arkivanov.decompose.router.stack.childStack
 import com.arkivanov.decompose.router.stack.pop
 import com.arkivanov.decompose.router.stack.pushNew
 import com.arkivanov.decompose.value.Value
+import com.tubetoast.tether.presentation.transfer.PendingFilesRepository
 import com.tubetoast.tether.presentation.transfer.TransferDetailsComponent
 import com.tubetoast.tether.transfer.PeerIdentity
 
 class RootComponent(
     componentContext: ComponentContext,
     private val peerListFactory: (ComponentContext, onShowDetails: (PeerIdentity) -> Unit) -> PeerListComponent,
+    val pendingFilesRepository: PendingFilesRepository,
 ) : ComponentContext by componentContext {
     private sealed interface Config {
         data object PeerList : Config
