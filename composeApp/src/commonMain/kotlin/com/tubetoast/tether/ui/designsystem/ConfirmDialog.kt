@@ -86,13 +86,13 @@ fun ConfirmDialogContent(
             horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            TetherButton(
+            Button(
                 label = secondary.label,
                 onClick = secondary.onClick,
                 contentDescription = secondary.contentDescription,
                 variant = secondary.variant,
             )
-            TetherButton(
+            Button(
                 label = primary.label,
                 onClick = primary.onClick,
                 contentDescription = primary.contentDescription,

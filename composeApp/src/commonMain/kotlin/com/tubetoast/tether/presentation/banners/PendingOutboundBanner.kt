@@ -8,7 +8,7 @@ import com.tubetoast.tether.presentation.PendingFilesSummary
 import com.tubetoast.tether.transfer.ByteFormatting
 import com.tubetoast.tether.ui.designsystem.Banner
 import com.tubetoast.tether.ui.designsystem.BannerSeverity
-import com.tubetoast.tether.ui.designsystem.TetherButton
+import com.tubetoast.tether.ui.designsystem.Button
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
 
@@ -28,7 +28,7 @@ fun PendingOutboundBanner(
         severity = if (dropFeedback) BannerSeverity.Error else BannerSeverity.Info,
         modifier = modifier,
     ) {
-        TetherButton(
+        Button(
             label = "Cancel",
             onClick = onCancel,
             contentDescription = "Cancel pending transfer",

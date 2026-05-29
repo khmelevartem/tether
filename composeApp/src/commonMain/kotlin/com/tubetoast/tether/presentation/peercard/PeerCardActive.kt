@@ -18,8 +18,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import com.tubetoast.tether.presentation.transfer.PeerTransferState
 import com.tubetoast.tether.protocol.Device
+import com.tubetoast.tether.ui.designsystem.Button
 import com.tubetoast.tether.ui.designsystem.ProgressBar
-import com.tubetoast.tether.ui.designsystem.TetherButton
 import com.tubetoast.tether.ui.designsystem.TitleText
 import com.tubetoast.tether.ui.feature.ByteProgressRow
 import com.tubetoast.tether.ui.feature.CurrentFileLabel
@@ -132,7 +132,7 @@ private fun ActiveCardShell(
                 text = displayName,
                 modifier = Modifier.weight(1f),
             )
-            TetherButton(
+            Button(
                 label = "Cancel",
                 onClick = onCancel,
                 contentDescription = cancelDescription,
@@ -168,7 +168,7 @@ private fun ActiveCardShell(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             trailingContent()
-            TetherButton(
+            Button(
                 label = "Show details →",
                 onClick = onShowDetails,
                 contentDescription = showDetailsDescription,

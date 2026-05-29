@@ -28,9 +28,9 @@ import com.tubetoast.tether.presentation.transfer.aggregateStripCopy
 import com.tubetoast.tether.presentation.transfer.detailsSubtitleCopy
 import com.tubetoast.tether.transfer.PerFileStatus
 import com.tubetoast.tether.ui.designsystem.BodyText
+import com.tubetoast.tether.ui.designsystem.Button
 import com.tubetoast.tether.ui.designsystem.DismissCloseButton
 import com.tubetoast.tether.ui.designsystem.LabelText
-import com.tubetoast.tether.ui.designsystem.TetherButton
 import com.tubetoast.tether.ui.designsystem.TitleText
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
@@ -106,7 +106,7 @@ fun TransferDetailsContent(
                     modifier = Modifier.weight(1f),
                 )
                 if (failedCount > 0 && isSenderSide) {
-                    TetherButton(
+                    Button(
                         label = "Retry",
                         onClick = onRetryAll,
                         contentDescription = "Retry all $failedCount failed files",
@@ -165,7 +165,7 @@ private fun TopBar(
             LabelText(text = subtitle)
         }
         if (showCancel) {
-            TetherButton(
+            Button(
                 label = "Cancel",
                 onClick = onCancelTransfer,
                 contentDescription = "Cancel transfer to $peerName",

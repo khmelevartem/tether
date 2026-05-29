@@ -24,7 +24,7 @@ import com.tubetoast.tether.ui.theme.tetherMinTouchTarget
 enum class ButtonVariant { Primary, Secondary, Destructive, Quiet }
 
 @Composable
-fun TetherButton(
+fun Button(
     label: String,
     onClick: () -> Unit,
     contentDescription: String,
@@ -59,19 +59,19 @@ private fun variantColor(variant: ButtonVariant, enabled: Boolean, colors: Tethe
     }
 }
 
-@Preview(name = "TetherButton — all variants enabled")
+@Preview(name = "Button — all variants enabled")
 @Composable
 private fun PreviewButtonsEnabled(@PreviewParameter(Themes::class) dark: Boolean) =
     PreviewSurface(darkTheme = dark) {
         Column {
             Row {
-                TetherButton(
+                Button(
                     label = "Primary",
                     onClick = {},
                     contentDescription = "Primary action",
                     variant = ButtonVariant.Primary,
                 )
-                TetherButton(
+                Button(
                     label = "Secondary",
                     onClick = {},
                     contentDescription = "Secondary action",
@@ -79,13 +79,13 @@ private fun PreviewButtonsEnabled(@PreviewParameter(Themes::class) dark: Boolean
                 )
             }
             Row {
-                TetherButton(
+                Button(
                     label = "Destructive",
                     onClick = {},
                     contentDescription = "Destructive action",
                     variant = ButtonVariant.Destructive,
                 )
-                TetherButton(
+                Button(
                     label = "Quiet",
                     onClick = {},
                     contentDescription = "Quiet action",
@@ -95,20 +95,20 @@ private fun PreviewButtonsEnabled(@PreviewParameter(Themes::class) dark: Boolean
         }
     }
 
-@Preview(name = "TetherButton — all variants disabled")
+@Preview(name = "Button — all variants disabled")
 @Composable
 private fun PreviewButtonsDisabled(@PreviewParameter(Themes::class) dark: Boolean) =
     PreviewSurface(darkTheme = dark) {
         Column {
             Row {
-                TetherButton(
+                Button(
                     label = "Primary",
                     onClick = {},
                     contentDescription = "Primary disabled",
                     variant = ButtonVariant.Primary,
                     enabled = false,
                 )
-                TetherButton(
+                Button(
                     label = "Secondary",
                     onClick = {},
                     contentDescription = "Secondary disabled",
@@ -117,14 +117,14 @@ private fun PreviewButtonsDisabled(@PreviewParameter(Themes::class) dark: Boolea
                 )
             }
             Row {
-                TetherButton(
+                Button(
                     label = "Destructive",
                     onClick = {},
                     contentDescription = "Destructive disabled",
                     variant = ButtonVariant.Destructive,
                     enabled = false,
                 )
-                TetherButton(
+                Button(
                     label = "Quiet",
                     onClick = {},
                     contentDescription = "Quiet disabled",

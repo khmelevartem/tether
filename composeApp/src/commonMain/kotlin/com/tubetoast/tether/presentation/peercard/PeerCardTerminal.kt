@@ -17,9 +17,9 @@ import com.tubetoast.tether.presentation.transfer.PeerTransferState
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.TransferErrorReason
 import com.tubetoast.tether.ui.designsystem.BodyText
+import com.tubetoast.tether.ui.designsystem.Button
 import com.tubetoast.tether.ui.designsystem.DismissCloseButton
 import com.tubetoast.tether.ui.designsystem.LabelText
-import com.tubetoast.tether.ui.designsystem.TetherButton
 import com.tubetoast.tether.ui.designsystem.TitleText
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
@@ -99,7 +99,7 @@ fun PeerCardReceived(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.End,
         ) {
-            TetherButton(
+            Button(
                 label = "Show details →",
                 onClick = callbacks.onShowDetails,
                 contentDescription = "Show transfer details for $peerName",
@@ -168,13 +168,13 @@ fun PeerCardError(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            TetherButton(
+            Button(
                 label = "Show details →",
                 onClick = callbacks.onShowDetails,
                 contentDescription = "Show transfer details for $peerName",
             )
             if (state.reason != TransferErrorReason.ReceiverSuspended) {
-                TetherButton(
+                Button(
                     label = "Retry",
                     onClick = callbacks.onRetry,
                     contentDescription = retryDesc,
@@ -215,7 +215,7 @@ private fun TerminalShell(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End,
             ) {
-                TetherButton(
+                Button(
                     label = "Show details →",
                     onClick = onShowDetails,
                     contentDescription = "Show transfer details for $peerName",

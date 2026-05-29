@@ -75,7 +75,7 @@ private fun PreviewBannerInfoWithAction(@PreviewParameter(Themes::class) dark: B
             text = "Ready to send 3 files. Pick a device below.",
             severity = BannerSeverity.Info,
         ) {
-            TetherButton(label = "Cancel", onClick = {}, contentDescription = "Cancel")
+            Button(label = "Cancel", onClick = {}, contentDescription = "Cancel")
         }
     }
 
