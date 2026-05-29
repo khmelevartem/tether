@@ -29,7 +29,7 @@ class RootComponentFactory(
                     peerTransferComponentFactory = { childCtx, peer ->
                         PeerTransferComponent(
                             componentContext = childCtx,
-                            peer = peer.id,
+                            peer = peer,
                             batchSenderFactory = batchSenderFactory,
                             onShowDetails = onShowDetails,
                             reconnectionTimeout = ReconnectionTimeout.DEFAULT,

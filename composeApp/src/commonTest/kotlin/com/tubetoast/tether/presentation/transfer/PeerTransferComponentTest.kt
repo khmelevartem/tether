@@ -4,6 +4,8 @@ import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.resume
 import com.tubetoast.tether.presentation.PendingFilesSummary
+import com.tubetoast.tether.presentation.peer.Peer
+import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.BatchSender
 import com.tubetoast.tether.transfer.FailureReason
 import com.tubetoast.tether.transfer.FakeConnectionMonitor
@@ -31,7 +33,10 @@ import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PeerTransferComponentTest {
-    private val peer = PeerIdentity("test-peer")
+    private val peer = Peer(
+        id = PeerIdentity("test-peer"),
+        device = Device(name = "TestDevice", host = "127.0.0.1", port = 8080),
+    )
 
     private fun buildComponent(
         events: MutableSharedFlow<ReceiveEvent> = MutableSharedFlow(extraBufferCapacity = 16),

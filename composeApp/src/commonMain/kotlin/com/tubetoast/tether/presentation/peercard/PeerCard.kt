@@ -5,7 +5,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
-import com.tubetoast.tether.presentation.peer.Peer
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.presentation.transfer.PeerTransferState
 import com.tubetoast.tether.protocol.Device
@@ -13,7 +12,6 @@ import com.tubetoast.tether.protocol.Device
 @Composable
 fun PeerCard(
     component: PeerTransferComponent,
-    peer: Peer,
     modifier: Modifier = Modifier,
 ) {
     val state by component.state.subscribeAsState()
@@ -34,8 +32,8 @@ fun PeerCard(
     )
     PeerCardContent(
         state = state,
-        isOnline = peer.isOnline,
-        device = peer.device,
+        isOnline = component.peer.isOnline,
+        device = component.peer.device,
         callbacks = callbacks,
         modifier = modifier,
         isAutoSendEnabled = isAutoSendEnabled,

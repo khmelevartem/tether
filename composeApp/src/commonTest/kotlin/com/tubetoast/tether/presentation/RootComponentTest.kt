@@ -227,7 +227,7 @@ class RootComponentTest {
                     peerTransferComponentFactory = { peerCtx, peerModel ->
                         PeerTransferComponent(
                             componentContext = peerCtx,
-                            peer = peerModel.id,
+                            peer = peerModel,
                             batchSenderFactory = fakeBatchSender(),
                             inboundEvents = MutableSharedFlow(),
                             onShowDetails = onShowDetails,

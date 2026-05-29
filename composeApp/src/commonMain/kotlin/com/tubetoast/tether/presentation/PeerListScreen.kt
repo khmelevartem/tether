@@ -127,7 +127,6 @@ fun PeerListContent(
                     if (peerComponent != null) {
                         PeerCard(
                             component = peerComponent,
-                            peer = row.peer,
                             modifier = cardModifier,
                         )
                     }

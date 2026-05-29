@@ -240,7 +240,7 @@ class PeerListComponentTest {
             peerTransferComponentFactory = { childCtx, peer ->
                 PeerTransferComponent(
                     componentContext = childCtx,
-                    peer = peer.id,
+                    peer = peer,
                     batchSenderFactory = fakeBatchSender(),
                     inboundEvents = MutableSharedFlow(),
                     onShowDetails = {},
