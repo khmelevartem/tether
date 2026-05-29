@@ -20,28 +20,28 @@ Compose talks down to the Component. The Component talks down to `AppContainer` 
 ## Component anatomy
 
 ```kotlin
-class DeviceListComponent(
+class PeerListComponent(
     componentContext: ComponentContext,
-    private val discovery: DeviceDiscovery,
+    private val peersRepository: PeersRepository,
     coroutineScope: CoroutineScope = componentContext.coroutineScope(),
 ) : ComponentContext by componentContext {
 
-    private val _state = MutableValue(DeviceListState.empty())
-    val state: Value<DeviceListState> = _state
+    private val _state = MutableValue(PeerListState.empty())
+    val state: Value<PeerListState> = _state
 
     init {
         coroutineScope.launch {
-            discovery.discoveredDevices.collect { devices ->
-                _state.update { DeviceListState(devices) }
+            peersRepository.peers.collect { peers ->
+                _state.update { PeerListState(peers) }
             }
         }
     }
 
-    fun onDeviceClicked(id: DeviceId) { /* ... */ }
+    fun onPeerClicked(id: PeerIdentity) { /* ... */ }
 }
 ```
 
-Components depend on **interfaces from `commonMain`** (e.g. `DeviceDiscovery`), not on platform actuals (`MdnsDiscovery`). The actual class implements the interface; the Component never sees the platform type. This keeps presentation tests in `commonTest` and allows fakes without `expect`/`actual` plumbing.
+Components depend on **interfaces or repositories from `commonMain`** (e.g. `PeersRepository`, `DeviceDiscovery`), not on platform actuals (`MdnsDiscovery`). The actual class implements the interface; the Component never sees the platform type. This keeps presentation tests in `commonTest` and allows fakes without `expect`/`actual` plumbing.
 
 Conventions:
 
@@ -69,9 +69,9 @@ Compose subscribes via `subscribeAsState`:
 
 ```kotlin
 @Composable
-fun DeviceList(component: DeviceListComponent) {
+fun PeerList(component: PeerListComponent) {
     val state by component.state.subscribeAsState()
-    Button(onClick = { component.onDeviceClicked(state.devices.first().id) }) { /* ... */ }
+    Button(onClick = { component.onPeerClicked(state.peers.first().id) }) { /* ... */ }
 }
 ```
 
@@ -136,21 +136,21 @@ Process-death state restoration is **not a goal** for the navigation stack. The 
 Components are testable as plain Kotlin — no Compose runtime, no Robolectric:
 
 ```kotlin
-class DeviceListComponentTest {
+class PeerListComponentTest {
 
-    @Test fun emits_devices_from_discovery() = runTest {
-        val flow = MutableStateFlow<List<Device>>(emptyList())
+    @Test fun emits_peers_from_repository() = runTest {
+        val flow = MutableStateFlow<List<Peer>>(emptyList())
         val lifecycle = LifecycleRegistry().apply { resume() }
-        val component = DeviceListComponent(
+        val component = PeerListComponent(
             componentContext = DefaultComponentContext(lifecycle),
-            discovery = FakeDeviceDiscovery(flow),
+            peersRepository = FakePeersRepository(flow),
             coroutineScope = backgroundScope,
         )
 
-        flow.value = listOf(deviceA, deviceB)
+        flow.value = listOf(peerA, peerB)
         runCurrent()
 
-        assertEquals(listOf(deviceA, deviceB), component.state.value.devices)
+        assertEquals(listOf(peerA, peerB), component.state.value.peers)
     }
 }
 ```
