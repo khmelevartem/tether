@@ -1,5 +1,8 @@
 package com.tubetoast.tether.network
 
+import com.tubetoast.tether.discovery.DiscoveredDevicesStore
+import com.tubetoast.tether.protocol.Device
+import com.tubetoast.tether.protocol.InfoDto
 import com.tubetoast.tether.protocol.PairRequest
 import com.tubetoast.tether.protocol.PairResponse
 import com.tubetoast.tether.security.TrustedDeviceStore
@@ -9,6 +12,7 @@ import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.server.plugins.origin
 import io.ktor.server.request.contentLength
 import io.ktor.server.request.receive
 import io.ktor.server.request.receiveChannel
@@ -63,10 +67,28 @@ internal fun Application.installFileServerRoutes(
     trustedDeviceStore: TrustedDeviceStore,
     serverPublicKey: ByteArray,
     tracker: TransferActivityTracker = DefaultTransferActivityTracker(),
+    ownFingerprint: () -> String = { "" },
+    discoveredDevicesStore: DiscoveredDevicesStore? = null,
 ) {
     install(ContentNegotiation) { json() }
     routing {
         get("/health") { call.respond(HttpStatusCode.OK, "Tether OK") }
+        post("/hello") {
+            val body = call.receive<InfoDto>()
+            if (body.fingerprint == ownFingerprint()) {
+                call.respond(HttpStatusCode.OK, emptyMap<String, String>())
+                return@post
+            }
+            val remoteHost = call.request.origin.remoteHost
+            val device = Device(
+                name = body.alias,
+                host = remoteHost,
+                port = body.port,
+            )
+            discoveredDevicesStore?.upsert(device)
+            log.info { "hello from ${body.alias}@$remoteHost:${body.port}" }
+            call.respond(HttpStatusCode.OK, emptyMap<String, String>())
+        }
         post("/pair") {
             val request = call.receive<PairRequest>()
             val deviceId = deviceIdFromPublicKey(request.publicKey)

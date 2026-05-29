@@ -5,7 +5,7 @@ import com.sun.jna.Pointer
 import com.sun.jna.ptr.PointerByReference
 import com.tubetoast.tether.discovery.DeviceDiscovery
 import com.tubetoast.tether.discovery.DiscoveredDevicesStore
-import com.tubetoast.tether.discovery.TXT_PROPS
+import com.tubetoast.tether.discovery.txtProps
 import com.tubetoast.tether.protocol.Device
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -41,6 +41,7 @@ private val log = KydraLog.withTag(default = "MdnsDiscovery.Bonjour")
  */
 internal class MdnsDiscoveryBonjour(
     private val store: DiscoveredDevicesStore,
+    private val fingerprint: String = "",
 ) : DeviceDiscovery {
     override val discoveredDevices: StateFlow<List<Device>> = store.devices
 
@@ -57,7 +58,7 @@ internal class MdnsDiscoveryBonjour(
             if (session != null) throw IllegalStateException("MdnsDiscovery already started; call stop() first")
             stopped = false
             currentPort = port
-            session = Session.start(deviceName, port, store)
+            session = Session.start(deviceName, port, store, fingerprint)
         }
     }
 
@@ -83,7 +84,7 @@ internal class MdnsDiscoveryBonjour(
         toClose.close()
         synchronized(lifecycleLock) {
             if (stopped) return
-            if (session == null) session = Session.start(name, port, store)
+            if (session == null) session = Session.start(name, port, store, fingerprint)
         }
     }
 
@@ -301,6 +302,7 @@ internal class MdnsDiscoveryBonjour(
                 deviceName: String,
                 port: Int,
                 store: DiscoveredDevicesStore,
+                fingerprint: String = "",
             ): Session {
                 val events = Channel<Event>(Channel.UNLIMITED)
                 val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -312,7 +314,8 @@ internal class MdnsDiscoveryBonjour(
                 }
                 session.bindState(state)
 
-                val registerRef = openRegisterRef(deviceName, port) { session.callbackAnchors.add(it) }
+                // interfaceIndex=0 → kDNSServiceInterfaceIndexAny; Bonjour fans out to all interfaces by default.
+                val registerRef = openRegisterRef(deviceName, port, fingerprint) { session.callbackAnchors.add(it) }
 
                 val browseCallback = object : DnsSd.BrowseReply {
                     override fun invoke(
@@ -338,6 +341,7 @@ internal class MdnsDiscoveryBonjour(
                 session.callbackAnchors.add(browseCallback)
 
                 val browseOutRef = PointerByReference()
+                // interfaceIndex=0 → kDNSServiceInterfaceIndexAny; Bonjour fans out to all interfaces by default.
                 val error = DnsSd.INSTANCE.DNSServiceBrowse(
                     browseOutRef,
                     0,
@@ -379,6 +383,7 @@ internal class MdnsDiscoveryBonjour(
             private fun openRegisterRef(
                 deviceName: String,
                 port: Int,
+                fingerprint: String,
                 anchor: (Any) -> Unit,
             ): Pointer? {
                 val outRef = PointerByReference()
@@ -398,7 +403,7 @@ internal class MdnsDiscoveryBonjour(
                     }
                 }
                 anchor(callback)
-                val txtBytes = BonjourCodec.encodeTxt(TXT_PROPS)
+                val txtBytes = BonjourCodec.encodeTxt(txtProps(fingerprint))
                 val txtMem = Memory(txtBytes.size.toLong()).also { it.write(0, txtBytes, 0, txtBytes.size) }
                 val error = DnsSd.INSTANCE.DNSServiceRegister(
                     outRef,

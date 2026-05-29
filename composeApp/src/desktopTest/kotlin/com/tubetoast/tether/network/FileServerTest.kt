@@ -62,7 +62,7 @@ class FileServerTest {
             .toFile()
             .also(cleanupPaths::add)
         val server = FileServer(
-            port = 0,
+            configuredPort = 0,
             downloadsDir = resolvedDownloads,
             trustedDeviceStore = DefaultTrustedDeviceStore(temp.dataStore),
             deviceKeyPair = DeviceKeyPair(configDir),

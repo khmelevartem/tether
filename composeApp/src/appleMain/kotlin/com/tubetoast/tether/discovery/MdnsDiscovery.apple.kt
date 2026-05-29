@@ -32,6 +32,7 @@ private val log = KydraLog.withTag(default = "MdnsDiscovery.Apple")
 // @Synchronized is a JVM-only annotation and is not available in Kotlin/Native.
 actual class MdnsDiscovery(
     private val store: DiscoveredDevicesStore,
+    private val fingerprint: String = "",
 ) : DeviceDiscovery {
     actual override val discoveredDevices: StateFlow<List<Device>> get() = store.devices
 
@@ -138,7 +139,7 @@ actual class MdnsDiscovery(
     }
 
     private fun txtRecordData(): NSData? {
-        val dict: Map<String, NSData> = TXT_PROPS.entries.associate { (k, v) ->
+        val dict: Map<String, NSData> = txtProps(fingerprint).entries.associate { (k, v) ->
             val bytes = v.encodeToByteArray()
             val nsData: NSData = bytes.usePinned { pinned ->
                 NSData.dataWithBytes(pinned.addressOf(0), bytes.size.toULong())

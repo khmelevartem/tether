@@ -51,7 +51,7 @@ class FileServerConcurrencyTest {
         val configDir = Files.createTempDirectory("tether-concurrency-test-keys").toFile().also(cleanupPaths::add)
         val temp = TempDataStore().also { cleanupTempStores += it }
         val server = FileServer(
-            port = 0,
+            configuredPort = 0,
             downloadsDir = downloadsDir,
             trustedDeviceStore = DefaultTrustedDeviceStore(temp.dataStore),
             deviceKeyPair = DeviceKeyPair(configDir),

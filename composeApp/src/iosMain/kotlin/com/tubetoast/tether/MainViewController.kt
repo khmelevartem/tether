@@ -45,9 +45,11 @@ fun MainViewController() = run {
                 val port = container.fileServer.start()
                 container.mdnsDiscovery.start(name, port = port)
                 container.nameRepublisher.start(scope)
+                container.rendezvousAnnouncer.start(scope)
             }
             onDispose {
                 container.nameRepublisher.stop()
+                container.rendezvousAnnouncer.stop()
                 scope.cancel()
                 container.mdnsDiscovery.stop()
                 container.fileServer.stop()

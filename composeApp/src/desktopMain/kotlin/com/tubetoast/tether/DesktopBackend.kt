@@ -49,9 +49,13 @@ internal suspend fun DesktopAppContainer.startBackendOrFail(): BackendHandle {
         throw BackendStartException.Mdns(e)
     }
     nameRepublisher.start(backendScope)
+    rendezvousAnnouncer.start(backendScope)
     return BackendHandle(port) {
         runCatching { nameRepublisher.stop() }.onFailure {
             log.warn { "nameRepublisher stop failed — ${it.message}" }
+        }
+        runCatching { rendezvousAnnouncer.stop() }.onFailure {
+            log.warn { "rendezvousAnnouncer stop failed — ${it.message}" }
         }
         runCatching { backendScope.cancel() }
         runCatching { mdnsDiscovery.stop() }.onFailure {

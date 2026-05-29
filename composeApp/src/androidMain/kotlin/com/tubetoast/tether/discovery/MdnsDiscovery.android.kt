@@ -18,6 +18,7 @@ private val log = KydraLog.withTag(default = "MdnsDiscovery.Android")
 actual class MdnsDiscovery(
     private val context: Context,
     private val store: DiscoveredDevicesStore,
+    private val fingerprint: String = "",
 ) : DeviceDiscovery {
     actual override val discoveredDevices: StateFlow<List<Device>> = store.devices
 
@@ -166,7 +167,7 @@ actual class MdnsDiscovery(
             serviceName = deviceName
             serviceType = SERVICE_TYPE
             this.port = port
-            TXT_PROPS.forEach { (k, v) -> setAttribute(k, v) }
+            txtProps(fingerprint).forEach { (k, v) -> setAttribute(k, v) }
         }
         log.debug { "Starting NSD: name=$deviceName, port=$port" }
         makeRegistrationListener().also { fresh ->
@@ -197,7 +198,7 @@ actual class MdnsDiscovery(
             serviceName = name
             serviceType = SERVICE_TYPE
             this.port = currentPort
-            TXT_PROPS.forEach { (k, v) -> setAttribute(k, v) }
+            txtProps(fingerprint).forEach { (k, v) -> setAttribute(k, v) }
         }
         makeRegistrationListener().also { fresh ->
             registrationListener = fresh

@@ -76,6 +76,7 @@ class TetherForegroundService : LifecycleService() {
             try {
                 mdnsDiscovery.start(deviceName, port)
                 container.nameRepublisher.start(lifecycleScope)
+                container.rendezvousAnnouncer.start(lifecycleScope)
                 runningMdnsDiscovery = mdnsDiscovery
                 log.info { "mDNS started: name=$deviceName port=$port" }
             } catch (e: Exception) {
@@ -108,6 +109,7 @@ class TetherForegroundService : LifecycleService() {
         val container = (application as AppContainerProvider).container
         container.transferActivityTracker.releaseAll()
         container.nameRepublisher.stop()
+        container.rendezvousAnnouncer.stop()
         runningMdnsDiscovery?.let { mdnsDiscovery ->
             try {
                 mdnsDiscovery.stop()

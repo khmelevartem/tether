@@ -13,9 +13,17 @@ import kotlinx.coroutines.flow.StateFlow
  */
 actual class MdnsDiscovery(
     store: DiscoveredDevicesStore,
+    fingerprint: String = "",
 ) : DeviceDiscovery {
     private val delegate: DeviceDiscovery =
-        if (isMacOsHost()) MdnsDiscoveryBonjour(store) else MdnsDiscoveryJmdns(store, Dispatchers.IO)
+        if (isMacOsHost()) {
+            MdnsDiscoveryBonjour(
+                store,
+                fingerprint,
+            )
+        } else {
+            MdnsDiscoveryJmdns(store, Dispatchers.IO, fingerprint)
+        }
 
     actual override val discoveredDevices: StateFlow<List<Device>> get() = delegate.discoveredDevices
 
