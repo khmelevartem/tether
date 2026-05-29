@@ -80,7 +80,7 @@ class PeerListComponent(
         clearPendingFiles()
     }
 
-    fun onDropRejectedDuringTransfer() {
+    fun onDropDuringActiveTransfer() {
         dropFeedbackJob?.cancel()
         dropFeedbackJob = scope.launch {
             mutableDropFeedback.value = true

@@ -210,7 +210,7 @@ class PeerListComponentTest {
     fun `dropFeedback is true during feedback window and false after`() = runTest {
         val component = buildComponent(emptyList(), coroutineScope = backgroundScope)
 
-        component.onDropRejectedDuringTransfer()
+        component.onDropDuringActiveTransfer()
 
         assertTrue(component.dropFeedback.value)
         advanceTimeBy(3_100L)
@@ -219,14 +219,14 @@ class PeerListComponentTest {
     }
 
     @Test
-    fun `second onDropRejectedDuringTransfer within window restarts the timer`() = runTest {
+    fun `second onDropDuringActiveTransfer within window restarts the timer`() = runTest {
         val component = buildComponent(emptyList(), coroutineScope = backgroundScope)
 
-        component.onDropRejectedDuringTransfer()
+        component.onDropDuringActiveTransfer()
         advanceTimeBy(2_500L)
         assertTrue(component.dropFeedback.value)
 
-        component.onDropRejectedDuringTransfer()
+        component.onDropDuringActiveTransfer()
         advanceTimeBy(2_500L)
         assertTrue(component.dropFeedback.value, "flag should still be true — second call restarted the window")
 
