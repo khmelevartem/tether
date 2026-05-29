@@ -46,13 +46,13 @@ Compose on macOS is delivered through the **Desktop JVM** target (mature Compose
 ## Costs accepted
 
 1. **Compose on iOS is younger than on Android.** Officially supported, but the iOS rendering path carries more risk of edge-case bugs than Android's. The locked visual identity already steers around the known Apple-Skia cost (no large-blur `Modifier.shadow()` — see [adr-visual-identity.md](adr-visual-identity.md)).
-2. **No native-component fallback.** Tether owns the full theme stack rather than borrowing platform-native components; a control that a native toolkit would provide for free is ours to build. This cost is accepted jointly with the custom-theme decision in [adr-visual-identity.md](adr-visual-identity.md).
+2. **No native-component fallback by default.** Tether owns the full theme stack rather than borrowing platform-native components; a control that a native toolkit would provide for free is ours to build. The cost is bounded on iOS: Compose Multiplatform embeds a native `UIView` / `UIViewController` inline via `UIKitView` / `UIKitViewController` ([CMP UIKit interop](https://www.jetbrains.com/help/kotlin-multiplatform-dev/compose-uikit-integration.html)), so when a genuinely native control is required it is dropped into the Compose tree as a single inlined view — not a forked UI. This cost is accepted jointly with the custom-theme decision in [adr-visual-identity.md](adr-visual-identity.md).
 3. **UI does not match each platform's native idiom by default.** A Tether screen looks like Tether on every platform, not like a stock iOS or Android screen. This is the intended trade for a single visual language, not a regression.
 
 ## Revisit if
 
 - **Compose on iOS materially breaks UX** in a way the test and smoke loop cannot mask, with no upstream fix in sight. A native UI on the Apple targets — driven by the existing UI-agnostic components — moves onto the table, scoped to Apple only.
-- **A platform-specific interaction genuinely cannot be expressed in Compose** (not merely "would look more native in SwiftUI"). The remedy is a per-platform composable or a narrow native entry point that still drives the shared component, not a parallel UI tree.
+- **A platform-specific interaction genuinely cannot be expressed in Compose** (not merely "would look more native in SwiftUI"). The remedy is a per-platform composable or — on iOS — a native `UIView` / `UIViewController` embedded inline via `UIKitView` / `UIKitViewController` that still drives the shared component, not a parallel UI tree.
 
 ## References
 
@@ -62,3 +62,4 @@ Compose on macOS is delivered through the **Desktop JVM** target (mature Compose
 - [adr-visual-identity.md](adr-visual-identity.md) — the single locked visual system this rendering choice reinforces.
 - [adr-macos-native-vs-jvm.md](adr-macos-native-vs-jvm.md) — macOS ships via Desktop JVM, not Kotlin/Native.
 - [vision.md](../../product/vision.md) — the cross-platform parity promise.
+- [CMP UIKit interop](https://www.jetbrains.com/help/kotlin-multiplatform-dev/compose-uikit-integration.html) — embedding native `UIView` / `UIViewController` inline in the Compose tree on iOS.
