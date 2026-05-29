@@ -2,9 +2,7 @@ package com.tubetoast.tether.presentation.dialogs
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,9 +11,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
@@ -24,13 +19,12 @@ import androidx.compose.ui.window.DialogProperties
 import com.tubetoast.tether.transfer.ByteFormatting
 import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.ui.components.BodyText
-import com.tubetoast.tether.ui.components.CancelTextButton
 import com.tubetoast.tether.ui.components.Checkbox
+import com.tubetoast.tether.ui.components.TetherButton
 import com.tubetoast.tether.ui.components.TitleText
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
 import com.tubetoast.tether.ui.theme.TetherTheme
-import com.tubetoast.tether.ui.theme.tetherMinTouchTarget
 
 @Composable
 fun LargeSelectionConfirmDialog(
@@ -103,40 +97,18 @@ fun LargeSelectionConfirmDialogContent(
             horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            CancelTextButton(
+            TetherButton(
+                label = "Cancel",
                 onClick = onDismiss,
                 contentDescription = "Cancel — discard selection",
             )
-            SendButton(
+            TetherButton(
+                label = "Send",
                 onClick = onConfirm,
-                sendLabel = "Send $fileCount files to ${peer.id}",
+                contentDescription = "Send $fileCount files to ${peer.id}",
                 modifier = Modifier.padding(start = spacing.md),
             )
         }
-    }
-}
-
-@Composable
-private fun SendButton(
-    onClick: () -> Unit,
-    sendLabel: String,
-    modifier: Modifier = Modifier,
-) {
-    val colors = TetherTheme.colors
-    Box(
-        modifier = modifier
-            .tetherMinTouchTarget()
-            .clickable(onClick = onClick)
-            .semantics {
-                role = Role.Button
-                contentDescription = sendLabel
-            },
-        contentAlignment = Alignment.Center,
-    ) {
-        BodyText(
-            text = "Send",
-            color = colors.accent,
-        )
     }
 }
 

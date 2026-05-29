@@ -19,8 +19,7 @@ import com.tubetoast.tether.transfer.TransferErrorReason
 import com.tubetoast.tether.ui.components.BodyText
 import com.tubetoast.tether.ui.components.DismissCloseButton
 import com.tubetoast.tether.ui.components.LabelText
-import com.tubetoast.tether.ui.components.RetryTextButton
-import com.tubetoast.tether.ui.components.ShowDetailsButton
+import com.tubetoast.tether.ui.components.TetherButton
 import com.tubetoast.tether.ui.components.TitleText
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
@@ -100,7 +99,8 @@ fun PeerCardReceived(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.End,
         ) {
-            ShowDetailsButton(
+            TetherButton(
+                label = "Show details →",
                 onClick = callbacks.onShowDetails,
                 contentDescription = "Show transfer details for $peerName",
             )
@@ -168,12 +168,14 @@ fun PeerCardError(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            ShowDetailsButton(
+            TetherButton(
+                label = "Show details →",
                 onClick = callbacks.onShowDetails,
                 contentDescription = "Show transfer details for $peerName",
             )
             if (state.reason != TransferErrorReason.ReceiverSuspended) {
-                RetryTextButton(
+                TetherButton(
+                    label = "Retry",
                     onClick = callbacks.onRetry,
                     contentDescription = retryDesc,
                     enabled = retryEnabled,
@@ -213,7 +215,8 @@ private fun TerminalShell(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End,
             ) {
-                ShowDetailsButton(
+                TetherButton(
+                    label = "Show details →",
                     onClick = onShowDetails,
                     contentDescription = "Show transfer details for $peerName",
                 )

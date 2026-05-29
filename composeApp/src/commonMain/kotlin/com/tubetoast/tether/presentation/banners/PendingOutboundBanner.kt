@@ -16,7 +16,7 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import com.tubetoast.tether.presentation.PendingFilesSummary
 import com.tubetoast.tether.transfer.ByteFormatting
 import com.tubetoast.tether.ui.components.BodyText
-import com.tubetoast.tether.ui.components.CancelTextButton
+import com.tubetoast.tether.ui.components.TetherButton
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
 import com.tubetoast.tether.ui.theme.TetherTheme
@@ -48,7 +48,8 @@ fun PendingOutboundBanner(
             text = text,
             modifier = Modifier.weight(1f),
         )
-        CancelTextButton(
+        TetherButton(
+            label = "Cancel",
             onClick = onCancel,
             contentDescription = "Cancel pending transfer",
         )

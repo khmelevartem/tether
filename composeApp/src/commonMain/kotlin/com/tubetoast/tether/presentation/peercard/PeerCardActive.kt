@@ -24,10 +24,9 @@ import androidx.compose.ui.unit.dp
 import com.tubetoast.tether.presentation.transfer.PeerTransferState
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.ui.components.ByteProgressRow
-import com.tubetoast.tether.ui.components.CancelTextButton
 import com.tubetoast.tether.ui.components.CurrentFileLabel
-import com.tubetoast.tether.ui.components.ShowDetailsButton
 import com.tubetoast.tether.ui.components.SkipCountBadge
+import com.tubetoast.tether.ui.components.TetherButton
 import com.tubetoast.tether.ui.components.TitleText
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
@@ -138,7 +137,8 @@ private fun ActiveCardShell(
                 text = displayName,
                 modifier = Modifier.weight(1f),
             )
-            CancelTextButton(
+            TetherButton(
+                label = "Cancel",
                 onClick = onCancel,
                 contentDescription = cancelDescription,
             )
@@ -173,7 +173,8 @@ private fun ActiveCardShell(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             trailingContent()
-            ShowDetailsButton(
+            TetherButton(
+                label = "Show details →",
                 onClick = onShowDetails,
                 contentDescription = showDetailsDescription,
             )
