@@ -11,9 +11,7 @@
     <!-- Foreground service hosting Ktor FileServer + NSD discovery so the Android peer
          stays reachable while the app is backgrounded. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <!-- dataSync: used for background network transfers. connectedDevice was tried but suppresses
-         the FGS notification on Android 14+ without Bluetooth/NFC/USB hardware involvement.
-         Android 15+ applies a 6h/day cumulative limit to dataSync — tracked in issue #59. -->
+    <!-- dataSync FGS type for Tether's Ktor file server + mDNS hosting. See docs/knowledge/android-fgs.md. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />

@@ -117,7 +117,7 @@
 - [ ] `LiveData` vs `StateFlow` — когда что, `asLiveData()`
 
 ### Background work
-- [ ] `WorkManager` vs `ForegroundService` vs `AlarmManager` — когда что
+- [x] `WorkManager` vs `ForegroundService` vs `AlarmManager` — когда что
 - [ ] `WorkManager` — guaranteed execution, Doze mode, цепочки, constraints
 - [ ] Doze mode & App Standby — как влияют на background
 - [ ] Как WorkManager использует `JobScheduler` под капотом
