@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,7 +33,6 @@ import com.tubetoast.tether.presentation.peer.Peer
 import com.tubetoast.tether.presentation.peercard.PeerCard
 import com.tubetoast.tether.presentation.peercard.PeerCardCallbacks
 import com.tubetoast.tether.presentation.sheets.MobilePickerChooserSheet
-import com.tubetoast.tether.presentation.sheets.PickerKind
 import com.tubetoast.tether.presentation.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.toPeerIdentity
@@ -45,23 +45,52 @@ import com.tubetoast.tether.ui.preview.TransferPreviewFixtures
 import com.tubetoast.tether.ui.theme.TetherTheme
 
 @Composable
-fun PeerListScreen(
-    component: PeerListComponent,
-    peerCallbacksFor: @Composable (PeerIdentity) -> PeerCardCallbacks,
-    onPickerPick: (PeerIdentity, PickerKind) -> Unit,
-    modifier: Modifier = Modifier,
-    autoSendEnabledFor: @Composable (PeerIdentity) -> Boolean = { false },
-    hasPending: Boolean = false,
-) {
+fun PeerListScreen(component: PeerListComponent, modifier: Modifier = Modifier) {
     val state by component.state.subscribeAsState()
 
     PeerListContent(
         rows = state.rows,
-        peerCallbacksFor = peerCallbacksFor,
-        autoSendEnabledFor = autoSendEnabledFor,
-        onPickerPick = onPickerPick,
-        hasPending = hasPending,
+        peerCallbacksFor = { peer -> rememberPeerCallbacks(peer, component) },
+        autoSendEnabledFor = { peer ->
+            component
+                .peerTransferComponent(peer)
+                ?.observeAutoSend()
+                ?.collectAsState(initial = false)
+                ?.value
+                ?: false
+        },
         modifier = modifier,
+    )
+}
+
+@Composable
+private fun rememberPeerCallbacks(
+    peer: PeerIdentity,
+    component: PeerListComponent,
+): PeerCardCallbacks {
+    val peerComponent = component.peerTransferComponent(peer) ?: return PeerCardCallbacks(
+        onToggleExpand = {},
+        onToggleAutoSend = {},
+        onCancel = {},
+        onDismiss = {},
+        onRetry = {},
+        onShowDetails = {},
+        onOpenFiles = {},
+        onClick = null,
+    )
+    return PeerCardCallbacks(
+        onToggleExpand = peerComponent::toggleExpanded,
+        onToggleAutoSend = peerComponent::setAutoSend,
+        onCancel = peerComponent::onCancel,
+        onDismiss = peerComponent::onDismiss,
+        onRetry = peerComponent::onRetry,
+        onShowDetails = peerComponent::onShowDetails,
+        onOpenFiles = {
+            // TODO(#192): Android — Intent.ACTION_VIEW to FileProvider URI for received folder
+            // TODO(#193): Desktop — Desktop.open() / xdg-open / Finder reveal
+            // TODO(#194): iOS — UIApplication.shared.open(Files-app deep link); fallback hint per UX brief §State 6
+        },
+        onClick = peerComponent::onCardClick,
     )
 }
 
@@ -69,10 +98,8 @@ fun PeerListScreen(
 fun PeerListContent(
     rows: List<PeerRow>,
     peerCallbacksFor: @Composable (PeerIdentity) -> PeerCardCallbacks,
-    onPickerPick: (PeerIdentity, PickerKind) -> Unit,
     modifier: Modifier = Modifier,
     autoSendEnabledFor: @Composable (PeerIdentity) -> Boolean = { false },
-    hasPending: Boolean = false,
     showMobileChooser: Boolean = IsMobileChooserPlatform,
 ) {
     val spacing = TetherTheme.spacing
@@ -82,11 +109,11 @@ fun PeerListContent(
     val sheetState = rememberModalBottomSheetState(
         initialDetent = SheetDetent.Hidden,
     )
-    var triggerPeer by remember { mutableStateOf<PeerIdentity?>(null) }
+    var triggerClick by remember { mutableStateOf<(() -> Unit)?>(null) }
 
     LaunchedEffect(sheetState.currentDetent) {
         if (sheetState.currentDetent == SheetDetent.Hidden) {
-            triggerPeer = null
+            triggerClick = null
         }
     }
 
@@ -108,19 +135,15 @@ fun PeerListContent(
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 items(rows, key = { it.peer.device.id }) { row ->
                     val peer = row.peer.id
+                    val callbacks = peerCallbacksFor(peer)
                     val tapAction: (() -> Unit)? = when {
-                        hasPending -> peerCallbacksFor(peer).let { cbs -> { cbs.onClick?.invoke() } }
                         row.transferState is PeerTransferState.Idle && showMobileChooser -> (
                             {
-                                triggerPeer = peer
+                                triggerClick = callbacks.onClick
                                 sheetState.targetDetent = SheetDetent.FullyExpanded
                             }
                         )
-                        row.transferState is PeerTransferState.Idle -> (
-                            {
-                                onPickerPick(peer, PickerKind.Files)
-                            }
-                        )
+                        callbacks.onClick != null -> callbacks.onClick
                         else -> null
                     }
                     val cardModifier = Modifier
@@ -133,11 +156,7 @@ fun PeerListContent(
                                     .clickable(onClick = tapAction)
                                     .semantics {
                                         role = Role.Button
-                                        contentDescription = if (hasPending) {
-                                            "Send to ${row.peer.device.name}"
-                                        } else {
-                                            "Pick files to send to ${row.peer.device.name}"
-                                        }
+                                        contentDescription = "Tap to interact with ${row.peer.device.name}"
                                     }
                             } else {
                                 Modifier
@@ -147,7 +166,7 @@ fun PeerListContent(
                         state = row.transferState,
                         isOnline = row.peer.isOnline,
                         device = row.peer.device,
-                        callbacks = peerCallbacksFor(peer),
+                        callbacks = callbacks,
                         modifier = cardModifier,
                         isAutoSendEnabled = autoSendEnabledFor(peer),
                     )
@@ -159,15 +178,15 @@ fun PeerListContent(
     MobilePickerChooserSheet(
         sheetState = sheetState,
         onPickPhotos = {
-            triggerPeer?.let { onPickerPick(it, PickerKind.Photos) }
+            triggerClick?.invoke()
             sheetState.targetDetent = SheetDetent.Hidden
         },
         onPickFiles = {
-            triggerPeer?.let { onPickerPick(it, PickerKind.Files) }
+            triggerClick?.invoke()
             sheetState.targetDetent = SheetDetent.Hidden
         },
         onPickFolder = {
-            triggerPeer?.let { onPickerPick(it, PickerKind.Folder) }
+            triggerClick?.invoke()
             sheetState.targetDetent = SheetDetent.Hidden
         },
         onDismiss = { sheetState.targetDetent = SheetDetent.Hidden },
@@ -181,7 +200,6 @@ private fun PreviewDiscovering(@PreviewParameter(Themes::class) dark: Boolean) =
         PeerListContent(
             rows = emptyList(),
             peerCallbacksFor = { previewCallbacks() },
-            onPickerPick = { _, _ -> },
         )
     }
 
@@ -198,7 +216,6 @@ private fun PreviewSingleDevice(@PreviewParameter(Themes::class) dark: Boolean) 
                 ),
             ),
             peerCallbacksFor = { previewCallbacks() },
-            onPickerPick = { _, _ -> },
         )
     }
 
@@ -218,11 +235,10 @@ private fun PreviewMultipleDevices(@PreviewParameter(Themes::class) dark: Boolea
                 )
             },
             peerCallbacksFor = { previewCallbacks() },
-            onPickerPick = { _, _ -> },
         )
     }
 
-@Preview(name = "PeerList — pending (banner in BannersSection above)")
+@Preview(name = "PeerList — pending (tap any device to send)")
 @Composable
 private fun PreviewPendingState(@PreviewParameter(Themes::class) dark: Boolean) =
     PreviewSurface(darkTheme = dark) {
@@ -234,9 +250,7 @@ private fun PreviewPendingState(@PreviewParameter(Themes::class) dark: Boolean) 
                     transferState = TransferPreviewFixtures.idleCollapsed,
                 ),
             ),
-            hasPending = true,
             peerCallbacksFor = { previewCallbacks() },
-            onPickerPick = { _, _ -> },
         )
     }
 

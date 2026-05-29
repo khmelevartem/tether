@@ -77,7 +77,9 @@ fun PeerList(component: PeerListComponent) {
 
 Events are plain method calls on the Component. No `LaunchedEffect` business logic, no event channels through the Composable.
 
-For states that are conceptually "empty or set", use an explicit empty sentinel on the state type (e.g. `PendingFilesSummary.NONE`) and keep `Value<T>` non-null. `Value<T>` has a non-null bound (`T : Any`); modelling absence as `null` and falling back to `StateFlow<T?>` is not the project convention.
+**`MutableStateFlow` / `MutableValue` updates always go through `update { ... }`.** Direct `.value = …` assignment is forbidden in new code. `update` is an atomic read-modify-write that eliminates lost-update races.
+
+**Components do not own domain logic.** Domain lives in the domain layer in plain Kotlin without framework dependencies. Presentation logic is restricted to mapping domain data to user-facing representation and relaying user actions to the appropriate domain class. Litmus test: if the UI is rewritten ground-up and the logic must still exist — it belongs in the domain layer, not the presentation layer.
 
 ## Long-lived state lives outside Components
 
