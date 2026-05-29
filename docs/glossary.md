@@ -25,6 +25,7 @@ Engineering concepts. The vocabulary [`architect`](../.claude/agents/architect.m
 - **Peer** — a device visible through discovery, regardless of pairing status. _Avoid:_ node, neighbour; device when pairing status matters (use **Trusted device** then).
 - **FileServer** — the per-device HTTP server that accepts incoming transfers. _Avoid:_ receiver, listener.
 - **FileClient** — the per-device HTTP client that initiates outgoing transfers. _Avoid:_ sender, uploader.
+- **Fingerprint** — a per-install random opaque string carried in `InfoDto` and mDNS TXT records, used for self-suppression in Layer 1 mDNS and Layer 2 `/hello`; interim placeholder until pairing identity (#11) lands. (see [discovery.md §Identity and self-suppression](engineering/discovery.md#identity-and-self-suppression))
 - **Source set** — a Kotlin Multiplatform compilation source set; platform-to-target mapping and hierarchy live in [architecture-principles.md](engineering/architecture-principles.md). _Avoid:_ saying «JVM» when the audience is end-users — say *Desktop* instead.
 - **Composition root** — the platform entry point that constructs the DI container; by extension, the `AppContainer` instance it constructs. (see [dependency-injection.md](engineering/dependency-injection.md))
 - **Container** — the DI container that holds singletons for one process lifetime; the construct that lives at the composition root.

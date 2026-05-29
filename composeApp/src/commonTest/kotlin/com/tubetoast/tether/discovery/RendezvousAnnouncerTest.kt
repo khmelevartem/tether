@@ -27,6 +27,24 @@ class RendezvousAnnouncerTest {
         }
     }
 
+    private fun failThenSucceedClient(
+        failDeviceName: String,
+        sent: MutableList<Pair<Device, InfoDto>> = mutableListOf(),
+    ): Pair<FileClient, MutableList<Pair<Device, InfoDto>>> {
+        var failedOnce = false
+        val client = object : FileClient(HttpClient(MockEngine { respond("", HttpStatusCode.OK) })) {
+            override suspend fun sendHello(target: Device, ownInfo: InfoDto): Boolean {
+                sent += target to ownInfo
+                if (target.name == failDeviceName && !failedOnce) {
+                    failedOnce = true
+                    return false
+                }
+                return true
+            }
+        }
+        return client to sent
+    }
+
     private val ownInfo = InfoDto(
         alias = "Me",
         fingerprint = "own-fp",
@@ -86,6 +104,34 @@ class RendezvousAnnouncerTest {
         assertEquals(2, sentHellos.size)
         assertTrue(sentHellos.any { it.first.name == "PeerA" })
         assertTrue(sentHellos.any { it.first.name == "PeerB" })
+        a.stop()
+    }
+
+    @Test
+    fun `retries hello when first attempt fails and device is re-emitted`() {
+        val store = DiscoveredDevicesStore()
+        val scope = TestScope(UnconfinedTestDispatcher())
+        val (client, sent) = failThenSucceedClient("PeerX")
+        val a = RendezvousAnnouncer(store = store, client = client, ownInfo = { ownInfo })
+        a.start(scope)
+
+        val deviceX = Device(name = "PeerX", host = "10.0.0.1", port = 5001)
+        store.upsert(deviceX)
+        scope.advanceUntilIdle()
+        // First attempt failed — PeerX not yet acked.
+        assertEquals(1, sent.count { it.first.name == "PeerX" }, "should have attempted PeerX once")
+
+        // Trigger re-emission by upserting another device; collector sees all current devices again.
+        store.upsert(Device(name = "PeerB", host = "10.0.0.2", port = 5002))
+        scope.advanceUntilIdle()
+        // Second attempt for PeerX succeeds — it is now acked.
+        assertEquals(2, sent.count { it.first.name == "PeerX" }, "should retry PeerX on re-emission")
+
+        // Subsequent re-emissions must not cause another send for PeerX.
+        store.upsert(Device(name = "PeerC", host = "10.0.0.3", port = 5003))
+        scope.advanceUntilIdle()
+        assertEquals(2, sent.count { it.first.name == "PeerX" }, "acked device must not be retried again")
+
         a.stop()
     }
 }

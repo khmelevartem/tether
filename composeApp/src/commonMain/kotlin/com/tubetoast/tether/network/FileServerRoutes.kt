@@ -74,7 +74,16 @@ internal fun Application.installFileServerRoutes(
     routing {
         get("/health") { call.respond(HttpStatusCode.OK, "Tether OK") }
         post("/hello") {
-            val body = call.receive<InfoDto>()
+            val body = try {
+                call.receive<InfoDto>()
+            } catch (_: Exception) {
+                call.respond(HttpStatusCode.BadRequest, mapOf("error" to "invalid_body"))
+                return@post
+            }
+            if (body.port !in 1..65535) {
+                call.respond(HttpStatusCode.BadRequest, mapOf("error" to "invalid_port"))
+                return@post
+            }
             if (body.fingerprint == ownFingerprint()) {
                 call.respond(HttpStatusCode.OK, emptyMap<String, String>())
                 return@post

@@ -101,7 +101,7 @@ On receipt: build a `Device` from `(remoteAddress, body.port, body.alias, body.f
 
 ### Self-suppression
 
-Drop `POST /hello` whose `fingerprint` matches the device's own. Until stable fingerprints exist, drop by `(alias, remoteAddress, port)` matching the device's own announced tuple, with an explicit code-side TODO referencing [#11](https://github.com/khmelevartem/tether/issues/11).
+Drop `POST /hello` whose `fingerprint` matches the device's own.
 
 ## Layer 3a — HTTP-subnet-scan fallback
 

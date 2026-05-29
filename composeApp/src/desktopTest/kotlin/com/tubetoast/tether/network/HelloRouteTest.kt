@@ -115,6 +115,69 @@ class HelloRouteTest {
     }
 
     @Test
+    fun `malformed hello body returns 400 and route stays alive`() {
+        val store = DiscoveredDevicesStore()
+        val server = newServer(ownFingerprint = "mine", store = store)
+        val port = server.start()
+        val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
+        try {
+            runBlocking {
+                // Non-JSON body.
+                val badResponse = client.post("http://localhost:$port/hello") {
+                    contentType(ContentType.Application.Json)
+                    setBody("not json at all")
+                }
+                assertTrue(
+                    badResponse.status.value in 400..499,
+                    "malformed body must yield 4xx, got ${badResponse.status}",
+                )
+
+                // Route must still accept a valid request afterwards.
+                val goodResponse = client.post("http://localhost:$port/hello") {
+                    contentType(ContentType.Application.Json)
+                    setBody(
+                        InfoDto(
+                            alias = "PeerOk",
+                            fingerprint = "other-fp",
+                            port = 5000,
+                            deviceType = DeviceType.Desktop,
+                        ),
+                    )
+                }
+                assertEquals(HttpStatusCode.OK, goodResponse.status, "route must accept valid request after bad one")
+            }
+            assertTrue(store.devices.value.isNotEmpty(), "valid request must upsert device")
+        } finally {
+            client.close()
+        }
+    }
+
+    @Test
+    fun `hello with out-of-range port returns 400`() {
+        val store = DiscoveredDevicesStore()
+        val server = newServer(ownFingerprint = "mine", store = store)
+        val port = server.start()
+        val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
+        try {
+            runBlocking {
+                val response = client.post("http://localhost:$port/hello") {
+                    contentType(ContentType.Application.Json)
+                    setBody(
+                        InfoDto(alias = "BadPort", fingerprint = "other-fp", port = 0, deviceType = DeviceType.Desktop),
+                    )
+                }
+                assertTrue(
+                    response.status.value in 400..499,
+                    "port=0 must yield 4xx, got ${response.status}",
+                )
+            }
+            assertTrue(store.devices.value.isEmpty(), "invalid port must not upsert device")
+        } finally {
+            client.close()
+        }
+    }
+
+    @Test
     fun `hello uses TCP remoteAddress not body ip for device host`() {
         val store = DiscoveredDevicesStore()
         val server = newServer(ownFingerprint = "mine", store = store)

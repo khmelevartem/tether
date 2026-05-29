@@ -4,6 +4,8 @@ import com.tubetoast.tether.network.FileClient
 import com.tubetoast.tether.protocol.InfoDto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.concurrent.Volatile
 
@@ -13,7 +15,7 @@ class RendezvousAnnouncer(
     private val ownInfo: () -> InfoDto,
 ) {
     @Volatile private var collectJob: Job? = null
-    private val ackedIds = mutableSetOf<String>()
+    private val ackedIds = MutableStateFlow(emptySet<String>())
 
     fun start(scope: CoroutineScope) {
         if (collectJob != null) return
@@ -21,9 +23,9 @@ class RendezvousAnnouncer(
             store.devices.collect { devices ->
                 val info = ownInfo()
                 for (device in devices) {
-                    if (device.id in ackedIds) continue
+                    if (device.id in ackedIds.value) continue
                     val ok = client.sendHello(device, info)
-                    if (ok) ackedIds += device.id
+                    if (ok) ackedIds.update { it + device.id }
                 }
             }
         }
@@ -32,6 +34,6 @@ class RendezvousAnnouncer(
     fun stop() {
         collectJob?.cancel()
         collectJob = null
-        ackedIds.clear()
+        ackedIds.value = emptySet()
     }
 }

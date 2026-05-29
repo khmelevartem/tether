@@ -75,6 +75,44 @@ class MdnsDiscoveryMultiInterfaceTest {
         d.stop()
         assertEquals(0, d.instanceCount, "all JmDNS instances must be torn down after stop()")
     }
+
+    @Test
+    fun `diffInterfaces brings up new interface`() = runBlocking {
+        val addrA = fakeAddr("127.0.0.1")
+        val addrB = fakeAddr("127.0.0.2")
+        val d = discovery(addresses = listOf("lo0" to addrA))
+        try {
+            d.start("DiffUpTest", 29400)
+            withTimeout(5_000) { while (d.instanceCount < 1) delay(50) }
+            assertEquals(1, d.instanceCount)
+
+            d.fakeAddresses = listOf("lo0" to addrA, "lo1" to addrB)
+            d.diffInterfaces()
+
+            assertEquals(2, d.instanceCount, "new interface must be brought up by diffInterfaces")
+        } finally {
+            d.stop()
+        }
+    }
+
+    @Test
+    fun `diffInterfaces tears down removed interface`() = runBlocking {
+        val addrA = fakeAddr("127.0.0.1")
+        val addrB = fakeAddr("127.0.0.2")
+        val d = discovery(addresses = listOf("lo0" to addrA, "lo1" to addrB))
+        try {
+            d.start("DiffDownTest", 29500)
+            withTimeout(5_000) { while (d.instanceCount < 2) delay(50) }
+            assertEquals(2, d.instanceCount)
+
+            d.fakeAddresses = listOf("lo0" to addrA)
+            d.diffInterfaces()
+
+            assertEquals(1, d.instanceCount, "removed interface must be torn down by diffInterfaces")
+        } finally {
+            d.stop()
+        }
+    }
 }
 
 /**
@@ -84,8 +122,10 @@ internal class TestMdnsDiscoveryJmdns(
     store: DiscoveredDevicesStore,
     requeryContext: kotlin.coroutines.CoroutineContext,
     fingerprint: String,
-    private val fakeAddresses: List<Pair<String, InetAddress>>,
+    addresses: List<Pair<String, InetAddress>>,
 ) : MdnsDiscoveryJmdns(store, requeryContext, fingerprint) {
+    var fakeAddresses: List<Pair<String, InetAddress>> = addresses
+
     val instanceCount: Int get() = synchronized(this) { instances.size }
 
     override fun bindAddresses(): List<Pair<String, InetAddress>> = fakeAddresses

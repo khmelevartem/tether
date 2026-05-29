@@ -75,8 +75,8 @@ internal open class MdnsDiscoveryJmdns(
             var requeryInterval = REQUERY_INITIAL_INTERVAL_MS
             var ifaceTick = 0L
             while (isActive) {
-                delay(REQUERY_INITIAL_INTERVAL_MS)
-                ifaceTick += REQUERY_INITIAL_INTERVAL_MS
+                delay(requeryInterval)
+                ifaceTick += requeryInterval
 
                 synchronized(this@MdnsDiscoveryJmdns) {
                     for (jmdns in instances.values) {
@@ -176,7 +176,7 @@ internal open class MdnsDiscoveryJmdns(
     }
 
     @Synchronized
-    private fun diffInterfaces() {
+    internal fun diffInterfaces() {
         val current = bindAddresses().toSet()
         val existing = instances.keys.toSet()
         val added = current - existing
