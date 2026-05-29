@@ -206,6 +206,10 @@ internal open class MdnsDiscoveryJmdns(
                     log.warn { "invalid port ${info.port} for '${event.name}', skipping" }
                     return
                 }
+                // Self-suppression by name first: TXT records (carrying `fp`) arrive in a separate mDNS
+                // transaction from A-records, so the early serviceResolved callbacks often expose
+                // peerFp == null while the announce is unambiguously ours.
+                if (event.name == deviceName) return
                 val peerFp = info.getPropertyString("fp")
                 if (peerFp != null && peerFp == fingerprint) return
                 val ipv4 = resolveIPv4(info, event.name) ?: return
