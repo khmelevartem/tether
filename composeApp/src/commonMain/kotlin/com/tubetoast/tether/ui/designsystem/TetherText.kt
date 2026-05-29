@@ -49,6 +49,24 @@ fun BodyText(
 }
 
 @Composable
+fun BodyLargeText(
+    text: String,
+    modifier: Modifier = Modifier,
+    color: Color = Color.Unspecified,
+    maxLines: Int = Int.MAX_VALUE,
+    overflow: TextOverflow = TextOverflow.Clip,
+) {
+    val resolvedColor = if (color == Color.Unspecified) TetherTheme.colors.textPrimary else color
+    BasicText(
+        text = text,
+        style = TetherTheme.typography.bodyLarge.copy(color = resolvedColor),
+        modifier = modifier,
+        maxLines = maxLines,
+        overflow = overflow,
+    )
+}
+
+@Composable
 fun LabelText(
     text: String,
     modifier: Modifier = Modifier,
@@ -108,6 +126,7 @@ private fun PreviewTetherTextScales(@PreviewParameter(Themes::class) dark: Boole
     PreviewSurface(darkTheme = dark) {
         Column {
             TitleText(text = "Title text (titleMedium)")
+            BodyLargeText(text = "Body large text (bodyLarge)")
             BodyText(text = "Body text (bodyMedium)")
             LabelText(text = "Label text (labelSmall)")
             NumericText(text = "42.0 MB/s (numeric)")

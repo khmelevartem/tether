@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,6 +25,7 @@ import com.composables.core.ModalBottomSheet
 import com.composables.core.ModalBottomSheetState
 import com.composables.core.Scrim
 import com.composables.core.Sheet
+import com.tubetoast.tether.ui.designsystem.BodyLargeText
 import com.tubetoast.tether.ui.designsystem.TitleText
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
@@ -126,7 +126,6 @@ private fun PickerRow(
 ) {
     val colors = TetherTheme.colors
     val spacing = TetherTheme.spacing
-    val typography = TetherTheme.typography
 
     Row(
         modifier = modifier
@@ -147,10 +146,7 @@ private fun PickerRow(
                 .tint(colors.textPrimary),
             modifier = Modifier.size(24.dp),
         )
-        BasicText(
-            text = label,
-            style = typography.bodyLarge.copy(color = colors.textPrimary),
-        )
+        BodyLargeText(text = label)
     }
 }
 
