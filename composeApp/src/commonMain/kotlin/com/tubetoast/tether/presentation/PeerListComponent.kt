@@ -1,6 +1,5 @@
 package com.tubetoast.tether.presentation
 
-import com.arkivanov.decompose.Cancellation
 import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.decompose.childContext
 import com.arkivanov.decompose.value.MutableValue
@@ -22,13 +21,10 @@ class PeerListComponent(
     private val peerTransferComponentFactory: (ComponentContext, Peer) -> PeerTransferComponent,
     coroutineScope: CoroutineScope = componentContext.coroutineScope(),
 ) : ComponentContext by componentContext {
-    private val scope = coroutineScope
-
     private val _state = MutableValue(PeerListState.empty())
     val state: Value<PeerListState> = _state
 
     private val children = mutableMapOf<PeerIdentity, PeerTransferComponent>()
-    private val subscriptions = mutableMapOf<PeerIdentity, Cancellation>()
     private val seenPeers = mutableMapOf<PeerIdentity, Peer>()
     private var onlineIds: Set<PeerIdentity> = emptySet()
 
@@ -40,7 +36,7 @@ class PeerListComponent(
                 ensureChildrenFor(peers)
                 evictOfflineIdlePeers()
                 rebuildState()
-            }.launchIn(scope)
+            }.launchIn(coroutineScope)
     }
 
     fun peerTransferComponent(peer: PeerIdentity): PeerTransferComponent? = children[peer]
@@ -48,12 +44,7 @@ class PeerListComponent(
     private fun ensureChildrenFor(peers: List<Peer>) {
         peers.forEach { peer ->
             if (peer.id !in children) {
-                val child = peerTransferComponentFactory(childContext(peer.id.id), peer)
-                children[peer.id] = child
-                subscriptions[peer.id] = child.state.subscribe {
-                    evictOfflineIdlePeers()
-                    rebuildState()
-                }
+                children[peer.id] = peerTransferComponentFactory(childContext(peer.id.id), peer)
             }
         }
     }
@@ -62,10 +53,7 @@ class PeerListComponent(
         val toRemove = children.keys.filter { id ->
             id !in onlineIds && children[id]?.state?.value is PeerTransferState.Idle
         }
-        toRemove.forEach { id ->
-            subscriptions.remove(id)?.cancel()
-            children.remove(id)
-        }
+        toRemove.forEach { id -> children.remove(id) }
     }
 
     private fun rebuildState() {

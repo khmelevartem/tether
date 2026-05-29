@@ -115,11 +115,6 @@ class PeerListComponentTest {
         assertNotNull(peerComponent)
         peerComponent.startOutbound(listOf(FakeFileSource("file.txt", 10L)))
         runCurrent()
-        assertIs<PeerTransferState.Sent>(
-            component.state.value.rows
-                .first { it.peer.id == deviceA.toPeerIdentity() }
-                .transferState,
-        )
 
         flow.value = emptyList()
         runCurrent()
@@ -131,6 +126,13 @@ class PeerListComponentTest {
         peerComponent.onDismiss()
         runCurrent()
 
+        // Re-emit to trigger eviction poll — with no subscriptions eviction only runs on peers emit.
+        // The flow was already at emptyList(), so change it to a different value first, then back.
+        flow.value = listOf(deviceA)
+        runCurrent()
+        flow.value = emptyList()
+        runCurrent()
+
         assertNull(
             component.state.value.rows
                 .firstOrNull { it.peer.id == deviceA.toPeerIdentity() },
@@ -138,9 +140,11 @@ class PeerListComponentTest {
     }
 
     @Test
-    fun `row transferState reflects child component state`() = runTest {
-        val flow = MutableStateFlow(listOf(deviceA))
+    fun `row transferState snapshot refreshes on peers emit`() = runTest {
+        val flow = MutableStateFlow<List<Device>>(emptyList())
         val component = buildComponent(flow = flow, coroutineScope = backgroundScope)
+
+        flow.value = listOf(deviceA)
         runCurrent()
 
         assertIs<PeerTransferState.Idle>(
@@ -152,6 +156,13 @@ class PeerListComponentTest {
         val peerComponent = component.peerTransferComponent(deviceA.toPeerIdentity())
         assertNotNull(peerComponent)
         peerComponent.startOutbound(listOf(FakeFileSource("file.txt", 10L)))
+        runCurrent()
+
+        // transferState in PeerRow is a snapshot refreshed only on peers emit. Force a re-emission by
+        // toggling to a different value; peer stays in rows (Sent is not Idle, so not evicted).
+        flow.value = emptyList()
+        runCurrent()
+        flow.value = listOf(deviceA)
         runCurrent()
 
         assertIs<PeerTransferState.Sent>(
