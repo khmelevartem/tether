@@ -27,14 +27,14 @@ private val IPV4_REGEX = Regex("""\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}""")
 
 internal const val REQUERY_INITIAL_INTERVAL_MS = 5_000L
 private const val REQUERY_MAX_INTERVAL_MS = 60_000L
-private const val IFACE_POLL_INTERVAL_MS = 5_000L
+private const val INTERFACE_POLL_INTERVAL_MS = 5_000L
 private val log = KydraLog.withTag(default = "MdnsDiscovery.JmDNS")
 
 /**
  * JmDNS-based discovery for non-macOS JVM hosts (Linux, Windows).
  *
  * Binds one JmDNS instance per non-loopback, non-link-local IPv4 interface address.
- * A background poller checks for interface changes every [IFACE_POLL_INTERVAL_MS] ms and
+ * A background poller checks for interface changes every [INTERFACE_POLL_INTERVAL_MS] ms and
  * tears down stale instances or creates new ones.
  *
  * JmDNS stops querying ~675 ms after `addServiceListener`; the next refresh is
@@ -89,7 +89,7 @@ internal open class MdnsDiscoveryJmdns(
 
         discoveryScope.launch {
             while (isActive) {
-                delay(IFACE_POLL_INTERVAL_MS)
+                delay(INTERFACE_POLL_INTERVAL_MS)
                 diffInterfaces()
             }
         }
@@ -131,11 +131,11 @@ internal open class MdnsDiscoveryJmdns(
             .getNetworkInterfaces()
             ?.asSequence()
             ?.filter { it.isUp && !it.isLoopback }
-            ?.flatMap { iface ->
-                iface.inetAddresses
+            ?.flatMap { networkInterface ->
+                networkInterface.inetAddresses
                     .asSequence()
                     .filter { it is Inet4Address && !it.isLinkLocalAddress && !it.isLoopbackAddress }
-                    .map { iface.name to it }
+                    .map { networkInterface.name to it }
             }?.toList()
             ?: emptyList()
     } catch (e: java.net.SocketException) {
@@ -206,12 +206,12 @@ internal open class MdnsDiscoveryJmdns(
                     log.warn { "invalid port ${info.port} for '${event.name}', skipping" }
                     return
                 }
-                // Self-suppression by name first: TXT records (carrying `fp`) arrive in a separate mDNS
-                // transaction from A-records, so the early serviceResolved callbacks often expose
-                // peerFp == null while the announce is unambiguously ours.
+                // Self-suppression by name first: TXT records (carrying the fingerprint) arrive in a
+                // separate mDNS transaction from A-records, so the early serviceResolved callbacks often
+                // expose a null peer fingerprint while the announce is unambiguously ours.
                 if (event.name == deviceName) return
-                val peerFp = info.getPropertyString("fp")
-                if (peerFp != null && peerFp == fingerprint) return
+                val peerFingerprint = info.getPropertyString("fp")
+                if (peerFingerprint != null && peerFingerprint == fingerprint) return
                 val ipv4 = resolveIPv4(info, event.name) ?: return
                 val device = Device(
                     name = event.name,
