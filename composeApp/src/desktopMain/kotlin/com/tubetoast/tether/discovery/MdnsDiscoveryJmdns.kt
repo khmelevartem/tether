@@ -73,11 +73,8 @@ internal open class MdnsDiscoveryJmdns(
 
         discoveryScope.launch {
             var requeryInterval = REQUERY_INITIAL_INTERVAL_MS
-            var ifaceTick = 0L
             while (isActive) {
                 delay(requeryInterval)
-                ifaceTick += requeryInterval
-
                 synchronized(this@MdnsDiscoveryJmdns) {
                     for (jmdns in instances.values) {
                         try {
@@ -87,11 +84,13 @@ internal open class MdnsDiscoveryJmdns(
                     }
                 }
                 requeryInterval = minOf(requeryInterval * 2, REQUERY_MAX_INTERVAL_MS)
+            }
+        }
 
-                if (ifaceTick >= IFACE_POLL_INTERVAL_MS) {
-                    ifaceTick = 0
-                    diffInterfaces()
-                }
+        discoveryScope.launch {
+            while (isActive) {
+                delay(IFACE_POLL_INTERVAL_MS)
+                diffInterfaces()
             }
         }
     }
