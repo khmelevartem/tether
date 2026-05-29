@@ -153,7 +153,9 @@ class TetherForegroundService : LifecycleService() {
         startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
         true
     } catch (e: ForegroundServiceStartNotAllowedException) {
-        log.warn { "dataSync FGS quota exhausted; aborting start, OS will retry after foreground reset" }
+        log.warn {
+            "dataSync FGS quota exhausted; aborting start. OS auto-restarts inside the cap window will hit this same path; FGS resumes only after user foregrounds the app."
+        }
         stopSelf()
         false
     }
