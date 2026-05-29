@@ -1,32 +1,17 @@
 package com.tubetoast.tether.ui.components
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
-import androidx.compose.ui.unit.dp
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
 import com.tubetoast.tether.ui.theme.TetherTheme
-import com.tubetoast.tether.ui.theme.tetherMinTouchTarget
-import compose.icons.TablerIcons
-import compose.icons.tablericons.ToggleLeft
-import compose.icons.tablericons.ToggleRight
 
 /**
  * A labelled toggle row for the auto-send setting.
@@ -47,7 +32,6 @@ fun AutoSendToggle(
 ) {
     val colors = TetherTheme.colors
     val typography = TetherTheme.typography
-    val spacing = TetherTheme.spacing
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -67,25 +51,11 @@ fun AutoSendToggle(
             append(", currently $stateLabel")
         }
 
-        Box(
-            modifier = Modifier
-                .tetherMinTouchTarget()
-                .clickable { onToggle(!enabled) }
-                .semantics {
-                    role = Role.Switch
-                    contentDescription = description
-                },
-            contentAlignment = Alignment.Center,
-        ) {
-            val icon = if (enabled) TablerIcons.ToggleRight else TablerIcons.ToggleLeft
-            val tint = if (enabled) colors.accent else colors.textMuted
-            Image(
-                painter = rememberVectorPainter(icon),
-                contentDescription = null,
-                colorFilter = ColorFilter.tint(tint),
-                modifier = Modifier.size(28.dp),
-            )
-        }
+        Toggle(
+            checked = enabled,
+            onCheckedChange = onToggle,
+            contentDescription = description,
+        )
     }
 }
 
