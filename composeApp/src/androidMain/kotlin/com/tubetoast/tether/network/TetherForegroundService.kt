@@ -10,6 +10,7 @@ import android.content.pm.ServiceInfo
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
+import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
@@ -37,9 +38,9 @@ class TetherForegroundService : LifecycleService() {
     // distinct from the "candidate" locals fetched from the container before start().
     // @Volatile: written from IO coroutine (lifecycleScope.launch(Dispatchers.IO)),
     // read from main thread in onStartCommand / onDestroy.
-    @Volatile private var runningFileServer: FileServer? = null
+    @Volatile internal var runningFileServer: FileServer? = null
 
-    @Volatile private var runningMdnsDiscovery: MdnsDiscovery? = null
+    @Volatile internal var runningMdnsDiscovery: MdnsDiscovery? = null
 
     // Binder returned from onBind so MainActivity can check if the service is running
     // via bindService(intent, connection, flags=0) without BIND_AUTO_CREATE.
@@ -130,9 +131,34 @@ class TetherForegroundService : LifecycleService() {
         super.onDestroy()
     }
 
-    /** Returns false if the OS refused promotion due to quota exhaustion; caller must not start servers. */
+    /** On false the OS refused FGS promotion; caller must not proceed with server start. */
     private fun startForegroundCompat(): Boolean {
         ensureChannel()
+        val notification = buildNotification()
+        return when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> startForegroundS(notification)
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
+                startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+                true
+            }
+            else -> {
+                startForeground(NOTIFICATION_ID, notification)
+                true
+            }
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.S)
+    private fun startForegroundS(notification: Notification): Boolean = try {
+        startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+        true
+    } catch (e: ForegroundServiceStartNotAllowedException) {
+        log.warn { "dataSync FGS quota exhausted; aborting start, OS will retry after foreground reset" }
+        stopSelf()
+        false
+    }
+
+    private fun buildNotification(): Notification {
         val stopIntent = Intent(this, TetherForegroundService::class.java).setAction(ACTION_STOP)
         val stopPendingIntent = PendingIntent.getService(
             this,
@@ -140,7 +166,7 @@ class TetherForegroundService : LifecycleService() {
             stopIntent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
-        val notification: Notification = NotificationCompat
+        return NotificationCompat
             .Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.fg_notification_title))
             .setContentText(getString(R.string.fg_notification_text))
@@ -151,32 +177,6 @@ class TetherForegroundService : LifecycleService() {
                 getString(R.string.fg_notification_stop_action),
                 stopPendingIntent,
             ).build()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                try {
-                    startForeground(
-                        NOTIFICATION_ID,
-                        notification,
-                        ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
-                    )
-                } catch (e: ForegroundServiceStartNotAllowedException) {
-                    // OS auto-restarted via START_STICKY inside the still-exhausted dataSync cap window.
-                    // Stop cleanly; the OS will retry and succeed once the user foregrounds the app.
-                    log.warn { "dataSync FGS quota exhausted; aborting start, OS will retry after foreground reset" }
-                    stopSelf()
-                    return false
-                }
-            } else {
-                startForeground(
-                    NOTIFICATION_ID,
-                    notification,
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
-                )
-            }
-        } else {
-            startForeground(NOTIFICATION_ID, notification)
-        }
-        return true
     }
 
     private fun ensureChannel() {
