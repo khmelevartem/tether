@@ -4,11 +4,13 @@ import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.resume
 import com.tubetoast.tether.discovery.FakeDeviceDiscovery
+import com.tubetoast.tether.presentation.banners.BannersComponent
 import com.tubetoast.tether.presentation.peer.FakePeersRepository
 import com.tubetoast.tether.presentation.peer.Peer
 import com.tubetoast.tether.presentation.peer.PeersRepository
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.presentation.transfer.PeerTransferState
+import com.tubetoast.tether.presentation.transfer.PendingFilesRepository
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.FakeFileSource
 import com.tubetoast.tether.transfer.fakeBatchSender
@@ -314,6 +316,13 @@ class PeerListComponentTest {
                     scope = coroutineScope,
                 )
             },
+            bannersComponentFactory = { bannersCtx ->
+                BannersComponent(
+                    componentContext = bannersCtx,
+                    pendingFilesRepository = PendingFilesRepository(),
+                    coroutineScope = coroutineScope,
+                )
+            },
             coroutineScope = coroutineScope,
         )
     }
@@ -336,6 +345,13 @@ class PeerListComponentTest {
                     inboundEvents = MutableSharedFlow(),
                     onShowDetails = {},
                     scope = coroutineScope,
+                )
+            },
+            bannersComponentFactory = { bannersCtx ->
+                BannersComponent(
+                    componentContext = bannersCtx,
+                    pendingFilesRepository = PendingFilesRepository(),
+                    coroutineScope = coroutineScope,
                 )
             },
             coroutineScope = coroutineScope,

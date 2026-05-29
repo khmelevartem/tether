@@ -21,7 +21,6 @@ class RootComponentFactory(
     fun create(componentContext: ComponentContext): RootComponent =
         RootComponent(
             componentContext = componentContext,
-            bannersFactory = { ctx -> BannersComponent(ctx, pendingFilesRepository) },
             peerListFactory = { ctx, onShowDetails ->
                 PeerListComponent(
                     componentContext = ctx,
@@ -39,6 +38,7 @@ class RootComponentFactory(
                             onOpenPicker = { onPickerPick(peer.id) },
                         )
                     },
+                    bannersComponentFactory = { bannersCtx -> BannersComponent(bannersCtx, pendingFilesRepository) },
                 )
             },
         )

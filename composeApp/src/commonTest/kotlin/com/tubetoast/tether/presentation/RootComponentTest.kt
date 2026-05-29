@@ -213,13 +213,6 @@ class RootComponentTest {
         )
         return RootComponent(
             componentContext = ctx,
-            bannersFactory = { childCtx ->
-                BannersComponent(
-                    componentContext = childCtx,
-                    pendingFilesRepository = pendingFilesRepository,
-                    coroutineScope = coroutineScope,
-                )
-            },
             peerListFactory = { childCtx, onShowDetails ->
                 PeerListComponent(
                     componentContext = childCtx,
@@ -234,6 +227,13 @@ class RootComponentTest {
                             scope = coroutineScope,
                             pendingFilesRepository = pendingFilesRepository,
                             onOpenPicker = onPickerPick,
+                        )
+                    },
+                    bannersComponentFactory = { bannersCtx ->
+                        BannersComponent(
+                            componentContext = bannersCtx,
+                            pendingFilesRepository = pendingFilesRepository,
+                            coroutineScope = coroutineScope,
                         )
                     },
                     coroutineScope = coroutineScope,

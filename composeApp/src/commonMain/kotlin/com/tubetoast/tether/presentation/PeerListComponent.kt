@@ -6,6 +6,7 @@ import com.arkivanov.decompose.value.MutableValue
 import com.arkivanov.decompose.value.Value
 import com.arkivanov.decompose.value.update
 import com.arkivanov.essenty.lifecycle.coroutines.coroutineScope
+import com.tubetoast.tether.presentation.banners.BannersComponent
 import com.tubetoast.tether.presentation.peer.Peer
 import com.tubetoast.tether.presentation.peer.PeersRepository
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
@@ -19,8 +20,10 @@ class PeerListComponent(
     componentContext: ComponentContext,
     private val peersRepository: PeersRepository,
     private val peerTransferComponentFactory: (ComponentContext, Peer) -> PeerTransferComponent,
+    bannersComponentFactory: (ComponentContext) -> BannersComponent,
     coroutineScope: CoroutineScope = componentContext.coroutineScope(),
 ) : ComponentContext by componentContext {
+    val bannersComponent: BannersComponent = bannersComponentFactory(childContext("banners"))
     private val _state = MutableValue(PeerListState.empty())
     val state: Value<PeerListState> = _state
 

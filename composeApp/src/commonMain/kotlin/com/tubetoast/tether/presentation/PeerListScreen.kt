@@ -28,6 +28,7 @@ import com.arkivanov.decompose.value.MutableValue
 import com.composables.core.SheetDetent
 import com.composables.core.rememberModalBottomSheetState
 import com.tubetoast.tether.foundation.IsMobileChooserPlatform
+import com.tubetoast.tether.presentation.banners.BannersSection
 import com.tubetoast.tether.presentation.peer.Peer
 import com.tubetoast.tether.presentation.peercard.PeerCard
 import com.tubetoast.tether.presentation.peercard.PeerCardCallbacks
@@ -50,11 +51,16 @@ import com.tubetoast.tether.ui.theme.TetherTheme
 fun PeerListScreen(component: PeerListComponent, modifier: Modifier = Modifier) {
     val state by component.state.subscribeAsState()
 
-    PeerListContent(
-        rows = state.rows,
-        peerComponentFor = component::peerTransferComponent,
-        modifier = modifier,
-    )
+    Column(modifier = modifier.fillMaxSize()) {
+        BannersSection(
+            component = component.bannersComponent,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        PeerListContent(
+            rows = state.rows,
+            peerComponentFor = component::peerTransferComponent,
+        )
+    }
 }
 
 @Composable
