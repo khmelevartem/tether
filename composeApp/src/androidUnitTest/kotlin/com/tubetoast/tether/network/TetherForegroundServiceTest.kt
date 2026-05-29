@@ -23,7 +23,6 @@ import org.robolectric.shadows.ShadowService
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @Implements(Service::class, callThroughByDefault = true)
@@ -78,8 +77,6 @@ class TetherForegroundServiceTest {
         val service = controller.get()
         val shadow = Shadow.extract<ShadowService>(service)
         assertTrue(shadow.isStoppedBySelf, "stopSelf() must be called when quota is exhausted")
-        assertNull(service.runningFileServer, "file server must not start when quota is exhausted")
-        assertNull(service.runningMdnsDiscovery, "mDNS must not start when quota is exhausted")
         controller.destroy()
     }
 

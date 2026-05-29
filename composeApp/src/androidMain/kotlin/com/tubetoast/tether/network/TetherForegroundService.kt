@@ -38,9 +38,9 @@ class TetherForegroundService : LifecycleService() {
     // distinct from the "candidate" locals fetched from the container before start().
     // @Volatile: written from IO coroutine (lifecycleScope.launch(Dispatchers.IO)),
     // read from main thread in onStartCommand / onDestroy.
-    @Volatile internal var runningFileServer: FileServer? = null
+    @Volatile private var runningFileServer: FileServer? = null
 
-    @Volatile internal var runningMdnsDiscovery: MdnsDiscovery? = null
+    @Volatile private var runningMdnsDiscovery: MdnsDiscovery? = null
 
     // Binder returned from onBind so MainActivity can check if the service is running
     // via bindService(intent, connection, flags=0) without BIND_AUTO_CREATE.
