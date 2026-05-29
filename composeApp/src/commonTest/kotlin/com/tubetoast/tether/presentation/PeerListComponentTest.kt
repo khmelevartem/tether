@@ -15,13 +15,16 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PeerListComponentTest {
@@ -201,6 +204,34 @@ class PeerListComponentTest {
                 .first { it.peer.id == deviceA.toPeerIdentity() }
                 .peer.isOnline,
         )
+    }
+
+    @Test
+    fun `dropFeedback is true during feedback window and false after`() = runTest {
+        val component = buildComponent(emptyList(), coroutineScope = backgroundScope)
+
+        component.onDropRejectedDuringTransfer()
+
+        assertTrue(component.dropFeedback.value)
+        advanceTimeBy(3_100L)
+
+        assertFalse(component.dropFeedback.value)
+    }
+
+    @Test
+    fun `second onDropRejectedDuringTransfer within window restarts the timer`() = runTest {
+        val component = buildComponent(emptyList(), coroutineScope = backgroundScope)
+
+        component.onDropRejectedDuringTransfer()
+        advanceTimeBy(2_500L)
+        assertTrue(component.dropFeedback.value)
+
+        component.onDropRejectedDuringTransfer()
+        advanceTimeBy(2_500L)
+        assertTrue(component.dropFeedback.value, "flag should still be true — second call restarted the window")
+
+        advanceTimeBy(600L)
+        assertFalse(component.dropFeedback.value)
     }
 
     private fun buildComponent(
