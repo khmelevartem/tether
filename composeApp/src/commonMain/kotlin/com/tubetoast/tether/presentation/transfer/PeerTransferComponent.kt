@@ -30,12 +30,14 @@ class PeerTransferComponent(
     componentContext: ComponentContext,
     val peer: PeerIdentity,
     private val batchSenderFactory: () -> BatchSender,
+    // TODO(#195): wire real ReceiveEvent source when Receiver UI lands
     private val inboundEvents: Flow<ReceiveEvent> = MutableSharedFlow(),
     onShowDetails: (PeerIdentity) -> Unit,
     private val reconnectionTimeout: Duration = ReconnectionTimeout.DEFAULT,
     private val scope: CoroutineScope,
     private val pendingFilesRepository: PendingFilesRepository? = null,
     private val peerPreferencesStore: PeerPreferencesStore? = null,
+    // TODO(#192/#193/#194): platform actuals wire real file picker here
     private val onOpenPicker: () -> Unit = {},
 ) : ComponentContext by componentContext {
     private val showDetailsCallback = onShowDetails
