@@ -40,8 +40,7 @@ private val log = KydraLog.withTag(default = "MdnsDiscovery.JmDNS")
  * JmDNS stops querying ~675 ms after `addServiceListener`; the next refresh is
  * at ~80% of TTL (~48 min). Re-calling `addServiceListener` with the same
  * instance skips the duplicate-add (deduped by `equals`) but unconditionally
- * re-arms `ServiceResolver` — re-verified in JmDNS 3.5.9 `JmDNSImpl`.
- * Re-verify if JmDNS is upgraded.
+ * re-arms `ServiceResolver`. Re-verify if JmDNS is upgraded.
  */
 internal open class MdnsDiscoveryJmdns(
     private val store: DiscoveredDevicesStore,
@@ -127,7 +126,7 @@ internal open class MdnsDiscoveryJmdns(
         store.clear()
     }
 
-    /** Returns (iface name, InetAddress) pairs for eligible addresses. Override in tests to control enumeration. */
+    /** Override in tests to control enumeration. */
     protected open fun bindAddresses(): List<Pair<String, InetAddress>> = try {
         NetworkInterface
             .getNetworkInterfaces()
@@ -185,8 +184,8 @@ internal open class MdnsDiscoveryJmdns(
         for (key in removed) {
             instances.remove(key)?.let { tearDown(key, it) }
         }
-        for ((ifaceName, addr) in added) {
-            bringUp(ifaceName to addr, addr, deviceName, ownPort)
+        for (key in added) {
+            bringUp(key, key.second, deviceName, ownPort)
         }
     }
 
