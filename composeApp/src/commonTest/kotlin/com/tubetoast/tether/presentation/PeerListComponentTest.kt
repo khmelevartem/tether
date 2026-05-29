@@ -71,7 +71,7 @@ class PeerListComponentTest {
     }
 
     @Test
-    fun `offline peer with active transfer persists in rows`() = runTest {
+    fun `offline peer with active transfer is not in rows but child survives`() = runTest {
         val flow = MutableStateFlow(listOf(deviceA))
         val component = buildComponent(flow = flow, coroutineScope = backgroundScope)
         runCurrent()
@@ -84,10 +84,11 @@ class PeerListComponentTest {
         flow.value = emptyList()
         runCurrent()
 
-        assertNotNull(
+        assertNull(
             component.state.value.rows
                 .firstOrNull { it.peer.id == deviceA.toPeerIdentity() },
         )
+        assertNotNull(component.peerTransferComponent(deviceA.toPeerIdentity()))
     }
 
     @Test
@@ -103,6 +104,7 @@ class PeerListComponentTest {
             component.state.value.rows
                 .firstOrNull { it.peer.id == deviceA.toPeerIdentity() },
         )
+        assertNull(component.peerTransferComponent(deviceA.toPeerIdentity()))
     }
 
     @Test
@@ -118,25 +120,46 @@ class PeerListComponentTest {
 
         flow.value = emptyList()
         runCurrent()
-        assertNotNull(
-            component.state.value.rows
-                .firstOrNull { it.peer.id == deviceA.toPeerIdentity() },
-        )
+        assertNotNull(component.peerTransferComponent(deviceA.toPeerIdentity()))
 
         peerComponent.onDismiss()
         runCurrent()
 
-        // Re-emit to trigger eviction poll — with no subscriptions eviction only runs on peers emit.
-        // The flow was already at emptyList(), so change it to a different value first, then back.
+        // Re-emit to trigger eviction poll — eviction only runs on peers emit.
         flow.value = listOf(deviceA)
         runCurrent()
         flow.value = emptyList()
         runCurrent()
 
+        assertNull(component.peerTransferComponent(deviceA.toPeerIdentity()))
         assertNull(
             component.state.value.rows
                 .firstOrNull { it.peer.id == deviceA.toPeerIdentity() },
         )
+    }
+
+    @Test
+    fun `peer returns in next emit and row reappears with existing child`() = runTest {
+        val flow = MutableStateFlow(listOf(deviceA))
+        val component = buildComponent(flow = flow, coroutineScope = backgroundScope)
+        runCurrent()
+
+        val peerComponent = component.peerTransferComponent(deviceA.toPeerIdentity())
+        assertNotNull(peerComponent)
+        peerComponent.startOutbound(listOf(FakeFileSource("file.txt", 10L)))
+        runCurrent()
+
+        flow.value = emptyList()
+        runCurrent()
+
+        flow.value = listOf(deviceA)
+        runCurrent()
+
+        assertNotNull(
+            component.state.value.rows
+                .firstOrNull { it.peer.id == deviceA.toPeerIdentity() },
+        )
+        assertEquals(peerComponent, component.peerTransferComponent(deviceA.toPeerIdentity()))
     }
 
     @Test
@@ -158,8 +181,8 @@ class PeerListComponentTest {
         peerComponent.startOutbound(listOf(FakeFileSource("file.txt", 10L)))
         runCurrent()
 
-        // transferState in PeerRow is a snapshot refreshed only on peers emit. Force a re-emission by
-        // toggling to a different value; peer stays in rows (Sent is not Idle, so not evicted).
+        // Force a re-emission so the snapshot in PeerRow picks up the updated child state.
+        // The child is Sent (non-Idle), so it survives the eviction pass when the peer leaves.
         flow.value = emptyList()
         runCurrent()
         flow.value = listOf(deviceA)
@@ -186,28 +209,13 @@ class PeerListComponentTest {
     }
 
     @Test
-    fun `isOnline reflects peer discovery status`() = runTest {
+    fun `isOnline flag comes from repository as-is`() = runTest {
         val flow = MutableStateFlow(listOf(deviceA))
         val component = buildComponent(flow = flow, coroutineScope = backgroundScope)
         runCurrent()
 
         assertEquals(
             true,
-            component.state.value.rows
-                .first { it.peer.id == deviceA.toPeerIdentity() }
-                .peer.isOnline,
-        )
-
-        val peerComponent = component.peerTransferComponent(deviceA.toPeerIdentity())
-        assertNotNull(peerComponent)
-        peerComponent.startOutbound(listOf(FakeFileSource("file.txt", 10L)))
-        runCurrent()
-
-        flow.value = emptyList()
-        runCurrent()
-
-        assertEquals(
-            false,
             component.state.value.rows
                 .first { it.peer.id == deviceA.toPeerIdentity() }
                 .peer.isOnline,

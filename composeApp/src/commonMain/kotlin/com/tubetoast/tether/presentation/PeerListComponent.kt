@@ -25,45 +25,32 @@ class PeerListComponent(
     val state: Value<PeerListState> = _state
 
     private val children = mutableMapOf<PeerIdentity, PeerTransferComponent>()
-    private val seenPeers = mutableMapOf<PeerIdentity, Peer>()
-    private var onlineIds: Set<PeerIdentity> = emptySet()
 
     init {
         peersRepository.peers
             .onEach { peers ->
-                onlineIds = peers.map { it.id }.toSet()
-                peers.forEach { peer -> seenPeers[peer.id] = peer }
-                ensureChildrenFor(peers)
-                evictOfflineIdlePeers()
-                rebuildState()
+                val onlineIds = peers.map { it.id }.toSet()
+                peers.forEach { peer ->
+                    if (peer.id !in children) {
+                        children[peer.id] = peerTransferComponentFactory(childContext(peer.id.id), peer)
+                    }
+                }
+                children.keys
+                    .filter { id -> id !in onlineIds && children[id]?.state?.value is PeerTransferState.Idle }
+                    .forEach { id -> children.remove(id) }
+                _state.update {
+                    PeerListState(
+                        rows = peers.map { peer ->
+                            PeerRow(
+                                peer = peer,
+                                // snapshot refreshed each emit; Compose subscribes to peerComponent.state per cell
+                                transferState = children[peer.id]?.state?.value ?: PeerTransferState.Idle(peer.id),
+                            )
+                        },
+                    )
+                }
             }.launchIn(coroutineScope)
     }
 
     fun peerTransferComponent(peer: PeerIdentity): PeerTransferComponent? = children[peer]
-
-    private fun ensureChildrenFor(peers: List<Peer>) {
-        peers.forEach { peer ->
-            if (peer.id !in children) {
-                children[peer.id] = peerTransferComponentFactory(childContext(peer.id.id), peer)
-            }
-        }
-    }
-
-    private fun evictOfflineIdlePeers() {
-        val toRemove = children.keys.filter { id ->
-            id !in onlineIds && children[id]?.state?.value is PeerTransferState.Idle
-        }
-        toRemove.forEach { id -> children.remove(id) }
-    }
-
-    private fun rebuildState() {
-        val rows = children.mapNotNull { (id, child) ->
-            val peer = seenPeers[id] ?: return@mapNotNull null
-            PeerRow(
-                peer = peer.copy(isOnline = id in onlineIds),
-                transferState = child.state.value,
-            )
-        }
-        _state.update { PeerListState(rows) }
-    }
 }
