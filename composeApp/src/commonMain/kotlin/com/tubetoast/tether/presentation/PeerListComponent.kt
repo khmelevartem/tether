@@ -15,8 +15,6 @@ import com.tubetoast.tether.presentation.transfer.PeerTransferState
 import com.tubetoast.tether.presentation.transfer.PendingFilesRepository
 import com.tubetoast.tether.transfer.PeerIdentity
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
@@ -40,11 +38,6 @@ class PeerListComponent(
     private val subscriptions = mutableMapOf<PeerIdentity, Cancellation>()
     private val seenPeers = mutableMapOf<PeerIdentity, Peer>()
     private var onlineIds: Set<PeerIdentity> = emptySet()
-
-    private val mutableDropFeedback = MutableValue(false)
-    val dropFeedback: Value<Boolean> = mutableDropFeedback
-
-    private var dropFeedbackJob: Job? = null
 
     init {
         peersRepository.peers
@@ -72,15 +65,6 @@ class PeerListComponent(
     fun setAutoSend(peer: PeerIdentity, enabled: Boolean) {
         val store = peerPreferencesStore ?: return
         scope.launch { store.setAutoSend(peer, enabled) }
-    }
-
-    fun onDropDuringActiveTransfer() {
-        dropFeedbackJob?.cancel()
-        dropFeedbackJob = scope.launch {
-            mutableDropFeedback.value = true
-            delay(DROP_FEEDBACK_DURATION_MS)
-            mutableDropFeedback.value = false
-        }
     }
 
     private fun ensureChildrenFor(peers: List<Peer>) {
@@ -115,9 +99,5 @@ class PeerListComponent(
             )
         }
         _state.update { PeerListState(rows) }
-    }
-
-    private companion object {
-        const val DROP_FEEDBACK_DURATION_MS = 3_000L
     }
 }

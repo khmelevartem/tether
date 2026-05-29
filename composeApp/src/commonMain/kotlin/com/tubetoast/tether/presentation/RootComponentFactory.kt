@@ -3,6 +3,7 @@ package com.tubetoast.tether.presentation
 import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.essenty.lifecycle.coroutines.coroutineScope
 import com.tubetoast.tether.preferences.PeerPreferencesStore
+import com.tubetoast.tether.presentation.banners.BannersComponent
 import com.tubetoast.tether.presentation.peer.PeersRepository
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.presentation.transfer.PendingFilesRepository
@@ -18,7 +19,7 @@ class RootComponentFactory(
     fun create(componentContext: ComponentContext): RootComponent =
         RootComponent(
             componentContext = componentContext,
-            pendingFilesRepository = pendingFilesRepository,
+            bannersFactory = { ctx -> BannersComponent(ctx, pendingFilesRepository) },
             peerListFactory = { ctx, onShowDetails ->
                 PeerListComponent(
                     componentContext = ctx,

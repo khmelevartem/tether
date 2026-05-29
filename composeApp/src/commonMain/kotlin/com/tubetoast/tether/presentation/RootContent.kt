@@ -2,7 +2,9 @@ package com.tubetoast.tether.presentation
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.safeContentPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -10,6 +12,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import com.arkivanov.decompose.extensions.compose.stack.Children
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
+import com.tubetoast.tether.presentation.banners.BannersSection
 import com.tubetoast.tether.presentation.peercard.PeerCardCallbacks
 import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.ui.theme.TetherTheme
@@ -30,30 +33,31 @@ fun RootContent(component: RootComponent, modifier: Modifier = Modifier) {
         ) {
             val stack by component.stack.subscribeAsState()
             val peerList = component.peerListComponent
-            val pending by component.pendingFilesRepository.summary.collectAsState()
-            val dropFeedback by peerList.dropFeedback.subscribeAsState()
+            val pending by component.bannersComponent.pendingSummary.collectAsState()
 
-            val hasPending = pending != null
-
-            Children(stack = stack) { child ->
-                when (val instance = child.instance) {
-                    is RootComponent.Child.PeerListChild -> PeerListScreen(
-                        component = instance.component,
-                        pending = pending,
-                        dropFeedback = dropFeedback,
-                        onCancelPending = component.pendingFilesRepository::clear,
-                        peerCallbacksFor = { peer ->
-                            rememberPeerCallbacks(peer, peerList, component, hasPending)
-                        },
-                        autoSendEnabledFor = { peer ->
-                            peerList.observeAutoSend(peer).collectAsState(initial = false).value
-                        },
-                        // TODO(#192): wire Android FilePicker actual (ACTION_OPEN_DOCUMENT / ACTION_OPEN_DOCUMENT_TREE; ContentResolver byte streams)
-                        // TODO(#193): wire Desktop FilePicker actual (JFileChooser or nativefiledialog; FileInputStream)
-                        // TODO(#194): wire iOS FilePicker actual (UIDocumentPickerViewController; NSURL → openReadChannel)
-                        onPickerPick = { peer, kind -> log.info { "onPickerPick($peer, $kind)" } },
-                    )
-                    is RootComponent.Child.TransferDetailsChild -> TransferDetailsScreen(instance.component)
+            Column(modifier = Modifier.fillMaxSize()) {
+                BannersSection(
+                    component = component.bannersComponent,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Children(stack = stack) { child ->
+                    when (val instance = child.instance) {
+                        is RootComponent.Child.PeerListChild -> PeerListScreen(
+                            component = instance.component,
+                            hasPending = pending != null,
+                            peerCallbacksFor = { peer ->
+                                rememberPeerCallbacks(peer, peerList, component)
+                            },
+                            autoSendEnabledFor = { peer ->
+                                peerList.observeAutoSend(peer).collectAsState(initial = false).value
+                            },
+                            // TODO(#192): wire Android FilePicker actual (ACTION_OPEN_DOCUMENT / ACTION_OPEN_DOCUMENT_TREE; ContentResolver byte streams)
+                            // TODO(#193): wire Desktop FilePicker actual (JFileChooser or nativefiledialog; FileInputStream)
+                            // TODO(#194): wire iOS FilePicker actual (UIDocumentPickerViewController; NSURL → openReadChannel)
+                            onPickerPick = { peer, kind -> log.info { "onPickerPick($peer, $kind)" } },
+                        )
+                        is RootComponent.Child.TransferDetailsChild -> TransferDetailsScreen(instance.component)
+                    }
                 }
             }
         }
@@ -65,7 +69,6 @@ private fun rememberPeerCallbacks(
     peer: PeerIdentity,
     peerListComponent: PeerListComponent,
     rootComponent: RootComponent,
-    hasPending: Boolean,
 ): PeerCardCallbacks {
     val peerComponent = peerListComponent.peerTransferComponent(peer) ?: return PeerCardCallbacks(
         onToggleExpand = {},
@@ -77,6 +80,9 @@ private fun rememberPeerCallbacks(
         onOpenFiles = {},
         onClick = null,
     )
+    val hasPending = rootComponent.bannersComponent.pendingSummary
+        .collectAsState()
+        .value != null
     return PeerCardCallbacks(
         onToggleExpand = peerComponent::toggleExpanded,
         onToggleAutoSend = { enabled -> peerListComponent.setAutoSend(peer, enabled) },

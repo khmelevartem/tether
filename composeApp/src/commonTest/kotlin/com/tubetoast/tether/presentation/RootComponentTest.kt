@@ -6,6 +6,7 @@ import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.resume
 import com.arkivanov.essenty.statekeeper.StateKeeperDispatcher
 import com.tubetoast.tether.discovery.FakeDeviceDiscovery
+import com.tubetoast.tether.presentation.banners.BannersComponent
 import com.tubetoast.tether.presentation.peer.PeersRepository
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.presentation.transfer.PeerTransferState
@@ -207,7 +208,13 @@ class RootComponentTest {
         )
         return RootComponent(
             componentContext = ctx,
-            pendingFilesRepository = pendingFilesRepository,
+            bannersFactory = { childCtx ->
+                BannersComponent(
+                    componentContext = childCtx,
+                    pendingFilesRepository = pendingFilesRepository,
+                    coroutineScope = coroutineScope,
+                )
+            },
             peerListFactory = { childCtx, onShowDetails ->
                 PeerListComponent(
                     componentContext = childCtx,

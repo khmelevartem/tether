@@ -28,8 +28,6 @@ import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.composables.core.SheetDetent
 import com.composables.core.rememberModalBottomSheetState
 import com.tubetoast.tether.foundation.IsMobileChooserPlatform
-import com.tubetoast.tether.presentation.banners.ForegroundConstraintBanner
-import com.tubetoast.tether.presentation.banners.PendingOutboundBanner
 import com.tubetoast.tether.presentation.peer.Peer
 import com.tubetoast.tether.presentation.peercard.PeerCard
 import com.tubetoast.tether.presentation.peercard.PeerCardCallbacks
@@ -49,24 +47,20 @@ import com.tubetoast.tether.ui.theme.TetherTheme
 @Composable
 fun PeerListScreen(
     component: PeerListComponent,
-    pending: PendingFilesSummary?,
-    dropFeedback: Boolean,
-    onCancelPending: () -> Unit,
     peerCallbacksFor: @Composable (PeerIdentity) -> PeerCardCallbacks,
     onPickerPick: (PeerIdentity, PickerKind) -> Unit,
     modifier: Modifier = Modifier,
     autoSendEnabledFor: @Composable (PeerIdentity) -> Boolean = { false },
+    hasPending: Boolean = false,
 ) {
     val state by component.state.subscribeAsState()
 
     PeerListContent(
         rows = state.rows,
-        pending = pending,
-        dropFeedback = dropFeedback,
-        onCancelPending = onCancelPending,
         peerCallbacksFor = peerCallbacksFor,
         autoSendEnabledFor = autoSendEnabledFor,
         onPickerPick = onPickerPick,
+        hasPending = hasPending,
         modifier = modifier,
     )
 }
@@ -74,14 +68,11 @@ fun PeerListScreen(
 @Composable
 fun PeerListContent(
     rows: List<PeerRow>,
-    pending: PendingFilesSummary?,
-    dropFeedback: Boolean,
-    onCancelPending: () -> Unit,
     peerCallbacksFor: @Composable (PeerIdentity) -> PeerCardCallbacks,
     onPickerPick: (PeerIdentity, PickerKind) -> Unit,
     modifier: Modifier = Modifier,
     autoSendEnabledFor: @Composable (PeerIdentity) -> Boolean = { false },
-    showForegroundBanner: Boolean = false,
+    hasPending: Boolean = false,
     showMobileChooser: Boolean = IsMobileChooserPlatform,
 ) {
     val spacing = TetherTheme.spacing
@@ -100,22 +91,6 @@ fun PeerListContent(
     }
 
     Column(modifier = modifier.fillMaxSize()) {
-        if (pending != null) {
-            PendingOutboundBanner(
-                summary = pending,
-                dropFeedback = dropFeedback,
-                onCancel = onCancelPending,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-
-        ForegroundConstraintBanner(
-            // TODO(#194): iOS — wire visible = true while any transfer is active (UIApplication foreground state observer)
-            //              On Android / Desktop / macOS this banner is permanently hidden per UX brief Platform Deltas
-            visible = showForegroundBanner,
-            modifier = Modifier.fillMaxWidth(),
-        )
-
         if (rows.isEmpty()) {
             Column(
                 modifier = Modifier.fillMaxSize(),
@@ -134,7 +109,7 @@ fun PeerListContent(
                 items(rows, key = { it.peer.device.id }) { row ->
                     val peer = row.peer.id
                     val tapAction: (() -> Unit)? = when {
-                        pending != null -> peerCallbacksFor(peer).let { cbs -> { cbs.onClick?.invoke() } }
+                        hasPending -> peerCallbacksFor(peer).let { cbs -> { cbs.onClick?.invoke() } }
                         row.transferState is PeerTransferState.Idle && showMobileChooser -> (
                             {
                                 triggerPeer = peer
@@ -158,7 +133,7 @@ fun PeerListContent(
                                     .clickable(onClick = tapAction)
                                     .semantics {
                                         role = Role.Button
-                                        contentDescription = if (pending != null) {
+                                        contentDescription = if (hasPending) {
                                             "Send to ${row.peer.device.name}"
                                         } else {
                                             "Pick files to send to ${row.peer.device.name}"
@@ -205,9 +180,6 @@ private fun PreviewDiscovering(@PreviewParameter(Themes::class) dark: Boolean) =
     PreviewSurface(darkTheme = dark) {
         PeerListContent(
             rows = emptyList(),
-            pending = null,
-            dropFeedback = false,
-            onCancelPending = {},
             peerCallbacksFor = { previewCallbacks() },
             onPickerPick = { _, _ -> },
         )
@@ -225,9 +197,6 @@ private fun PreviewSingleDevice(@PreviewParameter(Themes::class) dark: Boolean) 
                     transferState = TransferPreviewFixtures.idleCollapsed,
                 ),
             ),
-            pending = null,
-            dropFeedback = false,
-            onCancelPending = {},
             peerCallbacksFor = { previewCallbacks() },
             onPickerPick = { _, _ -> },
         )
@@ -248,17 +217,14 @@ private fun PreviewMultipleDevices(@PreviewParameter(Themes::class) dark: Boolea
                     },
                 )
             },
-            pending = null,
-            dropFeedback = false,
-            onCancelPending = {},
             peerCallbacksFor = { previewCallbacks() },
             onPickerPick = { _, _ -> },
         )
     }
 
-@Preview(name = "PeerList — pending banner")
+@Preview(name = "PeerList — pending (banner in BannersSection above)")
 @Composable
-private fun PreviewPendingBanner(@PreviewParameter(Themes::class) dark: Boolean) =
+private fun PreviewPendingState(@PreviewParameter(Themes::class) dark: Boolean) =
     PreviewSurface(darkTheme = dark) {
         val device = PreviewFixtures.singleDevice.first()
         PeerListContent(
@@ -268,50 +234,7 @@ private fun PreviewPendingBanner(@PreviewParameter(Themes::class) dark: Boolean)
                     transferState = TransferPreviewFixtures.idleCollapsed,
                 ),
             ),
-            pending = PendingFilesSummary(3, 52_428_800L),
-            dropFeedback = false,
-            onCancelPending = {},
-            peerCallbacksFor = { previewCallbacks() },
-            onPickerPick = { _, _ -> },
-        )
-    }
-
-@Preview(name = "PeerList — drop rejected flash")
-@Composable
-private fun PreviewDropFlash(@PreviewParameter(Themes::class) dark: Boolean) =
-    PreviewSurface(darkTheme = dark) {
-        val device = PreviewFixtures.singleDevice.first()
-        PeerListContent(
-            rows = listOf(
-                PeerRow(
-                    peer = Peer(id = device.toPeerIdentity(), device = device),
-                    transferState = TransferPreviewFixtures.activeOutbound,
-                ),
-            ),
-            pending = PendingFilesSummary(5, 104_857_600L),
-            dropFeedback = true,
-            onCancelPending = {},
-            peerCallbacksFor = { previewCallbacks() },
-            onPickerPick = { _, _ -> },
-        )
-    }
-
-@Preview(name = "PeerList — iOS banner")
-@Composable
-private fun PreviewIosBanner(@PreviewParameter(Themes::class) dark: Boolean) =
-    PreviewSurface(darkTheme = dark) {
-        val device = PreviewFixtures.singleDevice.first()
-        PeerListContent(
-            rows = listOf(
-                PeerRow(
-                    peer = Peer(id = device.toPeerIdentity(), device = device),
-                    transferState = TransferPreviewFixtures.activeInbound,
-                ),
-            ),
-            pending = null,
-            dropFeedback = false,
-            showForegroundBanner = true,
-            onCancelPending = {},
+            hasPending = true,
             peerCallbacksFor = { previewCallbacks() },
             onPickerPick = { _, _ -> },
         )
