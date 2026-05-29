@@ -10,7 +10,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
-private fun testDiscovery() = MdnsDiscovery(DiscoveredDevicesStore())
+private fun testDiscovery(fingerprint: String = "fp-${kotlin.random.Random.nextInt()}") =
+    MdnsDiscovery(DiscoveredDevicesStore(), fingerprint = fingerprint)
 
 // JmDNS delivers callbacks on real threads outside our CoroutineScope
 @Suppress("ktlint:tether:no-run-blocking-in-tests")

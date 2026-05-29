@@ -7,8 +7,10 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-private fun testDiscovery(store: DiscoveredDevicesStore = DiscoveredDevicesStore()) =
-    MdnsDiscovery(store)
+private fun testDiscovery(
+    store: DiscoveredDevicesStore = DiscoveredDevicesStore(),
+    fingerprint: String = "fp-${kotlin.random.Random.nextInt()}",
+) = MdnsDiscovery(store, fingerprint = fingerprint)
 
 class MdnsDiscoveryRepublishTest {
     @Test
