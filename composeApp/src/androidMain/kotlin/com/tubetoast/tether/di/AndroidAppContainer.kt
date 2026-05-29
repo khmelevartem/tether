@@ -55,5 +55,5 @@ class AndroidAppContainer(
         defaultSaveLocation = application.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)?.absolutePath ?: "",
         saveLocationWritable = true,
     )
-    override val ownDeviceType: DeviceType = DeviceType.mobile
+    override val ownDeviceType: DeviceType = DeviceType.Mobile
 }

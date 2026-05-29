@@ -12,9 +12,9 @@ import kotlin.test.assertTrue
 @Config(sdk = [34])
 class NsdTxtPropsTest {
     @Test
-    fun `TXT_PROPS applied to NsdServiceInfo produces non-empty attributes with no empty keys`() {
+    fun `txtProps applied to NsdServiceInfo produces non-empty attributes with no empty keys`() {
         val serviceInfo = NsdServiceInfo().apply {
-            TXT_PROPS.forEach { (k, v) -> setAttribute(k, v) }
+            txtProps("test-fingerprint").forEach { (k, v) -> setAttribute(k, v) }
         }
         val attributes = serviceInfo.attributes
         assertFalse(attributes.isEmpty(), "attributes must be non-empty")

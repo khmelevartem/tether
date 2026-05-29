@@ -54,7 +54,7 @@ class FileServerAndroidPairTest {
             override suspend fun getPublicKey(deviceId: String): ByteArray? = null
         }
         val srv = FileServer(
-            port = 0,
+            configuredPort = 0,
             downloadsDir = tmpDir,
             trustedDeviceStore = throwingStore,
             deviceKeyPair = DeviceKeyPair(keyPairDir),

@@ -1,6 +1,6 @@
 package com.tubetoast.tether.discovery
 
-import com.tubetoast.tether.network.RendezvousClient
+import com.tubetoast.tether.network.FileClient
 import com.tubetoast.tether.protocol.InfoDto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -9,7 +9,7 @@ import kotlin.concurrent.Volatile
 
 class RendezvousAnnouncer(
     private val store: DiscoveredDevicesStore,
-    private val client: RendezvousClient,
+    private val client: FileClient,
     private val ownInfo: () -> InfoDto,
 ) {
     @Volatile private var collectJob: Job? = null

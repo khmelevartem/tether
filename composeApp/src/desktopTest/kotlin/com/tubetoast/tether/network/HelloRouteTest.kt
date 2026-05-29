@@ -71,7 +71,7 @@ class HelloRouteTest {
                 val response = client.post("http://localhost:$port/hello") {
                     contentType(ContentType.Application.Json)
                     setBody(
-                        InfoDto(alias = "PeerA", fingerprint = "other-fp", port = 5000, deviceType = DeviceType.mobile),
+                        InfoDto(alias = "PeerA", fingerprint = "other-fp", port = 5000, deviceType = DeviceType.Mobile),
                     )
                 }
                 assertEquals(HttpStatusCode.OK, response.status)
@@ -104,7 +104,7 @@ class HelloRouteTest {
             runBlocking {
                 val response = client.post("http://localhost:$port/hello") {
                     contentType(ContentType.Application.Json)
-                    setBody(InfoDto(alias = "Self", fingerprint = "mine", port = port, deviceType = DeviceType.desktop))
+                    setBody(InfoDto(alias = "Self", fingerprint = "mine", port = port, deviceType = DeviceType.Desktop))
                 }
                 assertEquals(HttpStatusCode.OK, response.status)
             }
@@ -124,7 +124,7 @@ class HelloRouteTest {
             runBlocking {
                 client.post("http://localhost:$port/hello") {
                     contentType(ContentType.Application.Json)
-                    setBody(InfoDto(alias = "B", fingerprint = "other", port = 6000, deviceType = DeviceType.desktop))
+                    setBody(InfoDto(alias = "B", fingerprint = "other", port = 6000, deviceType = DeviceType.Desktop))
                 }
             }
             val device = store.devices.value.firstOrNull()

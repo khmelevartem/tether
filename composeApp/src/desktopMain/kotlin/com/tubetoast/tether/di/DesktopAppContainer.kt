@@ -44,5 +44,5 @@ class DesktopAppContainer(
         defaultSaveLocation = File(System.getProperty("user.home"), "Downloads").absolutePath,
         saveLocationWritable = true,
     )
-    override val ownDeviceType: DeviceType = DeviceType.desktop
+    override val ownDeviceType: DeviceType = DeviceType.Desktop
 }

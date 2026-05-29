@@ -60,7 +60,7 @@ open class AppleAppContainer(
         defaultSaveLocation = documentsDir(),
         saveLocationWritable = false,
     )
-    override val ownDeviceType: DeviceType = DeviceType.mobile
+    override val ownDeviceType: DeviceType = DeviceType.Mobile
 }
 
 @OptIn(ExperimentalForeignApi::class, kotlinx.cinterop.BetaInteropApi::class)

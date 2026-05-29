@@ -50,7 +50,7 @@ class FileServerPairTest {
         store = DefaultTrustedDeviceStore(temp.dataStore)
         keyPair = DeviceKeyPair(configDir)
         server = FileServer(
-            port = 0,
+            configuredPort = 0,
             downloadsDir = newTempDir(),
             trustedDeviceStore = store,
             deviceKeyPair = keyPair,
@@ -111,7 +111,7 @@ class FileServerPairTest {
             override suspend fun getPublicKey(deviceId: String): ByteArray? = null
         }
         val failServer = FileServer(
-            port = 0,
+            configuredPort = 0,
             downloadsDir = newTempDir(),
             trustedDeviceStore = throwingStore,
             deviceKeyPair = keyPair,

@@ -12,7 +12,7 @@ import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
 
-private fun testDiscovery() = MdnsDiscovery(DiscoveredDevicesStore())
+private fun testDiscovery() = MdnsDiscovery(DiscoveredDevicesStore(), fingerprint = "test-fp")
 
 // NSNetService delivers callbacks via NSRunLoop, not via coroutine dispatchers.
 // runBlocking / TestDispatcher / Turbine don't pump NSRunLoop, so integration tests

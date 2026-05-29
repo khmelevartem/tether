@@ -79,7 +79,6 @@ internal open class MdnsDiscoveryJmdns(
                 delay(REQUERY_INITIAL_INTERVAL_MS)
                 ifaceTick += REQUERY_INITIAL_INTERVAL_MS
 
-                // Re-arm listeners on all current instances.
                 synchronized(this@MdnsDiscoveryJmdns) {
                     for (jmdns in instances.values) {
                         try {
@@ -90,7 +89,6 @@ internal open class MdnsDiscoveryJmdns(
                 }
                 requeryInterval = minOf(requeryInterval * 2, REQUERY_MAX_INTERVAL_MS)
 
-                // Interface diff every IFACE_POLL_INTERVAL_MS.
                 if (ifaceTick >= IFACE_POLL_INTERVAL_MS) {
                     ifaceTick = 0
                     diffInterfaces()
@@ -130,7 +128,7 @@ internal open class MdnsDiscoveryJmdns(
     }
 
     /** Returns (iface name, InetAddress) pairs for eligible addresses. Override in tests to control enumeration. */
-    protected open fun bindAddresses(): List<Pair<String, InetAddress>> =
+    protected open fun bindAddresses(): List<Pair<String, InetAddress>> = try {
         NetworkInterface
             .getNetworkInterfaces()
             ?.asSequence()
@@ -142,6 +140,10 @@ internal open class MdnsDiscoveryJmdns(
                     .map { iface.name to it }
             }?.toList()
             ?: emptyList()
+    } catch (e: java.net.SocketException) {
+        log.warn { "getNetworkInterfaces failed — ${e.message}" }
+        emptyList()
+    }
 
     private fun bringUp(key: Pair<String, InetAddress>, addr: InetAddress, name: String, port: Int) {
         try {

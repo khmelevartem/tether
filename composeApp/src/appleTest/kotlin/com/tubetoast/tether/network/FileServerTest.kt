@@ -83,7 +83,7 @@ class FileServerTest {
         val configDir = newTempDir()
         val temp = TempDataStore().also { cleanupTempStores += it }
         return FileServer(
-            port = 0,
+            configuredPort = 0,
             downloadsDir = downloadsDir,
             trustedDeviceStore = DefaultTrustedDeviceStore(temp.dataStore),
             deviceKeyPair = DeviceKeyPair(configDir),

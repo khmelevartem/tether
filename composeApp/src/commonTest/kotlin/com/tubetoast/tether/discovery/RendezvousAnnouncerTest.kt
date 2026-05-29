@@ -1,6 +1,6 @@
 package com.tubetoast.tether.discovery
 
-import com.tubetoast.tether.network.RendezvousClient
+import com.tubetoast.tether.network.FileClient
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.protocol.DeviceType
 import com.tubetoast.tether.protocol.InfoDto
@@ -20,9 +20,7 @@ import kotlin.test.assertTrue
 class RendezvousAnnouncerTest {
     private val sentHellos = mutableListOf<Pair<Device, InfoDto>>()
 
-    private val fakeClient = object : RendezvousClient(
-        HttpClient(MockEngine { respond("", HttpStatusCode.OK) }),
-    ) {
+    private val fakeClient = object : FileClient(HttpClient(MockEngine { respond("", HttpStatusCode.OK) })) {
         override suspend fun sendHello(target: Device, ownInfo: InfoDto): Boolean {
             sentHellos += target to ownInfo
             return true
@@ -33,7 +31,7 @@ class RendezvousAnnouncerTest {
         alias = "Me",
         fingerprint = "own-fp",
         port = 9000,
-        deviceType = DeviceType.desktop,
+        deviceType = DeviceType.Desktop,
     )
 
     @Test

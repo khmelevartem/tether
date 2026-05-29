@@ -9,7 +9,6 @@ import com.tubetoast.tether.identity.DeviceIdentityStore
 import com.tubetoast.tether.network.DefaultTransferActivityTracker
 import com.tubetoast.tether.network.FileClient
 import com.tubetoast.tether.network.FileServer
-import com.tubetoast.tether.network.RendezvousClient
 import com.tubetoast.tether.network.TransferActivityTracker
 import com.tubetoast.tether.preferences.FileTransferPreferences
 import com.tubetoast.tether.preferences.PeerPreferencesStore
@@ -27,7 +26,6 @@ abstract class AppContainer {
     open val nameRepublisher: DeviceNameRepublisher by lazy { DeviceNameRepublisher(nameStore, mdnsDiscovery) }
     open val transferActivityTracker: TransferActivityTracker = DefaultTransferActivityTracker()
     open val fileClient: FileClient by lazy { FileClient.default(transferActivityTracker) }
-    open val rendezvousClient: RendezvousClient by lazy { RendezvousClient.default() }
     abstract val trustedDeviceStore: TrustedDeviceStore
     open val rootComponentFactory: RootComponentFactory by lazy { RootComponentFactory(mdnsDiscovery) }
     abstract val peerPreferencesStore: PeerPreferencesStore
@@ -40,7 +38,7 @@ abstract class AppContainer {
     open val rendezvousAnnouncer: RendezvousAnnouncer by lazy {
         RendezvousAnnouncer(
             store = discoveredDevicesStore,
-            client = rendezvousClient,
+            client = fileClient,
             ownInfo = {
                 InfoDto(
                     alias = nameStore.currentName,
