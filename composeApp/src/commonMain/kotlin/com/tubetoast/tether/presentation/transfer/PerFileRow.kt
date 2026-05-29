@@ -1,20 +1,17 @@
 package com.tubetoast.tether.presentation.transfer
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -32,6 +29,7 @@ import com.tubetoast.tether.transfer.PerFileStatus
 import com.tubetoast.tether.ui.components.BodyText
 import com.tubetoast.tether.ui.components.LabelText
 import com.tubetoast.tether.ui.components.NumericText
+import com.tubetoast.tether.ui.components.ProgressBar
 import com.tubetoast.tether.ui.components.RowCancelButton
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
@@ -92,12 +90,13 @@ fun PerFileRow(
         Column(modifier = Modifier.weight(1f)) {
             BodyText(text = status.name, maxLines = 1)
             when (status) {
-                is PerFileStatus.InProgress -> FileProgressBar(
+                is PerFileStatus.InProgress -> ProgressBar(
                     progress = if (status.size != null && status.size > 0) {
                         (status.bytesDone.toFloat() / status.size.toFloat()).coerceIn(0f, 1f)
                     } else {
                         0f
                     },
+                    height = ProgressBarHeight,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = spacing.xs),
@@ -164,30 +163,6 @@ private fun TrailingSlot(content: @Composable () -> Unit) {
         contentAlignment = Alignment.Center,
         content = { content() },
     )
-}
-
-@Composable
-private fun FileProgressBar(
-    progress: Float,
-    modifier: Modifier = Modifier,
-) {
-    val colors = TetherTheme.colors
-    val shapes = TetherTheme.shapes
-
-    Box(
-        modifier = modifier
-            .height(ProgressBarHeight)
-            .clip(shapes.sm)
-            .background(colors.border),
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(progress)
-                .height(ProgressBarHeight)
-                .clip(shapes.sm)
-                .background(colors.accent),
-        )
-    }
 }
 
 @Composable
