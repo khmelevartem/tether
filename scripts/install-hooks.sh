@@ -38,7 +38,7 @@ git diff --name-only | grep '\.kt$' | xargs -r git add
 
 echo "✅ KtLint format done"
 
-# Check doc links with lychee (soft — skip if not installed)
+# Check doc links with lychee
 if ! command -v lychee &> /dev/null; then
   echo "ℹ️  lychee not found — skipping link check. Install: brew install lychee or https://github.com/lycheeverse/lychee#installation"
 else
