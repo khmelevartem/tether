@@ -4,6 +4,10 @@ import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.decompose.value.MutableValue
 import com.arkivanov.decompose.value.Value
 import com.arkivanov.decompose.value.update
+import com.arkivanov.essenty.lifecycle.LifecycleRegistry
+import com.arkivanov.essenty.lifecycle.destroy
+import com.tubetoast.tether.preferences.PeerPreferencesStore
+import com.tubetoast.tether.presentation.peer.Peer
 import com.tubetoast.tether.transfer.BatchOutcome
 import com.tubetoast.tether.transfer.BatchProgress
 import com.tubetoast.tether.transfer.BatchSender
@@ -18,21 +22,34 @@ import com.tubetoast.tether.transfer.TransferErrorReason
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.time.Duration
 
 class PeerTransferComponent(
     componentContext: ComponentContext,
-    val peer: PeerIdentity,
+    val peer: Peer,
+    private val lifecycleRegistry: LifecycleRegistry,
     private val batchSenderFactory: () -> BatchSender,
-    private val inboundEvents: Flow<ReceiveEvent>,
-    private val onShowDetailsCallback: (PeerIdentity) -> Unit,
+    // TODO(#195): wire real ReceiveEvent source when Receiver UI lands
+    private val inboundEvents: Flow<ReceiveEvent> = MutableSharedFlow(),
+    onShowDetails: (PeerIdentity) -> Unit,
     private val reconnectionTimeout: Duration = ReconnectionTimeout.DEFAULT,
     private val scope: CoroutineScope,
+    private val pendingFilesRepository: PendingFilesRepository? = null,
+    private val peerPreferencesStore: PeerPreferencesStore? = null,
+    // TODO(#192/#193/#194): platform actuals wire real file picker here
+    private val onOpenPicker: () -> Unit = {},
 ) : ComponentContext by componentContext {
-    private val mutableState = MutableValue<PeerTransferState>(PeerTransferState.Idle(peer))
+    fun destroyContext() {
+        lifecycleRegistry.destroy()
+    }
+
+    private val showDetailsCallback = onShowDetails
+    private val mutableState = MutableValue<PeerTransferState>(PeerTransferState.Idle(peer.id))
     val state: Value<PeerTransferState> = mutableState
     private var activeJob: Job? = null
     private var currentSender: BatchSender? = null
@@ -57,6 +74,24 @@ class PeerTransferComponent(
         originalSources = sources
         cancelledFileNames.value = emptySet()
         launchBatch(sources)
+    }
+
+    fun onCardClick() {
+        val sources = pendingFilesRepository?.sources?.value.orEmpty()
+        if (sources.isNotEmpty()) {
+            startOutbound(sources)
+            pendingFilesRepository?.clear()
+        } else {
+            onOpenPicker()
+        }
+    }
+
+    fun observeAutoSend(): Flow<Boolean> =
+        peerPreferencesStore?.observeAutoSend(peer.id) ?: flowOf(false)
+
+    fun setAutoSend(enabled: Boolean) {
+        val store = peerPreferencesStore ?: return
+        scope.launch { store.setAutoSend(peer.id, enabled) }
     }
 
     fun onCancel() {
@@ -129,7 +164,7 @@ class PeerTransferComponent(
                 s is PeerTransferState.Cancelled ||
                 s is PeerTransferState.Error
             ) {
-                PeerTransferState.Idle(peer)
+                PeerTransferState.Idle(peer.id)
             } else {
                 s
             }
@@ -142,7 +177,7 @@ class PeerTransferComponent(
         }
     }
 
-    fun onShowDetails() = onShowDetailsCallback(peer)
+    fun onShowDetails() = showDetailsCallback(peer.id)
 
     private fun launchBatch(sources: List<FileSource>) {
         activeJob = scope.launch {
@@ -154,7 +189,7 @@ class PeerTransferComponent(
         val sender = batchSenderFactory()
         currentSender = sender
         try {
-            sender.run(sources, peer, { src -> src.name in cancelledFileNames.value }) { progress ->
+            sender.run(sources, peer.id, { src -> src.name in cancelledFileNames.value }) { progress ->
                 mutableState.value = mapProgress(progress)
             }
         } finally {
@@ -227,7 +262,7 @@ class PeerTransferComponent(
                     if (i == 0) PerFileStatus.Queued(ev.currentFile, null) else PerFileStatus.Queued("", null)
                 }
                 mutableState.value = PeerTransferState.ActiveInbound(
-                    peer = peer,
+                    peer = peer.id,
                     currentFile = ev.currentFile,
                     currentIndex = 0,
                     totalFiles = ev.totalFiles,
@@ -282,7 +317,7 @@ class PeerTransferComponent(
                         null
                     }
                     PeerTransferState.Received(
-                        peer = peer,
+                        peer = peer.id,
                         received = ev.received,
                         total = ev.total,
                         perFile = perFile,
@@ -303,7 +338,7 @@ class PeerTransferComponent(
             is ReceiveEvent.ConnectionLost -> {
                 mutableState.update { snapshot ->
                     PeerTransferState.Reconnecting(
-                        peer = peer,
+                        peer = peer.id,
                         direction = Direction.Inbound,
                         remainingSeconds = reconnectionTimeout.inWholeSeconds.toInt(),
                         snapshotBeforeDrop = snapshot,
@@ -315,7 +350,7 @@ class PeerTransferComponent(
                     val perFile = (s as? PeerTransferState.ActiveInbound)?.perFile ?: emptyList()
                     val doneCount = perFile.count { it is PerFileStatus.Done }
                     PeerTransferState.Error(
-                        peer = peer,
+                        peer = peer.id,
                         reason = TransferErrorReason.ReceiverSuspended,
                         sent = doneCount,
                         perFile = perFile,

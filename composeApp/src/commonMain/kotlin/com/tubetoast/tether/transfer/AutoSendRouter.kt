@@ -5,7 +5,7 @@ sealed interface RoutingDecision {
         val peer: PeerIdentity,
     ) : RoutingDecision
 
-    data object RequireDeviceListTap : RoutingDecision
+    data object RequirePeerListTap : RoutingDecision
 }
 
 object AutoSendRouter {
@@ -13,7 +13,7 @@ object AutoSendRouter {
         onlinePaired: List<PeerIdentity>,
         autoSendEnabled: (PeerIdentity) -> Boolean,
     ): RoutingDecision {
-        val single = onlinePaired.singleOrNull() ?: return RoutingDecision.RequireDeviceListTap
-        return if (autoSendEnabled(single)) RoutingDecision.AutoSend(single) else RoutingDecision.RequireDeviceListTap
+        val single = onlinePaired.singleOrNull() ?: return RoutingDecision.RequirePeerListTap
+        return if (autoSendEnabled(single)) RoutingDecision.AutoSend(single) else RoutingDecision.RequirePeerListTap
     }
 }

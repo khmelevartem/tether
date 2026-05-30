@@ -3,6 +3,8 @@ package com.tubetoast.tether.presentation.transfer
 import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.resume
+import com.tubetoast.tether.presentation.peer.Peer
+import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.BatchSender
 import com.tubetoast.tether.transfer.FailureReason
 import com.tubetoast.tether.transfer.FakeConnectionMonitor
@@ -25,7 +27,10 @@ import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class TransferDetailsComponentTest {
-    private val peer = PeerIdentity("test-peer")
+    private val peer = Peer(
+        id = PeerIdentity("test-peer"),
+        device = Device(name = "TestDevice", host = "127.0.0.1", port = 8080),
+    )
 
     private fun buildPeerComponent(
         scope: kotlinx.coroutines.CoroutineScope,
@@ -39,6 +44,7 @@ class TransferDetailsComponentTest {
         return PeerTransferComponent(
             componentContext = context,
             peer = peer,
+            lifecycleRegistry = lifecycle,
             batchSenderFactory = {
                 BatchSender(
                     sendOne = sendOneOverride ?: { src, onProgress ->
@@ -51,7 +57,7 @@ class TransferDetailsComponentTest {
                 )
             },
             inboundEvents = MutableSharedFlow(),
-            onShowDetailsCallback = {},
+            onShowDetails = {},
             scope = scope,
         )
     }

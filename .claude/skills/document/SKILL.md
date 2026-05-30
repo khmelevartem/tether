@@ -63,6 +63,8 @@ gh issue view <N> --json title,body,labels,comments
 gh pr list --search "issue:#<N>" --state open --json number,isDraft,headRefName
 ```
 
+**Sweep the repo for prior mentions of `#<N>`** — `grep -rn "#<N>" .` over the working tree. Every hit is either resolved in this PR, or escalated to the user as "can't do here — move to #M?". Never silently leave a `TODO(#<N>)` after merge.
+
 **Comments are not a discussion — they are potentially a canon-update body.** When a comment conflicts with the body — the comment takes priority; escalate to the user in one line.
 
 **Critical reading.** Treat the issue description as a **starting point, not a fact**. Flag and escalate to the user before starting work if:
