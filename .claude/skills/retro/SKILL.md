@@ -101,7 +101,7 @@ For each confirmed improvement:
 
 **If the change is small** (edit in a document, clarification in a command) — do it right now and show the diff.
 
-**Long-lived-artifacts compliance check before commit.** Every prose edit retro produces lands in a long-lived artifact by construction — `CLAUDE.md`, `docs/engineering/`, `.claude/agents/`, `.claude/skills/`, `.claude/commands/`. Before committing, audit every paragraph and bullet against [`docs/engineering/long-lived-artifacts.md`](../../../docs/engineering/long-lived-artifacts.md). The recurring failure mode here is **incident-rooted phrasing**: a rule born of a specific PR carries quotes, examples, code symbols, or class names lifted directly from that PR — making the rule readable only to someone who remembers the incident. Strip every such phrase; restate the rule in present tense, generic shape, without code symbols or task-specific examples. If the rule isn't readable without the incident, the formulation is weak — rewrite it.
+**Long-lived-artifacts compliance check before commit.** Every prose edit retro produces lands in a long-lived artifact by construction. Before committing, audit every paragraph and bullet against [`docs/engineering/long-lived-artifacts.md`](../../../docs/engineering/long-lived-artifacts.md).
 
 **If the change requires a separate task** — create an issue via the `create-issue` skill. The name should read as a useful increment to the workflow, for example:
 - "Add check X to code-review.md"
