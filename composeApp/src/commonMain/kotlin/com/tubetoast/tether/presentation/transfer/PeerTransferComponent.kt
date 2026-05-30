@@ -15,7 +15,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 
 class PeerTransferComponent(
@@ -39,8 +38,7 @@ class PeerTransferComponent(
     val state: Value<PeerCardState> = mutableState
 
     init {
-        combine(engine.state, expanded) { transfer, exp -> PeerCardState(transfer, exp) }
-            .onEach { s -> mutableState.update { s } }
+        combine(engine.state, expanded) { transfer, exp -> mutableState.update { PeerCardState(transfer, exp) } }
             .launchIn(scope)
     }
 
@@ -58,7 +56,7 @@ class PeerTransferComponent(
 
     fun onCancel() = engine.onCancel()
 
-    fun onRetry() = engine.onRetry()
+    fun onRetryOutbound() = engine.onRetryOutbound()
 
     fun onRetryFile(name: String) = engine.onRetryFile(name)
 

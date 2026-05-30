@@ -5,7 +5,7 @@ data class PeerCardCallbacks(
     val onToggleAutoSend: (Boolean) -> Unit,
     val onCancel: () -> Unit,
     val onDismiss: () -> Unit,
-    val onRetry: () -> Unit,
+    val onRetryOutbound: () -> Unit,
     val onShowDetails: () -> Unit,
     val onOpenFiles: () -> Unit,
     /** Called when the card body is tapped while pending files exist. Null means the tap is a no-op. */

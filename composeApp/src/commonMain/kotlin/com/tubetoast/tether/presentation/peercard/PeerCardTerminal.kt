@@ -176,7 +176,7 @@ internal fun PeerCardError(
             if (state.reason != TransferErrorReason.ReceiverSuspended) {
                 Button(
                     label = "Retry",
-                    onClick = callbacks.onRetry,
+                    onClick = callbacks.onRetryOutbound,
                     contentDescription = retryDesc,
                     enabled = retryEnabled,
                 )
@@ -230,7 +230,7 @@ private fun previewCallbacks() = PeerCardCallbacks(
     onToggleAutoSend = {},
     onCancel = {},
     onDismiss = {},
-    onRetry = {},
+    onRetryOutbound = {},
     onShowDetails = {},
     onOpenFiles = {},
 )

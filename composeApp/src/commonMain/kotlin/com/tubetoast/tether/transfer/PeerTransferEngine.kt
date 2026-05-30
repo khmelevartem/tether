@@ -40,7 +40,7 @@ class PeerTransferEngine(
 
     init {
         scope.launch {
-            inboundEvents.collect { ev -> handleInbound(ev) }
+            inboundEvents.collect { event -> handleInbound(event) }
         }
     }
 
@@ -50,6 +50,8 @@ class PeerTransferEngine(
             current is PeerTransferState.ActiveInbound ||
             current is PeerTransferState.Reconnecting
         ) {
+            // TODO: surface "transfer already in flight" to the user instead of silently no-oping —
+            //       onCardClick currently clears PendingFilesRepository regardless, losing the share-sheet payload.
             return
         }
         originalSources = sources
@@ -62,7 +64,7 @@ class PeerTransferEngine(
         activeJob = null
     }
 
-    fun onRetry() {
+    fun onRetryOutbound() {
         val current = _state.value
         val lastPerFile = when (current) {
             is PeerTransferState.Sent -> current.perFile
@@ -91,9 +93,9 @@ class PeerTransferEngine(
 
     fun onCancelFile(name: String) {
         val current = _state.value as? PeerTransferState.ActiveOutbound ?: return
-        val idx = current.perFile.indexOfFirst { it.name == name }
-        if (idx < 0) return
-        when (val status = current.perFile[idx]) {
+        val index = current.perFile.indexOfFirst { it.name == name }
+        if (index < 0) return
+        when (val status = current.perFile[index]) {
             is PerFileStatus.InProgress -> {
                 val sender = currentSender
                 if (sender != null) scope.launch { sender.cancelCurrent(name) }
@@ -102,9 +104,9 @@ class PeerTransferEngine(
                 cancelledFileNames.update { it + name }
                 _state.update { s ->
                     val active = s as? PeerTransferState.ActiveOutbound ?: return@update s
-                    val rowIdx = active.perFile.indexOfFirst { it.name == name }.takeIf { it >= 0 } ?: return@update s
+                    val rowIndex = active.perFile.indexOfFirst { it.name == name }.takeIf { it >= 0 } ?: return@update s
                     val updated = active.perFile.toMutableList()
-                    updated[rowIdx] = PerFileStatus.Failed(
+                    updated[rowIndex] = PerFileStatus.Failed(
                         status.name,
                         status.size,
                         FailureReason.CancelledByUser,
@@ -152,7 +154,7 @@ class PeerTransferEngine(
         val sender = batchSenderFactory()
         currentSender = sender
         try {
-            sender.run(sources, peer, { src -> src.name in cancelledFileNames.value }) { progress ->
+            sender.run(sources, peer, { source -> source.name in cancelledFileNames.value }) { progress ->
                 _state.update { mapProgress(progress) }
             }
         } finally {
@@ -218,18 +220,18 @@ class PeerTransferEngine(
         }
     }
 
-    private fun handleInbound(ev: ReceiveEvent) {
-        when (ev) {
+    private fun handleInbound(event: ReceiveEvent) {
+        when (event) {
             is ReceiveEvent.Started -> {
-                val perFile: List<PerFileStatus> = List(ev.totalFiles) { i ->
-                    if (i == 0) PerFileStatus.Queued(ev.currentFile, null) else PerFileStatus.Queued("", null)
+                val perFile: List<PerFileStatus> = List(event.totalFiles) { i ->
+                    if (i == 0) PerFileStatus.Queued(event.currentFile, null) else PerFileStatus.Queued("", null)
                 }
                 _state.update {
                     PeerTransferState.ActiveInbound(
                         peer = peer,
-                        currentFile = ev.currentFile,
+                        currentFile = event.currentFile,
                         currentIndex = 0,
-                        totalFiles = ev.totalFiles,
+                        totalFiles = event.totalFiles,
                         receivedBytes = 0L,
                         totalBytes = null,
                         bytesPerSec = null,
@@ -240,29 +242,29 @@ class PeerTransferEngine(
             is ReceiveEvent.Progress -> {
                 _state.update { s ->
                     val active = s as? PeerTransferState.ActiveInbound ?: return@update s
-                    val idx = active.perFile.indexOfFirst { it.name == ev.name }.takeIf { it >= 0 }
+                    val index = active.perFile.indexOfFirst { it.name == event.name }.takeIf { it >= 0 }
                         ?: active.perFile.indexOfFirst { it.name.isEmpty() }.takeIf { it >= 0 }
                         ?: active.currentIndex
                     val updated = active.perFile.toMutableList()
-                    updated[idx] = PerFileStatus.InProgress(ev.name, ev.totalBytes, ev.receivedBytes)
+                    updated[index] = PerFileStatus.InProgress(event.name, event.totalBytes, event.receivedBytes)
                     active.copy(
-                        currentFile = ev.name,
-                        receivedBytes = ev.receivedBytes,
-                        totalBytes = ev.totalBytes,
+                        currentFile = event.name,
+                        receivedBytes = event.receivedBytes,
+                        totalBytes = event.totalBytes,
                         perFile = updated,
                     )
                 }
             }
             is ReceiveEvent.FileCompleted -> {
-                confirmedReceived.update { it + ev.name }
+                confirmedReceived.update { it + event.name }
                 _state.update { s ->
                     val active = s as? PeerTransferState.ActiveInbound ?: return@update s
-                    val idx = active.perFile.indexOfFirst { it.name == ev.name }.takeIf { it >= 0 }
+                    val index = active.perFile.indexOfFirst { it.name == event.name }.takeIf { it >= 0 }
                         ?: active.currentIndex
                     val updated = active.perFile.toMutableList()
-                    updated[idx] = PerFileStatus.Done(ev.name, active.perFile[idx].size)
+                    updated[index] = PerFileStatus.Done(event.name, active.perFile[index].size)
                     active.copy(
-                        currentIndex = (idx + 1).coerceAtMost(active.totalFiles - 1),
+                        currentIndex = (index + 1).coerceAtMost(active.totalFiles - 1),
                         perFile = updated,
                     )
                 }
@@ -270,7 +272,7 @@ class PeerTransferEngine(
             is ReceiveEvent.BatchCompleted -> {
                 _state.update { s ->
                     val perFile = (s as? PeerTransferState.ActiveInbound)?.perFile ?: emptyList()
-                    val partialReason = if (ev.received < ev.total) {
+                    val partialReason = if (event.received < event.total) {
                         val failedEntries = perFile.filterIsInstance<PerFileStatus.Failed>()
                         val cancelledCount = failedEntries.count { it.reason is FailureReason.CancelledByUser }
                         if (cancelledCount > 0 && cancelledCount == failedEntries.size) {
@@ -283,8 +285,8 @@ class PeerTransferEngine(
                     }
                     PeerTransferState.Received(
                         peer = peer,
-                        received = ev.received,
-                        total = ev.total,
+                        received = event.received,
+                        total = event.total,
                         perFile = perFile,
                         partialReason = partialReason,
                     )
@@ -293,10 +295,10 @@ class PeerTransferEngine(
             is ReceiveEvent.Failed -> {
                 _state.update { s ->
                     val active = s as? PeerTransferState.ActiveInbound ?: return@update s
-                    val idx = active.perFile.indexOfFirst { it.name == ev.file }.takeIf { it >= 0 }
+                    val index = active.perFile.indexOfFirst { it.name == event.file }.takeIf { it >= 0 }
                         ?: active.currentIndex
                     val updated = active.perFile.toMutableList()
-                    updated[idx] = PerFileStatus.Failed(ev.file, active.perFile[idx].size, ev.reason)
+                    updated[index] = PerFileStatus.Failed(event.file, active.perFile[index].size, event.reason)
                     active.copy(perFile = updated)
                 }
             }

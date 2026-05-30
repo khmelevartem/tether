@@ -102,7 +102,7 @@ class PeerTransferEngineTest {
     }
 
     @Test
-    fun `onRetry after ReceiverSuspended does not restart transfer`() = runTest {
+    fun `onRetryOutbound after ReceiverSuspended does not restart transfer`() = runTest {
         val events = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
         val engine = buildEngine(events = events, scope = backgroundScope)
         runCurrent()
@@ -115,7 +115,7 @@ class PeerTransferEngineTest {
         val errorState = engine.state.value
         assertIs<PeerTransferState.Error>(errorState)
 
-        engine.onRetry()
+        engine.onRetryOutbound()
         runCurrent()
 
         assertIs<PeerTransferState.Error>(
@@ -159,7 +159,7 @@ class PeerTransferEngineTest {
     }
 
     @Test
-    fun `onRetry sends only failed files and skips already succeeded ones`() = runTest {
+    fun `onRetryOutbound sends only failed files and skips already succeeded ones`() = runTest {
         val sendCalls = mutableMapOf("a.txt" to 0, "b.txt" to 0, "c.txt" to 0)
         val engine = buildEngine(
             scope = backgroundScope,
@@ -182,7 +182,7 @@ class PeerTransferEngineTest {
         assertEquals(2, afterFirst.sent)
         assertEquals(3, afterFirst.total)
 
-        engine.onRetry()
+        engine.onRetryOutbound()
         runCurrent()
 
         assertEquals(1, sendCalls["a.txt"])

@@ -139,7 +139,7 @@ private fun previewCallbacks() = PeerCardCallbacks(
     onToggleAutoSend = {},
     onCancel = {},
     onDismiss = {},
-    onRetry = {},
+    onRetryOutbound = {},
     onShowDetails = {},
     onOpenFiles = {},
 )

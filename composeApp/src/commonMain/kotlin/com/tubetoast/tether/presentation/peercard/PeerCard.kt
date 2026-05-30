@@ -22,7 +22,7 @@ fun PeerCard(
         onToggleAutoSend = component::setAutoSend,
         onCancel = component::onCancel,
         onDismiss = component::onDismiss,
-        onRetry = component::onRetry,
+        onRetryOutbound = component::onRetryOutbound,
         onShowDetails = component::onShowDetails,
         onOpenFiles = {
             // TODO(#192): Android — Intent.ACTION_VIEW to FileProvider URI for received folder

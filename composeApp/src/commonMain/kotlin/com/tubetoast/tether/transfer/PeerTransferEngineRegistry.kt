@@ -4,6 +4,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
@@ -33,7 +34,7 @@ class PeerTransferEngineRegistry(
             val newEntry = Entry(engineFactory(peer, engineScope), engineScope)
             val next = current + (peer to newEntry)
             if (entries.compareAndSet(current, next)) return newEntry.engine
-            engineScope.coroutineContext[Job]?.cancel()
+            engineScope.cancel()
         }
     }
 
@@ -44,11 +45,7 @@ class PeerTransferEngineRegistry(
             val evicted = current[peer]
             val next = current - peer
             if (entries.compareAndSet(current, next)) {
-                evicted
-                    ?.scope
-                    ?.coroutineContext
-                    ?.get(Job)
-                    ?.cancel()
+                evicted?.scope?.cancel()
                 return
             }
         }

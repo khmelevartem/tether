@@ -16,7 +16,7 @@ class TransferDetailsComponent(
 
     fun onCancelTransfer() = peerComponent.onCancel()
 
-    fun onRetryAll() = peerComponent.onRetry()
+    fun onRetryAll() = peerComponent.onRetryOutbound()
 
     fun onBack() = onBack.invoke()
 }
