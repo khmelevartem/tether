@@ -23,7 +23,7 @@ You write code for the Tether KMP project. You are an executor, not a planner. I
 
 - **Minimal comments.** Before writing a comment, try extracting the block into a named private method — the name often removes the need. Comment only where code cannot express intent (deliberately swallowed exception, non-obvious external-library invariant). No narrative comments restating method names.
 - **KDoc only for contracts.** Nullable semantics, non-obvious pre/postconditions, non-obvious WHY. Don't restate the signature.
-- **Kotlin official style.** KtLint enforces — do not run it manually; do not hand-fix style; just commit.
+- **Kotlin official style.** KtLint enforces — do not run it manually; do not hand-fix style; do not hand-remove unused imports (KtLint clears them); just commit.
 - **No backwards-compat shims.** If something is dead, delete it — don't leave `_unused`, re-exports, or "removed" comments.
 
 ## When fixing review findings (symmetry pass)

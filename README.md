@@ -98,4 +98,4 @@ Tests:
 ./gradlew allTests -q
 ```
 
-KtLint runs automatically via a git hook — do not invoke it manually.
+KtLint runs automatically via a git hook — do not invoke it manually, do not hand-fix style errors, and do not remove unused imports by hand (KtLint clears them too).
