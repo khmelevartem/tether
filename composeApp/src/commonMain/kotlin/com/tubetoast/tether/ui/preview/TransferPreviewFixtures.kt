@@ -13,8 +13,8 @@ object TransferPreviewFixtures {
     val peer = PeerIdentity("Alice")
     val device: Device = PreviewFixtures.singleDevice.first()
 
-    val idleCollapsed = PeerTransferState.Idle(peer, expanded = false)
-    val idleExpanded = PeerTransferState.Idle(peer, expanded = true)
+    val idleCollapsed = PeerTransferState.Idle(peer)
+    val idleExpanded = PeerTransferState.Idle(peer)
 
     val activeOutbound = PeerTransferState.ActiveOutbound(
         peer = peer,

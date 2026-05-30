@@ -10,11 +10,13 @@ import com.tubetoast.tether.presentation.peer.Peer
 import com.tubetoast.tether.transfer.FileSource
 import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PeerTransferEngine
-import com.tubetoast.tether.transfer.PeerTransferState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.update
 
 class PeerTransferComponent(
     componentContext: ComponentContext,
@@ -32,11 +34,12 @@ class PeerTransferComponent(
     }
 
     private val showDetailsCallback = onShowDetails
-    private val mutableState = MutableValue<PeerTransferState>(engine.state.value)
-    val state: Value<PeerTransferState> = mutableState
+    private val expanded = MutableStateFlow(false)
+    private val mutableState = MutableValue(PeerCardState(engine.state.value, expanded.value))
+    val state: Value<PeerCardState> = mutableState
 
     init {
-        engine.state
+        combine(engine.state, expanded) { transfer, exp -> PeerCardState(transfer, exp) }
             .onEach { s -> mutableState.update { s } }
             .launchIn(scope)
     }
@@ -63,7 +66,7 @@ class PeerTransferComponent(
 
     fun onDismiss() = engine.onDismiss()
 
-    fun toggleExpanded() = engine.toggleExpanded()
+    fun toggleExpanded() = expanded.update { !it }
 
     fun observeAutoSend(): Flow<Boolean> = engine.observeAutoSend()
 

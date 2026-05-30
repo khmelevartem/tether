@@ -39,9 +39,9 @@ import com.tubetoast.tether.ui.theme.TetherTheme
 
 @Composable
 fun TransferDetailsScreen(component: TransferDetailsComponent) {
-    val state by component.state.subscribeAsState()
+    val cardState by component.state.subscribeAsState()
     TransferDetailsContent(
-        state = state,
+        state = cardState.transfer,
         onBack = component::onBack,
         onCancelTransfer = component::onCancelTransfer,
         onCancelFile = component::onCancelFile,

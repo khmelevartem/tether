@@ -29,7 +29,7 @@ class RootComponentFactory(
                     componentContext = ctx,
                     peersRepository = peersRepository,
                     peerTransferComponentFactory = { childCtx, lifecycle, peer ->
-                        val scope = CoroutineScope(Dispatchers.Main).withLifecycle(lifecycle)
+                        val scope = CoroutineScope(Dispatchers.Main.immediate).withLifecycle(lifecycle)
                         val engine = PeerTransferEngine(
                             peer = peer.id,
                             batchSenderFactory = batchSenderFactory,

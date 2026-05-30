@@ -9,7 +9,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PeerTransferEngineTest {
@@ -336,19 +335,6 @@ class PeerTransferEngineTest {
         val state = engine.state.value
         assertIs<PeerTransferState.Sent>(state)
         assertEquals(PartialOutcome.ConnectionLost, state.partialReason)
-    }
-
-    @Test
-    fun `toggleExpanded flips expanded flag in Idle state`() = runTest {
-        val engine = buildEngine(scope = backgroundScope)
-
-        assertIs<PeerTransferState.Idle>(engine.state.value)
-        assertTrue(!(engine.state.value as PeerTransferState.Idle).expanded)
-
-        engine.toggleExpanded()
-        runCurrent()
-
-        assertTrue((engine.state.value as PeerTransferState.Idle).expanded)
     }
 
     @Test

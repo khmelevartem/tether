@@ -5,7 +5,6 @@ sealed interface PeerTransferState {
 
     data class Idle(
         override val peer: PeerIdentity,
-        val expanded: Boolean = false,
     ) : PeerTransferState
 
     data class ActiveOutbound(

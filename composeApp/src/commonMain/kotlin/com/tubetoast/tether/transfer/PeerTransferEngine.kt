@@ -127,12 +127,6 @@ class PeerTransferEngine(
         }
     }
 
-    fun toggleExpanded() {
-        _state.update { s ->
-            (s as? PeerTransferState.Idle)?.copy(expanded = !s.expanded) ?: s
-        }
-    }
-
     fun observeAutoSend(): Flow<Boolean> =
         peerPreferencesStore?.observeAutoSend(peer) ?: flowOf(false)
 

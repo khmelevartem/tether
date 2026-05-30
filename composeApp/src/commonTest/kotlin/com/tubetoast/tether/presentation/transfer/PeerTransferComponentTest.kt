@@ -12,10 +12,16 @@ import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PeerTransferEngine
 import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.fakeBatchSender
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -24,6 +30,16 @@ import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PeerTransferComponentTest {
+    @BeforeTest
+    fun setUp() {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+    }
+
+    @AfterTest
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
     private val peer = Peer(
         id = PeerIdentity("test-peer"),
         device = Device(name = "TestDevice", host = "127.0.0.1", port = 8080),
@@ -60,12 +76,31 @@ class PeerTransferComponentTest {
     fun `state Value mirrors engine StateFlow`() = runTest {
         val (component) = buildComponent(scope = backgroundScope)
 
-        assertIs<PeerTransferState.Idle>(component.state.value)
+        assertIs<PeerTransferState.Idle>(component.state.value.transfer)
 
         component.startOutbound(listOf(FakeFileSource("a.txt", 100L)))
         runCurrent()
 
-        assertIs<PeerTransferState.Sent>(component.state.value)
+        assertIs<PeerTransferState.Sent>(component.state.value.transfer)
+    }
+
+    @Test
+    fun `toggleExpanded flips expanded and preserves transfer state`() = runTest {
+        val (component) = buildComponent(scope = backgroundScope)
+
+        assertIs<PeerTransferState.Idle>(component.state.value.transfer)
+        assertEquals(false, component.state.value.expanded)
+
+        component.toggleExpanded()
+        runCurrent()
+
+        assertTrue(component.state.value.expanded)
+        assertIs<PeerTransferState.Idle>(component.state.value.transfer)
+
+        component.toggleExpanded()
+        runCurrent()
+
+        assertEquals(false, component.state.value.expanded)
     }
 
     @Test
@@ -82,7 +117,7 @@ class PeerTransferComponentTest {
         component.onCardClick()
         runCurrent()
 
-        assertIs<PeerTransferState.Sent>(component.state.value)
+        assertIs<PeerTransferState.Sent>(component.state.value.transfer)
         assertNull(repo.summary.value)
     }
 

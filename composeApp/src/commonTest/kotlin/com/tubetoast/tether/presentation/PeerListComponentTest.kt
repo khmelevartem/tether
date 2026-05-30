@@ -17,11 +17,17 @@ import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.fakeBatchSender
 import com.tubetoast.tether.transfer.toPeerIdentity
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -31,6 +37,16 @@ import kotlin.test.assertNull
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PeerListComponentTest {
+    @BeforeTest
+    fun setUp() {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+    }
+
+    @AfterTest
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
     private val deviceA = Device(name = "DeviceA", host = "192.168.1.1", port = 8080)
     private val deviceB = Device(name = "DeviceB", host = "192.168.1.2", port = 8080)
 
@@ -195,7 +211,7 @@ class PeerListComponentTest {
         assertIs<PeerTransferState.Idle>(
             component.state.value.rows
                 .first()
-                .transferComponent.state.value,
+                .transferComponent.state.value.transfer,
         )
 
         val peerComponent = component.peerTransferComponent(deviceA.toPeerIdentity())
@@ -206,7 +222,7 @@ class PeerListComponentTest {
         assertIs<PeerTransferState.Sent>(
             component.state.value.rows
                 .first()
-                .transferComponent.state.value,
+                .transferComponent.state.value.transfer,
         )
     }
 
