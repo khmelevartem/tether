@@ -83,7 +83,7 @@ The urge to add an "Open questions" section to the body is the same signal: the 
 
 ## Multi-concern requests → halt and decompose
 
-A multi-concern request (≥2 independent concerns conflated into one body — for example "extract X to domain AND make repository retain offline peers", or "rename Y AND fix lifecycle bug AND add new validation") is a malformed task. **Stop, do not file, do not draft.** List the concerns you read, ask the user to pick one for this issue and which to spawn separately. This applies even when prior permission to skip the draft step was granted — draft-skip permission covers single-concern asks only.
+A multi-concern request (≥2 independent concerns conflated into one body) is a malformed task. **Stop, do not file, do not draft.** List the concerns you read, ask the user to pick one for this issue and which to spawn separately. This applies even when prior permission to skip the draft step was granted — draft-skip permission covers single-concern asks only.
 
 The cost of a bundled issue is structural: the title cannot describe what shipped, the DoD cannot be a flat checklist, blocked_by links lose meaning, and post-merge retro cannot attribute outcomes to causes. Decomposition at filing time is cheaper than untangling at close-issue time.
 
