@@ -10,10 +10,12 @@ import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.FakeFileSource
 import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PeerTransferEngine
+import com.tubetoast.tether.transfer.PeerTransferEngineRegistry
 import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.fakeBatchSender
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -139,5 +141,52 @@ class PeerTransferComponentTest {
         val (component, lifecycle) = buildComponent(scope = backgroundScope)
         component.destroyContext()
         assertEquals(Lifecycle.State.DESTROYED, lifecycle.state)
+    }
+
+    @Test
+    fun `engine survives destroyContext and re-attaches on new component`() = runTest {
+        val pauseChannel = Channel<Unit>(0)
+        val registry = PeerTransferEngineRegistry(
+            appScope = backgroundScope,
+            engineFactory = { id, engineScope ->
+                PeerTransferEngine(
+                    peer = id,
+                    batchSenderFactory = fakeBatchSender(pauseChannel = pauseChannel),
+                    inboundEvents = MutableSharedFlow(),
+                    scope = engineScope,
+                )
+            },
+        )
+
+        val lifecycleA = LifecycleRegistry()
+        lifecycleA.resume()
+        val componentA = PeerTransferComponent(
+            componentContext = DefaultComponentContext(lifecycleA),
+            peer = peer,
+            lifecycleRegistry = lifecycleA,
+            engine = registry.engineFor(peer.id),
+            onShowDetails = {},
+            scope = backgroundScope,
+        )
+
+        componentA.startOutbound(listOf(FakeFileSource("file.txt", 100L)))
+        runCurrent()
+        assertIs<PeerTransferState.ActiveOutbound>(componentA.state.value.transfer)
+
+        componentA.destroyContext()
+
+        val lifecycleB = LifecycleRegistry()
+        lifecycleB.resume()
+        val componentB = PeerTransferComponent(
+            componentContext = DefaultComponentContext(lifecycleB),
+            peer = peer,
+            lifecycleRegistry = lifecycleB,
+            engine = registry.engineFor(peer.id),
+            onShowDetails = {},
+            scope = backgroundScope,
+        )
+        runCurrent()
+
+        assertIs<PeerTransferState.ActiveOutbound>(componentB.state.value.transfer)
     }
 }
