@@ -57,6 +57,6 @@ A common interface per store with an actual class per platform, each wrapping `S
 
 ## References
 
-- Upstream: [`androidx.datastore:datastore-preferences-core` on Google Maven](https://maven.google.com/web/index.html#androidx.datastore:datastore-preferences-core).
+- Upstream: [`androidx.datastore:datastore-preferences-core` on Google Maven](https://maven.google.com/web/index.html).
 - AndroidX KMP guide: [DataStore on Kotlin Multiplatform](https://developer.android.com/kotlin/multiplatform/datastore).
 - Living doc: [`persistence.md`](../persistence.md).

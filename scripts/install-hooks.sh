@@ -88,6 +88,20 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "✅ Tests passed, all targets compile"
+
+# Online doc-link check — pre-push only; CI/pre-commit stay offline for speed.
+if command -v lychee &> /dev/null; then
+  echo "🌐 Running lychee on full doc corpus (online, including external URLs)..."
+  lychee --include-fragments --no-progress 'docs/**/*.md' '*.md'
+  if [ $? -ne 0 ]; then
+    echo "❌ lychee found broken links — push aborted."
+    exit 1
+  fi
+  echo "✅ Lychee online link check done"
+else
+  echo "ℹ️  lychee not found — skipping online link check. Install: brew install lychee"
+fi
+
 exit 0
 EOF
 
