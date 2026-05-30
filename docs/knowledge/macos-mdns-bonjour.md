@@ -51,7 +51,7 @@ published service (`Self` → `Self (2)`), and the self-filter must use
 the name from the publish callback, not the requested one. In JVM-Bonjour
 this is done via `Event.OwnNameAssigned` ([`MdnsDiscoveryBonjour.kt`](../../composeApp/src/desktopMain/kotlin/com/tubetoast/tether/discovery/bonjour/MdnsDiscoveryBonjour.kt)).
 In native Apple exactly the same pattern is already implemented — `ownServiceName = sender.name`
-in the `netServiceDidPublish` callback in [`MdnsDiscovery.apple.kt:154`](../../composeApp/src/appleMain/kotlin/com/tubetoast/tether/discovery/MdnsDiscovery.apple.kt:154).
+in the `netServiceDidPublish` callback in [`MdnsDiscovery.apple.kt`](../../composeApp/src/appleMain/kotlin/com/tubetoast/tether/discovery/MdnsDiscovery.apple.kt).
 Do not repeat the mistake of "filter by requested name" in new
 Apple-target locations.
 

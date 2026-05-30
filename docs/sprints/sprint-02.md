@@ -35,8 +35,8 @@
 
 | Issue | Спека |
 |-------|-------|
-| #9 | [pairing.md](docs/product/features/pairing/spec.md) (scoped) |
-| #7 | [device-list.md](docs/product/features/device-list/spec.md) (scoped) |
+| #9 | [pairing.md](../product/features/pairing/spec.md) (scoped) |
+| #7 | [device-list.md](../product/features/device-list/spec.md) (scoped) |
 | #81 | без спеки (инфра, не пользовательская фича; контракт зафиксирован в `commonMain/network/FileServer.kt`) |
 
 ## Не вошло намеренно

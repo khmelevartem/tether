@@ -10,7 +10,7 @@
 
 Today any device on the same Wi-Fi can send a file to any other Tether device — there is no notion of trust. For an MVP that goes to non-technical users this is unacceptable: a roommate, a coworker, or any guest on the network can drop arbitrary content uninvited. Tether's promise of "two taps to send" only works if the two devices on either end recognise each other; otherwise the receiver needs a wall of confirmations and Tether stops feeling local and effortless.
 
-[vision.md](../vision.md) names this as one MVP commitment: *"Pairing with 4-digit code verification."* This feature is that commitment in full — the cryptographic foundation, the PIN that humans compare, and the UI that asks them to compare it.
+[vision.md](../../vision.md) names this as one MVP commitment: *"Pairing with 4-digit code verification."* This feature is that commitment in full — the cryptographic foundation, the PIN that humans compare, and the UI that asks them to compare it.
 
 ## What it does
 
@@ -62,7 +62,7 @@ The user never sees keys, never types a code into a field, never picks an algori
 
 ## Not in this feature
 
-- Channel encryption of file transfers — separate, see [security.md](../security.md).
+- Channel encryption of file transfers — separate, see [security.md](../../security.md).
 - A "forget device" or "manage trusted devices" screen — comes after MVP.
 - Stronger storage on Apple platforms (Keychain). The first version uses default per-platform storage; Keychain is a follow-up.
 - Pairing of more than two devices in one action (group pairing) — out of scope.

@@ -37,6 +37,24 @@ fi
 git diff --name-only | grep '\.kt$' | xargs -r git add
 
 echo "✅ KtLint format done"
+
+# Check doc links with lychee (soft — skip if not installed)
+if ! command -v lychee &> /dev/null; then
+  echo "ℹ️  lychee not found — skipping link check. Install: brew install lychee or https://github.com/lycheeverse/lychee#installation"
+else
+  STAGED_MD=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^(docs/.*|[^/]+)\.md$' || true)
+  if [ -n "$STAGED_MD" ]; then
+    echo "🔗 Running lychee on staged markdown files..."
+    # shellcheck disable=SC2086
+    lychee --offline --include-fragments --no-progress $STAGED_MD
+    if [ $? -ne 0 ]; then
+      echo "❌ lychee found broken links — commit aborted."
+      exit 1
+    fi
+    echo "✅ Lychee link check done"
+  fi
+fi
+
 exit 0
 EOF
 

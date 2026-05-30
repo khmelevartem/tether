@@ -1,0 +1,2 @@
+# Exclude the UX brief template — it contains intentional placeholder links.
+exclude_path = ["docs/product/features/_ux-brief-template.md"]
