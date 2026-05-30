@@ -20,7 +20,7 @@
 | 4   | [#147](https://github.com/khmelevartem/tether/issues/147) | Device name backend: `DeviceNameStore`, default-имя, mDNS republish, CLI rename         | feature | L      | ✅ closed 2026-05-22 21:29 UTC |
 | 5   | [#121](https://github.com/khmelevartem/tether/issues/121) | Спека Wi-Fi availability detection: довести до `scoped`                                 | docs    | S      | ✅ closed ([6d2baae](https://github.com/khmelevartem/tether/commit/6d2baae), PR #159; уточнение row contract — [e0ae4b4](https://github.com/khmelevartem/tether/commit/e0ae4b4), PR #200) |
 
-**Итог:** 4/5 формально закрыты, #8 переплан в эпик с явным графом sub-issues (preparatory часть выполнена). Цель спринта по device name MVP, transport reliability (timeout + Wi-Fi/wake lock) и закрытию trio system-specs достигнута. Первый юзабельный sender-флоу как single-PR результат не достигнут — заменён на эпик #8 с декомпозицией; реальный sender запускается в sprint-06+. К концу спринта эпик #8 прошёл архитектурный аудит против file-transfer ux-brief, sub-issues #187–#195 переписаны под PeerCard-as-sole-surface, заведены sub-issues #223/#224 и foundation #222, появился engineering doc [`file-transfer.md`](../engineering/file-transfer.md) — sprint-07 стартует с консистентной декомпозицией.
+**Итог:** 4/5 формально закрыты, #8 переплан в эпик с явным графом sub-issues (preparatory часть выполнена). Цель спринта по device name MVP, transport reliability (timeout + Wi-Fi/wake lock) и закрытию trio system-specs достигнута. Первый юзабельный sender-флоу как single-PR результат не достигнут — заменён на эпик #8 с декомпозицией; реальный sender запускается в sprint-06+. К концу спринта эпик #8 прошёл архитектурный аудит против file-transfer ux-brief, sub-issues #187–#195 переписаны под PeerCard-as-sole-surface, заведены sub-issues #223/#224 и foundation #222, появился engineering doc [`file-transfer.md`](../engineering/file-transfer-wire.md) — sprint-07 стартует с консистентной декомпозицией.
 
 ## Доп. результаты (вне исходного состава)
 
@@ -38,7 +38,7 @@
 | #219 | `/sprint-pick` экспресс-команда ([6625f5a](https://github.com/khmelevartem/tether/commit/6625f5a), PR #220) | Чтение `docs/sprints/sprint-NN.md` + статус issue/PR — выбор следующей задачи без полного `/grooming`. |
 | #212 | Agent prompt template `_template.md` | Шаблон для writer-агентов. |
 | —   | Семь retro-PR (#168, #171, #179, #180, #181, #204, #205, #209) | Уточнения процесса agentic-цикла, скиллов `/implement` и `/code-review`. |
-| —   | **Аудит эпика #8 + новые sub-issues + engineering doc** (не отдельные issue) | Архитектор переписал тела #187, #188, #190, #191, #192, #193, #194, #195 под PeerCard-as-sole-surface модель из ux-brief; заведены #222 (settings navigation surface), #223 (file-transfer settings UI), #224 (iOS share-extension), #225 (receiver-side per-file cancel — Post-MVP); создан [`docs/engineering/file-transfer.md`](../engineering/file-transfer.md) фиксирующий архитектурные решения (PeerCard sole surface, ChildStack composition, preference-store split, retry rule, reconnection window, wake-lock parity). |
+| —   | **Аудит эпика #8 + новые sub-issues + engineering doc** (не отдельные issue) | Архитектор переписал тела #187, #188, #190, #191, #192, #193, #194, #195 под PeerCard-as-sole-surface модель из ux-brief; заведены #222 (settings navigation surface), #223 (file-transfer settings UI), #224 (iOS share-extension), #225 (receiver-side per-file cancel — Post-MVP); создан [`docs/engineering/file-transfer.md`](../engineering/file-transfer-wire.md) фиксирующий архитектурные решения (PeerCard sole surface, ChildStack composition, preference-store split, retry rule, reconnection window, wake-lock parity). |
 
 ### Внешний контекст
 
@@ -100,7 +100,7 @@
 9. **review-architecture agent в `/code-review` и `/implement`** (#184) — закрыт gap по архитектурному review.
 10. **Agent-model right-sizing** (#210) — цена/качество мульти-агентного цикла подкручены.
 11. **Writer-агент архитектора** (#206) — `/document` оркестратор + `architect` агент в `.claude/agents/`; симметричен `spec-writer` / `ux-expert`. Использован прямо в этом же спринте для аудита эпика #8 (см. главную таблицу «Итог»).
-12. **Эпик #8 переориентирован под ux-brief** (без отдельного issue) — 8 sub-issues переписаны, заведены #222–#225, новый engineering doc [`file-transfer.md`](../engineering/file-transfer.md). Sprint-07 (когда подойдёт #190/#191) стартует с консистентной декомпозицией, не с устаревшими контрактами.
+12. **Эпик #8 переориентирован под ux-brief** (без отдельного issue) — 8 sub-issues переписаны, заведены #222–#225, новый engineering doc [`file-transfer.md`](../engineering/file-transfer-wire.md). Sprint-07 (когда подойдёт #190/#191) стартует с консистентной декомпозицией, не с устаревшими контрактами.
 
 ## Связанные продуктовые спеки
 

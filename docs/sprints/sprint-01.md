@@ -45,9 +45,9 @@
 
 | Issue | Спека |
 |-------|-------|
-| #9 | [pairing.md](docs/product/features/pairing/spec.md) (scoped) |
+| #9 | [pairing.md](../product/features/pairing/spec.md) (scoped) |
 | #47, #44 | без спеки (баги — DoD из тела issue) |
-| #50 | без спеки (refactor); источник истины — [docs/engineering/dependency-injection.md](docs/engineering/dependency-injection.md) |
+| #50 | без спеки (refactor); источник истины — [docs/engineering/dependency-injection.md](../engineering/dependency-injection.md) |
 | #51 | без спеки (doc-задача); сама создаёт документ в `docs/engineering/` |
 | #52 | без спеки (CLI dev-инструмент, не пользовательская фича) |
 

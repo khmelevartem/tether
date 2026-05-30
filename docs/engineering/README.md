@@ -39,7 +39,7 @@ ADRs in [`adr/`](adr/) capture the *why* behind one-time architectural choices. 
 - [Presentation & Navigation](adr/adr-presentation-and-navigation.md) — chose Decompose over Voyager / custom thin layer / Compose Navigation MP / Premo.
 - [macOS target — Desktop JVM (reversed from Native)](adr/adr-macos-native-vs-jvm.md) — originally chose `macosArm64` Kotlin/Native; reversed 2026-05-25 to Desktop JVM because Compose-MP macOS-native UI is unsupported.
 - [Visual Identity](adr/adr-visual-identity.md) — palette, typography, iconography; dropped Material 3 in favour of custom `TetherTheme`.
-- [Network stack](adr/adr-network-stack.md) — chose Ktor CIO across all targets tactically; engine swaps under TLS forced upstream. Living-doc side — [`transport.md`](transport.md).
+- [Network stack](adr/adr-network-stack.md) — chose Ktor CIO across all targets tactically; engine swaps under TLS forced upstream. Living-doc side — [`file-transfer-wire.md`](file-transfer-wire.md).
 - [Apple FileServer engine](adr/adr-apple-fileserver-engine.md) — chose Ktor CIO Native over hand-rolled HTTP for the Apple-side `FileServer.actual`.
 - [Channel encryption](adr/adr-channel-encryption.md) — chose TLS-with-paired-key-pinning + SecureTransport on Apple. Includes 2026-05-16 Amendment with implementation-plan corrections.
 - [Hotspot-first Discovery](adr/adr-hotspot-discovery.md) — chose layered mDNS + `/hello` rendezvous + HTTP-subnet-scan + UDP-broadcast over raw-multicast-as-primary or Wi-Fi Direct / NAN. Motivated primarily by phone-hotspot transfer.
