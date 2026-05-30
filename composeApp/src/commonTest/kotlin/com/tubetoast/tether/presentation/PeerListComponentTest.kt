@@ -348,6 +348,7 @@ class PeerListComponentTest {
     private fun buildComponentWithPeers(
         peerFlow: MutableStateFlow<List<Peer>>,
         coroutineScope: CoroutineScope,
+        onDestroyContext: (String) -> Unit = {},
     ): PeerListComponent {
         val lifecycle = LifecycleRegistry()
         val context = DefaultComponentContext(lifecycle)
@@ -356,10 +357,16 @@ class PeerListComponentTest {
             componentContext = context,
             peersRepository = FakePeersRepository(peerFlow),
             peerTransferComponentFactory = { childCtx, childLifecycle, peer ->
+                val wrappedLifecycle = object : LifecycleRegistry by childLifecycle {
+                    override fun onDestroy() {
+                        onDestroyContext(peer.id.id)
+                        childLifecycle.onDestroy()
+                    }
+                }
                 PeerTransferComponent(
                     componentContext = childCtx,
                     peer = peer,
-                    lifecycleRegistry = childLifecycle,
+                    lifecycleRegistry = wrappedLifecycle,
                     batchSenderFactory = fakeBatchSender(),
                     inboundEvents = MutableSharedFlow(),
                     onShowDetails = {},
@@ -375,5 +382,55 @@ class PeerListComponentTest {
             },
             coroutineScope = coroutineScope,
         )
+    }
+
+    @Test
+    fun `mixed online and offline peers in same emit produce mixed-flag rows`() = runTest {
+        val peerOnline = Peer(id = deviceA.toPeerIdentity(), device = deviceA, isOnline = true)
+        val peerOffline = Peer(id = deviceB.toPeerIdentity(), device = deviceB, isOnline = false)
+        val peerFlow = MutableStateFlow(listOf(peerOnline, peerOffline))
+        val component = buildComponentWithPeers(peerFlow = peerFlow, coroutineScope = backgroundScope)
+        runCurrent()
+
+        val rows = component.state.value.rows
+        assertEquals(2, rows.size)
+        assertEquals(true, rows.first { it.peer.id == deviceA.toPeerIdentity() }.peer.isOnline)
+        assertEquals(false, rows.first { it.peer.id == deviceB.toPeerIdentity() }.peer.isOnline)
+    }
+
+    @Test
+    fun `destroyContext is not called when peer flips to offline in emit`() = runTest {
+        val peerOnline = Peer(id = deviceA.toPeerIdentity(), device = deviceA, isOnline = true)
+        val peerFlow = MutableStateFlow(listOf(peerOnline))
+        val destroyedIds = mutableListOf<String>()
+        val component = buildComponentWithPeers(
+            peerFlow = peerFlow,
+            coroutineScope = backgroundScope,
+            onDestroyContext = { destroyedIds += it },
+        )
+        runCurrent()
+
+        peerFlow.value = listOf(peerOnline.copy(isOnline = false))
+        runCurrent()
+
+        assertEquals(emptyList(), destroyedIds)
+        assertNotNull(component.peerTransferComponent(deviceA.toPeerIdentity()))
+    }
+
+    @Test
+    fun `peer flipping to offline-in-emit retains same transferComponent instance`() = runTest {
+        val peerOnline = Peer(id = deviceA.toPeerIdentity(), device = deviceA, isOnline = true)
+        val peerFlow = MutableStateFlow(listOf(peerOnline))
+        val component = buildComponentWithPeers(peerFlow = peerFlow, coroutineScope = backgroundScope)
+        runCurrent()
+
+        val before = component.peerTransferComponent(deviceA.toPeerIdentity())
+        assertNotNull(before)
+
+        peerFlow.value = listOf(peerOnline.copy(isOnline = false))
+        runCurrent()
+
+        val after = component.peerTransferComponent(deviceA.toPeerIdentity())
+        assertEquals(before, after)
     }
 }
