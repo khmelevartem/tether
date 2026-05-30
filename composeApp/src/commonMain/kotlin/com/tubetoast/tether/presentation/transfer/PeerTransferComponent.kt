@@ -12,6 +12,7 @@ import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PeerTransferEngine
 import com.tubetoast.tether.transfer.PeerTransferState
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -38,7 +39,7 @@ class PeerTransferComponent(
     init {
         engine.state
             .onEach { s -> mutableState.update { s } }
-            .launchIn(scope)
+            .launchIn(CoroutineScope(scope.coroutineContext + Dispatchers.Main.immediate))
     }
 
     fun startOutbound(sources: List<FileSource>) = engine.startOutbound(sources)

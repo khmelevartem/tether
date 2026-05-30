@@ -1,6 +1,7 @@
 package com.tubetoast.tether.presentation.transfer
 
 import com.arkivanov.decompose.DefaultComponentContext
+import com.arkivanov.essenty.lifecycle.Lifecycle
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.resume
 import com.tubetoast.tether.presentation.PendingFilesSummary
@@ -15,9 +16,15 @@ import com.tubetoast.tether.transfer.PeerTransferState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -25,6 +32,16 @@ import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PeerTransferComponentTest {
+    @BeforeTest
+    fun setUp() {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+    }
+
+    @AfterTest
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
     private val peer = Peer(
         id = PeerIdentity("test-peer"),
         device = Device(name = "TestDevice", host = "127.0.0.1", port = 8080),
@@ -34,7 +51,7 @@ class PeerTransferComponentTest {
         pendingFilesRepository: PendingFilesRepository? = null,
         onOpenPicker: () -> Unit = {},
         scope: kotlinx.coroutines.CoroutineScope,
-    ): PeerTransferComponent {
+    ): Pair<PeerTransferComponent, LifecycleRegistry> {
         val lifecycle = LifecycleRegistry()
         lifecycle.resume()
         val context = DefaultComponentContext(lifecycle)
@@ -51,7 +68,7 @@ class PeerTransferComponentTest {
             inboundEvents = MutableSharedFlow(),
             scope = scope,
         )
-        return PeerTransferComponent(
+        val component = PeerTransferComponent(
             componentContext = context,
             peer = peer,
             lifecycleRegistry = lifecycle,
@@ -61,11 +78,12 @@ class PeerTransferComponentTest {
             pendingFilesRepository = pendingFilesRepository,
             onOpenPicker = onOpenPicker,
         )
+        return component to lifecycle
     }
 
     @Test
     fun `state Value mirrors engine StateFlow`() = runTest {
-        val component = buildComponent(scope = backgroundScope)
+        val (component) = buildComponent(scope = backgroundScope)
 
         assertIs<PeerTransferState.Idle>(component.state.value)
 
@@ -78,7 +96,7 @@ class PeerTransferComponentTest {
     @Test
     fun `onCardClick with pending sources starts outbound and clears repo`() = runTest {
         val repo = PendingFilesRepository()
-        val component = buildComponent(
+        val (component) = buildComponent(
             pendingFilesRepository = repo,
             scope = backgroundScope,
         )
@@ -96,7 +114,7 @@ class PeerTransferComponentTest {
     @Test
     fun `onCardClick without pending sources invokes onOpenPicker`() = runTest {
         var pickerInvoked = false
-        val component = buildComponent(
+        val (component) = buildComponent(
             onOpenPicker = { pickerInvoked = true },
             scope = backgroundScope,
         )
@@ -107,8 +125,9 @@ class PeerTransferComponentTest {
     }
 
     @Test
-    fun `destroyContext does not throw`() = runTest {
-        val component = buildComponent(scope = backgroundScope)
+    fun `destroyContext destroys the lifecycle`() = runTest {
+        val (component, lifecycle) = buildComponent(scope = backgroundScope)
         component.destroyContext()
+        assertEquals(Lifecycle.State.DESTROYED, lifecycle.state)
     }
 }

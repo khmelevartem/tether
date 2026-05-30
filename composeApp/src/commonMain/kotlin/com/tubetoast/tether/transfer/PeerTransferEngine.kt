@@ -46,7 +46,7 @@ class PeerTransferEngine(
             return
         }
         originalSources = sources
-        cancelledFileNames.value = emptySet()
+        cancelledFileNames.update { emptySet() }
         launchBatch(sources)
     }
 
@@ -67,7 +67,7 @@ class PeerTransferEngine(
         val confirmed = confirmedReceived.value
         val retryable = originalSources.filter { it.name in failedNames && it.name !in confirmed }
         if (retryable.isEmpty()) return
-        cancelledFileNames.value = emptySet()
+        cancelledFileNames.update { emptySet() }
         launchBatch(retryable)
     }
 
@@ -152,7 +152,7 @@ class PeerTransferEngine(
         currentSender = sender
         try {
             sender.run(sources, peer, { src -> src.name in cancelledFileNames.value }) { progress ->
-                _state.value = mapProgress(progress)
+                _state.update { mapProgress(progress) }
             }
         } finally {
             currentSender = null
@@ -223,16 +223,18 @@ class PeerTransferEngine(
                 val perFile: List<PerFileStatus> = List(ev.totalFiles) { i ->
                     if (i == 0) PerFileStatus.Queued(ev.currentFile, null) else PerFileStatus.Queued("", null)
                 }
-                _state.value = PeerTransferState.ActiveInbound(
-                    peer = peer,
-                    currentFile = ev.currentFile,
-                    currentIndex = 0,
-                    totalFiles = ev.totalFiles,
-                    receivedBytes = 0L,
-                    totalBytes = null,
-                    bytesPerSec = null,
-                    perFile = perFile,
-                )
+                _state.update {
+                    PeerTransferState.ActiveInbound(
+                        peer = peer,
+                        currentFile = ev.currentFile,
+                        currentIndex = 0,
+                        totalFiles = ev.totalFiles,
+                        receivedBytes = 0L,
+                        totalBytes = null,
+                        bytesPerSec = null,
+                        perFile = perFile,
+                    )
+                }
             }
             is ReceiveEvent.Progress -> {
                 _state.update { s ->
