@@ -145,7 +145,7 @@
 - [ ] `produceState` — bridge от non-Compose к State
 
 ### Архитектура
-- [ ] State hoisting — паттерн, зачем
+- [x] State hoisting — паттерн, зачем
 - [ ] `CompositionLocal` — когда применять, чем опасен
 - [ ] Navigation в Compose — `NavController`, `NavHost`, back stack, deep links
 
