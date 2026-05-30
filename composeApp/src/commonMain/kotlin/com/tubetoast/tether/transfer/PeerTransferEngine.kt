@@ -50,8 +50,8 @@ class PeerTransferEngine(
             current is PeerTransferState.ActiveInbound ||
             current is PeerTransferState.Reconnecting
         ) {
-            // TODO: surface "transfer already in flight" to the user instead of silently no-oping —
-            //       onCardClick currently clears PendingFilesRepository regardless, losing the share-sheet payload.
+            // TODO(#327): surface "transfer already in flight" to the user; the caller still
+            //              clears PendingFilesRepository on this path, dropping the share-sheet payload.
             return
         }
         originalSources = sources
