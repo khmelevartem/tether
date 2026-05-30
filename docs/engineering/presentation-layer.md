@@ -96,6 +96,15 @@ A screen is two composables in the same file:
 
 Every `@Preview` targets `XxxContent` — never `XxxScreen`. Previews live in `commonMain` next to the screen (`androidx.compose.ui.tooling.preview.Preview`, the unified CMP annotation). Build fake state from `PreviewFixtures` and wrap content in `PreviewSurface { }`, both under `com.tubetoast.tether.ui.preview`. This split is what lets Roborazzi render previews headlessly under Robolectric (the Decompose lifecycle does not boot in that environment) and lets `review-visual` consume the resulting PNGs against the UX brief — see [testing.md §Screenshot tests](testing.md#screenshot-tests).
 
+## Reusable UI primitives
+
+Reusable composables live in two sibling folders under `composeApp/src/commonMain/kotlin/com/tubetoast/tether/ui/`:
+
+- `designsystem/` — domain-agnostic primitives: `Toggle`, `Checkbox`, `Button` + `ButtonVariant`, `Banner` + `BannerSeverity`, `ProgressBar`, `ConfirmDialog`, `EllipsizedText`, `BodyText`/`TitleText`/`LabelText`/`NumericText`/`CaptionText`/`BodyLargeText`, `IconButtons`, `BrandMark`. No transfer/peer/file vocabulary. Litmus test: if the primitive could land in a generic Compose library, it lives here.
+- `feature/` — domain-bound composables built on top of design-system primitives: `AutoSendToggle`, `PeerIdentityAccent`, `CurrentFileLabel`, `ByteProgressRow`, `SkipCountBadge`. Each carries transfer/peer semantics in its name, copy, or content description.
+
+New primitives go to `designsystem/` by default; demote to `feature/` only when the primitive references domain types or hardcodes domain copy.
+
 ## Navigation
 
 The presentation tree is rooted in a single `RootComponent` (a concrete class) that owns a Decompose `ChildStack`. Composables render it via a single entry point — `RootContent(component)` — which carries the app theme and the `Children { ... }` switch. There is no separate theme wrapper above it.
