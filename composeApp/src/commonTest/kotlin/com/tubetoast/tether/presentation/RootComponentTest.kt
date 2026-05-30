@@ -217,10 +217,11 @@ class RootComponentTest {
                 PeerListComponent(
                     componentContext = childCtx,
                     peersRepository = peersRepository,
-                    peerTransferComponentFactory = { peerCtx, peerModel ->
+                    peerTransferComponentFactory = { peerCtx, peerLifecycle, peerModel ->
                         PeerTransferComponent(
                             componentContext = peerCtx,
                             peer = peerModel,
+                            lifecycleRegistry = peerLifecycle,
                             batchSenderFactory = fakeBatchSender(),
                             inboundEvents = MutableSharedFlow(),
                             onShowDetails = onShowDetails,

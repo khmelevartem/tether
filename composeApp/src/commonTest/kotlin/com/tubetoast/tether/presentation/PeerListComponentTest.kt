@@ -24,6 +24,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
@@ -92,7 +93,6 @@ class PeerListComponentTest {
             component.state.value.rows
                 .firstOrNull { it.peer.id == deviceA.toPeerIdentity() },
         )
-        // component is not accessible via rows (absent from emit), even though it is non-Idle
         assertNull(component.peerTransferComponent(deviceA.toPeerIdentity()))
     }
 
@@ -113,6 +113,23 @@ class PeerListComponentTest {
     }
 
     @Test
+    fun `destroyContext called when peer leaves emit`() = runTest {
+        val flow = MutableStateFlow(listOf(deviceA, deviceB))
+        val destroyedIds = mutableListOf<String>()
+        val component = buildComponent(
+            flow = flow,
+            coroutineScope = backgroundScope,
+            onDestroyContext = { peerId -> destroyedIds += peerId },
+        )
+        runCurrent()
+
+        flow.value = listOf(deviceA)
+        runCurrent()
+
+        assertEquals(listOf(deviceB.toPeerIdentity().id), destroyedIds)
+    }
+
+    @Test
     fun `peer evicted after dismissing terminal state while offline`() = runTest {
         val flow = MutableStateFlow(listOf(deviceA))
         val component = buildComponent(flow = flow, coroutineScope = backgroundScope)
@@ -127,7 +144,6 @@ class PeerListComponentTest {
         runCurrent()
         assertNull(component.peerTransferComponent(deviceA.toPeerIdentity()))
 
-        // Dismiss transitions state to Idle; re-emitting triggers eviction of the idle component.
         peerComponent.onDismiss()
         runCurrent()
 
@@ -142,14 +158,14 @@ class PeerListComponentTest {
     }
 
     @Test
-    fun `peer returns in next emit and row reappears`() = runTest {
+    fun `peer returns in next emit and row reappears with fresh component`() = runTest {
         val flow = MutableStateFlow(listOf(deviceA))
         val component = buildComponent(flow = flow, coroutineScope = backgroundScope)
         runCurrent()
 
-        val peerComponent = component.peerTransferComponent(deviceA.toPeerIdentity())
-        assertNotNull(peerComponent)
-        peerComponent.startOutbound(listOf(FakeFileSource("file.txt", 10L)))
+        val first = component.peerTransferComponent(deviceA.toPeerIdentity())
+        assertNotNull(first)
+        first.startOutbound(listOf(FakeFileSource("file.txt", 10L)))
         runCurrent()
 
         flow.value = emptyList()
@@ -162,7 +178,9 @@ class PeerListComponentTest {
             component.state.value.rows
                 .firstOrNull { it.peer.id == deviceA.toPeerIdentity() },
         )
-        assertNotNull(component.peerTransferComponent(deviceA.toPeerIdentity()))
+        val second = component.peerTransferComponent(deviceA.toPeerIdentity())
+        assertNotNull(second)
+        assertNotEquals(first, second)
     }
 
     @Test
@@ -287,6 +305,7 @@ class PeerListComponentTest {
         initial: List<Device> = emptyList(),
         flow: MutableStateFlow<List<Device>> = MutableStateFlow(initial),
         coroutineScope: CoroutineScope,
+        onDestroyContext: (String) -> Unit = {},
     ): PeerListComponent {
         val lifecycle = LifecycleRegistry()
         val context = DefaultComponentContext(lifecycle)
@@ -298,10 +317,17 @@ class PeerListComponentTest {
         return PeerListComponent(
             componentContext = context,
             peersRepository = peersRepository,
-            peerTransferComponentFactory = { childCtx, peer ->
+            peerTransferComponentFactory = { childCtx, childLifecycle, peer ->
+                val wrappedLifecycle = object : LifecycleRegistry by childLifecycle {
+                    override fun onDestroy() {
+                        onDestroyContext(peer.id.id)
+                        childLifecycle.onDestroy()
+                    }
+                }
                 PeerTransferComponent(
                     componentContext = childCtx,
                     peer = peer,
+                    lifecycleRegistry = wrappedLifecycle,
                     batchSenderFactory = fakeBatchSender(),
                     inboundEvents = MutableSharedFlow(),
                     onShowDetails = {},
@@ -329,10 +355,11 @@ class PeerListComponentTest {
         return PeerListComponent(
             componentContext = context,
             peersRepository = FakePeersRepository(peerFlow),
-            peerTransferComponentFactory = { childCtx, peer ->
+            peerTransferComponentFactory = { childCtx, childLifecycle, peer ->
                 PeerTransferComponent(
                     componentContext = childCtx,
                     peer = peer,
+                    lifecycleRegistry = childLifecycle,
                     batchSenderFactory = fakeBatchSender(),
                     inboundEvents = MutableSharedFlow(),
                     onShowDetails = {},

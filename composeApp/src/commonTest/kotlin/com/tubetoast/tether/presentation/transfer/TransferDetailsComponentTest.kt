@@ -44,6 +44,7 @@ class TransferDetailsComponentTest {
         return PeerTransferComponent(
             componentContext = context,
             peer = peer,
+            lifecycleRegistry = lifecycle,
             batchSenderFactory = {
                 BatchSender(
                     sendOne = sendOneOverride ?: { src, onProgress ->

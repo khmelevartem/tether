@@ -1,16 +1,18 @@
 package com.tubetoast.tether.presentation
 
 import com.arkivanov.decompose.ComponentContext
+import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.decompose.childContext
 import com.arkivanov.decompose.value.MutableValue
 import com.arkivanov.decompose.value.Value
 import com.arkivanov.decompose.value.update
+import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.coroutines.coroutineScope
+import com.arkivanov.essenty.lifecycle.resume
 import com.tubetoast.tether.presentation.banners.BannersComponent
 import com.tubetoast.tether.presentation.peer.Peer
 import com.tubetoast.tether.presentation.peer.PeersRepository
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
-import com.tubetoast.tether.presentation.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.PeerIdentity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.launchIn
@@ -19,7 +21,7 @@ import kotlinx.coroutines.flow.onEach
 class PeerListComponent(
     componentContext: ComponentContext,
     private val peersRepository: PeersRepository,
-    private val peerTransferComponentFactory: (ComponentContext, Peer) -> PeerTransferComponent,
+    private val peerTransferComponentFactory: (ComponentContext, LifecycleRegistry, Peer) -> PeerTransferComponent,
     bannersComponentFactory: (ComponentContext) -> BannersComponent,
     coroutineScope: CoroutineScope = componentContext.coroutineScope(),
 ) : ComponentContext by componentContext {
@@ -27,27 +29,27 @@ class PeerListComponent(
     private val _state = MutableValue(PeerListState.empty())
     val state: Value<PeerListState> = _state
 
-    // TODO(#318): drop this lifecycle registry once transfer state lives in a domain
-    // repository — the component then has nothing to retain and Decompose contexts can be
-    // destroyed on eviction.
-    private val components = mutableMapOf<PeerIdentity, PeerTransferComponent>()
-
     init {
         peersRepository.peers
             .onEach { peers ->
-                val emitIds = peers.map { it.id }.toSet()
-                peers.forEach { peer ->
-                    if (peer.id !in components) {
-                        components[peer.id] = peerTransferComponentFactory(childContext(peer.id.id), peer)
-                    }
-                }
-                components.keys
-                    .filter { id -> id !in emitIds && components[id]?.state?.value is PeerTransferState.Idle }
-                    .forEach { id -> components.remove(id) }
+                val previous = _state.value.rows.associateBy { it.peer.id }
+                val newIds = peers.map { it.id }.toSet()
+
+                // Destroy components for peers no longer in the emit. Trade-off: an active
+                // transfer for a peer that drops from mDNS mid-flight is aborted when its
+                // lifecycle is destroyed. Until #319 (transfer state machine in domain repo)
+                // there is no safety net; foundation is cleaner this way and the regression
+                // is observable in behaviour, not in silent drift.
+                previous.values
+                    .filter { it.peer.id !in newIds }
+                    .forEach { it.transferComponent.destroyContext() }
+
                 _state.update {
                     PeerListState(
                         rows = peers.map { peer ->
-                            PeerRow(peer = peer, transferComponent = components.getValue(peer.id))
+                            val existing = previous[peer.id]?.transferComponent
+                            val component = existing ?: createComponent(peer)
+                            PeerRow(peer, component)
                         },
                     )
                 }
@@ -58,4 +60,10 @@ class PeerListComponent(
         _state.value.rows
             .firstOrNull { it.peer.id == peer }
             ?.transferComponent
+
+    private fun createComponent(peer: Peer): PeerTransferComponent {
+        val lifecycle = LifecycleRegistry()
+        lifecycle.resume()
+        return peerTransferComponentFactory(DefaultComponentContext(lifecycle), lifecycle, peer)
+    }
 }

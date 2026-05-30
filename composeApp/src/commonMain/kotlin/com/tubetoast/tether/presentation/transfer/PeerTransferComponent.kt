@@ -4,6 +4,8 @@ import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.decompose.value.MutableValue
 import com.arkivanov.decompose.value.Value
 import com.arkivanov.decompose.value.update
+import com.arkivanov.essenty.lifecycle.LifecycleRegistry
+import com.arkivanov.essenty.lifecycle.destroy
 import com.tubetoast.tether.preferences.PeerPreferencesStore
 import com.tubetoast.tether.presentation.peer.Peer
 import com.tubetoast.tether.transfer.BatchOutcome
@@ -30,6 +32,7 @@ import kotlin.time.Duration
 class PeerTransferComponent(
     componentContext: ComponentContext,
     val peer: Peer,
+    private val lifecycleRegistry: LifecycleRegistry,
     private val batchSenderFactory: () -> BatchSender,
     // TODO(#195): wire real ReceiveEvent source when Receiver UI lands
     private val inboundEvents: Flow<ReceiveEvent> = MutableSharedFlow(),
@@ -41,6 +44,10 @@ class PeerTransferComponent(
     // TODO(#192/#193/#194): platform actuals wire real file picker here
     private val onOpenPicker: () -> Unit = {},
 ) : ComponentContext by componentContext {
+    fun destroyContext() {
+        lifecycleRegistry.destroy()
+    }
+
     private val showDetailsCallback = onShowDetails
     private val mutableState = MutableValue<PeerTransferState>(PeerTransferState.Idle(peer.id))
     val state: Value<PeerTransferState> = mutableState
