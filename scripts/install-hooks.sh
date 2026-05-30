@@ -42,18 +42,13 @@ echo "✅ KtLint format done"
 if ! command -v lychee &> /dev/null; then
   echo "ℹ️  lychee not found — skipping link check. Install: brew install lychee or https://github.com/lycheeverse/lychee#installation"
 else
-  # Intentionally scoped to staged files only; CI runs lychee against the full corpus.
-  # NUL-delimited so filenames with whitespace survive the pipeline.
-  STAGED_MD=$(git diff --cached --name-only --diff-filter=ACM -z | grep -zE '^(docs/.*|[^/]+)\.md$' | tr '\0' '\n')
-  if [ -n "$STAGED_MD" ]; then
-    echo "🔗 Running lychee on staged markdown files..."
-    echo "$STAGED_MD" | tr '\n' '\0' | xargs -0 lychee --offline --include-fragments --no-progress
-    if [ $? -ne 0 ]; then
-      echo "❌ lychee found broken links — commit aborted."
-      exit 1
-    fi
-    echo "✅ Lychee link check done"
+  echo "🔗 Running lychee on full doc corpus..."
+  lychee --offline --include-fragments --no-progress 'docs/**/*.md' '*.md'
+  if [ $? -ne 0 ]; then
+    echo "❌ lychee found broken links — commit aborted."
+    exit 1
   fi
+  echo "✅ Lychee link check done"
 fi
 
 exit 0
