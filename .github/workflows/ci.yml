@@ -30,3 +30,14 @@ jobs:
       - uses: gradle/actions/setup-gradle@v3
       - name: Run tests (all modules)
         run: ./gradlew allTests
+
+  links:
+    runs-on: ubuntu-latest
+    name: Doc links
+    steps:
+      - uses: actions/checkout@v4
+      - name: Lychee link check
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: --offline --include-fragments --no-progress 'docs/**/*.md' '*.md'
+          fail: true

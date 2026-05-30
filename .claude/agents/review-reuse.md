@@ -22,6 +22,8 @@ rg "<distinctive substring>" --type kotlin
 
 If you find a near-duplicate, flag it. "Near" includes: same logic with different names, same data shape with different types, same algorithm with cosmetic differences. Don't be conservative — flag and let the author argue.
 
+**Threshold — second copy.** Once the same shape appears in **two** places in the diff (or once in the diff + once already in the codebase), flag it for extraction. Do not wait for the third copy. The fact that each copy currently lives as a private helper next to its caller is not a defence; private-helper duplication across sibling files is the precise pattern this rule targets.
+
 ### 2. Doc-vs-code drift
 
 If the diff changes a public API, type, or contract that's referenced in:

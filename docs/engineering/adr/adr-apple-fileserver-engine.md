@@ -57,4 +57,4 @@ The server listens on port 0 (OS-assigned ephemeral) and writes received files t
 - [#81](https://github.com/khmelevartem/tether/issues/81) — Apple FileServer implementation issue
 - [adr-macos-native-vs-jvm.md](adr-macos-native-vs-jvm.md) — earlier decision; this ADR updates its premise about Ktor server availability on Native
 - [docs/knowledge/apple-platform.md](../../knowledge/apple-platform.md) — Apple-target gotchas (delegate GC, NSRunLoop in tests, Local Network privacy)
-- [Ktor 3.0 release notes](https://ktor.io/docs/whats-new-3-0-0.html) — server-engine Native support
+- [Ktor releases](https://ktor.io/docs/releases.html) — server-engine Native support landed in 3.0

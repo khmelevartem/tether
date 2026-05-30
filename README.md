@@ -99,3 +99,5 @@ Tests:
 ```
 
 KtLint runs automatically via a git hook — do not invoke it manually, do not hand-fix style errors, and do not remove unused imports by hand (KtLint clears them too).
+
+Doc link / `#anchor` validation: `lychee` runs offline on the full doc corpus in the pre-commit hook and online (external URLs) in pre-push; CI gates the same offline check on push. Install with `brew install lychee` (the hook soft-skips if absent).

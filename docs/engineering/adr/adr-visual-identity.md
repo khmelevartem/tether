@@ -91,9 +91,9 @@ Compose Foundation + `com.composables:core` (Compose Unstyled). Custom `TetherTh
 
 ### Brand mark — Interpretation I: "Two-Tone Tether" (chosen)
 
-Signature glyph: `•—•` — left dot teal, right dot `peerIdentity` (warm copper/amber hue), neutral `textPrimary` line. Full geometry, states, and design rationale: [ui-brand-mark.md](../ui-brand-mark.md).
+Signature glyph: `•—•` — left dot teal, right dot `peerIdentity` (warm copper/amber hue), neutral `textPrimary` line. Full geometry, states, and design rationale: `ui-brand-mark.md` (file removed).
 
-The mark literalizes the word *tether* — a line between two points under tension. It occupies an empty cell in the file-transfer icon space (competitors use radar arcs, arrows, planes, clouds) and earns triple duty as app icon, in-app status indicator, and transfer progress bar — meaning `peerIdentity` stays live on-screen during use and recall remains active between launches. Full alternatives analysis: [ui-brand-mark.md § Rationale](../ui-brand-mark.md).
+The mark literalizes the word *tether* — a line between two points under tension. It occupies an empty cell in the file-transfer icon space (competitors use radar arcs, arrows, planes, clouds) and earns triple duty as app icon, in-app status indicator, and transfer progress bar — meaning `peerIdentity` stays live on-screen during use and recall remains active between launches. Full alternatives analysis: `ui-brand-mark.md § Rationale` (file removed).
 
 `peerIdentity` is never used as a UI interactive accent, hover state, focus ring, or button color. Teal is the sole interactive accent in the UI.
 
@@ -162,7 +162,7 @@ UI stays single-accent (teal only). The two-tone is icon-level only.
 
 - [docs/product/design.md](../../product/design.md) — visual language and locked palette
 - [docs/engineering/ui-style-guide.md](../ui-style-guide.md) — implementation reference
-- [docs/engineering/ui-brand-mark.md](../ui-brand-mark.md) — `•—•` geometry, states, and design rationale
+- `docs/engineering/ui-brand-mark.md` — `•—•` geometry, states, and design rationale (file removed)
 - [adr-presentation-and-navigation.md](adr-presentation-and-navigation.md) — Decompose presentation layer
 - [Inter typeface](https://rsms.me/inter/) — OFL-1.1
 - [Tabler Icons](https://tabler.io/icons) — MIT license
