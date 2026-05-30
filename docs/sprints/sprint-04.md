@@ -57,7 +57,7 @@
 | #111  | без продуктовой спеки — рефактор discovery layer                                                     |
 | #120  | правит [device-name-bootstrapping/spec.md](../product/features/device-name-bootstrapping/spec.md) (`idea` → `scoped`) |
 | #107 (доп.) | правит [file-transfer/spec.md](../product/features/file-transfer/spec.md) (`idea` → `scoped`) |
-| #145 (доп.) | правит [design.md](../product/design.md), добавляет [ui-style-guide.md](../engineering/ui-style-guide.md), `ui-brand-mark.md` (removed — see #287), [adr-visual-identity.md](../engineering/adr/adr-visual-identity.md) |
+| #145 (доп.) | правит [design.md](../product/design.md), добавляет [ui-style-guide.md](../engineering/ui-style-guide.md), `ui-brand-mark.md` (file removed), [adr-visual-identity.md](../engineering/adr/adr-visual-identity.md) |
 
 ## Не вошло намеренно
 

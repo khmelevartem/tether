@@ -42,6 +42,7 @@ echo "✅ KtLint format done"
 if ! command -v lychee &> /dev/null; then
   echo "ℹ️  lychee not found — skipping link check. Install: brew install lychee or https://github.com/lycheeverse/lychee#installation"
 else
+  # Intentionally scoped to staged files only; CI runs lychee against the full corpus.
   STAGED_MD=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^(docs/.*|[^/]+)\.md$' || true)
   if [ -n "$STAGED_MD" ]; then
     echo "🔗 Running lychee on staged markdown files..."
