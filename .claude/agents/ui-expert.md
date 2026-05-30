@@ -88,4 +88,4 @@ These conventions ensure `./gradlew :composeApp:recordRoborazziDebug -q` can ren
 
 - Backend / network / discovery logic — that's not UI.
 - Make business decisions ("should the user see X here?"). If the spec doesn't say, ask back; don't invent UX.
-- Hand-fix KtLint style — the git hook handles it.
+- Hand-fix KtLint style or hand-remove unused imports — the git hook handles both.

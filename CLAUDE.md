@@ -37,7 +37,7 @@ To pull main into the branch — `/rebase` (rebases onto fresh main and shows wh
 
 ## Common commands
 
-Run all Gradle commands with `-q`. Do not run KtLint manually — the git hook does it automatically on commit; do not fix style errors by hand either.
+Run all Gradle commands with `-q`. Do not run KtLint manually — the git hook does it automatically on commit; do not fix style errors by hand either. Do not clean up unused imports by hand either — KtLint removes them on commit.
 
 Full list of commands by platform — [README.md](README.md). Test commands — [`testing.md`](docs/engineering/testing.md). Parallel run of all targets — `scripts/run-all.sh`.
 

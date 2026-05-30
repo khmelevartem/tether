@@ -34,12 +34,7 @@ trade-off, documented below.
     android:exported="false" />
 ```
 
-```kotlin
-// TetherForegroundService.kt
-if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-    startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
-}
-```
+Service code: see `TetherForegroundService.startForegroundCompat`.
 
 **Rule:** when changing the FGS type, always verify on a real device that the
 notification is visible. Emulators may not reproduce suppression behavior.
@@ -53,14 +48,11 @@ window, the OS kills the service and the notification disappears with no user-vi
 message. Logcat shows a fatal exception with a "dataSync did not stop within its timeout"
 message. ([Android 15 behavior changes — Data sync foreground services](https://developer.android.com/about/versions/15/behavior-changes-15#datasync-timeout))
 
-The service runs `START_STICKY`, so the OS auto-restarts it after the kill. Each restart
-attempt during the still-exhausted window crashes the process with a fatal "Time limit
-already exhausted for foreground service type dataSync" exception out of `startForeground()`
-in `onCreate`. Observed in practice as two restart-and-crash cycles within ~30min of the
-initial kill before the OS gives up. The user does not see these crashes (no Activity is
-up), but they surface in crash analytics. A user-initiated cold start hours later succeeds
-because foregrounding the app resets the timer before the start is attempted. See #310
-for the planned graceful-handling fix.
+`START_STICKY` causes the OS to auto-restart the service after the kill. Each restart
+inside the still-exhausted window aborts cleanly: `startForegroundCompat` catches the
+`ForegroundServiceStartNotAllowedException` (API 31+), logs a warning, and calls
+`stopSelf()` — no fatal, no FileServer/mDNS start. A user-initiated cold start after
+the cap window has freed succeeds because foregrounding the app resets the timer.
 
 **Root cause:** Android 15 (API 35) introduced a 6-hour-per-24h cap on `dataSync` FGS
 runtime. The timer resets each time the user brings the app to the foreground.
@@ -75,7 +67,7 @@ at which point the foreground-reset takes effect.
 
 **Detection:**
 ```
-adb logcat | grep -E "dataSync did not stop within its timeout|Time limit already exhausted"
+adb logcat | grep "dataSync did not stop within its timeout"
 ```
 
 **Recovery:** user reopens the app; cold start re-arms the foreground service (see the "Stop button UX — sticky Stop pattern" section below).

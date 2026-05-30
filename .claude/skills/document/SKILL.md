@@ -63,6 +63,8 @@ gh issue view <N> --json title,body,labels,comments
 gh pr list --search "issue:#<N>" --state open --json number,isDraft,headRefName
 ```
 
+**Sweep the repo for prior mentions of `#<N>`** — `grep -rn "#<N>" .` over the working tree. Every hit is either resolved in this PR, or escalated to the user as "can't do here — move to #M?". Never silently leave a `TODO(#<N>)` after merge.
+
 **Comments are not a discussion — they are potentially a canon-update body.** When a comment conflicts with the body — the comment takes priority; escalate to the user in one line.
 
 **Critical reading.** Treat the issue description as a **starting point, not a fact**. Flag and escalate to the user before starting work if:
@@ -148,6 +150,7 @@ Check, in order:
 3. **Scope cohesion.** For each artifact, ask: "does every section depend on the central invariant of this artifact's feature/subsystem?" Sections describing concepts that survive without that invariant belong to a different artifact. (Rule from [spec-writer Step 3](../../agents/spec-writer.md) and [ux-expert "Before declaring ready"](../../agents/ux-expert.md).) Mechanical move = do it; concept-level scope dispute = D2.
 4. **ADR parent-living-doc invariant.** If an ADR was created, the parent living doc exists and is referenced from the ADR Context section. Per [`docs/engineering/adr/README.md`](../../../docs/engineering/adr/README.md). If missing, dispatch `architect` again to add the parent doc in this same pass.
 5. **Indexes updated.** `docs/product/features/README.md` row added/updated if a spec was touched; `docs/engineering/README.md` entry added if a living doc or ADR was created.
+6. **Relocation completeness.** When the diff *removes or moves* a decision / section out of a doc (trim, split, hoist to canon), verify two things per removed unit: (a) it is **homed** somewhere in canon — an existing or newly-created ADR / principle / spec / knowledge entry — and not simply deleted; (b) every **inbound link** to the removed anchor is repointed (`grep -rn '<old-file>.md#<anchor>' docs/ *.md`). A clean diff that removes content is not self-evidently complete: the test is "where does each removed claim now live, and does everything that linked to it still resolve?". Missing home = D2 (route to the owning sub-agent); dangling link = mechanical fix, apply directly.
 
 Mechanical fixes (rename, add missing link, add missing index row) — apply directly. Conceptual fixes — D2 → escalate.
 

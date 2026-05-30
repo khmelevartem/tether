@@ -1,5 +1,7 @@
 package com.tubetoast.tether.network
 
+import android.app.ForegroundServiceStartNotAllowedException
+import android.app.Notification
 import android.app.Service
 import android.content.Intent
 import com.tubetoast.tether.TetherApp
@@ -13,11 +15,25 @@ import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.Implementation
+import org.robolectric.annotation.Implements
+import org.robolectric.shadow.api.Shadow
 import org.robolectric.shadows.ShadowPowerManager
+import org.robolectric.shadows.ShadowService
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+
+@Implements(Service::class, callThroughByDefault = true)
+class ShadowServiceThrowingOnStartForeground : ShadowService() {
+    @Implementation
+    override fun startForeground(
+        id: Int,
+        notification: Notification,
+        foregroundServiceType: Int,
+    ): Unit = throw ForegroundServiceStartNotAllowedException("quota exhausted (test shadow)")
+}
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = TetherApp::class)
@@ -51,6 +67,16 @@ class TetherForegroundServiceTest {
     @Test
     fun `onDestroy does not throw when server and discovery were never started`() {
         val controller = Robolectric.buildService(TetherForegroundService::class.java).create()
+        controller.destroy()
+    }
+
+    @Test
+    @Config(sdk = [35], shadows = [ShadowServiceThrowingOnStartForeground::class])
+    fun `onCreate stops self without launching servers when FGS quota is exhausted`() {
+        val controller = Robolectric.buildService(TetherForegroundService::class.java).create()
+        val service = controller.get()
+        val shadow = Shadow.extract<ShadowService>(service)
+        assertTrue(shadow.isStoppedBySelf, "stopSelf() must be called when quota is exhausted")
         controller.destroy()
     }
 

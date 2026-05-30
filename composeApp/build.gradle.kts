@@ -111,6 +111,7 @@ kotlin {
             implementation(libs.decompose.extensions.compose)
             implementation(libs.essenty.lifecycle.coroutines)
             implementation(libs.tabler.icons)
+            implementation(libs.compose.unstyled)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

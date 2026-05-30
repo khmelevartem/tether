@@ -15,6 +15,8 @@ User-facing concepts. The vocabulary [`spec-writer`](../.claude/agents/spec-writ
 - **Device name** — the user-chosen display label for a device, shown to peers (see [device-name-bootstrapping](product/features/device-name-bootstrapping/)).
 - **Hotspot transfer** — a transfer that runs over an ad-hoc Wi-Fi hotspot hosted by one of the devices, used when the peers have no shared Wi-Fi network (see [hotspot-transfer](product/features/hotspot-transfer/)).
 - **Peer identity** — the stable visual signal (currently a warm copper hue) bound to a specific peer's device identity, so the same peer is recognisable across screens. _Avoid:_ peer color, device color, identity hue. (see [ui-style-guide.md](engineering/ui-style-guide.md))
+- **Auto-send** — a per-peer opt-in that, when enabled and the peer is the sole online paired peer, sends incoming pending files immediately without a device-list tap. Toggle lives in the expanded PeerCard (see [file-transfer](product/features/file-transfer/)). _Avoid:_ quick send, instant send.
+- **Pending files** — files staged for a transfer that has not yet started, typically arriving via share-sheet or drag-drop while the user picks the target peer. Surfaced by the pending-outbound banner on the device list (see [file-transfer](product/features/file-transfer/)). _Avoid:_ queued files, staged files, awaiting files.
 
 ## Technical
 

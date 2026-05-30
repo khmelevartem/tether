@@ -20,29 +20,29 @@ class AutoSendRoutingTest {
     }
 
     @Test
-    fun `two online paired peers routes to RequireDeviceListTap`() {
+    fun `two online paired peers routes to RequirePeerListTap`() {
         val decision = AutoSendRouter.route(
             onlinePaired = listOf(peerA, peerB),
             autoSendEnabled = { true },
         )
-        assertIs<RoutingDecision.RequireDeviceListTap>(decision)
+        assertIs<RoutingDecision.RequirePeerListTap>(decision)
     }
 
     @Test
-    fun `one online paired peer with autoSend disabled routes to RequireDeviceListTap`() {
+    fun `one online paired peer with autoSend disabled routes to RequirePeerListTap`() {
         val decision = AutoSendRouter.route(
             onlinePaired = listOf(peerA),
             autoSendEnabled = { false },
         )
-        assertIs<RoutingDecision.RequireDeviceListTap>(decision)
+        assertIs<RoutingDecision.RequirePeerListTap>(decision)
     }
 
     @Test
-    fun `zero online paired peers routes to RequireDeviceListTap`() {
+    fun `zero online paired peers routes to RequirePeerListTap`() {
         val decision = AutoSendRouter.route(
             onlinePaired = emptyList(),
             autoSendEnabled = { true },
         )
-        assertIs<RoutingDecision.RequireDeviceListTap>(decision)
+        assertIs<RoutingDecision.RequirePeerListTap>(decision)
     }
 }

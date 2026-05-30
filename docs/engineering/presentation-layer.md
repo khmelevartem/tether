@@ -20,28 +20,28 @@ Compose talks down to the Component. The Component talks down to `AppContainer` 
 ## Component anatomy
 
 ```kotlin
-class DeviceListComponent(
+class PeerListComponent(
     componentContext: ComponentContext,
-    private val discovery: DeviceDiscovery,
+    private val peersRepository: PeersRepository,
     coroutineScope: CoroutineScope = componentContext.coroutineScope(),
 ) : ComponentContext by componentContext {
 
-    private val _state = MutableValue(DeviceListState.empty())
-    val state: Value<DeviceListState> = _state
+    private val _state = MutableValue(PeerListState.empty())
+    val state: Value<PeerListState> = _state
 
     init {
         coroutineScope.launch {
-            discovery.discoveredDevices.collect { devices ->
-                _state.update { DeviceListState(devices) }
+            peersRepository.peers.collect { peers ->
+                _state.update { PeerListState(peers) }
             }
         }
     }
 
-    fun onDeviceClicked(id: DeviceId) { /* ... */ }
+    fun onPeerClicked(id: PeerIdentity) { /* ... */ }
 }
 ```
 
-Components depend on **interfaces from `commonMain`** (e.g. `DeviceDiscovery`), not on platform actuals (`MdnsDiscovery`). The actual class implements the interface; the Component never sees the platform type. This keeps presentation tests in `commonTest` and allows fakes without `expect`/`actual` plumbing.
+Components depend on **interfaces or repositories from `commonMain`** (e.g. `PeersRepository`, `DeviceDiscovery`), not on platform actuals (`MdnsDiscovery`). The actual class implements the interface; the Component never sees the platform type. This keeps presentation tests in `commonTest` and allows fakes without `expect`/`actual` plumbing.
 
 Conventions:
 
@@ -69,15 +69,17 @@ Compose subscribes via `subscribeAsState`:
 
 ```kotlin
 @Composable
-fun DeviceList(component: DeviceListComponent) {
+fun PeerList(component: PeerListComponent) {
     val state by component.state.subscribeAsState()
-    Button(onClick = { component.onDeviceClicked(state.devices.first().id) }) { /* ... */ }
+    Button(onClick = { component.onPeerClicked(state.peers.first().id) }) { /* ... */ }
 }
 ```
 
 Events are plain method calls on the Component. No `LaunchedEffect` business logic, no event channels through the Composable.
 
-For states that are conceptually "empty or set", use an explicit empty sentinel on the state type (e.g. `PendingFilesSummary.NONE`) and keep `Value<T>` non-null. `Value<T>` has a non-null bound (`T : Any`); modelling absence as `null` and falling back to `StateFlow<T?>` is not the project convention.
+**`MutableStateFlow` / `MutableValue` updates always go through `update { ... }`.** Direct `.value = …` assignment is forbidden in new code. `update` is an atomic read-modify-write that eliminates lost-update races.
+
+**Components do not own domain logic.** Domain lives in the domain layer in plain Kotlin without framework dependencies. Presentation logic is restricted to mapping domain data to user-facing representation and relaying user actions to the appropriate domain class. Litmus test: if the UI is rewritten ground-up and the logic must still exist — it belongs in the domain layer, not the presentation layer.
 
 ## Long-lived state lives outside Components
 
@@ -93,6 +95,15 @@ A screen is two composables in the same file:
 - **`XxxContent(state, callbacks, modifier)`** — stateless. Renders the UI given a plain state object. No Decompose, no DI, no coroutines.
 
 Every `@Preview` targets `XxxContent` — never `XxxScreen`. Previews live in `commonMain` next to the screen (`androidx.compose.ui.tooling.preview.Preview`, the unified CMP annotation). Build fake state from `PreviewFixtures` and wrap content in `PreviewSurface { }`, both under `com.tubetoast.tether.ui.preview`. This split is what lets Roborazzi render previews headlessly under Robolectric (the Decompose lifecycle does not boot in that environment) and lets `review-visual` consume the resulting PNGs against the UX brief — see [testing.md §Screenshot tests](testing.md#screenshot-tests).
+
+## Reusable UI primitives
+
+Reusable composables live in two sibling folders under `composeApp/src/commonMain/kotlin/com/tubetoast/tether/ui/`:
+
+- `designsystem/` — domain-agnostic primitives: `Toggle`, `Checkbox`, `Button` + `ButtonVariant`, `Banner` + `BannerSeverity`, `ProgressBar`, `ConfirmDialog`, `EllipsizedText`, `BodyText`/`TitleText`/`LabelText`/`NumericText`/`CaptionText`/`BodyLargeText`, `IconButtons`, `BrandMark`. No transfer/peer/file vocabulary. Litmus test: if the primitive could land in a generic Compose library, it lives here.
+- `feature/` — domain-bound composables built on top of design-system primitives: `AutoSendToggle`, `PeerIdentityAccent`, `CurrentFileLabel`, `ByteProgressRow`, `SkipCountBadge`. Each carries transfer/peer semantics in its name, copy, or content description.
+
+New primitives go to `designsystem/` by default; demote to `feature/` only when the primitive references domain types or hardcodes domain copy.
 
 ## Navigation
 
@@ -136,21 +147,21 @@ Process-death state restoration is **not a goal** for the navigation stack. The 
 Components are testable as plain Kotlin — no Compose runtime, no Robolectric:
 
 ```kotlin
-class DeviceListComponentTest {
+class PeerListComponentTest {
 
-    @Test fun emits_devices_from_discovery() = runTest {
-        val flow = MutableStateFlow<List<Device>>(emptyList())
+    @Test fun emits_peers_from_repository() = runTest {
+        val flow = MutableStateFlow<List<Peer>>(emptyList())
         val lifecycle = LifecycleRegistry().apply { resume() }
-        val component = DeviceListComponent(
+        val component = PeerListComponent(
             componentContext = DefaultComponentContext(lifecycle),
-            discovery = FakeDeviceDiscovery(flow),
+            peersRepository = FakePeersRepository(flow),
             coroutineScope = backgroundScope,
         )
 
-        flow.value = listOf(deviceA, deviceB)
+        flow.value = listOf(peerA, peerB)
         runCurrent()
 
-        assertEquals(listOf(deviceA, deviceB), component.state.value.devices)
+        assertEquals(listOf(peerA, peerB), component.state.value.peers)
     }
 }
 ```

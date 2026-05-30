@@ -1,5 +1,6 @@
 package com.tubetoast.tether.network
 
+import android.app.ForegroundServiceStartNotAllowedException
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -9,6 +10,7 @@ import android.content.pm.ServiceInfo
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
+import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
@@ -46,7 +48,7 @@ class TetherForegroundService : LifecycleService() {
 
     override fun onCreate() {
         super.onCreate()
-        startForegroundCompat()
+        if (!startForegroundCompat()) return
 
         val container = (application as AppContainerProvider).container
         val fileServer = container.fileServer
@@ -131,8 +133,36 @@ class TetherForegroundService : LifecycleService() {
         super.onDestroy()
     }
 
-    private fun startForegroundCompat() {
+    /** On false the OS refused FGS promotion; caller must not proceed with server start. */
+    private fun startForegroundCompat(): Boolean {
         ensureChannel()
+        val notification = buildNotification()
+        return when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> startForegroundS(notification)
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
+                startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+                true
+            }
+            else -> {
+                startForeground(NOTIFICATION_ID, notification)
+                true
+            }
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.S)
+    private fun startForegroundS(notification: Notification): Boolean = try {
+        startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+        true
+    } catch (e: ForegroundServiceStartNotAllowedException) {
+        log.warn {
+            "dataSync FGS quota exhausted; aborting start. OS auto-restarts inside the cap window will hit this same path; FGS resumes only after user foregrounds the app."
+        }
+        stopSelf()
+        false
+    }
+
+    private fun buildNotification(): Notification {
         val stopIntent = Intent(this, TetherForegroundService::class.java).setAction(ACTION_STOP)
         val stopPendingIntent = PendingIntent.getService(
             this,
@@ -140,7 +170,7 @@ class TetherForegroundService : LifecycleService() {
             stopIntent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
-        val notification: Notification = NotificationCompat
+        return NotificationCompat
             .Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.fg_notification_title))
             .setContentText(getString(R.string.fg_notification_text))
@@ -151,15 +181,6 @@ class TetherForegroundService : LifecycleService() {
                 getString(R.string.fg_notification_stop_action),
                 stopPendingIntent,
             ).build()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(
-                NOTIFICATION_ID,
-                notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
-            )
-        } else {
-            startForeground(NOTIFICATION_ID, notification)
-        }
     }
 
     private fun ensureChannel() {

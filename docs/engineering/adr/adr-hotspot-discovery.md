@@ -70,7 +70,7 @@ Cheap and universal. Rejected because Tether's audience ([audience.md](../../pro
 
 ### Drop the symmetry — designate one side as initiator
 
-Wired into LocalSend's API split (upload mode vs download mode). Rejected: the symmetry decision in [tech-stack.md](../../product/tech-stack.md#every-node-is-both-client-and-server) is load-bearing for the product.
+Wired into LocalSend's API split (upload mode vs download mode). Rejected: the symmetry principle in [architecture-principles.md](../architecture-principles.md#every-node-is-both-client-and-server) is load-bearing for the product.
 
 ## Consequences
 
