@@ -18,9 +18,10 @@ class MdnsDiscoveryMultiInterfaceTest {
     private fun discovery(
         fingerprint: String = "",
         addresses: List<Pair<String, InetAddress>>,
-    ): TestMdnsDiscoveryJmdns {
+    ): MdnsDiscoveryJmdns {
         val store = DiscoveredDevicesStore()
-        return TestMdnsDiscoveryJmdns(store, Dispatchers.IO, fingerprint, addresses)
+        val fakeProvider = FakeNetworkInterfaceProvider(addresses)
+        return MdnsDiscoveryJmdns(store, Dispatchers.IO, fingerprint, fakeProvider)
     }
 
     @Test
@@ -80,13 +81,15 @@ class MdnsDiscoveryMultiInterfaceTest {
     fun `diffInterfaces brings up new interface`() = runBlocking {
         val addrA = fakeAddr("127.0.0.1")
         val addrB = fakeAddr("127.0.0.2")
-        val d = discovery(addresses = listOf("lo0" to addrA))
+        val fakeProvider = FakeNetworkInterfaceProvider(listOf("lo0" to addrA))
+        val store = DiscoveredDevicesStore()
+        val d = MdnsDiscoveryJmdns(store, Dispatchers.IO, "", fakeProvider)
         try {
             d.start("DiffUpTest", 29400)
             withTimeout(5_000) { while (d.instanceCount < 1) delay(50) }
             assertEquals(1, d.instanceCount)
 
-            d.fakeAddresses = listOf("lo0" to addrA, "lo1" to addrB)
+            fakeProvider.addresses = listOf("lo0" to addrA, "lo1" to addrB)
             d.diffInterfaces()
 
             assertEquals(2, d.instanceCount, "new interface must be brought up by diffInterfaces")
@@ -99,13 +102,15 @@ class MdnsDiscoveryMultiInterfaceTest {
     fun `diffInterfaces tears down removed interface`() = runBlocking {
         val addrA = fakeAddr("127.0.0.1")
         val addrB = fakeAddr("127.0.0.2")
-        val d = discovery(addresses = listOf("lo0" to addrA, "lo1" to addrB))
+        val fakeProvider = FakeNetworkInterfaceProvider(listOf("lo0" to addrA, "lo1" to addrB))
+        val store = DiscoveredDevicesStore()
+        val d = MdnsDiscoveryJmdns(store, Dispatchers.IO, "", fakeProvider)
         try {
             d.start("DiffDownTest", 29500)
             withTimeout(5_000) { while (d.instanceCount < 2) delay(50) }
             assertEquals(2, d.instanceCount)
 
-            d.fakeAddresses = listOf("lo0" to addrA)
+            fakeProvider.addresses = listOf("lo0" to addrA)
             d.diffInterfaces()
 
             assertEquals(1, d.instanceCount, "removed interface must be torn down by diffInterfaces")
@@ -115,18 +120,11 @@ class MdnsDiscoveryMultiInterfaceTest {
     }
 }
 
-/**
- * Subclass that controls the enumerated addresses, bypassing real network interface detection.
- */
-internal class TestMdnsDiscoveryJmdns(
-    store: DiscoveredDevicesStore,
-    requeryContext: kotlin.coroutines.CoroutineContext,
-    fingerprint: String,
-    addresses: List<Pair<String, InetAddress>>,
-) : MdnsDiscoveryJmdns(store, requeryContext, fingerprint) {
-    var fakeAddresses: List<Pair<String, InetAddress>> = addresses
-
-    val instanceCount: Int get() = synchronized(this) { instances.size }
-
-    override fun bindAddresses(): List<Pair<String, InetAddress>> = fakeAddresses
+internal class FakeNetworkInterfaceProvider(
+    var addresses: List<Pair<String, InetAddress>>,
+) : NetworkInterfaceProvider {
+    override fun bindAddresses(): List<Pair<String, InetAddress>> = addresses
 }
+
+private val MdnsDiscoveryJmdns.instanceCount: Int
+    get() = synchronized(this) { instances.size }

@@ -2,9 +2,9 @@ package com.tubetoast.tether.network
 
 import com.tubetoast.tether.discovery.DiscoveredDevicesStore
 import com.tubetoast.tether.protocol.Device
-import com.tubetoast.tether.protocol.InfoDto
 import com.tubetoast.tether.protocol.PairRequest
 import com.tubetoast.tether.protocol.PairResponse
+import com.tubetoast.tether.protocol.PeerAnnouncement
 import com.tubetoast.tether.security.TrustedDeviceStore
 import com.tubetoast.tether.security.deviceIdFromPublicKey
 import io.ktor.http.HttpStatusCode
@@ -75,7 +75,7 @@ internal fun Application.installFileServerRoutes(
         get("/health") { call.respond(HttpStatusCode.OK, "Tether OK") }
         post("/hello") {
             val body = try {
-                call.receive<InfoDto>()
+                call.receive<PeerAnnouncement>()
             } catch (_: Exception) {
                 call.respond(HttpStatusCode.BadRequest, mapOf("error" to "invalid_body"))
                 return@post

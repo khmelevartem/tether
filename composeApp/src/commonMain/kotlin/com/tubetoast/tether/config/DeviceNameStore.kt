@@ -9,7 +9,6 @@ class DeviceNameStore(
     private val _name = MutableStateFlow("")
 
     val name: Flow<String> get() = _name
-    val currentName: String get() = _name.value
 
     suspend fun init() {
         _name.value = runCatching { persistence.read() }.getOrNull() ?: defaultDeviceName()

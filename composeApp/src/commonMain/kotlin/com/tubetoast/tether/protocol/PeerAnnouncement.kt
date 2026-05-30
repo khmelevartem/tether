@@ -4,7 +4,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class InfoDto(
+data class PeerAnnouncement(
     val alias: String,
     val fingerprint: String,
     val port: Int,
@@ -14,18 +14,15 @@ data class InfoDto(
 
 @Serializable
 enum class DeviceType {
-    @SerialName("mobile")
-    Mobile,
+    @SerialName("android")
+    Android,
+
+    @SerialName("ios")
+    Ios,
 
     @SerialName("desktop")
     Desktop,
 
-    @SerialName("web")
-    Web,
-
-    @SerialName("headless")
-    Headless,
-
-    @SerialName("server")
-    Server,
+    @SerialName("cli")
+    Cli,
 }

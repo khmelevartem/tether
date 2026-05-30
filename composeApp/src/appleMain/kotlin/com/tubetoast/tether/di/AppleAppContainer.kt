@@ -1,19 +1,16 @@
 package com.tubetoast.tether.di
 
+import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.Preferences
 import com.tubetoast.tether.config.DefaultDeviceNamePersistence
 import com.tubetoast.tether.config.DeviceNamePersistence
 import com.tubetoast.tether.discovery.DiscoveredDevicesStore
 import com.tubetoast.tether.discovery.MdnsDiscovery
-import com.tubetoast.tether.identity.DeviceIdentityStore
 import com.tubetoast.tether.network.FileServer
 import com.tubetoast.tether.preferences.DefaultFileTransferPreferences
-import com.tubetoast.tether.preferences.DefaultPeerPreferencesStore
 import com.tubetoast.tether.preferences.FileTransferPreferences
-import com.tubetoast.tether.preferences.PeerPreferencesStore
 import com.tubetoast.tether.protocol.DeviceType
-import com.tubetoast.tether.security.DefaultTrustedDeviceStore
-import com.tubetoast.tether.security.TrustedDeviceStore
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.ObjCObjectVar
 import kotlinx.cinterop.alloc
@@ -32,16 +29,13 @@ import platform.Foundation.NSUserDomainMask
 open class AppleAppContainer(
     private val config: AppleAppConfig,
 ) : AppContainer() {
-    private val dataStore = PreferenceDataStoreFactory.createWithPath {
+    override val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.createWithPath {
         appSupportDir().toPath() / "tether_preferences.preferences_pb"
     }
-    override val namePersistence: DeviceNamePersistence = DefaultDeviceNamePersistence(dataStore)
-    private val trustedDataStore = PreferenceDataStoreFactory.createWithPath {
+    override val trustedDataStore: DataStore<Preferences> = PreferenceDataStoreFactory.createWithPath {
         appSupportDir().toPath() / "tether_trusted_devices.preferences_pb"
     }
-    override val trustedDeviceStore: TrustedDeviceStore = DefaultTrustedDeviceStore(trustedDataStore)
-    override val deviceIdentityStore: DeviceIdentityStore = DeviceIdentityStore(dataStore)
-    override val ownFingerprint: String = runBlocking { deviceIdentityStore.getOrCreate() }
+    override val namePersistence: DeviceNamePersistence = DefaultDeviceNamePersistence(dataStore)
     override val discoveredDevicesStore: DiscoveredDevicesStore = DiscoveredDevicesStore()
     override val fileServer: FileServer by lazy {
         FileServer(
@@ -49,18 +43,19 @@ open class AppleAppContainer(
             trustedDeviceStore = trustedDeviceStore,
             deviceKeyPair = config.deviceKeyPair,
             tracker = transferActivityTracker,
-            ownFingerprint = { ownFingerprint },
+            ownFingerprint = { runBlocking { deviceIdentityStore.getOrCreate() } },
             discoveredDevicesStore = discoveredDevicesStore,
         )
     }
-    override val mdnsDiscovery: MdnsDiscovery = MdnsDiscovery(discoveredDevicesStore, ownFingerprint)
-    override val peerPreferencesStore: PeerPreferencesStore = DefaultPeerPreferencesStore(dataStore)
+    override val mdnsDiscovery: MdnsDiscovery by lazy {
+        MdnsDiscovery(discoveredDevicesStore, runBlocking { deviceIdentityStore.getOrCreate() })
+    }
     override val fileTransferPreferences: FileTransferPreferences = DefaultFileTransferPreferences(
         dataStore = dataStore,
         defaultSaveLocation = documentsDir(),
         saveLocationWritable = false,
     )
-    override val ownDeviceType: DeviceType = DeviceType.Mobile
+    override val ownDeviceType: DeviceType = DeviceType.Ios
 }
 
 @OptIn(ExperimentalForeignApi::class, kotlinx.cinterop.BetaInteropApi::class)

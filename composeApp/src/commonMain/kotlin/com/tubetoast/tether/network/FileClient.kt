@@ -1,7 +1,7 @@
 package com.tubetoast.tether.network
 
 import com.tubetoast.tether.protocol.Device
-import com.tubetoast.tether.protocol.InfoDto
+import com.tubetoast.tether.protocol.PeerAnnouncement
 import com.tubetoast.tether.protocol.SendResult
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -64,7 +64,7 @@ open class FileClient(
         throw NotImplementedError("ping() is not yet implemented")
     }
 
-    open suspend fun sendHello(target: Device, ownInfo: InfoDto): Boolean = try {
+    open suspend fun sendHello(target: Device, ownInfo: PeerAnnouncement): Boolean = try {
         val response = client.post("http://${target.host}:${target.port}/hello") {
             contentType(ContentType.Application.Json)
             setBody(ownInfo)

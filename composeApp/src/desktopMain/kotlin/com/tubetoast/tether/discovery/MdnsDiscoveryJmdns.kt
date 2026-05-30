@@ -13,9 +13,7 @@ import ru.pocketbyte.kydra.log.debug
 import ru.pocketbyte.kydra.log.info
 import ru.pocketbyte.kydra.log.warn
 import ru.pocketbyte.kydra.log.wrapper.withTag
-import java.net.Inet4Address
 import java.net.InetAddress
-import java.net.NetworkInterface
 import javax.jmdns.JmDNS
 import javax.jmdns.ServiceEvent
 import javax.jmdns.ServiceInfo
@@ -42,17 +40,18 @@ private val log = KydraLog.withTag(default = "MdnsDiscovery.JmDNS")
  * instance skips the duplicate-add (deduped by `equals`) but unconditionally
  * re-arms `ServiceResolver`. Re-verify if JmDNS is upgraded.
  */
-internal open class MdnsDiscoveryJmdns(
+internal class MdnsDiscoveryJmdns(
     private val store: DiscoveredDevicesStore,
     private val requeryContext: CoroutineContext,
     private val fingerprint: String = "",
+    private val networkInterfaceProvider: NetworkInterfaceProvider = DefaultNetworkInterfaceProvider(),
 ) : DeviceDiscovery {
     private val discoveryScope = CoroutineScope(SupervisorJob() + requeryContext)
 
     override val discoveredDevices: StateFlow<List<Device>> = store.devices
 
     /** Keyed by (interface name, IPv4 address). */
-    protected val instances = mutableMapOf<Pair<String, InetAddress>, JmDNS>()
+    internal val instances = mutableMapOf<Pair<String, InetAddress>, JmDNS>()
 
     @Volatile private var deviceName: String = ""
 
@@ -67,7 +66,7 @@ internal open class MdnsDiscoveryJmdns(
         this.ownPort = port
         started = true
 
-        for (entry in bindAddresses()) {
+        for (entry in networkInterfaceProvider.bindAddresses()) {
             bringUp(entry, entry.second, deviceName, port)
         }
 
@@ -125,24 +124,6 @@ internal open class MdnsDiscoveryJmdns(
         store.clear()
     }
 
-    /** Override in tests to control enumeration. */
-    protected open fun bindAddresses(): List<Pair<String, InetAddress>> = try {
-        NetworkInterface
-            .getNetworkInterfaces()
-            ?.asSequence()
-            ?.filter { it.isUp && !it.isLoopback }
-            ?.flatMap { networkInterface ->
-                networkInterface.inetAddresses
-                    .asSequence()
-                    .filter { it is Inet4Address && !it.isLinkLocalAddress && !it.isLoopbackAddress }
-                    .map { networkInterface.name to it }
-            }?.toList()
-            ?: emptyList()
-    } catch (e: java.net.SocketException) {
-        log.warn { "getNetworkInterfaces failed — ${e.message}" }
-        emptyList()
-    }
-
     private fun bringUp(key: Pair<String, InetAddress>, addr: InetAddress, name: String, port: Int) {
         try {
             val jmdns = JmDNS.create(addr, name)
@@ -176,7 +157,7 @@ internal open class MdnsDiscoveryJmdns(
 
     @Synchronized
     internal fun diffInterfaces() {
-        val current = bindAddresses().toSet()
+        val current = networkInterfaceProvider.bindAddresses().toSet()
         val existing = instances.keys.toSet()
         val added = current - existing
         val removed = existing - current

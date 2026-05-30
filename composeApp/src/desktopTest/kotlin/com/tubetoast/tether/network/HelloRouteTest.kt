@@ -3,7 +3,7 @@ package com.tubetoast.tether.network
 import com.tubetoast.tether.discovery.DiscoveredDevicesStore
 import com.tubetoast.tether.preferences.TempDataStore
 import com.tubetoast.tether.protocol.DeviceType
-import com.tubetoast.tether.protocol.InfoDto
+import com.tubetoast.tether.protocol.PeerAnnouncement
 import com.tubetoast.tether.security.DefaultTrustedDeviceStore
 import com.tubetoast.tether.security.DeviceKeyPair
 import io.ktor.client.HttpClient
@@ -71,7 +71,12 @@ class HelloRouteTest {
                 val response = client.post("http://localhost:$port/hello") {
                     contentType(ContentType.Application.Json)
                     setBody(
-                        InfoDto(alias = "PeerA", fingerprint = "other-fp", port = 5000, deviceType = DeviceType.Mobile),
+                        PeerAnnouncement(
+                            alias = "PeerA",
+                            fingerprint = "other-fp",
+                            port = 5000,
+                            deviceType = DeviceType.Android,
+                        ),
                     )
                 }
                 assertEquals(HttpStatusCode.OK, response.status)
@@ -104,7 +109,14 @@ class HelloRouteTest {
             runBlocking {
                 val response = client.post("http://localhost:$port/hello") {
                     contentType(ContentType.Application.Json)
-                    setBody(InfoDto(alias = "Self", fingerprint = "mine", port = port, deviceType = DeviceType.Desktop))
+                    setBody(
+                        PeerAnnouncement(
+                            alias = "Self",
+                            fingerprint = "mine",
+                            port = port,
+                            deviceType = DeviceType.Desktop,
+                        ),
+                    )
                 }
                 assertEquals(HttpStatusCode.OK, response.status)
             }
@@ -136,7 +148,7 @@ class HelloRouteTest {
                 val goodResponse = client.post("http://localhost:$port/hello") {
                     contentType(ContentType.Application.Json)
                     setBody(
-                        InfoDto(
+                        PeerAnnouncement(
                             alias = "PeerOk",
                             fingerprint = "other-fp",
                             port = 5000,
@@ -163,7 +175,12 @@ class HelloRouteTest {
                 val response = client.post("http://localhost:$port/hello") {
                     contentType(ContentType.Application.Json)
                     setBody(
-                        InfoDto(alias = "BadPort", fingerprint = "other-fp", port = 0, deviceType = DeviceType.Desktop),
+                        PeerAnnouncement(
+                            alias = "BadPort",
+                            fingerprint = "other-fp",
+                            port = 0,
+                            deviceType = DeviceType.Desktop,
+                        ),
                     )
                 }
                 assertTrue(
@@ -187,7 +204,14 @@ class HelloRouteTest {
             runBlocking {
                 client.post("http://localhost:$port/hello") {
                     contentType(ContentType.Application.Json)
-                    setBody(InfoDto(alias = "B", fingerprint = "other", port = 6000, deviceType = DeviceType.Desktop))
+                    setBody(
+                        PeerAnnouncement(
+                            alias = "B",
+                            fingerprint = "other",
+                            port = 6000,
+                            deviceType = DeviceType.Desktop,
+                        ),
+                    )
                 }
             }
             val device = store.devices.value.firstOrNull()

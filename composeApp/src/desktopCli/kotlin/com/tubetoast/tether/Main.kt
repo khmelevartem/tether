@@ -13,6 +13,7 @@ import com.tubetoast.tether.logging.isDebugEnabled
 import com.tubetoast.tether.network.FileClient
 import com.tubetoast.tether.network.send
 import com.tubetoast.tether.protocol.Device
+import com.tubetoast.tether.protocol.DeviceType
 import com.tubetoast.tether.protocol.SendResult
 import com.tubetoast.tether.transfer.ByteFormatting
 import kotlinx.coroutines.CoroutineScope
@@ -48,6 +49,7 @@ class TetherCommand :
         initTetherLogging(debugEnabled = isDebugEnabled())
         val container = DesktopAppContainer(
             DefaultDesktopAppConfig(port = port ?: 0, namePersistenceOverride = EphemeralDeviceNamePersistence()),
+            ownDeviceType = DeviceType.Cli,
         )
 
         container.nameStore.init()

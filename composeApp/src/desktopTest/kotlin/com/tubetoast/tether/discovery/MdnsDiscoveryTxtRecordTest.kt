@@ -20,7 +20,6 @@ class MdnsDiscoveryTxtRecordTest {
     fun `txtProps includes fingerprint under fp key`() {
         val props = txtProps("abc123")
         assertTrue(props.containsKey("fp"), "txtProps must contain fp key")
-        assertTrue(props.containsKey("v"), "txtProps must contain v key")
         assertTrue(props["fp"] == "abc123", "fp value must match fingerprint")
     }
 }
