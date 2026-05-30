@@ -40,7 +40,7 @@ Always read `CLAUDE.md`. Then read the engineering doc that maps to the diff:
 
 ## What you do NOT check
 
-- Style/formatting → KtLint (skip entirely)
+- Style/formatting and unused imports → KtLint (skip entirely)
 - Correctness/concurrency → `review-correctness`
 - Test quality → `review-tests`
 - Platform expect/actual completeness → `review-platform`
