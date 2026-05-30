@@ -4,6 +4,6 @@ import com.tubetoast.tether.transfer.PeerTransferState
 
 data class PeerCardState(
     val transfer: PeerTransferState,
-    /** Only meaningful when [transfer] is [PeerTransferState.Idle]. */
+    /** Has no effect when the card is not idle. */
     val expanded: Boolean,
 )
