@@ -13,6 +13,13 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.time.Duration
 
+/**
+ * Per-peer transfer state holder for the peer's session. Owns the live `PeerTransferState`
+ * across multiple outbound batches (each driven through a freshly constructed `BatchSender`)
+ * and inbound `ReceiveEvent`s. Holds cross-batch memory a single batch cannot — receipts the
+ * peer has confirmed (filtered out on retry) and queued cancellations (consumed by the next
+ * batch's skip predicate).
+ */
 class PeerTransferEngine(
     private val peer: PeerIdentity,
     private val batchSenderFactory: () -> BatchSender,
