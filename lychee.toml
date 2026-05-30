@@ -1,2 +1,3 @@
 # Exclude the UX brief template — it contains intentional placeholder links.
-exclude_path = ["docs/product/features/_ux-brief-template.md"]
+# Entries are regexes (not globs); escape dots and anchor with `$` to avoid accidental matches.
+exclude_path = ["docs/product/features/_ux-brief-template\\.md$"]
