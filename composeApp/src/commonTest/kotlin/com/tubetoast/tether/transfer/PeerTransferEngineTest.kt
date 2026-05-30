@@ -1,6 +1,5 @@
 package com.tubetoast.tether.transfer
 
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -11,7 +10,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PeerTransferEngineTest {
@@ -19,23 +17,12 @@ class PeerTransferEngineTest {
 
     private fun buildEngine(
         events: MutableSharedFlow<ReceiveEvent> = MutableSharedFlow(extraBufferCapacity = 16),
-        monitor: FakeConnectionMonitor = FakeConnectionMonitor(),
         pauseChannel: Channel<Unit>? = null,
         sendOneOverride: (suspend (FileSource, (Long, Long?) -> Unit) -> Unit)? = null,
         scope: kotlinx.coroutines.CoroutineScope,
     ): PeerTransferEngine = PeerTransferEngine(
         peer = peer,
-        batchSenderFactory = {
-            BatchSender(
-                sendOne = sendOneOverride ?: { src, onProgress ->
-                    pauseChannel?.receive()
-                    onProgress(src.sizeBytes ?: 0L, src.sizeBytes)
-                },
-                connectionMonitor = monitor,
-                progressThrottle = 100.milliseconds,
-                dispatcher = Dispatchers.Unconfined,
-            )
-        },
+        batchSenderFactory = fakeBatchSender(sendOneOverride = sendOneOverride, pauseChannel = pauseChannel),
         inboundEvents = events,
         scope = scope,
     )

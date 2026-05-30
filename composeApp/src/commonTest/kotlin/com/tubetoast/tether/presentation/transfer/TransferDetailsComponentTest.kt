@@ -5,9 +5,7 @@ import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.resume
 import com.tubetoast.tether.presentation.peer.Peer
 import com.tubetoast.tether.protocol.Device
-import com.tubetoast.tether.transfer.BatchSender
 import com.tubetoast.tether.transfer.FailureReason
-import com.tubetoast.tether.transfer.FakeConnectionMonitor
 import com.tubetoast.tether.transfer.FakeFileSource
 import com.tubetoast.tether.transfer.FileSource
 import com.tubetoast.tether.transfer.PeerIdentity
@@ -15,7 +13,7 @@ import com.tubetoast.tether.transfer.PeerTransferEngine
 import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.PerFileStatus
 import com.tubetoast.tether.transfer.ReceiverWriteFailedException
-import kotlinx.coroutines.Dispatchers
+import com.tubetoast.tether.transfer.fakeBatchSender
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -25,7 +23,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
-import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class TransferDetailsComponentTest {
@@ -42,20 +39,9 @@ class TransferDetailsComponentTest {
         val lifecycle = LifecycleRegistry()
         lifecycle.resume()
         val context = DefaultComponentContext(lifecycle)
-        val monitor = FakeConnectionMonitor()
         val engine = PeerTransferEngine(
             peer = peer.id,
-            batchSenderFactory = {
-                BatchSender(
-                    sendOne = sendOneOverride ?: { src, onProgress ->
-                        pauseChannel?.receive()
-                        onProgress(src.sizeBytes ?: 0L, src.sizeBytes)
-                    },
-                    connectionMonitor = monitor,
-                    progressThrottle = 100.milliseconds,
-                    dispatcher = Dispatchers.Unconfined,
-                )
-            },
+            batchSenderFactory = fakeBatchSender(sendOneOverride = sendOneOverride, pauseChannel = pauseChannel),
             inboundEvents = MutableSharedFlow(),
             scope = scope,
         )

@@ -7,13 +7,11 @@ import com.arkivanov.essenty.lifecycle.resume
 import com.tubetoast.tether.presentation.PendingFilesSummary
 import com.tubetoast.tether.presentation.peer.Peer
 import com.tubetoast.tether.protocol.Device
-import com.tubetoast.tether.transfer.BatchSender
-import com.tubetoast.tether.transfer.FakeConnectionMonitor
 import com.tubetoast.tether.transfer.FakeFileSource
 import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PeerTransferEngine
 import com.tubetoast.tether.transfer.PeerTransferState
-import kotlinx.coroutines.Dispatchers
+import com.tubetoast.tether.transfer.fakeBatchSender
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.test.runCurrent
@@ -23,7 +21,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PeerTransferComponentTest {
@@ -42,14 +39,7 @@ class PeerTransferComponentTest {
         val context = DefaultComponentContext(lifecycle)
         val engine = PeerTransferEngine(
             peer = peer.id,
-            batchSenderFactory = {
-                BatchSender(
-                    sendOne = { src, onProgress -> onProgress(src.sizeBytes ?: 0L, src.sizeBytes) },
-                    connectionMonitor = FakeConnectionMonitor(),
-                    progressThrottle = 100.milliseconds,
-                    dispatcher = Dispatchers.Unconfined,
-                )
-            },
+            batchSenderFactory = fakeBatchSender(),
             inboundEvents = MutableSharedFlow(),
             scope = scope,
         )
