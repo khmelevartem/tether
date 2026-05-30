@@ -1,5 +1,7 @@
 package com.tubetoast.tether.discovery
 
+import com.tubetoast.tether.identity.DeviceIdentityStore
+import com.tubetoast.tether.preferences.TempDataStore
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -12,7 +14,10 @@ import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
 
-private fun testDiscovery() = MdnsDiscovery(DiscoveredDevicesStore(), fingerprint = "test-fp")
+private fun testDiscovery(): MdnsDiscovery {
+    val temp = TempDataStore()
+    return MdnsDiscovery(DiscoveredDevicesStore(), DeviceIdentityStore(temp.dataStore))
+}
 
 // NSNetService delivers callbacks via NSRunLoop, not via coroutine dispatchers.
 // runBlocking / TestDispatcher / Turbine don't pump NSRunLoop, so integration tests
@@ -31,6 +36,7 @@ private fun awaitCondition(timeoutSec: Double = 10.0, condition: () -> Boolean):
 // NOTE: integration tests rely on mDNS multicast on the host machine.
 // Stop any running CLI instances before running — external _tether._tcp.
 // services may interfere with discovery.
+@Suppress("ktlint:tether:no-run-blocking-in-tests")
 class MdnsDiscoveryTest {
     // --- Lifecycle tests (no network required) ---
 
@@ -40,7 +46,7 @@ class MdnsDiscoveryTest {
     }
 
     @Test
-    fun `start twice without stop throws IllegalStateException`() {
+    fun `start twice without stop throws IllegalStateException`(): Unit = runBlocking {
         val discovery = testDiscovery()
         discovery.start("DoubleStart", 19001)
         try {
@@ -52,8 +58,6 @@ class MdnsDiscoveryTest {
         }
     }
 
-    // NSNetService callbacks on real NSRunLoop thread
-    @Suppress("ktlint:tether:no-run-blocking-in-tests")
     @Test
     fun `stop emits empty list`() = runBlocking {
         val discovery = testDiscovery()
@@ -63,7 +67,7 @@ class MdnsDiscoveryTest {
     }
 
     @Test
-    fun `restart — stop then start does not throw`() {
+    fun `restart — stop then start does not throw`() = runBlocking {
         val discovery = testDiscovery()
         discovery.start("RestartDevice", 19004)
         discovery.stop()
@@ -72,7 +76,7 @@ class MdnsDiscoveryTest {
     }
 
     @Test
-    fun `multiple stops do not throw`() {
+    fun `multiple stops do not throw`() = runBlocking {
         val discovery = testDiscovery()
         discovery.start("MultiStop", 19005)
         discovery.stop()
@@ -82,7 +86,7 @@ class MdnsDiscoveryTest {
     // --- Integration tests (NSRunLoop-pumped) ---
 
     @Test
-    fun `two instances discover each other`() {
+    fun `two instances discover each other`() = runBlocking {
         val a = testDiscovery()
         val b = testDiscovery()
         try {
@@ -103,7 +107,7 @@ class MdnsDiscoveryTest {
     }
 
     @Test
-    fun `instances do not discover themselves`() {
+    fun `instances do not discover themselves`() = runBlocking {
         val a = testDiscovery()
         val b = testDiscovery()
         try {
@@ -128,7 +132,7 @@ class MdnsDiscoveryTest {
     }
 
     @Test
-    fun `discovered device has correct port`() {
+    fun `discovered device has correct port`() = runBlocking {
         val a = testDiscovery()
         val b = testDiscovery()
         try {

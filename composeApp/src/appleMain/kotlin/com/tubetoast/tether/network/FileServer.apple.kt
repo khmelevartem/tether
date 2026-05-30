@@ -1,6 +1,7 @@
 package com.tubetoast.tether.network
 
 import com.tubetoast.tether.discovery.DiscoveredDevicesStore
+import com.tubetoast.tether.identity.DeviceIdentityStore
 import com.tubetoast.tether.security.DeviceKeyPair
 import com.tubetoast.tether.security.TrustedDeviceStore
 import io.ktor.server.cio.CIO
@@ -25,7 +26,7 @@ actual class FileServer(
     private val trustedDeviceStore: TrustedDeviceStore,
     private val deviceKeyPair: DeviceKeyPair,
     private val tracker: TransferActivityTracker = DefaultTransferActivityTracker(),
-    private val ownFingerprint: () -> String = { "" },
+    private val deviceIdentityStore: DeviceIdentityStore? = null,
     private val discoveredDevicesStore: DiscoveredDevicesStore? = null,
 ) {
     private val downloadsDir: String = downloadsDir ?: defaultDownloadsDir()
@@ -48,7 +49,7 @@ actual class FileServer(
                     trustedDeviceStore,
                     deviceKeyPair.publicKey,
                     tracker,
-                    ownFingerprint,
+                    deviceIdentityStore,
                     discoveredDevicesStore,
                 )
             }.start(wait = false)

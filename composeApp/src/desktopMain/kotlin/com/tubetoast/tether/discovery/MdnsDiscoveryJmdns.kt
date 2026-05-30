@@ -1,5 +1,6 @@
 package com.tubetoast.tether.discovery
 
+import com.tubetoast.tether.identity.DeviceIdentityStore
 import com.tubetoast.tether.protocol.Device
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -43,7 +44,7 @@ private val log = KydraLog.withTag(default = "MdnsDiscovery.JmDNS")
 internal class MdnsDiscoveryJmdns(
     private val store: DiscoveredDevicesStore,
     private val requeryContext: CoroutineContext,
-    private val fingerprint: String = "",
+    private val deviceIdentityStore: DeviceIdentityStore,
     private val networkInterfaceProvider: NetworkInterfaceProvider = DefaultNetworkInterfaceProvider(),
 ) : DeviceDiscovery {
     private val discoveryScope = CoroutineScope(SupervisorJob() + requeryContext)
@@ -57,13 +58,21 @@ internal class MdnsDiscoveryJmdns(
 
     @Volatile private var ownPort: Int = -1
 
+    @Volatile private var fingerprint: String = ""
+
     @Volatile private var started: Boolean = false
 
+    override suspend fun start(deviceName: String, port: Int) {
+        val fp = deviceIdentityStore.getOrCreate()
+        startSync(deviceName, port, fp)
+    }
+
     @Synchronized
-    override fun start(deviceName: String, port: Int) {
+    private fun startSync(deviceName: String, port: Int, fp: String) {
         if (started) throw IllegalStateException("MdnsDiscovery already started; call stop() first")
         this.deviceName = deviceName
         this.ownPort = port
+        this.fingerprint = fp
         started = true
 
         for (entry in networkInterfaceProvider.bindAddresses()) {

@@ -1,6 +1,7 @@
 package com.tubetoast.tether.network
 
 import com.tubetoast.tether.discovery.DiscoveredDevicesStore
+import com.tubetoast.tether.identity.DeviceIdentityStore
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.protocol.PairRequest
 import com.tubetoast.tether.protocol.PairResponse
@@ -67,7 +68,7 @@ internal fun Application.installFileServerRoutes(
     trustedDeviceStore: TrustedDeviceStore,
     serverPublicKey: ByteArray,
     tracker: TransferActivityTracker = DefaultTransferActivityTracker(),
-    ownFingerprint: () -> String = { "" },
+    deviceIdentityStore: DeviceIdentityStore? = null,
     discoveredDevicesStore: DiscoveredDevicesStore? = null,
 ) {
     install(ContentNegotiation) { json() }
@@ -84,7 +85,7 @@ internal fun Application.installFileServerRoutes(
                 call.respond(HttpStatusCode.BadRequest, mapOf("error" to "invalid_port"))
                 return@post
             }
-            if (body.fingerprint == ownFingerprint()) {
+            if (deviceIdentityStore != null && body.fingerprint == deviceIdentityStore.getOrCreate()) {
                 call.respond(HttpStatusCode.OK, emptyMap<String, String>())
                 return@post
             }

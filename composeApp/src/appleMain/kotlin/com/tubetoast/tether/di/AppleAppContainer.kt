@@ -17,7 +17,6 @@ import kotlinx.cinterop.alloc
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.value
-import kotlinx.coroutines.runBlocking
 import okio.Path.Companion.toPath
 import platform.Foundation.NSApplicationSupportDirectory
 import platform.Foundation.NSDocumentDirectory
@@ -43,12 +42,12 @@ open class AppleAppContainer(
             trustedDeviceStore = trustedDeviceStore,
             deviceKeyPair = config.deviceKeyPair,
             tracker = transferActivityTracker,
-            ownFingerprint = { runBlocking { deviceIdentityStore.getOrCreate() } },
+            deviceIdentityStore = deviceIdentityStore,
             discoveredDevicesStore = discoveredDevicesStore,
         )
     }
     override val mdnsDiscovery: MdnsDiscovery by lazy {
-        MdnsDiscovery(discoveredDevicesStore, runBlocking { deviceIdentityStore.getOrCreate() })
+        MdnsDiscovery(discoveredDevicesStore, deviceIdentityStore)
     }
     override val fileTransferPreferences: FileTransferPreferences = DefaultFileTransferPreferences(
         dataStore = dataStore,

@@ -1,5 +1,7 @@
 package com.tubetoast.tether.discovery
 
+import com.tubetoast.tether.identity.DeviceIdentityStore
+import com.tubetoast.tether.preferences.TempDataStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -16,12 +18,12 @@ class MdnsDiscoveryMultiInterfaceTest {
         InetAddress.getByName(host)
 
     private fun discovery(
-        fingerprint: String = "",
         addresses: List<Pair<String, InetAddress>>,
     ): MdnsDiscoveryJmdns {
         val store = DiscoveredDevicesStore()
         val fakeProvider = FakeNetworkInterfaceProvider(addresses)
-        return MdnsDiscoveryJmdns(store, Dispatchers.IO, fingerprint, fakeProvider)
+        val temp = TempDataStore()
+        return MdnsDiscoveryJmdns(store, Dispatchers.IO, DeviceIdentityStore(temp.dataStore), fakeProvider)
     }
 
     @Test
@@ -46,8 +48,13 @@ class MdnsDiscoveryMultiInterfaceTest {
     @Test
     fun `self-fingerprint suppress filters out own announce`() = runBlocking {
         val addr = fakeAddr("127.0.0.1")
-        val d1 = discovery(fingerprint = "fp-x", addresses = listOf("lo0" to addr))
-        val d2 = discovery(fingerprint = "fp-x", addresses = listOf("lo0" to addr))
+        val sharedTemp = TempDataStore()
+        val sharedIdentityStore = DeviceIdentityStore(sharedTemp.dataStore)
+        val fakeProvider1 = FakeNetworkInterfaceProvider(listOf("lo0" to addr))
+        val fakeProvider2 = FakeNetworkInterfaceProvider(listOf("lo0" to addr))
+        val store = DiscoveredDevicesStore()
+        val d1 = MdnsDiscoveryJmdns(store, Dispatchers.IO, sharedIdentityStore, fakeProvider1)
+        val d2 = MdnsDiscoveryJmdns(store, Dispatchers.IO, sharedIdentityStore, fakeProvider2)
         try {
             d1.start("SelfSuppressA", 29200)
             d2.start("SelfSuppressB", 29201)
@@ -83,7 +90,8 @@ class MdnsDiscoveryMultiInterfaceTest {
         val addrB = fakeAddr("127.0.0.2")
         val fakeProvider = FakeNetworkInterfaceProvider(listOf("lo0" to addrA))
         val store = DiscoveredDevicesStore()
-        val d = MdnsDiscoveryJmdns(store, Dispatchers.IO, "", fakeProvider)
+        val temp = TempDataStore()
+        val d = MdnsDiscoveryJmdns(store, Dispatchers.IO, DeviceIdentityStore(temp.dataStore), fakeProvider)
         try {
             d.start("DiffUpTest", 29400)
             withTimeout(5_000) { while (d.instanceCount < 1) delay(50) }
@@ -104,7 +112,8 @@ class MdnsDiscoveryMultiInterfaceTest {
         val addrB = fakeAddr("127.0.0.2")
         val fakeProvider = FakeNetworkInterfaceProvider(listOf("lo0" to addrA, "lo1" to addrB))
         val store = DiscoveredDevicesStore()
-        val d = MdnsDiscoveryJmdns(store, Dispatchers.IO, "", fakeProvider)
+        val temp = TempDataStore()
+        val d = MdnsDiscoveryJmdns(store, Dispatchers.IO, DeviceIdentityStore(temp.dataStore), fakeProvider)
         try {
             d.start("DiffDownTest", 29500)
             withTimeout(5_000) { while (d.instanceCount < 2) delay(50) }

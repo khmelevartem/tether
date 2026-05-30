@@ -11,7 +11,7 @@ class FakeDeviceDiscovery(
 
     val republishCalls = mutableListOf<String>()
 
-    override fun start(deviceName: String, port: Int) = Unit
+    override suspend fun start(deviceName: String, port: Int) = Unit
 
     override fun stop() = Unit
 

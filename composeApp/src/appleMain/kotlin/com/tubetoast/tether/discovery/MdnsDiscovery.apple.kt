@@ -2,6 +2,7 @@
 
 package com.tubetoast.tether.discovery
 
+import com.tubetoast.tether.identity.DeviceIdentityStore
 import com.tubetoast.tether.protocol.Device
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.ObjCSignatureOverride
@@ -32,10 +33,11 @@ private val log = KydraLog.withTag(default = "MdnsDiscovery.Apple")
 // @Synchronized is a JVM-only annotation and is not available in Kotlin/Native.
 actual class MdnsDiscovery(
     private val store: DiscoveredDevicesStore,
-    private val fingerprint: String = "",
+    private val deviceIdentityStore: DeviceIdentityStore,
 ) : DeviceDiscovery {
     actual override val discoveredDevices: StateFlow<List<Device>> get() = store.devices
 
+    private var fingerprint: String = ""
     private var netService: NSNetService? = null
     private var browser: NSNetServiceBrowser? = null
     private var ownServiceName: String? = null
@@ -47,7 +49,8 @@ actual class MdnsDiscovery(
     private var browserDelegate: BrowserDelegate? = null
     private val resolutionDelegates = mutableListOf<ResolutionDelegate>()
 
-    actual override fun start(deviceName: String, port: Int) {
+    actual override suspend fun start(deviceName: String, port: Int) {
+        fingerprint = deviceIdentityStore.getOrCreate()
         if (netService != null || browser != null) {
             throw IllegalStateException("MdnsDiscovery already started; call stop() first")
         }

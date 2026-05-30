@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.StateFlow
 expect class MdnsDiscovery : DeviceDiscovery {
     override val discoveredDevices: StateFlow<List<Device>>
 
-    override fun start(deviceName: String, port: Int)
+    override suspend fun start(deviceName: String, port: Int)
 
     override fun stop()
 

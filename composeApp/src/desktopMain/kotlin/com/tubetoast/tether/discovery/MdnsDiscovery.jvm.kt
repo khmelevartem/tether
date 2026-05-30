@@ -1,9 +1,11 @@
 package com.tubetoast.tether.discovery
 
 import com.tubetoast.tether.discovery.bonjour.MdnsDiscoveryBonjour
+import com.tubetoast.tether.identity.DeviceIdentityStore
 import com.tubetoast.tether.protocol.Device
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
+
 
 /**
  * macOS → [MdnsDiscoveryBonjour] (DNS-SD IPC; JmDNS can't see external WiFi peers on macOS).
@@ -13,21 +15,18 @@ import kotlinx.coroutines.flow.StateFlow
  */
 actual class MdnsDiscovery(
     store: DiscoveredDevicesStore,
-    fingerprint: String = "",
+    deviceIdentityStore: DeviceIdentityStore,
 ) : DeviceDiscovery {
     private val delegate: DeviceDiscovery =
         if (isMacOsHost()) {
-            MdnsDiscoveryBonjour(
-                store,
-                fingerprint,
-            )
+            MdnsDiscoveryBonjour(store, deviceIdentityStore)
         } else {
-            MdnsDiscoveryJmdns(store, Dispatchers.IO, fingerprint)
+            MdnsDiscoveryJmdns(store, Dispatchers.IO, deviceIdentityStore)
         }
 
     actual override val discoveredDevices: StateFlow<List<Device>> get() = delegate.discoveredDevices
 
-    actual override fun start(deviceName: String, port: Int) = delegate.start(deviceName, port)
+    actual override suspend fun start(deviceName: String, port: Int) = delegate.start(deviceName, port)
 
     actual override fun stop() = delegate.stop()
 

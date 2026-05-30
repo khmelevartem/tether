@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.os.Build
+import com.tubetoast.tether.identity.DeviceIdentityStore
 import com.tubetoast.tether.protocol.Device
 import kotlinx.coroutines.flow.StateFlow
 import ru.pocketbyte.kydra.log.KydraLog
@@ -18,10 +19,11 @@ private val log = KydraLog.withTag(default = "MdnsDiscovery.Android")
 actual class MdnsDiscovery(
     private val context: Context,
     private val store: DiscoveredDevicesStore,
-    private val fingerprint: String = "",
+    private val deviceIdentityStore: DeviceIdentityStore,
 ) : DeviceDiscovery {
     actual override val discoveredDevices: StateFlow<List<Device>> = store.devices
 
+    @Volatile private var fingerprint: String = ""
     @Volatile private var nsdManager: NsdManager? = null
 
     @Volatile private var ownName: String? = null
@@ -154,9 +156,15 @@ actual class MdnsDiscovery(
         }
     }
 
+    actual override suspend fun start(deviceName: String, port: Int) {
+        val fp = deviceIdentityStore.getOrCreate()
+        startSync(deviceName, port, fp)
+    }
+
     @Synchronized
-    actual override fun start(deviceName: String, port: Int) {
+    private fun startSync(deviceName: String, port: Int, fp: String) {
         if (nsdManager != null) throw IllegalStateException("MdnsDiscovery already started; call stop() first")
+        fingerprint = fp
         ownName = deviceName
         currentPort = port
         resolveQueue.clear()

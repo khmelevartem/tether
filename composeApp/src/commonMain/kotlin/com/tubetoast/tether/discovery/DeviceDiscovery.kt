@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.StateFlow
 interface DeviceDiscovery {
     val discoveredDevices: StateFlow<List<Device>>
 
-    fun start(deviceName: String, port: Int)
+    suspend fun start(deviceName: String, port: Int)
 
     fun stop()
 

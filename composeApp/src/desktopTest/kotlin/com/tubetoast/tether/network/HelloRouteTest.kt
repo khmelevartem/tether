@@ -1,6 +1,7 @@
 package com.tubetoast.tether.network
 
 import com.tubetoast.tether.discovery.DiscoveredDevicesStore
+import com.tubetoast.tether.identity.DeviceIdentityStore
 import com.tubetoast.tether.preferences.TempDataStore
 import com.tubetoast.tether.protocol.DeviceType
 import com.tubetoast.tether.protocol.PeerAnnouncement
@@ -42,18 +43,18 @@ class HelloRouteTest {
     }
 
     private fun newServer(
-        ownFingerprint: String = "test-fp",
+        identityStore: DeviceIdentityStore = DeviceIdentityStore(TempDataStore().also { cleanupTempStores += it }.dataStore),
         store: DiscoveredDevicesStore = DiscoveredDevicesStore(),
     ): FileServer {
         val configDir = Files.createTempDirectory("tether-hello-test-keys").toFile().also(cleanupPaths::add)
         val downloadsDir = Files.createTempDirectory("tether-hello-test-dl").toFile().also(cleanupPaths::add)
-        val temp = TempDataStore().also { cleanupTempStores += it }
+        val keyTemp = TempDataStore().also { cleanupTempStores += it }
         val server = FileServer(
             configuredPort = 0,
             downloadsDir = downloadsDir,
-            trustedDeviceStore = DefaultTrustedDeviceStore(temp.dataStore),
+            trustedDeviceStore = DefaultTrustedDeviceStore(keyTemp.dataStore),
             deviceKeyPair = DeviceKeyPair(configDir),
-            ownFingerprint = { ownFingerprint },
+            deviceIdentityStore = identityStore,
             discoveredDevicesStore = store,
         )
         startedServer = server
@@ -63,7 +64,7 @@ class HelloRouteTest {
     @Test
     fun `hello from foreign fingerprint upserts device into store`() {
         val store = DiscoveredDevicesStore()
-        val server = newServer(ownFingerprint = "mine", store = store)
+        val server = newServer(store = store)
         val port = server.start()
         val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
         try {
@@ -102,17 +103,20 @@ class HelloRouteTest {
     @Test
     fun `hello with own fingerprint does not upsert into store`() {
         val store = DiscoveredDevicesStore()
-        val server = newServer(ownFingerprint = "mine", store = store)
+        val identityTemp = TempDataStore().also { cleanupTempStores += it }
+        val identityStore = DeviceIdentityStore(identityTemp.dataStore)
+        val server = newServer(identityStore = identityStore, store = store)
         val port = server.start()
         val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
         try {
             runBlocking {
+                val ownFingerprint = identityStore.getOrCreate()
                 val response = client.post("http://localhost:$port/hello") {
                     contentType(ContentType.Application.Json)
                     setBody(
                         PeerAnnouncement(
                             alias = "Self",
-                            fingerprint = "mine",
+                            fingerprint = ownFingerprint,
                             port = port,
                             deviceType = DeviceType.Desktop,
                         ),
@@ -129,7 +133,7 @@ class HelloRouteTest {
     @Test
     fun `malformed hello body returns 400 and route stays alive`() {
         val store = DiscoveredDevicesStore()
-        val server = newServer(ownFingerprint = "mine", store = store)
+        val server = newServer(store = store)
         val port = server.start()
         val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
         try {
@@ -167,7 +171,7 @@ class HelloRouteTest {
     @Test
     fun `hello with out-of-range port returns 400`() {
         val store = DiscoveredDevicesStore()
-        val server = newServer(ownFingerprint = "mine", store = store)
+        val server = newServer(store = store)
         val port = server.start()
         val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
         try {
@@ -197,7 +201,7 @@ class HelloRouteTest {
     @Test
     fun `hello uses TCP remoteAddress not body ip for device host`() {
         val store = DiscoveredDevicesStore()
-        val server = newServer(ownFingerprint = "mine", store = store)
+        val server = newServer(store = store)
         val port = server.start()
         val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
         try {

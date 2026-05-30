@@ -6,6 +6,7 @@ import com.sun.jna.ptr.PointerByReference
 import com.tubetoast.tether.discovery.DeviceDiscovery
 import com.tubetoast.tether.discovery.DiscoveredDevicesStore
 import com.tubetoast.tether.discovery.txtProps
+import com.tubetoast.tether.identity.DeviceIdentityStore
 import com.tubetoast.tether.protocol.Device
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -41,7 +42,7 @@ private val log = KydraLog.withTag(default = "MdnsDiscovery.Bonjour")
  */
 internal class MdnsDiscoveryBonjour(
     private val store: DiscoveredDevicesStore,
-    private val fingerprint: String = "",
+    private val deviceIdentityStore: DeviceIdentityStore,
 ) : DeviceDiscovery {
     override val discoveredDevices: StateFlow<List<Device>> = store.devices
 
@@ -53,12 +54,16 @@ internal class MdnsDiscoveryBonjour(
 
     @Volatile private var stopped: Boolean = false
 
-    override fun start(deviceName: String, port: Int) {
+    @Volatile private var fingerprint: String = ""
+
+    override suspend fun start(deviceName: String, port: Int) {
+        val fp = deviceIdentityStore.getOrCreate()
         synchronized(lifecycleLock) {
             if (session != null) throw IllegalStateException("MdnsDiscovery already started; call stop() first")
             stopped = false
             currentPort = port
-            session = Session.start(deviceName, port, store, fingerprint)
+            fingerprint = fp
+            session = Session.start(deviceName, port, store, fp)
         }
     }
 

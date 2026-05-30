@@ -10,7 +10,6 @@ import com.tubetoast.tether.discovery.MdnsDiscovery
 import com.tubetoast.tether.preferences.DefaultFileTransferPreferences
 import com.tubetoast.tether.preferences.FileTransferPreferences
 import com.tubetoast.tether.protocol.DeviceType
-import kotlinx.coroutines.runBlocking
 import okio.Path.Companion.toPath
 import java.io.File
 
@@ -33,7 +32,7 @@ class DesktopAppContainer(
         ?: DefaultDeviceNamePersistence(dataStore)
     override val discoveredDevicesStore: DiscoveredDevicesStore = DiscoveredDevicesStore()
     override val mdnsDiscovery: MdnsDiscovery by lazy {
-        MdnsDiscovery(discoveredDevicesStore, runBlocking { deviceIdentityStore.getOrCreate() })
+        MdnsDiscovery(discoveredDevicesStore, deviceIdentityStore)
     }
     override val fileTransferPreferences: FileTransferPreferences = DefaultFileTransferPreferences(
         dataStore = dataStore,
