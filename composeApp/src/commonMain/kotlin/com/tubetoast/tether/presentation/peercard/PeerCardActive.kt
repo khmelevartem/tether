@@ -16,8 +16,8 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
-import com.tubetoast.tether.presentation.transfer.PeerTransferState
 import com.tubetoast.tether.protocol.Device
+import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.ui.designsystem.Button
 import com.tubetoast.tether.ui.designsystem.ProgressBar
 import com.tubetoast.tether.ui.designsystem.TitleText

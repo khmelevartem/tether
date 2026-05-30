@@ -9,6 +9,7 @@ import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.presentation.transfer.PendingFilesRepository
 import com.tubetoast.tether.transfer.BatchSender
 import com.tubetoast.tether.transfer.PeerIdentity
+import com.tubetoast.tether.transfer.PeerTransferEngine
 import com.tubetoast.tether.transfer.ReconnectionTimeout
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -28,16 +29,22 @@ class RootComponentFactory(
                     componentContext = ctx,
                     peersRepository = peersRepository,
                     peerTransferComponentFactory = { childCtx, lifecycle, peer ->
+                        val scope = CoroutineScope(Dispatchers.Main).withLifecycle(lifecycle)
+                        val engine = PeerTransferEngine(
+                            peer = peer.id,
+                            batchSenderFactory = batchSenderFactory,
+                            reconnectionTimeout = ReconnectionTimeout.DEFAULT,
+                            scope = scope,
+                            peerPreferencesStore = peerPreferencesStore,
+                        )
                         PeerTransferComponent(
                             componentContext = childCtx,
                             peer = peer,
                             lifecycleRegistry = lifecycle,
-                            batchSenderFactory = batchSenderFactory,
+                            engine = engine,
                             onShowDetails = onShowDetails,
-                            reconnectionTimeout = ReconnectionTimeout.DEFAULT,
-                            scope = CoroutineScope(Dispatchers.Main).withLifecycle(lifecycle),
+                            scope = scope,
                             pendingFilesRepository = pendingFilesRepository,
-                            peerPreferencesStore = peerPreferencesStore,
                             onOpenPicker = { onPickerPick(peer.id) },
                         )
                     },

@@ -21,11 +21,11 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
-import com.tubetoast.tether.presentation.transfer.PeerTransferState
 import com.tubetoast.tether.presentation.transfer.PerFileRow
 import com.tubetoast.tether.presentation.transfer.TransferDetailsComponent
 import com.tubetoast.tether.presentation.transfer.aggregateStripCopy
 import com.tubetoast.tether.presentation.transfer.detailsSubtitleCopy
+import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.PerFileStatus
 import com.tubetoast.tether.ui.designsystem.BodyText
 import com.tubetoast.tether.ui.designsystem.Button

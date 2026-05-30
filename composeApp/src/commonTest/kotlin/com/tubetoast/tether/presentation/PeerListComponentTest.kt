@@ -9,10 +9,11 @@ import com.tubetoast.tether.presentation.peer.FakePeersRepository
 import com.tubetoast.tether.presentation.peer.Peer
 import com.tubetoast.tether.presentation.peer.PeersRepository
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
-import com.tubetoast.tether.presentation.transfer.PeerTransferState
 import com.tubetoast.tether.presentation.transfer.PendingFilesRepository
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.FakeFileSource
+import com.tubetoast.tether.transfer.PeerTransferEngine
+import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.fakeBatchSender
 import com.tubetoast.tether.transfer.toPeerIdentity
 import kotlinx.coroutines.CoroutineScope
@@ -324,12 +325,17 @@ class PeerListComponentTest {
                         childLifecycle.onDestroy()
                     }
                 }
+                val engine = PeerTransferEngine(
+                    peer = peer.id,
+                    batchSenderFactory = fakeBatchSender(),
+                    inboundEvents = MutableSharedFlow(),
+                    scope = coroutineScope,
+                )
                 PeerTransferComponent(
                     componentContext = childCtx,
                     peer = peer,
                     lifecycleRegistry = wrappedLifecycle,
-                    batchSenderFactory = fakeBatchSender(),
-                    inboundEvents = MutableSharedFlow(),
+                    engine = engine,
                     onShowDetails = {},
                     scope = coroutineScope,
                 )
@@ -363,12 +369,17 @@ class PeerListComponentTest {
                         childLifecycle.onDestroy()
                     }
                 }
+                val engine = PeerTransferEngine(
+                    peer = peer.id,
+                    batchSenderFactory = fakeBatchSender(),
+                    inboundEvents = MutableSharedFlow(),
+                    scope = coroutineScope,
+                )
                 PeerTransferComponent(
                     componentContext = childCtx,
                     peer = peer,
                     lifecycleRegistry = wrappedLifecycle,
-                    batchSenderFactory = fakeBatchSender(),
-                    inboundEvents = MutableSharedFlow(),
+                    engine = engine,
                     onShowDetails = {},
                     scope = coroutineScope,
                 )

@@ -9,10 +9,11 @@ import com.tubetoast.tether.discovery.FakeDeviceDiscovery
 import com.tubetoast.tether.presentation.banners.BannersComponent
 import com.tubetoast.tether.presentation.peer.PeersRepository
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
-import com.tubetoast.tether.presentation.transfer.PeerTransferState
 import com.tubetoast.tether.presentation.transfer.PendingFilesRepository
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.FakeFileSource
+import com.tubetoast.tether.transfer.PeerTransferEngine
+import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.fakeBatchSender
 import com.tubetoast.tether.transfer.toPeerIdentity
 import kotlinx.coroutines.CoroutineScope
@@ -218,12 +219,17 @@ class RootComponentTest {
                     componentContext = childCtx,
                     peersRepository = peersRepository,
                     peerTransferComponentFactory = { peerCtx, peerLifecycle, peerModel ->
+                        val engine = PeerTransferEngine(
+                            peer = peerModel.id,
+                            batchSenderFactory = fakeBatchSender(),
+                            inboundEvents = MutableSharedFlow(),
+                            scope = coroutineScope,
+                        )
                         PeerTransferComponent(
                             componentContext = peerCtx,
                             peer = peerModel,
                             lifecycleRegistry = peerLifecycle,
-                            batchSenderFactory = fakeBatchSender(),
-                            inboundEvents = MutableSharedFlow(),
+                            engine = engine,
                             onShowDetails = onShowDetails,
                             scope = coroutineScope,
                             pendingFilesRepository = pendingFilesRepository,

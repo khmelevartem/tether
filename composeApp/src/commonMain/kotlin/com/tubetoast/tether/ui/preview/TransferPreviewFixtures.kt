@@ -1,11 +1,11 @@
 package com.tubetoast.tether.ui.preview
 
-import com.tubetoast.tether.presentation.transfer.Direction
-import com.tubetoast.tether.presentation.transfer.PeerTransferState
 import com.tubetoast.tether.protocol.Device
+import com.tubetoast.tether.transfer.Direction
 import com.tubetoast.tether.transfer.FailureReason
 import com.tubetoast.tether.transfer.PartialOutcome
 import com.tubetoast.tether.transfer.PeerIdentity
+import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.PerFileStatus
 import com.tubetoast.tether.transfer.TransferErrorReason
 
