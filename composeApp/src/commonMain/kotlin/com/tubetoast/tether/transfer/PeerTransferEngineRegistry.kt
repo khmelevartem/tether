@@ -8,9 +8,9 @@ import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 /**
- * Per-process registry of per-peer `PeerTransferEngine` instances. Engines survive Component
- * destruction (mDNS drops, screen navigation) and are evicted only on explicit `evict` (un-pair)
- * or process death.
+ * Engines survive Component destruction (mDNS drops, screen navigation) and are evicted only
+ * on explicit `evict` or process death. No caller wires `evict` yet — engines for permanently
+ * gone peers stay until process death.
  */
 @OptIn(ExperimentalAtomicApi::class)
 class PeerTransferEngineRegistry(
@@ -37,7 +37,7 @@ class PeerTransferEngineRegistry(
         }
     }
 
-    fun evict(peer: PeerIdentity) {
+    internal fun evict(peer: PeerIdentity) {
         while (true) {
             val current = entries.load()
             if (peer !in current) return

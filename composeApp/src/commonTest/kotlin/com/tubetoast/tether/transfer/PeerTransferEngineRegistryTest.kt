@@ -1,17 +1,22 @@
 package com.tubetoast.tether.transfer
 
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertSame
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PeerTransferEngineRegistryTest {
@@ -90,13 +95,28 @@ class PeerTransferEngineRegistryTest {
     @Test
     fun `engines created in parallel for the same peer resolve to one instance`() = runTest {
         val registry = buildRegistry(backgroundScope)
+        val threadCount = 8
+        // CompletableDeferred broadcasts to all waiting threads at once, maximising the chance
+        // that compareAndSet races across real Dispatchers.Default threads.
+        val ready = Semaphore(permits = threadCount, acquiredPermits = threadCount)
+        val go = CompletableDeferred<Unit>()
 
-        val results = (1..8)
+        val results = (1..threadCount)
             .map {
-                async { registry.engineFor(peerA) }
-            }.awaitAll()
+                async {
+                    withContext(Dispatchers.Default) {
+                        ready.release()
+                        go.await()
+                        registry.engineFor(peerA)
+                    }
+                }
+            }
 
-        val distinct = results.toSet()
-        assertEquals(1, distinct.size)
+        repeat(threadCount) { ready.acquire() }
+        go.complete(Unit)
+
+        val engines = results.awaitAll()
+        val expected = engines.first()
+        engines.forEach { assertSame(expected, it) }
     }
 }
