@@ -8,9 +8,9 @@ import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 /**
- * Engines survive Component destruction (mDNS drops, screen navigation) and are evicted only
- * on explicit `evict` or process death. No caller wires `evict` yet — engines for permanently
- * gone peers stay until process death.
+ * Engines survive Component destruction (mDNS drops, screen navigation). The only triggers
+ * for engine death are an explicit eviction call by the caller and process death; an engine
+ * for a permanently gone peer that nobody evicts lives until process death.
  */
 @OptIn(ExperimentalAtomicApi::class)
 class PeerTransferEngineRegistry(
