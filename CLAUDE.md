@@ -50,5 +50,5 @@ Index and selection rules (skill vs command) — [`.claude/README.md`](.claude/R
 - **Minimal comments.** Before adding one — try extracting the block into a private method: the method name often makes the comment unnecessary. A comment only where code cannot express intent (deliberately swallowed exception, non-obvious external-library invariant).
 - **KDoc vs `//`.** KDoc — only for contracts (nullable semantics, non-obvious pre-/postconditions, non-obvious WHY). Do not restate the method name or signature — that is noise. If KDoc adds no information relative to the code — remove it.
 - **Kotlin official style** (enforced by KtLint).
-- **One top-level class per file.** Data classes, sealed types, enums included. Nested types stay nested only when they are private implementation details of the enclosing class (e.g. `private sealed interface Config` inside a Component). If a type is consumed by callers — its own file.
+- **One top-level class per file.** Data classes, sealed types, enums included. Nested types stay nested only when they are private implementation details of the enclosing class — never consumed across the file boundary. If a type is reachable to callers, it gets its own file.
 - **Long-lived artifacts discipline** (CLAUDE.md, `docs/`, `.claude/`, KDoc, inline comments) — [`long-lived-artifacts.md`](docs/engineering/long-lived-artifacts.md).
