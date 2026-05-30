@@ -81,6 +81,12 @@ If a principal question is unresolved and its answer would change the shape of t
 
 The urge to add an "Open questions" section to the body is the same signal: the body is not yet a unit of execution. Extract the question into its own task, link the dependency, leave the body lean. The body never lists questions for the implementer to answer; questions belong in tasks that resolve them.
 
+## Multi-concern requests → halt and decompose
+
+A multi-concern request (≥2 independent concerns conflated into one body) is a malformed task. **Stop, do not file, do not draft.** List the concerns you read, ask the user to pick one for this issue and which to spawn separately. This applies even when prior permission to skip the draft step was granted — draft-skip permission covers single-concern asks only.
+
+The cost of a bundled issue is structural: the title cannot describe what shipped, the DoD cannot be a flat checklist, blocked_by links lose meaning, and post-merge retro cannot attribute outcomes to causes. Decomposition at filing time is cheaper than untangling at close-issue time.
+
 ## Draft
 
 Follow [TEMPLATE.md](TEMPLATE.md). Mandatory body sections: Context, Goal, Entry point, DoD, Out of scope. Optional: References (similar closed issues), Hypotheses (bugfix only). Type is set via a type label (`feature` / `bugfix` / `refactor` / `infra` / `docs` / `dependency`), not a body field.

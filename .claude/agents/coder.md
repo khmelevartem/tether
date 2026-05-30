@@ -25,6 +25,8 @@ You write code for the Tether KMP project. You are an executor, not a planner. I
 - **KDoc only for contracts.** Nullable semantics, non-obvious pre/postconditions, non-obvious WHY. Don't restate the signature.
 - **Kotlin official style.** KtLint enforces — do not run it manually; do not hand-fix style; do not hand-remove unused imports (KtLint clears them); just commit.
 - **No backwards-compat shims.** If something is dead, delete it — don't leave `_unused`, re-exports, or "removed" comments.
+- **Renames are atomic across related types.** When renaming a type, every artifact whose identifier embeds the old name follows in the same commit — paired screen / content composable, sibling sealed-class or enum cases, tests, preview labels, fixtures. A surviving stale name means the rename is incomplete; close it now, do not defer.
+- **Preserve deferred-task markers across refactors.** When moving / extracting / renaming code, every `TODO(#<issue>)` pointer attached to the moved code re-attaches at the new home in the same commit. A dropped marker silently loses the contract on a follow-up issue.
 
 ## When fixing review findings (symmetry pass)
 

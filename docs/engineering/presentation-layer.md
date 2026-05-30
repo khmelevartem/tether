@@ -96,6 +96,8 @@ A screen is two composables in the same file:
 
 Every `@Preview` targets `XxxContent` — never `XxxScreen`. Previews live in `commonMain` next to the screen (`androidx.compose.ui.tooling.preview.Preview`, the unified CMP annotation). Build fake state from `PreviewFixtures` and wrap content in `PreviewSurface { }`, both under `com.tubetoast.tether.ui.preview`. This split is what lets Roborazzi render previews headlessly under Robolectric (the Decompose lifecycle does not boot in that environment) and lets `review-visual` consume the resulting PNGs against the UX brief — see [testing.md §Screenshot tests](testing.md#screenshot-tests).
 
+**Visibility — tightest by default.** Composable visibility tracks call-site reach. Public is reserved for entry points consumed across packages. Internal is for composables whose only callers live in the same package. Private is for composables whose only callers live in the same file — including layout-only helpers and preview-only wrappers.
+
 ## Reusable UI primitives
 
 Reusable composables live in two sibling folders under `composeApp/src/commonMain/kotlin/com/tubetoast/tether/ui/`:

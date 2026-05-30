@@ -101,6 +101,8 @@ For each confirmed improvement:
 
 **If the change is small** (edit in a document, clarification in a command) — do it right now and show the diff.
 
+**Long-lived-artifacts compliance check before commit.** Every prose edit retro produces lands in a long-lived artifact by construction. Before committing, audit every paragraph and bullet against [`docs/engineering/long-lived-artifacts.md`](../../../docs/engineering/long-lived-artifacts.md).
+
 **If the change requires a separate task** — create an issue via the `create-issue` skill. The name should read as a useful increment to the workflow, for example:
 - "Add check X to code-review.md"
 - "Clarify scope of implement skill for case Y"
