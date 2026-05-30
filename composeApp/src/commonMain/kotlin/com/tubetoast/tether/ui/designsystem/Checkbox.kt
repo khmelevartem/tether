@@ -66,7 +66,7 @@ fun Checkbox(
 }
 
 @Composable
-internal fun CheckboxBox(
+private fun CheckboxBox(
     checked: Boolean,
     modifier: Modifier = Modifier,
 ) {

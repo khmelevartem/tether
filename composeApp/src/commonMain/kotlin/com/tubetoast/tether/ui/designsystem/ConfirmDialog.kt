@@ -53,7 +53,7 @@ fun ConfirmDialog(
 }
 
 @Composable
-fun ConfirmDialogContent(
+internal fun ConfirmDialogContent(
     title: String,
     body: String,
     primary: ConfirmAction,

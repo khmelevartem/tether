@@ -29,7 +29,7 @@ import com.tubetoast.tether.ui.preview.Themes
 import com.tubetoast.tether.ui.preview.TransferPreviewFixtures
 
 @Composable
-fun PeerCardActiveOutbound(
+internal fun PeerCardActiveOutbound(
     state: PeerTransferState.ActiveOutbound,
     device: Device,
     callbacks: PeerCardCallbacks,
@@ -65,7 +65,7 @@ fun PeerCardActiveOutbound(
 }
 
 @Composable
-fun PeerCardActiveInbound(
+internal fun PeerCardActiveInbound(
     state: PeerTransferState.ActiveInbound,
     device: Device,
     callbacks: PeerCardCallbacks,
@@ -178,7 +178,7 @@ private fun ActiveCardShell(
 }
 
 @Composable
-fun TransferProgressBar(
+private fun TransferProgressBar(
     progress: Float,
     modifier: Modifier = Modifier,
 ) {

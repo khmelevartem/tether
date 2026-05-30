@@ -24,7 +24,7 @@ import com.tubetoast.tether.ui.preview.TransferPreviewFixtures
 import com.tubetoast.tether.ui.theme.TetherTheme
 
 @Composable
-fun PeerCardIdle(
+internal fun PeerCardIdle(
     state: PeerTransferState.Idle,
     device: Device,
     isOnline: Boolean,

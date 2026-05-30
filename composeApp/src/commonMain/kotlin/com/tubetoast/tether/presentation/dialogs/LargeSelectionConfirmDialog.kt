@@ -42,7 +42,7 @@ fun LargeSelectionConfirmDialog(
 }
 
 @Composable
-fun LargeSelectionConfirmDialogContent(
+private fun LargeSelectionConfirmDialogContent(
     fileCount: Int,
     totalBytes: Long,
     peer: PeerIdentity,

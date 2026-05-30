@@ -21,7 +21,7 @@ import com.tubetoast.tether.ui.preview.TransferPreviewFixtures
 import com.tubetoast.tether.ui.theme.TetherTheme
 
 @Composable
-fun PeerCardReconnecting(
+internal fun PeerCardReconnecting(
     state: PeerTransferState.Reconnecting,
     device: Device,
     modifier: Modifier = Modifier,

@@ -58,7 +58,7 @@ fun PeerListScreen(component: PeerListComponent, modifier: Modifier = Modifier) 
 }
 
 @Composable
-fun PeerListContent(
+private fun PeerListContent(
     rows: List<PeerRow>,
     modifier: Modifier = Modifier,
     showMobileChooser: Boolean = IsMobileChooserPlatform,

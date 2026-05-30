@@ -41,7 +41,7 @@ fun PeerCard(
 }
 
 @Composable
-fun PeerCardContent(
+internal fun PeerCardContent(
     state: PeerTransferState,
     isOnline: Boolean,
     device: Device,

@@ -27,7 +27,7 @@ import com.tubetoast.tether.ui.preview.TransferPreviewFixtures
 import com.tubetoast.tether.ui.theme.TetherTheme
 
 @Composable
-fun PeerCardSent(
+internal fun PeerCardSent(
     state: PeerTransferState.Sent,
     device: Device,
     callbacks: PeerCardCallbacks,
@@ -54,7 +54,7 @@ fun PeerCardSent(
  *   so the platform-specific inline hint from UX brief §State 6 renders.
  */
 @Composable
-fun PeerCardReceived(
+internal fun PeerCardReceived(
     state: PeerTransferState.Received,
     device: Device,
     callbacks: PeerCardCallbacks,
@@ -109,7 +109,7 @@ fun PeerCardReceived(
 }
 
 @Composable
-fun PeerCardCancelled(
+internal fun PeerCardCancelled(
     state: PeerTransferState.Cancelled,
     device: Device,
     callbacks: PeerCardCallbacks,
@@ -128,7 +128,7 @@ fun PeerCardCancelled(
 }
 
 @Composable
-fun PeerCardError(
+internal fun PeerCardError(
     state: PeerTransferState.Error,
     device: Device,
     isOnline: Boolean,

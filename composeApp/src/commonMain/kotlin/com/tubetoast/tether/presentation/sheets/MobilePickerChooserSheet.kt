@@ -76,7 +76,7 @@ fun MobilePickerChooserSheet(
 }
 
 @Composable
-fun MobilePickerChooserSheetContent(
+private fun MobilePickerChooserSheetContent(
     enabledKinds: Set<PickerKind>,
     onPickPhotos: () -> Unit,
     onPickFiles: () -> Unit,

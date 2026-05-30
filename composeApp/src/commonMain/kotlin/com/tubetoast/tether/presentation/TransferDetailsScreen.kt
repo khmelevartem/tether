@@ -51,7 +51,7 @@ fun TransferDetailsScreen(component: TransferDetailsComponent) {
 }
 
 @Composable
-fun TransferDetailsContent(
+private fun TransferDetailsContent(
     state: PeerTransferState,
     onBack: () -> Unit,
     onCancelTransfer: () -> Unit,
