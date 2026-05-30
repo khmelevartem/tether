@@ -74,6 +74,10 @@ observe a positive side-effect (counter, flag, state change) — not just the ab
 an exception or a 2xx response. Otherwise the test passes regardless of whether the
 feature ran. Flag as `[REQUIRED]`.
 
+### 10. Component-on-repository: cover every emit variation
+
+When a component subscribes to a repository / flow and derives state from each emit, the test suite must cover every variation the repository can produce — not only the happy path used at construction time. Concretely: empty list, single element, multiple elements, every flag value the model carries (e.g. `isOnline = true` AND `isOnline = false`), state transitions across successive emits (true→false, present→absent, absent→present), and any mixed combination relevant to the row builder. Missing a variation that the repo can legally emit is `[REQUIRED]` — without it a future repo enrichment ships an untested code path on the consumer side.
+
 ## What you do NOT check
 
 - AC coverage → review-dod
