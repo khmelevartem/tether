@@ -26,13 +26,11 @@
 
 ## Дополнительные результаты
 
-Закрыто в окне спринта вне исходного состава:
+Закрыто в окне спринта вне исходного состава (только задачи с реально мерджнутым PR):
 
-- [#318](https://github.com/khmelevartem/tether/issues/318) ([PR #325](https://github.com/khmelevartem/tether/pull/325)) — extract transfer state machine to `OutboundTransferRepository`; `PeersRepository` retains paired-active offline peers. Подготовка домена под sender-wiring.
-- [#319](https://github.com/khmelevartem/tether/issues/319) (PR #325 same) — extract per-peer transfer state machine into `PeerTransferEngine` + retain via `PeerTransferEngineRegistry`. Разблокировал #321 и #328.
+- [#319](https://github.com/khmelevartem/tether/issues/319) ([PR #325](https://github.com/khmelevartem/tether/pull/325)) — extract per-peer transfer state machine into `PeerTransferEngine` + retain via `PeerTransferEngineRegistry`. Заодно поглотил #318 (`OutboundTransferRepository` оказался лишним слоем поверх engine'а). Разблокировал #321 и #328.
 - [#309](https://github.com/khmelevartem/tether/issues/309) ([PR #324](https://github.com/khmelevartem/tether/pull/324) + cleanup [PR #335](https://github.com/khmelevartem/tether/pull/335)) — auto-send to sole online paired peer on share-sheet entry. Достроена AC #5 transfer-фичи.
-- [#287](https://github.com/khmelevartem/tether/issues/287) — design the brand mark. Визуальная база под #244 и #317.
-- [#314](https://github.com/khmelevartem/tether/issues/314) ([PR #323](https://github.com/khmelevartem/tether/pull/323)) — validate doc links and anchors with lychee. Документация защищена от gnarly drift.
+- [#314](https://github.com/khmelevartem/tether/issues/314) ([PR #323](https://github.com/khmelevartem/tether/pull/323)) — validate doc links and anchors with lychee. Документация защищена от drift.
 - [#305](https://github.com/khmelevartem/tether/issues/305) ([PR #306](https://github.com/khmelevartem/tether/pull/306)) — close sprint-08, plan sprint-09 (этот же sprint planning).
 
 ## Порядок мерджа
