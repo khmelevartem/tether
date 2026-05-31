@@ -33,7 +33,7 @@ class PeerTransferEngine(
 
     private var activeJob: Job? = null
     private var currentSender: BatchSender? = null
-    private var originalSources: List<FileSource> = emptyList()
+    private val originalSources = MutableStateFlow<List<FileSource>>(emptyList())
     private val confirmedReceived = MutableStateFlow<Set<String>>(emptySet())
     private val cancelledFileNames = MutableStateFlow<Set<String>>(emptySet())
 
@@ -57,7 +57,7 @@ class PeerTransferEngine(
             perFile = sources.map { PerFileStatus.Queued(it.name, it.sizeBytes) },
         )
         if (!_state.compareAndSet(current, claim)) return
-        originalSources = sources
+        originalSources.value = sources
         cancelledFileNames.update { emptySet() }
         launchBatch(sources)
     }
@@ -65,6 +65,16 @@ class PeerTransferEngine(
     fun onCancel() {
         activeJob?.cancel()
         activeJob = null
+        _state.update { current ->
+            if (current is PeerTransferState.ActiveOutbound) {
+                val perFile = current.perFile
+                val sent = perFile.count { it is PerFileStatus.Done }
+                val remaining = perFile.filter { it !is PerFileStatus.Done }.map { it.name }
+                PeerTransferState.Cancelled(peer = peer, sent = sent, remaining = remaining, perFile = perFile)
+            } else {
+                current
+            }
+        }
     }
 
     fun onRetryOutbound() {
@@ -77,14 +87,14 @@ class PeerTransferEngine(
         }
         val failedNames = lastPerFile.filterIsInstance<PerFileStatus.Failed>().map { it.name }.toSet()
         val confirmed = confirmedReceived.value
-        val retryable = originalSources.filter { it.name in failedNames && it.name !in confirmed }
+        val retryable = originalSources.value.filter { it.name in failedNames && it.name !in confirmed }
         if (retryable.isEmpty()) return
         cancelledFileNames.update { emptySet() }
         launchBatch(retryable)
     }
 
     fun onRetryFile(name: String) {
-        val source = originalSources.firstOrNull { it.name == name } ?: return
+        val source = originalSources.value.firstOrNull { it.name == name } ?: return
         cancelledFileNames.update { it - name }
         val job = activeJob
         activeJob = scope.launch {
@@ -160,6 +170,16 @@ class PeerTransferEngine(
             }
         } finally {
             currentSender = null
+            _state.update { current ->
+                if (current is PeerTransferState.ActiveOutbound) {
+                    val perFile = current.perFile
+                    val sent = perFile.count { it is PerFileStatus.Done }
+                    val remaining = perFile.filter { it !is PerFileStatus.Done }.map { it.name }
+                    PeerTransferState.Cancelled(peer = peer, sent = sent, remaining = remaining, perFile = perFile)
+                } else {
+                    current
+                }
+            }
         }
     }
 

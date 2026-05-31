@@ -13,8 +13,7 @@ sealed interface PeerTransferState {
         abstract val totalBytes: Long?
         abstract val perFile: List<PerFileStatus>
 
-        /** Engine atomically claimed via compareAndSet; the BatchSender has not produced its first
-         * progress heartbeat yet. No per-byte progress fields exist at this phase. */
+        /** Outbound transfer reserved by the engine; per-byte progress is not yet available. */
         data class Claimed(
             override val peer: PeerIdentity,
             override val totalFiles: Int,

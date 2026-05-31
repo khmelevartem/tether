@@ -61,6 +61,20 @@ class PeerTransferEngineTest {
     }
 
     @Test
+    fun `cancel during Claimed phase transitions to Cancelled`() = runTest {
+        val pauseChannel = Channel<Unit>(0)
+        val engine = buildEngine(pauseChannel = pauseChannel, scope = backgroundScope)
+
+        engine.startOutbound(listOf(FakeFileSource("a.txt", 100L), FakeFileSource("b.txt", 100L)))
+        assertIs<PeerTransferState.ActiveOutbound.Claimed>(engine.state.value)
+
+        engine.onCancel()
+        runCurrent()
+
+        assertIs<PeerTransferState.Cancelled>(engine.state.value)
+    }
+
+    @Test
     fun `inbound Started Progress FileCompleted BatchCompleted produces Received`() = runTest {
         val events = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
         val engine = buildEngine(events = events, scope = backgroundScope)
