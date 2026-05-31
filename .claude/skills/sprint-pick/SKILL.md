@@ -1,13 +1,13 @@
 ---
 name: sprint-pick
-description: Quick read-only look at the current `docs/sprints/sprint-NN.md` — pull issue numbers from Composition + Blocking chains, batch-check OPEN/PR status via `gh`, query `blocked_by` only for 🟢 items, and propose 1–3 candidates to start now with one-sentence justifications. No Gradle, no edits. Use when the user says "what to pick next", "next task from sprint", "что взять из спринта", "следующая задача", or invokes `/sprint-pick`.
+description: Quick read-only look at the current `docs/sprints/sprint-NN.md` — pull issue numbers from the composition table + merge order, batch-check OPEN/PR status via `gh`, query `blocked_by` only for 🟢 items, and propose 1–3 candidates to start now with one-sentence justifications. No Gradle, no edits. Use when the user says "what to pick next", "next task from sprint", "что взять из спринта", "следующая задача", or invokes `/sprint-pick`.
 ---
 
 Quick look: what to pick from the current sprint right now. Read-only and `gh` only, no Gradle.
 
 ## 1. Sprint
 
-Take `docs/sprints/sprint-NN.md` with the maximum NN. Read **only** the sections "Sprint goal", "Composition", "Blocking chains". Extract issue numbers.
+Take `docs/sprints/sprint-NN.md` with the maximum NN. Read **only** the `## Состав` table and the `## Порядок мерджа` section. Extract issue numbers from the table; the merge order section carries the in-sprint chains (`#A → #B`, `||` for parallel branches). Skip the H1 subtitle and the `**Направления:**` line — they are decorative.
 
 If the file doesn't exist — say so and propose `/grooming`. Stop.
 
@@ -38,12 +38,12 @@ For each 🟢:
 gh api repos/khmelevartem/tether/issues/<N>/dependencies/blocked_by --jq '.[] | "\(.number) \(.state)"'
 ```
 
-If there is an open blocker → 🔴. Also account for the internal merge order from the "Blocking chains" section of the sprint doc.
+If there is an open blocker → 🔴. Also account for the in-sprint chains from the `## Порядок мерджа` section.
 
 ## 4. Output (compact)
 
 ```
-Sprint N — "<goal>"
+Sprint NN
 ✅ #a #b   🟡 #c   🟢 #d #e   🔴 #f (blocked by #g)
 
 Pick now:
@@ -52,8 +52,8 @@ Pick now:
 ```
 
 1–3 items maximum, only from 🟢. Selection criteria (in descending order):
-1. Unblocks the longest tail (mentioned in "Blocking chains outward" or blocking-links).
-2. Does not conflict with what is already 🟡 (by layers from the sprint doc).
+1. Unblocks the longest tail (per merge-order chains or external `blocked_by`).
+2. Does not conflict with what is already 🟡 — different `Тип` from the composition table, or different files (quick `gh pr view <PR> --json files` on the in-flight 🟡 PR).
 3. Smaller size → faster.
 
 If 🟢 is empty — say so, and propose: finish 🟡, unblock 🔴, or `/grooming` for a new sprint.

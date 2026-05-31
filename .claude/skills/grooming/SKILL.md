@@ -1,6 +1,6 @@
 ---
 name: grooming
-description: Run a backlog grooming session — close the current sprint-NN.md by actuals (task statuses, extra results within the window), go through open issues, find unfiled tasks via gap-analysis (platform symmetry, TODOs in code, MVP blockers from the roadmap) and compose a compact candidate for the next sprint in a fixed format (Goal / Composition / Consequences / optional merge order). Use when the user says "groom", "grooming", "plan the sprint", "close the sprint".
+description: Run a backlog grooming session — close the current sprint-NN.md by actuals (task statuses, extra results within the window), go through open issues, find unfiled tasks via gap-analysis (platform symmetry, TODOs in code, MVP blockers from the roadmap) and compose a compact candidate for the next sprint in a fixed format (directions tag / composition / what it unblocks / optional merge order). Use when the user says "groom", "grooming", "plan the sprint", "close the sprint".
 ---
 
 Run a backlog grooming session and compose a candidate plan for the next sprint.
@@ -189,14 +189,15 @@ Save to `docs/sprints/sprint-NN.md`. Format:
 
 <1–3 буллета. Только «после X следующее становится возможным Y» — не пересказ того, что задача делает. Если буллет начинается с «После X шипнуто Y» без следующего шага — выкинуть.>
 
-## Порядок мерджа (опционально)
+<!-- Optional: omit if there's no rebase risk. Heading literal — no parenthetical suffix. -->
+## Порядок мерджа
 
-<Если важен для минимизации rebase: #A → #B → #C, `||` маркирует параллельные ветки. Иначе секция опускается.>
+<#A → #B → #C, `||` маркирует параллельные ветки.>
 ```
 
-**Направления.** Функциональные области, по которым идут задачи спринта: `паринг`, `передача`, `обнаружение`, `UI`, `надёжность`, `скиллы`, `документация`, и т.п. Flat list через `·`. Не цели и не commit'ы — просто метка, куда смотреть. Один спринт обычно покрывает 2–4 направления; больше — сигнал что задачи разъезжаются и спринт теряет фокус.
+**Направления.** Короткие метки функциональных областей, по которым идут задачи спринта. Flat list через `·`. Не цели и не commit'ы — просто метка, куда смотреть. Один спринт обычно покрывает 2–4 направления; больше — сигнал что задачи разъезжаются и спринт теряет фокус.
 
-**Skyrim-codename.** Декоративное название в стиле провинций Тамриэля / эпических заветов («Печать Первого Касания», «Завет Четырёх Клинков») — для атмосферы и удобства узнавания в `/progress` и retro. **Не несёт смысловой нагрузки.** `/sprint-pick`, `/progress`, агенты при выборе задач — не должны парсить или анализировать subtitle. Номер `NN` остаётся единственным machine-readable идентификатором.
+**Skyrim-codename.** Декоративный subtitle в эпической стилистике — для атмосферы и узнавания. **Не несёт операционной нагрузки.** Любой инструмент, читающий sprint-NN.md, должен опираться только на номер `NN`; subtitle парсить и анализировать запрещено.
 
 **Size (for the column):**
 - **S** — isolated change with no platform specifics
