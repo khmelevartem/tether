@@ -130,7 +130,7 @@ Apply [`docs/engineering/long-lived-artifacts.md`](../../docs/engineering/long-l
 ### Step 7 — Update indexes
 
 - New or substantially restructured living doc → add a one-line entry to `docs/engineering/README.md` under «Sections», matching existing tone.
-- New ADR → add a one-line entry to `docs/engineering/README.md` under «Architecture Decision Records» (format: «[Title](adr/adr-X.md) — chose X over Y / Z because…»). The `adr/README.md` is conventions-only; do not list ADRs there.
+- New ADR → add a one-line entry to `docs/engineering/README.md` under «Architecture Decision Records» (format: `[Title](adr/adr-X.md) — chose X over Y / Z because…`). The `adr/README.md` is conventions-only; do not list ADRs there.
 
 ### Step 8 — Verify and hand back
 
