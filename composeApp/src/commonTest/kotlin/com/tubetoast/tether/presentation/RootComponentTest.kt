@@ -6,14 +6,16 @@ import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.resume
 import com.arkivanov.essenty.statekeeper.StateKeeperDispatcher
 import com.tubetoast.tether.discovery.FakeDeviceDiscovery
+import com.tubetoast.tether.peer.PeersRepository
+import com.tubetoast.tether.preferences.FakePeerPreferencesStore
 import com.tubetoast.tether.presentation.banners.BannersComponent
-import com.tubetoast.tether.presentation.peer.PeersRepository
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
-import com.tubetoast.tether.presentation.transfer.PendingFilesRepository
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.FakeFileSource
 import com.tubetoast.tether.transfer.PeerTransferEngine
 import com.tubetoast.tether.transfer.PeerTransferState
+import com.tubetoast.tether.transfer.PendingFilesRepository
+import com.tubetoast.tether.transfer.PendingFilesSummary
 import com.tubetoast.tether.transfer.fakeBatchSender
 import com.tubetoast.tether.transfer.toPeerIdentity
 import kotlinx.coroutines.CoroutineScope
@@ -240,6 +242,7 @@ class RootComponentTest {
                             batchSenderFactory = fakeBatchSender(),
                             inboundEvents = MutableSharedFlow(),
                             scope = coroutineScope,
+                            peerPreferencesStore = FakePeerPreferencesStore(),
                         )
                         PeerTransferComponent(
                             componentContext = peerCtx,

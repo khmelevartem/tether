@@ -1,6 +1,6 @@
 package com.tubetoast.tether.presentation
 
-import com.tubetoast.tether.presentation.peer.Peer
+import com.tubetoast.tether.peer.Peer
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 
 data class PeerRow(

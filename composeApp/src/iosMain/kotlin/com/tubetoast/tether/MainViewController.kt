@@ -47,6 +47,7 @@ fun MainViewController() = run {
                 container.mdnsDiscovery.start(name, port = port)
                 container.nameRepublisher.start(scope)
                 container.rendezvousAnnouncer.start(scope)
+                container.autoSendDispatcher.start()
             }
             onDispose {
                 container.nameRepublisher.stop()

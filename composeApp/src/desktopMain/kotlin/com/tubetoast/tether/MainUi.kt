@@ -25,6 +25,7 @@ fun main() = runBlocking {
     )
     container.nameStore.init()
     val handle = container.startBackendOrFail()
+    container.autoSendDispatcher.start()
     registerShutdownHook(handle)
 
     val lifecycle = LifecycleRegistry()
