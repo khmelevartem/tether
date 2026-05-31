@@ -1,6 +1,7 @@
 package com.tubetoast.tether.network
 
 import com.tubetoast.tether.protocol.Device
+import com.tubetoast.tether.protocol.PeerAnnouncement
 import com.tubetoast.tether.protocol.SendResult
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -14,6 +15,8 @@ import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.OutgoingContent
+import io.ktor.http.contentType
+import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.utils.io.ByteChannel
 import io.ktor.utils.io.ByteReadChannel
@@ -36,7 +39,7 @@ import kotlin.time.Duration.Companion.seconds
 
 private val log = KydraLog.withTag(default = "FileClient")
 
-class FileClient(
+open class FileClient(
     private val client: HttpClient,
     private val tracker: TransferActivityTracker = DefaultTransferActivityTracker(),
     private val noProgressTimeout: Duration = DEFAULT_NO_PROGRESS_TIMEOUT,
@@ -54,6 +57,19 @@ class FileClient(
             },
             tracker = tracker,
         )
+    }
+
+    open suspend fun sendHello(target: Device, ownInfo: PeerAnnouncement): Boolean = try {
+        val response = client.post("http://${target.host}:${target.port}/hello") {
+            contentType(ContentType.Application.Json)
+            setBody(ownInfo)
+        }
+        val ok = response.status.isSuccess()
+        if (ok) log.info { "hello sent → ${target.host}:${target.port}" }
+        ok
+    } catch (e: Exception) {
+        log.error { "hello failed → ${target.host}:${target.port} — ${e.message}" }
+        false
     }
 
     suspend fun send(

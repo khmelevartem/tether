@@ -56,7 +56,7 @@ class FileServerPairTest {
     }
 
     private fun startServer(store: TrustedDeviceStore, keyPair: DeviceKeyPair): Pair<FileServer, Int> {
-        val server = FileServer(port = 0, trustedDeviceStore = store, deviceKeyPair = keyPair)
+        val server = FileServer(configuredPort = 0, trustedDeviceStore = store, deviceKeyPair = keyPair)
         startedServer = server
         return server to server.start()
     }

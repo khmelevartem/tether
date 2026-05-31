@@ -10,18 +10,16 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
-private fun testDiscovery() = MdnsDiscovery(DiscoveredDevicesStore())
-
 // JmDNS delivers callbacks on real threads outside our CoroutineScope
 @Suppress("ktlint:tether:no-run-blocking-in-tests")
 class MdnsDiscoveryTest {
     @Test
-    fun `stop before start does not throw`() {
+    fun `stop before start does not throw`(): Unit = runBlocking {
         testDiscovery().stop()
     }
 
     @Test
-    fun `start twice without stop throws IllegalStateException`() {
+    fun `start twice without stop throws IllegalStateException`(): Unit = runBlocking {
         val discovery = testDiscovery()
         discovery.start("DoubleStart", 19001)
         try {
@@ -34,7 +32,7 @@ class MdnsDiscoveryTest {
     }
 
     @Test
-    fun `stop emits empty list`() = runBlocking {
+    fun `stop emits empty list`(): Unit = runBlocking {
         val discovery = testDiscovery()
         discovery.start("StopEmits", 19003)
         discovery.stop()
@@ -42,7 +40,7 @@ class MdnsDiscoveryTest {
     }
 
     @Test
-    fun `two instances discover each other`() = runBlocking {
+    fun `two instances discover each other`(): Unit = runBlocking {
         val a = testDiscovery()
         val b = testDiscovery()
         try {
@@ -90,7 +88,7 @@ class MdnsDiscoveryTest {
     }
 
     @Test
-    fun `instances do not discover themselves`() = runBlocking {
+    fun `instances do not discover themselves`(): Unit = runBlocking {
         val a = testDiscovery()
         val b = testDiscovery()
         try {
@@ -130,7 +128,7 @@ class MdnsDiscoveryTest {
     }
 
     @Test
-    fun `restart — stop then start works correctly`() = runBlocking {
+    fun `restart — stop then start works correctly`(): Unit = runBlocking {
         val a = testDiscovery()
         val b = testDiscovery()
         try {
@@ -157,7 +155,7 @@ class MdnsDiscoveryTest {
     }
 
     @Test
-    fun `stop clears previously discovered peers`() = runBlocking {
+    fun `stop clears previously discovered peers`(): Unit = runBlocking {
         val a = testDiscovery()
         val b = testDiscovery()
         try {
@@ -176,7 +174,7 @@ class MdnsDiscoveryTest {
     }
 
     @Test
-    fun `peer re-resolved with new port replaces old entry`() = runBlocking {
+    fun `peer re-resolved with new port replaces old entry`(): Unit = runBlocking {
         val a = testDiscovery()
         val b = testDiscovery()
         try {
@@ -223,7 +221,7 @@ class MdnsDiscoveryTest {
     }
 
     @Test
-    fun `discovered device has correct host and port`() = runBlocking {
+    fun `discovered device has correct host and port`(): Unit = runBlocking {
         val a = testDiscovery()
         val b = testDiscovery()
         try {

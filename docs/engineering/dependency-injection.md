@@ -179,6 +179,10 @@ A `SomeTransferRepository` interface with one `SomeTransferRepositoryImpl` adds 
 
 When you do need to test a class that depends on a collaborator, prefer a hand-rolled fake or a test-double provided by the library — don't introduce a wrapper interface just to mock it. If a fake is hard to write because the component is too coupled to its collaborators, fix the component.
 
+### 7. The container exposes named components, not plain data
+
+A container field is a named object that owns or manages something — a store, a server, a client, a scope, a factory. It is not a primitive, a string, a number, a collection, or any other plain data shape. Values like an identity, an alias, a port, a device-type tag belong to the component that owns them; consumers receive the owning component and ask it for the value at the moment they need it, including across an asynchronous boundary if the value is only known after I/O. Putting plain data on the container forces materialisation at construction time, hides who is responsible for the value, and turns the container into a property bag instead of a wiring graph.
+
 ## Testability
 
 The container is also the seam tests use to substitute fakes. Three levels of tests, three patterns:

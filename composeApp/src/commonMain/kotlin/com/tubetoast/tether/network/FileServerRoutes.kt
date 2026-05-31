@@ -1,7 +1,11 @@
 package com.tubetoast.tether.network
 
+import com.tubetoast.tether.discovery.DiscoveredDevicesStore
+import com.tubetoast.tether.identity.DeviceIdentityStore
+import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.protocol.PairRequest
 import com.tubetoast.tether.protocol.PairResponse
+import com.tubetoast.tether.protocol.PeerAnnouncement
 import com.tubetoast.tether.security.TrustedDeviceStore
 import com.tubetoast.tether.security.deviceIdFromPublicKey
 import io.ktor.http.HttpStatusCode
@@ -9,6 +13,7 @@ import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.server.plugins.origin
 import io.ktor.server.request.contentLength
 import io.ktor.server.request.receive
 import io.ktor.server.request.receiveChannel
@@ -19,6 +24,7 @@ import io.ktor.server.routing.routing
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.readAvailable
 import ru.pocketbyte.kydra.log.KydraLog
+import ru.pocketbyte.kydra.log.debug
 import ru.pocketbyte.kydra.log.error
 import ru.pocketbyte.kydra.log.info
 import ru.pocketbyte.kydra.log.wrapper.withTag
@@ -63,10 +69,39 @@ internal fun Application.installFileServerRoutes(
     trustedDeviceStore: TrustedDeviceStore,
     serverPublicKey: ByteArray,
     tracker: TransferActivityTracker = DefaultTransferActivityTracker(),
+    deviceIdentityStore: DeviceIdentityStore? = null,
+    discoveredDevicesStore: DiscoveredDevicesStore? = null,
 ) {
     install(ContentNegotiation) { json() }
     routing {
         get("/health") { call.respond(HttpStatusCode.OK, "Tether OK") }
+        post("/hello") {
+            val body = try {
+                call.receive<PeerAnnouncement>()
+            } catch (_: Exception) {
+                call.respond(HttpStatusCode.BadRequest, mapOf("error" to "invalid_body"))
+                return@post
+            }
+            if (body.port !in 1..65535) {
+                log.info { "hello rejected — invalid port ${body.port} from ${body.alias}" }
+                call.respond(HttpStatusCode.BadRequest, mapOf("error" to "invalid_port"))
+                return@post
+            }
+            if (deviceIdentityStore != null && body.fingerprint == deviceIdentityStore.getOrCreate()) {
+                log.debug { "hello self-suppressed (own fingerprint) from ${body.alias}" }
+                call.respond(HttpStatusCode.OK, emptyMap<String, String>())
+                return@post
+            }
+            val remoteHost = call.request.origin.remoteHost
+            val device = Device(
+                name = body.alias,
+                host = remoteHost,
+                port = body.port,
+            )
+            discoveredDevicesStore?.upsert(device)
+            log.info { "hello from ${body.alias}@$remoteHost:${body.port}" }
+            call.respond(HttpStatusCode.OK, emptyMap<String, String>())
+        }
         post("/pair") {
             val request = call.receive<PairRequest>()
             val deviceId = deviceIdFromPublicKey(request.publicKey)

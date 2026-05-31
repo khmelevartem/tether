@@ -29,6 +29,7 @@ Engineering concepts. The vocabulary [`architect`](../.claude/agents/architect.m
 - **Inbound** — a transfer this device receives from a peer. _Avoid:_ download, receive (verb only).
 - **FileServer** — the per-device HTTP server that accepts incoming transfers. _Avoid:_ receiver, listener.
 - **FileClient** — the per-device HTTP client that initiates outgoing transfers. _Avoid:_ sender, uploader.
+- **Fingerprint** — the stable per-device identity carried in discovery announces and `/hello` payloads. Used by every node to recognise its own announces and suppress them, and (once pairing lands) as the trust key two devices agree on at pairing time. _Avoid:_ device id when the cross-network identity property matters; install token. (see [discovery.md §Identity and self-suppression](engineering/discovery.md#identity-and-self-suppression))
 - **Source set** — a Kotlin Multiplatform compilation source set; platform-to-target mapping and hierarchy live in [architecture-principles.md](engineering/architecture-principles.md). _Avoid:_ saying «JVM» when the audience is end-users — say *Desktop* instead.
 - **Composition root** — the platform entry point that constructs the DI container; by extension, the `AppContainer` instance it constructs. (see [dependency-injection.md](engineering/dependency-injection.md))
 - **Container** — the DI container that holds singletons for one process lifetime; the construct that lives at the composition root.

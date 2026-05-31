@@ -5,7 +5,8 @@ import com.sun.jna.Pointer
 import com.sun.jna.ptr.PointerByReference
 import com.tubetoast.tether.discovery.DeviceDiscovery
 import com.tubetoast.tether.discovery.DiscoveredDevicesStore
-import com.tubetoast.tether.discovery.TXT_PROPS
+import com.tubetoast.tether.discovery.txtProps
+import com.tubetoast.tether.identity.DeviceIdentityStore
 import com.tubetoast.tether.protocol.Device
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -19,6 +20,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.warn
 import ru.pocketbyte.kydra.log.wrapper.withTag
@@ -41,10 +44,11 @@ private val log = KydraLog.withTag(default = "MdnsDiscovery.Bonjour")
  */
 internal class MdnsDiscoveryBonjour(
     private val store: DiscoveredDevicesStore,
+    private val deviceIdentityStore: DeviceIdentityStore,
 ) : DeviceDiscovery {
     override val discoveredDevices: StateFlow<List<Device>> = store.devices
 
-    private val lifecycleLock = Any()
+    private val lifecycleLock = Mutex()
 
     @Volatile private var session: Session? = null
 
@@ -52,17 +56,21 @@ internal class MdnsDiscoveryBonjour(
 
     @Volatile private var stopped: Boolean = false
 
-    override fun start(deviceName: String, port: Int) {
-        synchronized(lifecycleLock) {
+    @Volatile private var fingerprint: String = ""
+
+    override suspend fun start(deviceName: String, port: Int) {
+        val fingerprint = deviceIdentityStore.getOrCreate()
+        lifecycleLock.withLock {
             if (session != null) throw IllegalStateException("MdnsDiscovery already started; call stop() first")
             stopped = false
             currentPort = port
-            session = Session.start(deviceName, port, store)
+            this.fingerprint = fingerprint
+            session = Session.start(deviceName, port, store, fingerprint)
         }
     }
 
-    override fun stop() {
-        val toClose = synchronized(lifecycleLock) {
+    override suspend fun stop() {
+        val toClose = lifecycleLock.withLock {
             stopped = true
             val current = session
             session = null
@@ -73,17 +81,17 @@ internal class MdnsDiscoveryBonjour(
         store.clear()
     }
 
-    override fun republish(name: String) {
-        val (toClose, port) = synchronized(lifecycleLock) {
+    override suspend fun republish(name: String) {
+        val (toClose, port) = lifecycleLock.withLock {
             val current = session ?: return
             val port = currentPort
             session = null
             current to port
         }
         toClose.close()
-        synchronized(lifecycleLock) {
+        lifecycleLock.withLock {
             if (stopped) return
-            if (session == null) session = Session.start(name, port, store)
+            if (session == null) session = Session.start(name, port, store, fingerprint)
         }
     }
 
@@ -144,7 +152,7 @@ internal class MdnsDiscoveryBonjour(
                 when (event) {
                     is Event.BrowseAdd -> state.onBrowseAdd(event.name, event.interfaceIndex)
                     is Event.BrowseRemove -> state.onBrowseRemove(event.name)
-                    is Event.Resolved -> state.onResolved(event.name, event.host, event.port)
+                    is Event.Resolved -> state.onResolved(event.name, event.host, event.port, event.peerFingerprint)
                     is Event.AddrInfoFound -> state.onAddrInfoFound(event.name, event.ipv4, event.isAdd)
                 }
             }
@@ -185,7 +193,15 @@ internal class MdnsDiscoveryBonjour(
                 ) {
                     if (errorCode != DnsSd.NO_ERROR) return
                     val host = hosttarget ?: return
-                    events.trySend(Event.Resolved(peerName, host, BonjourCodec.networkOrderToHost(port)))
+                    val peerFingerprint = if (txtRecord != null && txtLen > 0) {
+                        val bytes = txtRecord.getByteArray(0, txtLen.toInt() and 0xFFFF)
+                        BonjourCodec.decodeTxt(bytes)["fp"]
+                    } else {
+                        null
+                    }
+                    events.trySend(
+                        Event.Resolved(peerName, host, BonjourCodec.networkOrderToHost(port), peerFingerprint),
+                    )
                 }
             }
             callbackAnchors.add(callback)
@@ -284,6 +300,7 @@ internal class MdnsDiscoveryBonjour(
                 val name: String,
                 val host: String,
                 val port: Int,
+                val peerFingerprint: String?,
             ) : Event()
 
             data class AddrInfoFound(
@@ -301,18 +318,19 @@ internal class MdnsDiscoveryBonjour(
                 deviceName: String,
                 port: Int,
                 store: DiscoveredDevicesStore,
+                fingerprint: String = "",
             ): Session {
                 val events = Channel<Event>(Channel.UNLIMITED)
                 val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-                val ownAddresses = localAddresses()
                 val session = Session(store, scope, events)
-                val state = BonjourState(store, session) { host, resolvedPort ->
-                    resolvedPort == port && ownAddresses.contains(host)
+                val state = BonjourState(store, session, fingerprint) { host, resolvedPort ->
+                    resolvedPort == port && localAddresses().contains(host)
                 }
                 session.bindState(state)
 
-                val registerRef = openRegisterRef(deviceName, port) { session.callbackAnchors.add(it) }
+                // interfaceIndex=0 → kDNSServiceInterfaceIndexAny; Bonjour fans out to all interfaces by default.
+                val registerRef = openRegisterRef(deviceName, port, fingerprint) { session.callbackAnchors.add(it) }
 
                 val browseCallback = object : DnsSd.BrowseReply {
                     override fun invoke(
@@ -338,6 +356,7 @@ internal class MdnsDiscoveryBonjour(
                 session.callbackAnchors.add(browseCallback)
 
                 val browseOutRef = PointerByReference()
+                // interfaceIndex=0 → kDNSServiceInterfaceIndexAny; Bonjour fans out to all interfaces by default.
                 val error = DnsSd.INSTANCE.DNSServiceBrowse(
                     browseOutRef,
                     0,
@@ -379,6 +398,7 @@ internal class MdnsDiscoveryBonjour(
             private fun openRegisterRef(
                 deviceName: String,
                 port: Int,
+                fingerprint: String,
                 anchor: (Any) -> Unit,
             ): Pointer? {
                 val outRef = PointerByReference()
@@ -398,7 +418,7 @@ internal class MdnsDiscoveryBonjour(
                     }
                 }
                 anchor(callback)
-                val txtBytes = BonjourCodec.encodeTxt(TXT_PROPS)
+                val txtBytes = BonjourCodec.encodeTxt(txtProps(fingerprint))
                 val txtMem = Memory(txtBytes.size.toLong()).also { it.write(0, txtBytes, 0, txtBytes.size) }
                 val error = DnsSd.INSTANCE.DNSServiceRegister(
                     outRef,

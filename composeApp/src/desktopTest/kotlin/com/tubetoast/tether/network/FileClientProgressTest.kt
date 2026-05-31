@@ -31,7 +31,7 @@ class FileClientProgressTest {
         configDir = Files.createTempDirectory("tether-progress-test-keys").toFile()
         tempStore = TempDataStore()
         server = FileServer(
-            port = 0,
+            configuredPort = 0,
             downloadsDir = tmpDir,
             trustedDeviceStore = DefaultTrustedDeviceStore(tempStore.dataStore),
             deviceKeyPair = DeviceKeyPair(configDir),

@@ -1,5 +1,7 @@
 package com.tubetoast.tether.network
 
+import com.tubetoast.tether.discovery.DiscoveredDevicesStore
+import com.tubetoast.tether.identity.DeviceIdentityStore
 import com.tubetoast.tether.security.DeviceKeyPair
 import com.tubetoast.tether.security.TrustedDeviceStore
 import io.ktor.server.cio.CIO
@@ -19,14 +21,19 @@ import ru.pocketbyte.kydra.log.wrapper.withTag
 private val log = KydraLog.withTag(default = "FileServer")
 
 actual class FileServer(
-    private val port: Int,
+    private val configuredPort: Int,
     downloadsDir: String? = null,
     private val trustedDeviceStore: TrustedDeviceStore,
     private val deviceKeyPair: DeviceKeyPair,
     private val tracker: TransferActivityTracker = DefaultTransferActivityTracker(),
+    private val deviceIdentityStore: DeviceIdentityStore? = null,
+    private val discoveredDevicesStore: DiscoveredDevicesStore? = null,
 ) {
     private val downloadsDir: String = downloadsDir ?: defaultDownloadsDir()
     private var server: EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration>? = null
+
+    private var _port: Int = -1
+    actual val port: Int get() = _port
 
     actual fun start(): Int {
         check(server == null) { "FileServer is already running" }
@@ -36,15 +43,23 @@ actual class FileServer(
         )
         storage.ensureRoot()
         val srv = try {
-            embeddedServer(CIO, port = port) {
-                installFileServerRoutes(storage, trustedDeviceStore, deviceKeyPair.publicKey, tracker)
+            embeddedServer(CIO, port = configuredPort) {
+                installFileServerRoutes(
+                    storage,
+                    trustedDeviceStore,
+                    deviceKeyPair.publicKey,
+                    tracker,
+                    deviceIdentityStore,
+                    discoveredDevicesStore,
+                )
             }.start(wait = false)
         } catch (e: Exception) {
-            log.error { e withMessage "FileServer start failed on port $port" }
+            log.error { e withMessage "FileServer start failed on port $configuredPort" }
             throw e
         }
         server = srv
         val resolvedPort = runBlocking { srv.engine.resolvedConnectors() }.first().port
+        _port = resolvedPort
         log.info { "started on port $resolvedPort, downloads → ${this.downloadsDir}" }
         return resolvedPort
     }
@@ -52,6 +67,7 @@ actual class FileServer(
     actual fun stop() {
         server?.stop(gracePeriodMillis = 500, timeoutMillis = 1_000)
         server = null
+        _port = -1
         log.info { "stopped" }
     }
 }

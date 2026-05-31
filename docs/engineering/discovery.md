@@ -30,14 +30,14 @@ Discovery runs four layers stacked top to bottom by speed and reach. Each layer 
 ┌─────────────────────────────────▼────────────────────────────────────┐
 │ Layer 3 — fallback channels (started if store stays empty for N s)   │
 │   3a HTTP-subnet-scan: POST /hello to every reachable host.          │
-│   3b UDP-broadcast: limited broadcast carrying same InfoDto.         │
+│   3b UDP-broadcast: limited broadcast carrying same PeerAnnouncement.         │
 │   Run concurrently; both may contribute.                             │
 └─────────────────────────────────┬────────────────────────────────────┘
                                   │ feeds
 ┌─────────────────────────────────▼────────────────────────────────────┐
 │ Layer 4 — Out-of-band pairing (QR scan + manual IP entry)            │
 │   User-initiated. QR primary; manual entry for camera-less cases.    │
-│   Same code path as Layer 2 — InfoDto → store upsert.                │
+│   Same code path as Layer 2 — PeerAnnouncement → store upsert.                │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -80,7 +80,7 @@ Content-Type: application/json
   "alias":       string,           // user-visible device name
   "fingerprint": string,           // see Identity below; interim placeholder allowed
   "port":        integer,          // sender's FileServer port
-  "deviceType":  "mobile"|"desktop"|"web"|"headless"|"server",
+  "deviceType":  "android"|"ios"|"desktop"|"cli",
   "version":     integer           // protocol version, currently 1
 }
 ```
@@ -101,7 +101,7 @@ On receipt: build a `Device` from `(remoteAddress, body.port, body.alias, body.f
 
 ### Self-suppression
 
-Drop `POST /hello` whose `fingerprint` matches the device's own. Until stable fingerprints exist, drop by `(alias, remoteAddress, port)` matching the device's own announced tuple, with an explicit code-side TODO referencing [#11](https://github.com/khmelevartem/tether/issues/11).
+Drop `POST /hello` whose `fingerprint` matches the device's own.
 
 ## Layer 3a — HTTP-subnet-scan fallback
 
@@ -117,7 +117,7 @@ Some networks (corporate APs with client isolation, certain captive setups) drop
 
 ## Layer 3b — UDP-broadcast fallback
 
-Listener bound on a reserved UDP port on every interface. Pings sent as limited broadcast (`255.255.255.255:<port>`) on each connected interface carry the same `InfoDto` payload as `/hello`.
+Listener bound on a reserved UDP port on every interface. Pings sent as limited broadcast (`255.255.255.255:<port>`) on each connected interface carry the same `PeerAnnouncement` payload as `/hello`.
 
 A host receiving a broadcast ping replies by `POST /hello` (Layer 2) over TCP to the sender — the UDP packet's purpose is purely to elicit the rendezvous; the rendezvous payload is the source of truth. This keeps state outside UDP entirely.
 
@@ -135,7 +135,7 @@ When automatic discovery fails, the user is offered a way to introduce the two d
 
 ### QR scan (primary)
 
-One device displays a QR code that encodes its own `InfoDto` (`alias`, `fingerprint`, `port`, `deviceType`, `version`) and host IP. The other scans it with the in-app scanner. The decoded payload is fed into the same upsert path as an inbound `POST /hello` — the resulting peer appears in the device list like any other, and the two sides exchange `/hello` immediately so both ends symmetrise.
+One device displays a QR code that encodes its own `PeerAnnouncement` (`alias`, `fingerprint`, `port`, `deviceType`, `version`) and host IP. The other scans it with the in-app scanner. The decoded payload is fed into the same upsert path as an inbound `POST /hello` — the resulting peer appears in the device list like any other, and the two sides exchange `/hello` immediately so both ends symmetrise.
 
 QR is the primary out-of-band path because it is unambiguous (no transcription errors), works across language and keyboard layouts, and is the same gesture a user already knows from Wi-Fi password sharing.
 
@@ -155,7 +155,7 @@ Any combination of failure modes Layers 1–3 cannot overcome, the user works ar
 
 ## Identity and self-suppression
 
-The `fingerprint` field in `/hello` and `InfoDto` carries a stable device identity. Its target is the EC P-256 public key fingerprint produced by [Pairing (#11)](https://github.com/khmelevartem/tether/issues/11) — the same identity used by [channel encryption](../product/security.md#channel-encryption) and pairing.
+The `fingerprint` field in `/hello` and `PeerAnnouncement` carries a stable device identity. Its target is the EC P-256 public key fingerprint produced by [Pairing (#11)](https://github.com/khmelevartem/tether/issues/11) — the same identity used by [channel encryption](../product/security.md#channel-encryption) and pairing.
 
 Until pairing identity lands, the field carries a per-install random opaque string sufficient for self-suppression but not for trust. No code path treats it as authentication; trust gating remains pairing. The interim string is regenerated on app reinstall, matching the user-visible "reinstall produces a new identity" behaviour of pairing.
 
@@ -182,7 +182,7 @@ Trust is established exclusively at [pairing](../product/security.md#pairing-flo
 
 ### Contracts that span all layers
 
-- `InfoDto` shape (`alias`, `fingerprint`, `port`, `deviceType`, `version`) is identical in `/hello` and in UDP-broadcast payloads. A single deserializer; layers do not see each other.
+- `PeerAnnouncement` shape (`alias`, `fingerprint`, `port`, `deviceType`, `version`) is identical in `/hello` and in UDP-broadcast payloads. A single deserializer; layers do not see each other.
 - All layers feed `DiscoveredDevicesStore` via the same upsert path. Source of discovery is not stored.
 - All HTTP requests originating from discovery (`/hello` outgoing) use the existing `FileClient`-derived HTTP client. No new HTTP stack.
 
