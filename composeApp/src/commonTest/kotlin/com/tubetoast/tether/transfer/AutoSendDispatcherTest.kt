@@ -5,8 +5,10 @@ import com.tubetoast.tether.peer.Peer
 import com.tubetoast.tether.preferences.FakePeerPreferencesStore
 import com.tubetoast.tether.preferences.PeerPreferencesStore
 import com.tubetoast.tether.protocol.Device
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
@@ -109,22 +111,12 @@ class AutoSendDispatcherTest {
 
     @Test
     fun `auto-send bails when a second peer comes online during preference read`() = runTest {
-        val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val gate = CompletableDeferred<Unit>()
         val peersFlow = MutableStateFlow(listOf(peerA))
         val peersRepo = FakePeersRepository(peersFlow)
         val pendingRepo = PendingFilesRepository()
         val store = FakePeerPreferencesStore()
-
-        val gatedStore = object : PeerPreferencesStore {
-            override fun observeAutoSend(peer: PeerIdentity) = flow {
-                gate.await()
-                emit(true)
-            }
-
-            override suspend fun setAutoSend(peer: PeerIdentity, enabled: Boolean) = Unit
-
-            override suspend fun autoSendEnabledFor(peer: PeerIdentity) = true
-        }
+        val gatedStore = GatedPeerPreferencesStore(gate)
 
         val registry = buildRegistry(backgroundScope, store)
         buildDispatcher(peersRepo, pendingRepo, gatedStore, registry, backgroundScope).start()
@@ -143,21 +135,11 @@ class AutoSendDispatcherTest {
 
     @Test
     fun `auto-send bails when sources are cleared during preference read`() = runTest {
-        val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val gate = CompletableDeferred<Unit>()
         val peersRepo = FakePeersRepository(MutableStateFlow(listOf(peerA)))
         val pendingRepo = PendingFilesRepository()
         val store = FakePeerPreferencesStore()
-
-        val gatedStore = object : PeerPreferencesStore {
-            override fun observeAutoSend(peer: PeerIdentity) = flow {
-                gate.await()
-                emit(true)
-            }
-
-            override suspend fun setAutoSend(peer: PeerIdentity, enabled: Boolean) = Unit
-
-            override suspend fun autoSendEnabledFor(peer: PeerIdentity) = true
-        }
+        val gatedStore = GatedPeerPreferencesStore(gate)
 
         val registry = buildRegistry(backgroundScope, store)
         buildDispatcher(peersRepo, pendingRepo, gatedStore, registry, backgroundScope).start()
@@ -176,21 +158,11 @@ class AutoSendDispatcherTest {
 
     @Test
     fun `auto-send bails when engine is no longer Idle after preference read`() = runTest {
-        val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val gate = CompletableDeferred<Unit>()
         val peersRepo = FakePeersRepository(MutableStateFlow(listOf(peerA)))
         val pendingRepo = PendingFilesRepository()
         val store = FakePeerPreferencesStore()
-
-        val gatedStore = object : PeerPreferencesStore {
-            override fun observeAutoSend(peer: PeerIdentity) = flow {
-                gate.await()
-                emit(true)
-            }
-
-            override suspend fun setAutoSend(peer: PeerIdentity, enabled: Boolean) = Unit
-
-            override suspend fun autoSendEnabledFor(peer: PeerIdentity) = true
-        }
+        val gatedStore = GatedPeerPreferencesStore(gate)
 
         val registry = buildRegistry(backgroundScope, store)
         buildDispatcher(peersRepo, pendingRepo, gatedStore, registry, backgroundScope).start()
@@ -248,4 +220,18 @@ class AutoSendDispatcherTest {
         assertIs<PeerTransferState.Sent>(registry.engineFor(peerA.id).state.value)
         assertNull(pendingRepo.summary.value)
     }
+}
+
+private class GatedPeerPreferencesStore(
+    private val gate: CompletableDeferred<Unit>,
+    private val autoSendResult: Boolean = true,
+) : PeerPreferencesStore {
+    override fun observeAutoSend(peer: PeerIdentity): Flow<Boolean> = flow {
+        gate.await()
+        emit(autoSendResult)
+    }
+
+    override suspend fun setAutoSend(peer: PeerIdentity, enabled: Boolean) = Unit
+
+    override suspend fun autoSendEnabledFor(peer: PeerIdentity): Boolean = autoSendResult
 }
