@@ -1,9 +1,9 @@
 package com.tubetoast.tether.transfer
 
+import com.tubetoast.tether.peer.FakePeersRepository
+import com.tubetoast.tether.peer.Peer
 import com.tubetoast.tether.preferences.FakePeerPreferencesStore
 import com.tubetoast.tether.preferences.PeerPreferencesStore
-import com.tubetoast.tether.presentation.peer.FakePeersRepository
-import com.tubetoast.tether.presentation.peer.Peer
 import com.tubetoast.tether.protocol.Device
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi

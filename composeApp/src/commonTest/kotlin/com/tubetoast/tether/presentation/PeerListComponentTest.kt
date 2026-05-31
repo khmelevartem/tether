@@ -4,11 +4,11 @@ import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.resume
 import com.tubetoast.tether.discovery.FakeDeviceDiscovery
+import com.tubetoast.tether.peer.FakePeersRepository
+import com.tubetoast.tether.peer.Peer
+import com.tubetoast.tether.peer.PeersRepository
 import com.tubetoast.tether.preferences.FakePeerPreferencesStore
 import com.tubetoast.tether.presentation.banners.BannersComponent
-import com.tubetoast.tether.presentation.peer.FakePeersRepository
-import com.tubetoast.tether.presentation.peer.Peer
-import com.tubetoast.tether.presentation.peer.PeersRepository
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.FakeFileSource

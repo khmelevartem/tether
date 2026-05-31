@@ -8,10 +8,10 @@ import com.tubetoast.tether.network.DefaultTransferActivityTracker
 import com.tubetoast.tether.network.FileClient
 import com.tubetoast.tether.network.FileServer
 import com.tubetoast.tether.network.TransferActivityTracker
+import com.tubetoast.tether.peer.PeersRepository
 import com.tubetoast.tether.preferences.FileTransferPreferences
 import com.tubetoast.tether.preferences.PeerPreferencesStore
 import com.tubetoast.tether.presentation.RootComponentFactory
-import com.tubetoast.tether.presentation.peer.PeersRepository
 import com.tubetoast.tether.security.TrustedDeviceStore
 import com.tubetoast.tether.transfer.AutoSendDispatcher
 import com.tubetoast.tether.transfer.BatchSender

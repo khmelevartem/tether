@@ -27,8 +27,8 @@ import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.composables.core.SheetDetent
 import com.composables.core.rememberModalBottomSheetState
 import com.tubetoast.tether.foundation.IsMobileChooserPlatform
+import com.tubetoast.tether.peer.Peer
 import com.tubetoast.tether.presentation.banners.BannersSection
-import com.tubetoast.tether.presentation.peer.Peer
 import com.tubetoast.tether.presentation.peercard.PeerCard
 import com.tubetoast.tether.presentation.peercard.PeerCardCallbacks
 import com.tubetoast.tether.presentation.peercard.PeerCardContent

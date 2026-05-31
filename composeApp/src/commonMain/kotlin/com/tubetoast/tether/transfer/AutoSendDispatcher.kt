@@ -1,7 +1,7 @@
 package com.tubetoast.tether.transfer
 
+import com.tubetoast.tether.peer.PeersRepository
 import com.tubetoast.tether.preferences.PeerPreferencesStore
-import com.tubetoast.tether.presentation.peer.PeersRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine

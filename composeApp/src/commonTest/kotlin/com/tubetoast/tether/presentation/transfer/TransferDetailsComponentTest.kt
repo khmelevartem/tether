@@ -3,8 +3,8 @@ package com.tubetoast.tether.presentation.transfer
 import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.resume
+import com.tubetoast.tether.peer.Peer
 import com.tubetoast.tether.preferences.FakePeerPreferencesStore
-import com.tubetoast.tether.presentation.peer.Peer
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.FailureReason
 import com.tubetoast.tether.transfer.FakeFileSource
