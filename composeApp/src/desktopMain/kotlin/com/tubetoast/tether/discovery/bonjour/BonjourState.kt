@@ -7,12 +7,14 @@ import com.tubetoast.tether.protocol.Device
 internal class BonjourState(
     private val store: DiscoveredDevicesStore,
     private val sink: Sink,
+    private val ownFingerprint: String,
     private val isSelf: (host: String, port: Int) -> Boolean,
 ) {
     private val activeResolves = mutableSetOf<String>()
     private val activeAddrInfos = mutableSetOf<String>()
     private val pendingPorts = mutableMapOf<String, Int>()
     private val pendingIps = mutableMapOf<String, String>()
+    private val pendingFingerprints = mutableMapOf<String, String>()
 
     fun onBrowseAdd(name: String, interfaceIndex: Int) {
         if (!activeResolves.add(name)) return
@@ -27,9 +29,10 @@ internal class BonjourState(
         cleanupName(name)
     }
 
-    fun onResolved(name: String, hostname: String, port: Int) {
+    fun onResolved(name: String, hostname: String, port: Int, peerFingerprint: String?) {
         if (name !in activeResolves) return
         pendingPorts[name] = port
+        if (peerFingerprint != null) pendingFingerprints[name] = peerFingerprint
         emitIfReady(name)
         if (activeAddrInfos.add(name)) {
             sink.openAddrInfo(name, hostname)
@@ -49,12 +52,15 @@ internal class BonjourState(
     private fun cleanupName(name: String) {
         pendingPorts.remove(name)
         pendingIps.remove(name)
+        pendingFingerprints.remove(name)
         store.removeByName(name)
     }
 
     private fun emitIfReady(name: String) {
         val ip = pendingIps[name] ?: return
         val port = pendingPorts[name] ?: return
+        val peerFingerprint = pendingFingerprints[name]
+        if (peerFingerprint != null && peerFingerprint == ownFingerprint) return
         if (isSelf(ip, port)) return
         val device = Device(name = name, host = ip, port = port)
         store.upsert(device)

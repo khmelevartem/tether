@@ -27,6 +27,22 @@ internal object BonjourCodec {
         return result
     }
 
+    /** Reverses [encodeTxt]; entries without `=` map to empty value. */
+    fun decodeTxt(bytes: ByteArray): Map<String, String> {
+        val out = mutableMapOf<String, String>()
+        var pos = 0
+        while (pos < bytes.size) {
+            val len = bytes[pos].toInt() and 0xFF
+            pos++
+            if (len == 0 || pos + len > bytes.size) break
+            val entry = bytes.decodeToString(pos, pos + len)
+            pos += len
+            val eq = entry.indexOf('=')
+            if (eq < 0) out[entry] = "" else out[entry.substring(0, eq)] = entry.substring(eq + 1)
+        }
+        return out
+    }
+
     fun hostOrderToNetwork(port: Int): Short =
         ((((port and 0xFF) shl 8) or ((port ushr 8) and 0xFF))).toShort()
 

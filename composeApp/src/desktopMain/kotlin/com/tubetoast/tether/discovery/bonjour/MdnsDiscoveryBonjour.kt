@@ -152,7 +152,7 @@ internal class MdnsDiscoveryBonjour(
                 when (event) {
                     is Event.BrowseAdd -> state.onBrowseAdd(event.name, event.interfaceIndex)
                     is Event.BrowseRemove -> state.onBrowseRemove(event.name)
-                    is Event.Resolved -> state.onResolved(event.name, event.host, event.port)
+                    is Event.Resolved -> state.onResolved(event.name, event.host, event.port, event.peerFingerprint)
                     is Event.AddrInfoFound -> state.onAddrInfoFound(event.name, event.ipv4, event.isAdd)
                 }
             }
@@ -193,7 +193,15 @@ internal class MdnsDiscoveryBonjour(
                 ) {
                     if (errorCode != DnsSd.NO_ERROR) return
                     val host = hosttarget ?: return
-                    events.trySend(Event.Resolved(peerName, host, BonjourCodec.networkOrderToHost(port)))
+                    val peerFingerprint = if (txtRecord != null && txtLen > 0) {
+                        val bytes = txtRecord.getByteArray(0, txtLen.toInt() and 0xFFFF)
+                        BonjourCodec.decodeTxt(bytes)["fp"]
+                    } else {
+                        null
+                    }
+                    events.trySend(
+                        Event.Resolved(peerName, host, BonjourCodec.networkOrderToHost(port), peerFingerprint),
+                    )
                 }
             }
             callbackAnchors.add(callback)
@@ -292,6 +300,7 @@ internal class MdnsDiscoveryBonjour(
                 val name: String,
                 val host: String,
                 val port: Int,
+                val peerFingerprint: String?,
             ) : Event()
 
             data class AddrInfoFound(
@@ -314,10 +323,9 @@ internal class MdnsDiscoveryBonjour(
                 val events = Channel<Event>(Channel.UNLIMITED)
                 val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-                val ownAddresses = localAddresses()
                 val session = Session(store, scope, events)
-                val state = BonjourState(store, session) { host, resolvedPort ->
-                    resolvedPort == port && ownAddresses.contains(host)
+                val state = BonjourState(store, session, fingerprint) { host, resolvedPort ->
+                    resolvedPort == port && localAddresses().contains(host)
                 }
                 session.bindState(state)
 
