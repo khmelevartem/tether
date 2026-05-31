@@ -73,9 +73,10 @@ abstract class AppContainer {
     }
 
     /**
-     * Each concrete subclass MUST touch `init { autoSendDispatcher }` after its own property
-     * initializers to activate auto-send. Accessing the lazy val here wires the dispatcher
-     * to the already-initialised [peerPreferencesStore].
+     * Auto-send must be activated in the leaf container — the lazy is read once per process so
+     * the combine collector starts subscribing to peers and pending sources before the first
+     * share-sheet arrives. The base class cannot do this itself because the abstract collaborators
+     * are not yet assigned when its own `init` block runs.
      */
     open val autoSendDispatcher: AutoSendDispatcher by lazy {
         AutoSendDispatcher(

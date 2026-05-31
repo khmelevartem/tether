@@ -45,14 +45,23 @@ class PeerTransferEngine(
 
     fun startOutbound(sources: List<FileSource>) {
         val current = _state.value
-        if (current is PeerTransferState.ActiveOutbound ||
-            current is PeerTransferState.ActiveInbound ||
-            current is PeerTransferState.Reconnecting
-        ) {
+        if (current !is PeerTransferState.Idle) {
             // TODO(#327): surface "transfer already in flight" to the user; the caller still
             //              clears PendingFilesRepository on this path, dropping the share-sheet payload.
             return
         }
+        val claim = PeerTransferState.ActiveOutbound(
+            peer = peer,
+            currentFile = sources.firstOrNull()?.name.orEmpty(),
+            currentIndex = 0,
+            totalFiles = sources.size,
+            sentBytes = 0L,
+            totalBytes = sources.sumOf { it.sizeBytes ?: 0L },
+            bytesPerSec = null,
+            skippedCount = 0,
+            perFile = sources.map { PerFileStatus.Queued(it.name, it.sizeBytes) },
+        )
+        if (!_state.compareAndSet(current, claim)) return
         originalSources = sources
         cancelledFileNames.update { emptySet() }
         launchBatch(sources)

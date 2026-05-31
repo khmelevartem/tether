@@ -58,6 +58,23 @@ class AutoSendDispatcherTest {
     )
 
     @Test
+    fun `zero online peers do not trigger auto-send`() = runTest {
+        val store = FakePeerPreferencesStore()
+        store.setAutoSendSync(peerA.id, true)
+        val peersRepo = FakePeersRepository(MutableStateFlow(emptyList()))
+        val pendingRepo = PendingFilesRepository()
+        val registry = buildRegistry(backgroundScope, store)
+        buildDispatcher(peersRepo, pendingRepo, store, registry, backgroundScope).start()
+        runCurrent()
+
+        pendingRepo.setPending(PendingFilesSummary(1, 100L), listOf(FakeFileSource("a.txt", 100L)))
+        repeat(4) { runCurrent() }
+
+        assertIs<PeerTransferState.Idle>(registry.engineFor(peerA.id).state.value)
+        assertNotNull(pendingRepo.summary.value)
+    }
+
+    @Test
     fun `single online peer with auto-send ON triggers transfer on pending arrival`() = runTest {
         val store = FakePeerPreferencesStore()
         store.setAutoSendSync(peerA.id, true)

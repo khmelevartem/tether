@@ -340,6 +340,31 @@ class PeerTransferEngineTest {
     }
 
     @Test
+    fun `concurrent startOutbound calls produce one launchBatch`() = runTest {
+        var factoryInvocations = 0
+        val engine = PeerTransferEngine(
+            peer = peer,
+            batchSenderFactory = {
+                factoryInvocations++
+                fakeBatchSender()()
+            },
+            inboundEvents = MutableSharedFlow(),
+            scope = backgroundScope,
+            peerPreferencesStore = FakePeerPreferencesStore(),
+        )
+
+        val sourcesA = listOf(FakeFileSource("a.txt", 100L))
+        val sourcesB = listOf(FakeFileSource("b.txt", 200L))
+        engine.startOutbound(sourcesA)
+        engine.startOutbound(sourcesB)
+        runCurrent()
+
+        assertEquals(1, factoryInvocations)
+        val state = engine.state.value as PeerTransferState.Sent
+        assertEquals("a.txt", state.perFile.first().name)
+    }
+
+    @Test
     fun `onDismiss from Sent returns to Idle`() = runTest {
         val engine = buildEngine(scope = backgroundScope)
 

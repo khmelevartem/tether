@@ -32,8 +32,7 @@ class AutoSendDispatcher(
                 .observeAutoSend(singleCandidate)
                 .catch { emit(false) }
                 .first()
-            // Re-validate after the suspending preference read — mDNS may have added a peer,
-            // sources may have been cleared, or the engine may have transitioned out of Idle.
+            // mDNS may have added a peer, sources may have been cleared, or the engine may have transitioned out of Idle.
             val sourcesAfter = pendingFilesRepository.sources.value
             if (sourcesAfter.isEmpty()) return@combine
             val onlineAfter = peersRepository.peers.value
