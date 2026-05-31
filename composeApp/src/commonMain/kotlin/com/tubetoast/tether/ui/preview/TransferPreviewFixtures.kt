@@ -16,7 +16,7 @@ object TransferPreviewFixtures {
     val idleCollapsed = PeerTransferState.Idle(peer)
     val idleExpanded = PeerTransferState.Idle(peer)
 
-    val activeOutbound = PeerTransferState.ActiveOutbound(
+    val activeOutbound = PeerTransferState.ActiveOutbound.Sending(
         peer = peer,
         currentFile = "vacation_photo_2024_summer_beach_holiday.jpg",
         currentIndex = 2,
@@ -46,7 +46,7 @@ object TransferPreviewFixtures {
         },
     )
 
-    val activeOutboundCalculating = PeerTransferState.ActiveOutbound(
+    val activeOutboundCalculating = PeerTransferState.ActiveOutbound.Sending(
         peer = peer,
         currentFile = "document.pdf",
         currentIndex = 0,

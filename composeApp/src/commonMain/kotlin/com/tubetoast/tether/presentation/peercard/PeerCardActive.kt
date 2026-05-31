@@ -36,8 +36,9 @@ internal fun PeerCardActiveOutbound(
     modifier: Modifier = Modifier,
 ) {
     val peerName = device.name
-    val progress = if (state.totalBytes != null && state.totalBytes > 0) {
-        (state.sentBytes.toFloat() / state.totalBytes.toFloat()).coerceIn(0f, 1f)
+    val sending = state as? PeerTransferState.ActiveOutbound.Sending
+    val progress = if (sending != null && sending.totalBytes != null && sending.totalBytes > 0) {
+        (sending.sentBytes.toFloat() / sending.totalBytes.toFloat()).coerceIn(0f, 1f)
     } else {
         0f
     }
@@ -46,14 +47,15 @@ internal fun PeerCardActiveOutbound(
         peerName = peerName,
         titlePrefix = null,
         progress = progress,
-        currentFile = state.currentFile,
-        sentBytes = state.sentBytes,
+        currentFile = sending?.currentFile.orEmpty(),
+        sentBytes = sending?.sentBytes ?: 0L,
         totalBytes = state.totalBytes,
-        bytesPerSec = state.bytesPerSec,
+        bytesPerSec = sending?.bytesPerSec,
         isInbound = false,
         trailingContent = {
-            if (state.skippedCount > 0) {
-                SkipCountBadge(count = state.skippedCount)
+            val skipped = sending?.skippedCount ?: 0
+            if (skipped > 0) {
+                SkipCountBadge(count = skipped)
             }
         },
         cancelDescription = "Cancel transfer to $peerName",

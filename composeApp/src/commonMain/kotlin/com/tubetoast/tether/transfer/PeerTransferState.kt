@@ -7,17 +7,33 @@ sealed interface PeerTransferState {
         override val peer: PeerIdentity,
     ) : PeerTransferState
 
-    data class ActiveOutbound(
-        override val peer: PeerIdentity,
-        val currentFile: String,
-        val currentIndex: Int,
-        val totalFiles: Int,
-        val sentBytes: Long,
-        val totalBytes: Long?,
-        val bytesPerSec: Long?,
-        val skippedCount: Int,
-        val perFile: List<PerFileStatus>,
-    ) : PeerTransferState
+    sealed class ActiveOutbound : PeerTransferState {
+        abstract override val peer: PeerIdentity
+        abstract val totalFiles: Int
+        abstract val totalBytes: Long?
+        abstract val perFile: List<PerFileStatus>
+
+        /** Engine atomically claimed via compareAndSet; the BatchSender has not produced its first
+         * progress heartbeat yet. No per-byte progress fields exist at this phase. */
+        data class Claimed(
+            override val peer: PeerIdentity,
+            override val totalFiles: Int,
+            override val totalBytes: Long?,
+            override val perFile: List<PerFileStatus>,
+        ) : ActiveOutbound()
+
+        data class Sending(
+            override val peer: PeerIdentity,
+            val currentFile: String,
+            val currentIndex: Int,
+            override val totalFiles: Int,
+            val sentBytes: Long,
+            override val totalBytes: Long?,
+            val bytesPerSec: Long?,
+            val skippedCount: Int,
+            override val perFile: List<PerFileStatus>,
+        ) : ActiveOutbound()
+    }
 
     data class ActiveInbound(
         override val peer: PeerIdentity,

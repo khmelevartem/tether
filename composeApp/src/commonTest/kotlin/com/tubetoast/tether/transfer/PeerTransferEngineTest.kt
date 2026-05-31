@@ -35,13 +35,13 @@ class PeerTransferEngineTest {
 
         engine.startOutbound(listOf(FakeFileSource("a.txt", 100L)))
         runCurrent()
-        assertIs<PeerTransferState.ActiveOutbound>(engine.state.value)
-        val firstFile = (engine.state.value as PeerTransferState.ActiveOutbound).currentFile
+        val firstState = assertIs<PeerTransferState.ActiveOutbound.Sending>(engine.state.value)
+        val firstFile = firstState.currentFile
 
         engine.startOutbound(listOf(FakeFileSource("b.txt", 200L)))
         runCurrent()
 
-        val state = engine.state.value as PeerTransferState.ActiveOutbound
+        val state = assertIs<PeerTransferState.ActiveOutbound.Sending>(engine.state.value)
         assertEquals(firstFile, state.currentFile)
     }
 

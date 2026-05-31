@@ -141,8 +141,7 @@ class TransferDetailsComponentTest {
         )
         runCurrent()
 
-        val stateOnB = peerComponent.state.value.transfer
-        assertIs<PeerTransferState.ActiveOutbound>(stateOnB)
+        val stateOnB = assertIs<PeerTransferState.ActiveOutbound.Sending>(peerComponent.state.value.transfer)
         assertEquals("b.txt", stateOnB.currentFile)
 
         details.onCancelFile("b.txt")
@@ -176,8 +175,7 @@ class TransferDetailsComponentTest {
         )
         runCurrent()
 
-        val activeState = peerComponent.state.value.transfer
-        assertIs<PeerTransferState.ActiveOutbound>(activeState)
+        val activeState = assertIs<PeerTransferState.ActiveOutbound.Sending>(peerComponent.state.value.transfer)
         assertEquals("file1.txt", activeState.currentFile)
 
         details.onCancelFile("file2.txt")

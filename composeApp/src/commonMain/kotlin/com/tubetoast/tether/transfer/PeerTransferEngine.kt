@@ -50,15 +50,10 @@ class PeerTransferEngine(
             //              clears PendingFilesRepository on this path, dropping the share-sheet payload.
             return
         }
-        val claim = PeerTransferState.ActiveOutbound(
+        val claim = PeerTransferState.ActiveOutbound.Claimed(
             peer = peer,
-            currentFile = sources.firstOrNull()?.name.orEmpty(),
-            currentIndex = 0,
             totalFiles = sources.size,
-            sentBytes = 0L,
             totalBytes = sources.sumOf { it.sizeBytes ?: 0L },
-            bytesPerSec = null,
-            skippedCount = 0,
             perFile = sources.map { PerFileStatus.Queued(it.name, it.sizeBytes) },
         )
         if (!_state.compareAndSet(current, claim)) return
@@ -111,7 +106,7 @@ class PeerTransferEngine(
             is PerFileStatus.Queued -> {
                 cancelledFileNames.update { it + name }
                 _state.update { s ->
-                    val active = s as? PeerTransferState.ActiveOutbound ?: return@update s
+                    val active = s as? PeerTransferState.ActiveOutbound.Sending ?: return@update s
                     val rowIndex = active.perFile.indexOfFirst { it.name == name }.takeIf { it >= 0 } ?: return@update s
                     val updated = active.perFile.toMutableList()
                     updated[rowIndex] = PerFileStatus.Failed(
@@ -169,7 +164,7 @@ class PeerTransferEngine(
     }
 
     private fun mapProgress(progress: BatchProgress): PeerTransferState = when (progress) {
-        is BatchProgress.Sending -> PeerTransferState.ActiveOutbound(
+        is BatchProgress.Sending -> PeerTransferState.ActiveOutbound.Sending(
             peer = progress.peer,
             currentFile = progress.currentFile,
             currentIndex = progress.currentIndex,

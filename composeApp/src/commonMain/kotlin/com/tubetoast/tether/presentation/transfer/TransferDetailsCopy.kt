@@ -8,8 +8,10 @@ fun aggregateStripCopy(sent: Int, total: Int, failed: Int): String {
 }
 
 fun detailsSubtitleCopy(state: PeerTransferState, peerName: String): String = when (state) {
-    is PeerTransferState.ActiveOutbound ->
-        "Sending ${state.currentIndex + 1} of ${state.totalFiles}…"
+    is PeerTransferState.ActiveOutbound -> when (state) {
+        is PeerTransferState.ActiveOutbound.Sending -> "Sending ${state.currentIndex + 1} of ${state.totalFiles}…"
+        is PeerTransferState.ActiveOutbound.Claimed -> "Sending 1 of ${state.totalFiles}…"
+    }
     is PeerTransferState.ActiveInbound ->
         "Receiving ${state.currentIndex + 1} of ${state.totalFiles}…"
     is PeerTransferState.Sent ->
