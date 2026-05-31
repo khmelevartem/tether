@@ -30,7 +30,13 @@ For those where `state` ≠ `CLOSED` — also check the PR via `gh pr list --sta
 git log --oneline --since="<date-of-first-sprint-commit>" --until="<date-of-last-sprint-commit>" | grep -E "^[a-f0-9]+ #[0-9]+:"
 ```
 
-Compare with the sprint composition. Everything closed in this window that was not in the composition is a candidate for the "Additional" section.
+**Filter by merged PR, not by closed state.** `state=CLOSED` covers three different things, only one of which is a real deliverable:
+
+- ✅ closed by a merged PR — real result, goes into the "Additional" section.
+- ❌ manually closed as `not planned` / scoped out / deferred — not a result; goes nowhere.
+- ❌ manually closed as `completed` without a PR — usually means superseded by another issue (rolled into its PR), abandoned, or paused. Not a separate deliverable. If it was truly absorbed by another task's PR, mention it inline on that task's line ("заодно поглотил #N"), not as its own bullet.
+
+For every candidate from the closed-in-window list, verify `gh pr list --search "<N> in:title" --state merged` returns a PR before adding it. No PR — no line in "Additional".
 
 **0.5 Update the sprint doc:**
 
