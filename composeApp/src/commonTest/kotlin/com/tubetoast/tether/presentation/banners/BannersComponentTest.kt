@@ -36,6 +36,7 @@ class BannersComponentTest {
 
         val summary = PendingFilesSummary(2, 1024L)
         repo.setPending(summary, emptyList())
+        runCurrent()
 
         assertTrue(component.pendingSummary.value == summary)
     }
