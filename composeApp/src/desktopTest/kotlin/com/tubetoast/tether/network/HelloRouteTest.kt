@@ -43,7 +43,8 @@ class HelloRouteTest {
     }
 
     private fun newServer(
-        identityStore: DeviceIdentityStore = DeviceIdentityStore(TempDataStore().also { cleanupTempStores += it }.dataStore),
+        identityStore: DeviceIdentityStore =
+            DeviceIdentityStore(TempDataStore().also { cleanupTempStores += it }.dataStore),
         store: DiscoveredDevicesStore = DiscoveredDevicesStore(),
     ): FileServer {
         val configDir = Files.createTempDirectory("tether-hello-test-keys").toFile().also(cleanupPaths::add)

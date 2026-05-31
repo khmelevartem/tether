@@ -6,7 +6,6 @@ import com.tubetoast.tether.protocol.Device
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 
-
 /**
  * macOS → [MdnsDiscoveryBonjour] (DNS-SD IPC; JmDNS can't see external WiFi peers on macOS).
  * Linux/Windows → [MdnsDiscoveryJmdns].

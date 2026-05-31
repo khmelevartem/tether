@@ -24,6 +24,7 @@ actual class MdnsDiscovery(
     actual override val discoveredDevices: StateFlow<List<Device>> = store.devices
 
     @Volatile private var fingerprint: String = ""
+
     @Volatile private var nsdManager: NsdManager? = null
 
     @Volatile private var ownName: String? = null
