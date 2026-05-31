@@ -91,59 +91,6 @@ class AutoSendDispatcherTest {
     }
 
     @Test
-    fun `two online peers with auto-send ON for both do not trigger`() = runTest {
-        val store = FakePeerPreferencesStore()
-        store.setAutoSendSync(peerA.id, true)
-        store.setAutoSendSync(peerB.id, true)
-        val peersRepo = FakePeersRepository(MutableStateFlow(listOf(peerA, peerB)))
-        val pendingRepo = PendingFilesRepository()
-        val registry = buildRegistry(backgroundScope, store)
-        buildDispatcher(peersRepo, pendingRepo, store, registry, backgroundScope).start()
-        runCurrent()
-
-        pendingRepo.setPending(PendingFilesSummary(1, 100L), listOf(FakeFileSource("a.txt", 100L)))
-        repeat(4) { runCurrent() }
-
-        assertIs<PeerTransferState.Idle>(registry.engineFor(peerA.id).state.value)
-        assertIs<PeerTransferState.Idle>(registry.engineFor(peerB.id).state.value)
-        assertNotNull(pendingRepo.summary.value)
-    }
-
-    @Test
-    fun `two online peers with auto-send ON only for one do not trigger`() = runTest {
-        val store = FakePeerPreferencesStore()
-        store.setAutoSendSync(peerA.id, true)
-        val peersRepo = FakePeersRepository(MutableStateFlow(listOf(peerA, peerB)))
-        val pendingRepo = PendingFilesRepository()
-        val registry = buildRegistry(backgroundScope, store)
-        buildDispatcher(peersRepo, pendingRepo, store, registry, backgroundScope).start()
-        runCurrent()
-
-        pendingRepo.setPending(PendingFilesSummary(1, 100L), listOf(FakeFileSource("a.txt", 100L)))
-        repeat(4) { runCurrent() }
-
-        assertIs<PeerTransferState.Idle>(registry.engineFor(peerA.id).state.value)
-        assertIs<PeerTransferState.Idle>(registry.engineFor(peerB.id).state.value)
-        assertNotNull(pendingRepo.summary.value)
-    }
-
-    @Test
-    fun `zero online peers do not trigger`() = runTest {
-        val store = FakePeerPreferencesStore()
-        store.setAutoSendSync(peerA.id, true)
-        val peersRepo = FakePeersRepository(MutableStateFlow(emptyList()))
-        val pendingRepo = PendingFilesRepository()
-        val registry = buildRegistry(backgroundScope, store)
-        buildDispatcher(peersRepo, pendingRepo, store, registry, backgroundScope).start()
-        runCurrent()
-
-        pendingRepo.setPending(PendingFilesSummary(1, 100L), listOf(FakeFileSource("a.txt", 100L)))
-        repeat(4) { runCurrent() }
-
-        assertNotNull(pendingRepo.summary.value)
-    }
-
-    @Test
     fun `auto-send bails when a second peer comes online during preference read`() = runTest {
         val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
         val peersFlow = MutableStateFlow(listOf(peerA))

@@ -49,4 +49,8 @@ class AndroidAppContainer(
         defaultSaveLocation = application.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)?.absolutePath ?: "",
         saveLocationWritable = true,
     )
+
+    init {
+        autoSendDispatcher
+    }
 }

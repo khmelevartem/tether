@@ -52,6 +52,10 @@ open class AppleAppContainer(
         defaultSaveLocation = documentsDir(),
         saveLocationWritable = false,
     )
+
+    init {
+        autoSendDispatcher
+    }
 }
 
 @OptIn(ExperimentalForeignApi::class, kotlinx.cinterop.BetaInteropApi::class)

@@ -24,22 +24,24 @@ class AutoSendDispatcher(
     fun start() {
         combine(peersRepository.peers, pendingFilesRepository.sources) { peers, sources ->
             if (sources.isEmpty()) return@combine
-            val only = peers.filter { it.isOnline }.singleOrNull() ?: return@combine
-            val engine = engineRegistry.engineFor(only.id)
+            val onlinePaired = peers.filter { it.isOnline }.map { it.id }
+            val singleCandidate = onlinePaired.singleOrNull() ?: return@combine
+            val engine = engineRegistry.engineFor(singleCandidate)
             if (engine.state.value !is PeerTransferState.Idle) return@combine
-            val autoSend = peerPreferencesStore
-                .observeAutoSend(only.id)
+            val autoSendEnabled = peerPreferencesStore
+                .observeAutoSend(singleCandidate)
                 .catch { emit(false) }
                 .first()
-            if (!autoSend) return@combine
             // Re-validate after the suspending preference read — mDNS may have added a peer,
             // sources may have been cleared, or the engine may have transitioned out of Idle.
             val sourcesAfter = pendingFilesRepository.sources.value
             if (sourcesAfter.isEmpty()) return@combine
-            val onlyAfter = peersRepository.peers.value
+            val onlineAfter = peersRepository.peers.value
                 .filter { it.isOnline }
-                .singleOrNull() ?: return@combine
-            if (onlyAfter.id != only.id) return@combine
+                .map { it.id }
+            val decision = AutoSendRouter.route(onlineAfter) { it == singleCandidate && autoSendEnabled }
+            val target = (decision as? RoutingDecision.AutoSend)?.peer ?: return@combine
+            if (target != singleCandidate) return@combine
             if (engine.state.value !is PeerTransferState.Idle) return@combine
             engine.startOutbound(sourcesAfter)
             pendingFilesRepository.clear()

@@ -72,6 +72,11 @@ abstract class AppContainer {
         )
     }
 
+    /**
+     * Each concrete subclass MUST touch `init { autoSendDispatcher }` after its own property
+     * initializers to activate auto-send. Accessing the lazy val here wires the dispatcher
+     * to the already-initialised [peerPreferencesStore].
+     */
     open val autoSendDispatcher: AutoSendDispatcher by lazy {
         AutoSendDispatcher(
             peersRepository = peersRepository,
@@ -83,7 +88,6 @@ abstract class AppContainer {
     }
 
     open val rootComponentFactory: RootComponentFactory by lazy {
-        autoSendDispatcher
         RootComponentFactory(
             peersRepository = peersRepository,
             peerTransferEngineRegistry = peerTransferEngineRegistry,
