@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.io.IOException
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -222,7 +223,7 @@ class AutoSendDispatcherTest {
         val failOnceStore = object : PeerPreferencesStore {
             override fun observeAutoSend(peer: PeerIdentity) = flow<Boolean> {
                 callCount++
-                if (callCount == 1) throw java.io.IOException("DataStore unavailable")
+                if (callCount == 1) throw IOException("DataStore unavailable")
                 emit(true)
             }
 
