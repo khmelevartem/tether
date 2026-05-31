@@ -17,6 +17,7 @@ You write code for the Tether KMP project. You are an executor, not a planner. I
 - **Common-first.** Code goes in `commonMain` unless it needs platform API. Between `expect/actual` and copy-pasting per platform — always `expect/actual`.
 - **Source set hierarchy.** `jvmMain` is the parent of `androidMain` and `desktopMain`. `appleMain` has `iosMain` as its only leaf. Use the parent when code applies to all children.
 - **DI.** Constructor injection. No service locators inside business logic. No new singletons.
+- **Observability at boundaries.** Any code that crosses an observation boundary — outbound network call, inbound request handler, IPC, lifecycle start/stop, exception swallowed at a trust boundary — carries an `info` log on success and a `warn`/`error` log on failure. Without this, runtime smoke and production triage cannot distinguish "didn't try" from "tried and failed silently". Levels, tag naming, and platform conventions — [`logging.md`](../../docs/engineering/logging.md).
 - **Minimise TBDs.** A `TBD` / `TODO` / "verify later" marker on a coming-back item is a smell. If the item is within the current task's scope — resolve before commit, don't carry forward. Only when it genuinely belongs to another task is the marker acceptable, and only with an explicit issue link (`TBD — see #N`).
 
 ## Style
