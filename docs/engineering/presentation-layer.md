@@ -87,6 +87,8 @@ A Component's lifetime is bound to the screen (or flow) it represents. Anything 
 
 In particular: **we do not use `InstanceKeeper` to retain domain state across configuration changes.** The repository in `AppContainer` already outlives the Activity; the Component just rebuilds and re-subscribes on rotation.
 
+When state is **per-peer** (or per any other stable domain identity), the `AppContainer`-owned holder is shaped as a registry keyed by that identity: `engineFor(id)` lazily creates and caches an instance with a per-instance scope, and an `evict(id)` API cancels that scope when the entity is gone for good. Components look up their per-peer holder by identity at construction time and let it outlive their own lifecycle. See `PeerTransferEngineRegistry` for the canonical shape.
+
 ## Screens and previews
 
 A screen is two composables in the same file:
