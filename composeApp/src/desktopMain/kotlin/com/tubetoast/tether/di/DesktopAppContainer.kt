@@ -40,6 +40,6 @@ class DesktopAppContainer(
     )
 
     init {
-        autoSendDispatcher
+        activateEagerSingletons()
     }
 }

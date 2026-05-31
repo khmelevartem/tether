@@ -54,7 +54,7 @@ open class AppleAppContainer(
     )
 
     init {
-        autoSendDispatcher
+        activateEagerSingletons()
     }
 }
 

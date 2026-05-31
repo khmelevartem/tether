@@ -51,6 +51,6 @@ class AndroidAppContainer(
     )
 
     init {
-        autoSendDispatcher
+        activateEagerSingletons()
     }
 }
