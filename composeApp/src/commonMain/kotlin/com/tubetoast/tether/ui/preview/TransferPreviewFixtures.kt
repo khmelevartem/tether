@@ -1,11 +1,11 @@
 package com.tubetoast.tether.ui.preview
 
-import com.tubetoast.tether.presentation.transfer.Direction
-import com.tubetoast.tether.presentation.transfer.PeerTransferState
 import com.tubetoast.tether.protocol.Device
+import com.tubetoast.tether.transfer.Direction
 import com.tubetoast.tether.transfer.FailureReason
 import com.tubetoast.tether.transfer.PartialOutcome
 import com.tubetoast.tether.transfer.PeerIdentity
+import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.PerFileStatus
 import com.tubetoast.tether.transfer.TransferErrorReason
 
@@ -13,8 +13,8 @@ object TransferPreviewFixtures {
     val peer = PeerIdentity("Alice")
     val device: Device = PreviewFixtures.singleDevice.first()
 
-    val idleCollapsed = PeerTransferState.Idle(peer, expanded = false)
-    val idleExpanded = PeerTransferState.Idle(peer, expanded = true)
+    val idleCollapsed = PeerTransferState.Idle(peer)
+    val idleExpanded = PeerTransferState.Idle(peer)
 
     val activeOutbound = PeerTransferState.ActiveOutbound(
         peer = peer,

@@ -1,5 +1,7 @@
 package com.tubetoast.tether.presentation.transfer
 
+import com.tubetoast.tether.transfer.PeerTransferState
+
 fun aggregateStripCopy(sent: Int, total: Int, failed: Int): String {
     val base = "$sent of $total sent"
     return if (failed > 0) "$base · $failed failed" else base

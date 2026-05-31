@@ -8,7 +8,7 @@ class TransferDetailsComponent(
     private val peerComponent: PeerTransferComponent,
     private val onBack: () -> Unit,
 ) : ComponentContext by componentContext {
-    val state: Value<PeerTransferState> get() = peerComponent.state
+    val state: Value<PeerCardState> get() = peerComponent.state
 
     fun onRetryFile(name: String) = peerComponent.onRetryFile(name)
 
@@ -16,7 +16,7 @@ class TransferDetailsComponent(
 
     fun onCancelTransfer() = peerComponent.onCancel()
 
-    fun onRetryAll() = peerComponent.onRetry()
+    fun onRetryAll() = peerComponent.onRetryOutbound()
 
     fun onBack() = onBack.invoke()
 }

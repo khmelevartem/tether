@@ -5,9 +5,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
+import com.tubetoast.tether.presentation.transfer.PeerCardState
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
-import com.tubetoast.tether.presentation.transfer.PeerTransferState
 import com.tubetoast.tether.protocol.Device
+import com.tubetoast.tether.transfer.PeerTransferState
 
 @Composable
 fun PeerCard(
@@ -21,7 +22,7 @@ fun PeerCard(
         onToggleAutoSend = component::setAutoSend,
         onCancel = component::onCancel,
         onDismiss = component::onDismiss,
-        onRetry = component::onRetry,
+        onRetryOutbound = component::onRetryOutbound,
         onShowDetails = component::onShowDetails,
         onOpenFiles = {
             // TODO(#192): Android — Intent.ACTION_VIEW to FileProvider URI for received folder
@@ -42,16 +43,17 @@ fun PeerCard(
 
 @Composable
 internal fun PeerCardContent(
-    state: PeerTransferState,
+    state: PeerCardState,
     isOnline: Boolean,
     device: Device,
     callbacks: PeerCardCallbacks,
     modifier: Modifier = Modifier,
     isAutoSendEnabled: Boolean = false,
 ) {
-    when (state) {
+    when (val transfer = state.transfer) {
         is PeerTransferState.Idle -> PeerCardIdle(
-            state = state,
+            state = transfer,
+            expanded = state.expanded,
             device = device,
             isOnline = isOnline,
             isAutoSendEnabled = isAutoSendEnabled,
@@ -59,42 +61,42 @@ internal fun PeerCardContent(
             modifier = modifier,
         )
         is PeerTransferState.ActiveOutbound -> PeerCardActiveOutbound(
-            state = state,
+            state = transfer,
             device = device,
             callbacks = callbacks,
             modifier = modifier,
         )
         is PeerTransferState.ActiveInbound -> PeerCardActiveInbound(
-            state = state,
+            state = transfer,
             device = device,
             callbacks = callbacks,
             modifier = modifier,
         )
         is PeerTransferState.Reconnecting -> PeerCardReconnecting(
-            state = state,
+            state = transfer,
             device = device,
             modifier = modifier,
         )
         is PeerTransferState.Sent -> PeerCardSent(
-            state = state,
+            state = transfer,
             device = device,
             callbacks = callbacks,
             modifier = modifier,
         )
         is PeerTransferState.Received -> PeerCardReceived(
-            state = state,
+            state = transfer,
             device = device,
             callbacks = callbacks,
             modifier = modifier,
         )
         is PeerTransferState.Cancelled -> PeerCardCancelled(
-            state = state,
+            state = transfer,
             device = device,
             callbacks = callbacks,
             modifier = modifier,
         )
         is PeerTransferState.Error -> PeerCardError(
-            state = state,
+            state = transfer,
             device = device,
             isOnline = isOnline,
             callbacks = callbacks,

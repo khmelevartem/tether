@@ -1,7 +1,7 @@
 package com.tubetoast.tether.presentation.peercard
 
-import com.tubetoast.tether.presentation.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.PartialOutcome
+import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.TransferErrorReason
 
 fun sentCardCopy(state: PeerTransferState.Sent): String {

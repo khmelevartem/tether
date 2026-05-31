@@ -1,16 +1,10 @@
-package com.tubetoast.tether.presentation.transfer
-
-import com.tubetoast.tether.transfer.PartialOutcome
-import com.tubetoast.tether.transfer.PeerIdentity
-import com.tubetoast.tether.transfer.PerFileStatus
-import com.tubetoast.tether.transfer.TransferErrorReason
+package com.tubetoast.tether.transfer
 
 sealed interface PeerTransferState {
     val peer: PeerIdentity
 
     data class Idle(
         override val peer: PeerIdentity,
-        val expanded: Boolean = false,
     ) : PeerTransferState
 
     data class ActiveOutbound(

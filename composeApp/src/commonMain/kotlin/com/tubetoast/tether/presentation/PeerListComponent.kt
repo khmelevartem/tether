@@ -35,11 +35,6 @@ class PeerListComponent(
                 val previous = _state.value.rows.associateBy { it.peer.id }
                 val newIds = peers.map { it.id }.toSet()
 
-                // Destroy components for peers no longer in the emit. Trade-off: an active
-                // transfer for a peer that drops from mDNS mid-flight is aborted when its
-                // lifecycle is destroyed. Until #319 (transfer state machine in domain repo)
-                // there is no safety net; foundation is cleaner this way and the regression
-                // is observable in behaviour, not in silent drift.
                 previous.values
                     .filter { it.peer.id !in newIds }
                     .forEach { it.transferComponent.destroyContext() }

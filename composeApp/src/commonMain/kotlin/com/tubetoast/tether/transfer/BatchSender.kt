@@ -28,6 +28,12 @@ class PeerUnreachableException(
     cause: Throwable? = null,
 ) : RuntimeException(cause)
 
+/**
+ * Drives a single outbound batch to one peer: walks the source list, invokes `sendOne` per
+ * file, emits `BatchProgress` updates, returns the final `BatchOutcome`. Owns wire-level
+ * concerns within that one batch — per-file cancel, drop-and-reconnect within the
+ * reconnection timeout, progress throttling. One instance per batch attempt.
+ */
 class BatchSender(
     private val sendOne: suspend (FileSource, onProgress: (Long, Long?) -> Unit) -> Unit,
     private val connectionMonitor: ConnectionMonitor,

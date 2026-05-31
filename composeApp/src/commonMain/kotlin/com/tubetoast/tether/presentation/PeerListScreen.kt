@@ -33,7 +33,8 @@ import com.tubetoast.tether.presentation.peercard.PeerCard
 import com.tubetoast.tether.presentation.peercard.PeerCardCallbacks
 import com.tubetoast.tether.presentation.peercard.PeerCardContent
 import com.tubetoast.tether.presentation.sheets.MobilePickerChooserSheet
-import com.tubetoast.tether.presentation.transfer.PeerTransferState
+import com.tubetoast.tether.presentation.transfer.PeerCardState
+import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.toPeerIdentity
 import com.tubetoast.tether.ui.designsystem.BodyText
 import com.tubetoast.tether.ui.designsystem.BrandMark
@@ -95,7 +96,9 @@ private fun PeerListContent(
                 items(rows, key = { it.peer.device.id }) { row ->
                     val peerComponent = row.transferComponent
                     val transferState by peerComponent.state.subscribeAsState()
-                    val tapAction: () -> Unit = if (transferState is PeerTransferState.Idle && showMobileChooser) {
+                    val tapAction: () -> Unit = if (transferState.transfer is PeerTransferState.Idle &&
+                        showMobileChooser
+                    ) {
                         {
                             triggerClick = peerComponent::onCardClick
                             sheetState.targetDetent = SheetDetent.FullyExpanded
@@ -141,7 +144,7 @@ private fun PeerListContent(
 
 private data class PeerCardPreviewSpec(
     val peer: Peer,
-    val transferState: PeerTransferState,
+    val peerCardState: PeerCardState,
 )
 
 @Preview(name = "PeerList — discovering empty")
@@ -160,7 +163,7 @@ private fun PreviewSingleDevice(@PreviewParameter(Themes::class) dark: Boolean) 
             specs = listOf(
                 PeerCardPreviewSpec(
                     peer = Peer(id = device.toPeerIdentity(), device = device),
-                    transferState = TransferPreviewFixtures.idleCollapsed,
+                    peerCardState = PeerCardState(TransferPreviewFixtures.idleCollapsed, expanded = false),
                 ),
             ),
         )
@@ -174,11 +177,14 @@ private fun PreviewMultipleDevices(@PreviewParameter(Themes::class) dark: Boolea
             specs = PreviewFixtures.multipleDevices.mapIndexed { index, device ->
                 PeerCardPreviewSpec(
                     peer = Peer(id = device.toPeerIdentity(), device = device, isOnline = index != 2),
-                    transferState = when (index) {
-                        0 -> TransferPreviewFixtures.activeOutbound
-                        1 -> TransferPreviewFixtures.idleCollapsed
-                        else -> TransferPreviewFixtures.sentFull
-                    },
+                    peerCardState = PeerCardState(
+                        transfer = when (index) {
+                            0 -> TransferPreviewFixtures.activeOutbound
+                            1 -> TransferPreviewFixtures.idleCollapsed
+                            else -> TransferPreviewFixtures.sentFull
+                        },
+                        expanded = false,
+                    ),
                 )
             },
         )
@@ -193,7 +199,7 @@ private fun PreviewPendingState(@PreviewParameter(Themes::class) dark: Boolean) 
             specs = listOf(
                 PeerCardPreviewSpec(
                     peer = Peer(id = device.toPeerIdentity(), device = device),
-                    transferState = TransferPreviewFixtures.idleCollapsed,
+                    peerCardState = PeerCardState(TransferPreviewFixtures.idleCollapsed, expanded = false),
                 ),
             ),
         )
@@ -221,7 +227,7 @@ private fun PeerListContentPreview(specs: List<PeerCardPreviewSpec>) {
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 items(specs, key = { it.peer.device.id }) { spec ->
                     PeerCardContent(
-                        state = spec.transferState,
+                        state = spec.peerCardState,
                         isOnline = spec.peer.isOnline,
                         device = spec.peer.device,
                         callbacks = previewCallbacks(),
@@ -240,7 +246,7 @@ private fun previewCallbacks() = PeerCardCallbacks(
     onToggleAutoSend = {},
     onCancel = {},
     onDismiss = {},
-    onRetry = {},
+    onRetryOutbound = {},
     onShowDetails = {},
     onOpenFiles = {},
     onClick = null,
