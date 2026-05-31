@@ -59,11 +59,6 @@ open class FileClient(
         )
     }
 
-    suspend fun ping(device: Device): Boolean {
-        // TODO: GET http://${device.host}:${device.port}/health
-        throw NotImplementedError("ping() is not yet implemented")
-    }
-
     open suspend fun sendHello(target: Device, ownInfo: PeerAnnouncement): Boolean = try {
         val response = client.post("http://${target.host}:${target.port}/hello") {
             contentType(ContentType.Application.Json)

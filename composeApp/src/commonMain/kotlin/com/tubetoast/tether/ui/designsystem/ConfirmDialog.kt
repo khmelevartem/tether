@@ -67,7 +67,7 @@ internal fun ConfirmDialogContent(
 
     // Compose has no Role.AlertDialog; mergeDescendants ensures the container is a single
     // focusable unit while Dialog() itself handles focus trapping.
-    // TODO(#follow-up): revisit if CMP adds native alertdialog role support.
+    // TODO(#330): revisit when CMP adds native alertdialog role support.
     Column(
         modifier = modifier
             .fillMaxWidth()
