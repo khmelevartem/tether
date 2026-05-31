@@ -8,7 +8,6 @@ import kotlinx.coroutines.flow.map
 class FakePeerPreferencesStore : PeerPreferencesStore {
     private val store = MutableStateFlow<Map<String, Boolean>>(emptyMap())
 
-    /** Replaces the stored value for [peer] and emits to active observers. */
     fun setAutoSendSync(peer: PeerIdentity, enabled: Boolean) {
         store.value = store.value + (peer.id to enabled)
     }

@@ -208,11 +208,9 @@ class AutoSendDispatcherTest {
         pendingRepo.setPending(PendingFilesSummary(1, 100L), listOf(FakeFileSource("a.txt", 100L)))
         repeat(4) { runCurrent() }
 
-        // First emission: IOException caught → emit(false) → no trigger.
         assertIs<PeerTransferState.Idle>(registry.engineFor(peerA.id).state.value)
         assertNotNull(pendingRepo.summary.value)
 
-        // Second emission: store succeeds → transfer starts.
         pendingRepo.clear()
         pendingRepo.setPending(PendingFilesSummary(1, 100L), listOf(FakeFileSource("a.txt", 100L)))
         repeat(4) { runCurrent() }

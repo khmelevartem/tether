@@ -38,9 +38,7 @@ class AutoSendDispatcher(
             val onlineAfter = peersRepository.peers.value
                 .filter { it.isOnline }
                 .map { it.id }
-            val decision = AutoSendRouter.route(onlineAfter) { it == singleCandidate && autoSendEnabled }
-            val target = (decision as? RoutingDecision.AutoSend)?.peer ?: return@combine
-            if (target != singleCandidate) return@combine
+            if (onlineAfter.singleOrNull() != singleCandidate || !autoSendEnabled) return@combine
             if (engine.state.value !is PeerTransferState.Idle) return@combine
             engine.startOutbound(sourcesAfter)
             pendingFilesRepository.clear()
