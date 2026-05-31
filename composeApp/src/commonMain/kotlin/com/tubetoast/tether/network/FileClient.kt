@@ -56,11 +56,6 @@ class FileClient(
         )
     }
 
-    suspend fun ping(device: Device): Boolean {
-        // TODO: GET http://${device.host}:${device.port}/health
-        throw NotImplementedError("ping() is not yet implemented")
-    }
-
     suspend fun send(
         device: Device,
         channel: ByteReadChannel,

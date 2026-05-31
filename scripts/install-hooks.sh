@@ -38,6 +38,32 @@ git diff --name-only | grep '\.kt$' | xargs -r git add
 
 echo "✅ KtLint format done"
 
+# Check TODO/FIXME comments reference a tracker
+# Rule: docs/engineering/long-lived-artifacts.md §Deferred work carries a tracker.
+# Catches // TODO, /* TODO, * TODO (KDoc), case-insensitive, that lack any digits on the line.
+# Kotlin's `TODO("...")` builtin is excluded (no // or * prefix before TODO).
+echo "🔖 Checking TODO/FIXME tracker references..."
+TODO_VIOLATORS=""
+while IFS= read -r f; do
+  [ -z "$f" ] && continue
+  [ -f "$f" ] || continue
+  bad=$(awk 'tolower($0) ~ /(\/\/|\/?\*)[[:space:]]*(todo|fixme)/ && $0 !~ /[0-9]/ { print FILENAME":"NR": "$0 }' "$f" 2>/dev/null) || true
+  if [ -n "$bad" ]; then
+    TODO_VIOLATORS="${TODO_VIOLATORS}${bad}
+"
+  fi
+done < <(git diff --cached --name-only --diff-filter=ACM | grep '\.kt$')
+
+if [ -n "$TODO_VIOLATORS" ]; then
+  echo "❌ TODO/FIXME without a tracker reference — commit aborted."
+  echo "   Any form is fine (TODO(#123), todo #123, TODO[123]) — the line must contain digits."
+  echo "   See docs/engineering/long-lived-artifacts.md §Deferred work carries a tracker."
+  echo ""
+  printf "%s" "$TODO_VIOLATORS"
+  exit 1
+fi
+echo "✅ TODOs reference issues"
+
 # Check doc links with lychee
 if ! command -v lychee &> /dev/null; then
   echo "ℹ️  lychee not found — skipping link check. Install: brew install lychee or https://github.com/lycheeverse/lychee#installation"
