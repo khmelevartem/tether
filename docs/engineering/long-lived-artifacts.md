@@ -32,6 +32,12 @@ When reading: verify against the code before acting on the claim.
 
 When writing: prefer the product invariant («pairing keyed by stable device identity») over the description of the current implementation. If a runtime detail is unavoidable, keep the minimum needed for comprehension.
 
+## Deferred work carries a tracker
+
+A `TODO` (or `FIXME`) in code is a deferred-work marker. It must point to a tracked issue — the form does not matter (`TODO(#123)`, `todo #123`, `TODO[123]`, `// TODO - 123: ...`), only that the digits identify a GitHub issue a reader can open.
+
+Without a tracker, a `TODO` has no half-life: nobody owns it, nobody cancels it, and grepping the codebase for «what is deferred» returns prose instead of a worklist. File the issue first; reference it from the comment.
+
 ## Link over inline-copy
 
 A long-lived artifact references rules / tokens / tables from another artifact — link (`see docs/engineering/X.md §Y`), do not embed.
