@@ -3,8 +3,8 @@ package com.tubetoast.tether.presentation.banners
 import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.resume
-import com.tubetoast.tether.presentation.PendingFilesSummary
-import com.tubetoast.tether.presentation.transfer.PendingFilesRepository
+import com.tubetoast.tether.transfer.PendingFilesRepository
+import com.tubetoast.tether.transfer.PendingFilesSummary
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceTimeBy

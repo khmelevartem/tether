@@ -2,8 +2,8 @@ package com.tubetoast.tether.presentation.banners
 
 import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.essenty.lifecycle.coroutines.coroutineScope
-import com.tubetoast.tether.presentation.PendingFilesSummary
-import com.tubetoast.tether.presentation.transfer.PendingFilesRepository
+import com.tubetoast.tether.transfer.PendingFilesRepository
+import com.tubetoast.tether.transfer.PendingFilesSummary
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
