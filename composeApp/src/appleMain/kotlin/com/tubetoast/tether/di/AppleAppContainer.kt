@@ -52,10 +52,6 @@ open class AppleAppContainer(
         defaultSaveLocation = documentsDir(),
         saveLocationWritable = false,
     )
-
-    init {
-        activateEagerSingletons()
-    }
 }
 
 @OptIn(ExperimentalForeignApi::class, kotlinx.cinterop.BetaInteropApi::class)

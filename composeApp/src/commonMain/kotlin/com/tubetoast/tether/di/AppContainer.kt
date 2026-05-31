@@ -79,16 +79,7 @@ abstract class AppContainer {
             peerPreferencesStore = peerPreferencesStore,
             engineRegistry = peerTransferEngineRegistry,
             scope = appScope,
-        ).also { it.start() }
-    }
-
-    /**
-     * Activates eager singletons that survive Component destruction (auto-send dispatcher today,
-     * future ones added here). Each leaf container calls this from its own `init` block once all
-     * abstract collaborators have been assigned — the base cannot do this itself.
-     */
-    protected fun activateEagerSingletons() {
-        autoSendDispatcher
+        )
     }
 
     open val rootComponentFactory: RootComponentFactory by lazy {

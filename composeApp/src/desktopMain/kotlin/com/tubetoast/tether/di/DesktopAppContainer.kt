@@ -38,8 +38,4 @@ class DesktopAppContainer(
         defaultSaveLocation = File(System.getProperty("user.home"), "Downloads").absolutePath,
         saveLocationWritable = true,
     )
-
-    init {
-        activateEagerSingletons()
-    }
 }

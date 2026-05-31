@@ -45,6 +45,7 @@ fun MainViewController() = run {
                 val port = container.fileServer.start()
                 container.mdnsDiscovery.start(name, port = port)
                 container.nameRepublisher.start(scope)
+                container.autoSendDispatcher.start()
             }
             onDispose {
                 container.nameRepublisher.stop()
