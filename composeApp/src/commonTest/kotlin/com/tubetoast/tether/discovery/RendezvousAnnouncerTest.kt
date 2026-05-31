@@ -126,19 +126,19 @@ class RendezvousAnnouncerTest {
         val deviceX = Device(name = "PeerX", host = "10.0.0.1", port = 5001)
         store.upsert(deviceX)
         scope.advanceUntilIdle()
-        // First attempt failed — PeerX not yet acked.
+        // First attempt failed — PeerX not yet acknowledged.
         assertEquals(1, sent.count { it.first.name == "PeerX" }, "should have attempted PeerX once")
 
         // Trigger re-emission by upserting another device; collector sees all current devices again.
         store.upsert(Device(name = "PeerB", host = "10.0.0.2", port = 5002))
         scope.advanceUntilIdle()
-        // Second attempt for PeerX succeeds — it is now acked.
+        // Second attempt for PeerX succeeds — it is now acknowledged.
         assertEquals(2, sent.count { it.first.name == "PeerX" }, "should retry PeerX on re-emission")
 
         // Subsequent re-emissions must not cause another send for PeerX.
         store.upsert(Device(name = "PeerC", host = "10.0.0.3", port = 5003))
         scope.advanceUntilIdle()
-        assertEquals(2, sent.count { it.first.name == "PeerX" }, "acked device must not be retried again")
+        assertEquals(2, sent.count { it.first.name == "PeerX" }, "acknowledged device must not be retried again")
 
         a.stop()
     }

@@ -17,10 +17,10 @@ class DeviceIdentityStoreTest {
     @Test
     fun `getOrCreate returns a 32-char hex string`() = runTest {
         val store = DeviceIdentityStore(temp.dataStore)
-        val fp = store.getOrCreate()
-        assertNotNull(fp)
-        assertEquals(32, fp.length, "fingerprint must be 32 hex chars (128-bit)")
-        assertTrue(fp.all { it in '0'..'9' || it in 'a'..'f' }, "fingerprint must be lowercase hex: $fp")
+        val fingerprint = store.getOrCreate()
+        assertNotNull(fingerprint)
+        assertEquals(32, fingerprint.length, "fingerprint must be 32 hex chars (128-bit)")
+        assertTrue(fingerprint.all { it in '0'..'9' || it in 'a'..'f' }, "fingerprint must be lowercase hex: $fingerprint")
     }
 
     @Test
@@ -33,8 +33,8 @@ class DeviceIdentityStoreTest {
 
     @Test
     fun `getOrCreate persists across new store instances with same dataStore`() = runTest {
-        val fp1 = DeviceIdentityStore(temp.dataStore).getOrCreate()
-        val fp2 = DeviceIdentityStore(temp.dataStore).getOrCreate()
-        assertEquals(fp1, fp2, "fingerprint must survive re-instantiation with same dataStore")
+        val firstInstanceFingerprint = DeviceIdentityStore(temp.dataStore).getOrCreate()
+        val secondInstanceFingerprint = DeviceIdentityStore(temp.dataStore).getOrCreate()
+        assertEquals(firstInstanceFingerprint, secondInstanceFingerprint, "fingerprint must survive re-instantiation with same dataStore")
     }
 }

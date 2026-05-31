@@ -63,16 +63,16 @@ internal class MdnsDiscoveryJmdns(
     @Volatile private var started: Boolean = false
 
     override suspend fun start(deviceName: String, port: Int) {
-        val fp = deviceIdentityStore.getOrCreate()
-        startSync(deviceName, port, fp)
+        val fingerprint = deviceIdentityStore.getOrCreate()
+        startSynchronized(deviceName, port, fingerprint)
     }
 
     @Synchronized
-    private fun startSync(deviceName: String, port: Int, fp: String) {
+    private fun startSynchronized(deviceName: String, port: Int, fingerprint: String) {
         if (started) throw IllegalStateException("MdnsDiscovery already started; call stop() first")
         this.deviceName = deviceName
         this.ownPort = port
-        this.fingerprint = fp
+        this.fingerprint = fingerprint
         started = true
 
         for (entry in networkInterfaceProvider.bindAddresses()) {

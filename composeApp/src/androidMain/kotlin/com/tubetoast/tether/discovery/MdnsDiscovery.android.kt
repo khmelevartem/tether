@@ -158,14 +158,14 @@ actual class MdnsDiscovery(
     }
 
     actual override suspend fun start(deviceName: String, port: Int) {
-        val fp = deviceIdentityStore.getOrCreate()
-        startSync(deviceName, port, fp)
+        val fingerprint = deviceIdentityStore.getOrCreate()
+        startSynchronized(deviceName, port, fingerprint)
     }
 
     @Synchronized
-    private fun startSync(deviceName: String, port: Int, fp: String) {
+    private fun startSynchronized(deviceName: String, port: Int, fingerprint: String) {
         if (nsdManager != null) throw IllegalStateException("MdnsDiscovery already started; call stop() first")
-        fingerprint = fp
+        this.fingerprint = fingerprint
         ownName = deviceName
         currentPort = port
         resolveQueue.clear()
