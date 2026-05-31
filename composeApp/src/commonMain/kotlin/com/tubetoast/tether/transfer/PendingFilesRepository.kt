@@ -16,8 +16,20 @@ class PendingFilesRepository {
         _sources.update { sources }
     }
 
+    /** Unconditional clear — for paths where the user explicitly dismisses pending. */
     fun clear() {
         _summary.update { null }
         _sources.update { emptyList() }
+    }
+
+    /**
+     * Clear only if [expected] is still the current sources snapshot. Returns true on success.
+     * Use after consuming a specific batch — protects against dropping a fresh setPending that
+     * arrived concurrently with the consumer.
+     */
+    fun clearIfMatches(expected: List<FileSource>): Boolean {
+        if (!_sources.compareAndSet(expected, emptyList())) return false
+        _summary.update { null }
+        return true
     }
 }

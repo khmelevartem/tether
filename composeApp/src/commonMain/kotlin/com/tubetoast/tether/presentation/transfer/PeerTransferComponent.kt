@@ -49,7 +49,7 @@ class PeerTransferComponent(
         val sources = pendingFilesRepository?.sources?.value.orEmpty()
         if (sources.isNotEmpty()) {
             engine.startOutbound(sources)
-            pendingFilesRepository?.clear()
+            pendingFilesRepository?.clearIfMatches(sources)
         } else {
             onOpenPicker()
         }

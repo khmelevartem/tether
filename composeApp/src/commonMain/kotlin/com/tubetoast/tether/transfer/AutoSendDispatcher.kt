@@ -41,7 +41,9 @@ class AutoSendDispatcher(
             val engine = engineRegistry.engineFor(singleCandidate)
             if (engine.state.value !is PeerTransferState.Idle) return@combine
             engine.startOutbound(sourcesAfter)
-            pendingFilesRepository.clear()
+            // Conditional clear: a fresh setPending may have raced ahead while engine.startOutbound ran;
+            // dropping it unconditionally would silently lose the user's newer share.
+            pendingFilesRepository.clearIfMatches(sourcesAfter)
         }.launchIn(scope)
     }
 }
