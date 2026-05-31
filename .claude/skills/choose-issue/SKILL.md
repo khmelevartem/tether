@@ -1,6 +1,6 @@
 ---
-name: sprint-pick
-description: Quick read-only look at the current `docs/sprints/sprint-NN.md` — pull issue numbers from the composition table + merge order, batch-check OPEN/PR status via `gh`, query `blocked_by` only for 🟢 items, and propose 1–3 candidates to start now with one-sentence justifications. No Gradle, no edits. Use when the user says "what to pick next", "next task from sprint", "что взять из спринта", "следующая задача", or invokes `/sprint-pick`.
+name: choose-issue
+description: Quick read-only look at the current `docs/sprints/sprint-NN.md` — pull issue numbers from the composition table + merge order, batch-check OPEN/PR status via `gh`, query `blocked_by` only for 🟢 items, and propose 1–3 candidates to start now with one-sentence justifications. No Gradle, no edits. Use when the user says "what to pick next", "next task from sprint", "что взять из спринта", "следующая задача", or invokes `/choose-issue`.
 ---
 
 Quick look: what to pick from the current sprint right now. Read-only and `gh` only, no Gradle.
