@@ -187,17 +187,19 @@ Save to `docs/sprints/sprint-NN.md`. Format:
 
 ## Что разблокирует
 
-<1–3 буллета. Только «после X следующее становится возможным Y» — не пересказ того, что задача делает. Если буллет начинается с «После X шипнуто Y» без следующего шага — выкинуть.>
+<1–3 bullets. Only "after X, Y becomes possible" — not a paraphrase of what the task does. If a bullet starts with "after X shipped Y" without a downstream step — drop it.>
 
-<!-- Optional: omit if there's no rebase risk. Heading literal — no parenthetical suffix. -->
+<!-- Optional: omit if there's no rebase risk. Heading is literal — no parenthetical suffix in the actual doc. -->
 ## Порядок мерджа
 
-<#A → #B → #C, `||` маркирует параллельные ветки.>
+<#A → #B → #C; `||` marks parallel branches.>
 ```
 
-**Направления.** Короткие метки функциональных областей, по которым идут задачи спринта. Flat list через `·`. Не цели и не commit'ы — просто метка, куда смотреть. Один спринт обычно покрывает 2–4 направления; больше — сигнал что задачи разъезжаются и спринт теряет фокус.
+Section names in the template — `Состав`, `Что разблокирует`, `Порядок мерджа`, the leading `**Направления:**` tag — are literal output strings written to the sprint doc as-is. Sprint docs in this repo are authored in Russian; the literals match that convention. Tooling matches them by exact string.
 
-**Skyrim-codename.** Декоративный subtitle в эпической стилистике — для атмосферы и узнавания. **Не несёт операционной нагрузки.** Любой инструмент, читающий sprint-NN.md, должен опираться только на номер `NN`; subtitle парсить и анализировать запрещено.
+**Направления (Directions).** Short labels for the functional areas this sprint touches. Flat list separated by `·`. Not goals, not commitments — just a "where to look" tag. A sprint typically covers 2–4 directions; more signals tasks are diverging and the sprint is losing focus.
+
+**Skyrim-codename.** A decorative subtitle in epic-fantasy style — for atmosphere and recognisability. **Carries no operational load.** Any tool reading `sprint-NN.md` must rely only on the number `NN`; the subtitle must not be parsed or analysed.
 
 **Size (for the column):**
 - **S** — isolated change with no platform specifics
@@ -208,11 +210,11 @@ Save to `docs/sprints/sprint-NN.md`. Format:
 - A prose "Sprint goal" paragraph. Sprints in this project = parallel agent loadout + merge order, not a customer-visible increment commitment. Directions tag + composition table + merge order carry all the load.
 - Justifications for why a task was chosen ("priority", "because it blocks #N").
 - Parallelism tables by layer, conflict matrices.
-- External blocking chains — that goes in «Что разблокирует», in one sentence.
+- External blocking chains — that goes in `## Что разблокирует`, in one sentence.
 - A "not included intentionally" list — it lives in the issue backlog, not the sprint doc.
 - A list of related product specs — specs are linked from issues, not duplicated here.
 - Per-task DoD / acceptance criteria expansion.
 
-When closing the sprint (Step 0), an `Итог` column is appended to the «Состав» table, and a `## Дополнительные результаты` section is added — this is the only thing that grows on top of the plan.
+When closing the sprint (Step 0), an `Итог` column is appended to the `## Состав` table, and a `## Дополнительные результаты` section is added — this is the only thing that grows on top of the plan.
 
 If there are tasks among the candidates without a spec — explicitly ask before saving whether a spec needs to be created.
