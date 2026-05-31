@@ -20,7 +20,10 @@ class DeviceIdentityStoreTest {
         val fingerprint = store.getOrCreate()
         assertNotNull(fingerprint)
         assertEquals(32, fingerprint.length, "fingerprint must be 32 hex chars (128-bit)")
-        assertTrue(fingerprint.all { it in '0'..'9' || it in 'a'..'f' }, "fingerprint must be lowercase hex: $fingerprint")
+        assertTrue(
+            fingerprint.all { it in '0'..'9' || it in 'a'..'f' },
+            "fingerprint must be lowercase hex: $fingerprint",
+        )
     }
 
     @Test
@@ -35,6 +38,10 @@ class DeviceIdentityStoreTest {
     fun `getOrCreate persists across new store instances with same dataStore`() = runTest {
         val firstInstanceFingerprint = DeviceIdentityStore(temp.dataStore).getOrCreate()
         val secondInstanceFingerprint = DeviceIdentityStore(temp.dataStore).getOrCreate()
-        assertEquals(firstInstanceFingerprint, secondInstanceFingerprint, "fingerprint must survive re-instantiation with same dataStore")
+        assertEquals(
+            firstInstanceFingerprint,
+            secondInstanceFingerprint,
+            "fingerprint must survive re-instantiation with same dataStore",
+        )
     }
 }
