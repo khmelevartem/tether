@@ -64,7 +64,9 @@ open class FileClient(
             contentType(ContentType.Application.Json)
             setBody(ownInfo)
         }
-        response.status.isSuccess()
+        val ok = response.status.isSuccess()
+        if (ok) log.info { "hello sent → ${target.host}:${target.port}" }
+        ok
     } catch (e: Exception) {
         log.error { "hello failed → ${target.host}:${target.port} — ${e.message}" }
         false

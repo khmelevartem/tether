@@ -24,6 +24,7 @@ import io.ktor.server.routing.routing
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.readAvailable
 import ru.pocketbyte.kydra.log.KydraLog
+import ru.pocketbyte.kydra.log.debug
 import ru.pocketbyte.kydra.log.error
 import ru.pocketbyte.kydra.log.info
 import ru.pocketbyte.kydra.log.wrapper.withTag
@@ -82,10 +83,12 @@ internal fun Application.installFileServerRoutes(
                 return@post
             }
             if (body.port !in 1..65535) {
+                log.info { "hello rejected — invalid port ${body.port} from ${body.alias}" }
                 call.respond(HttpStatusCode.BadRequest, mapOf("error" to "invalid_port"))
                 return@post
             }
             if (deviceIdentityStore != null && body.fingerprint == deviceIdentityStore.getOrCreate()) {
+                log.debug { "hello self-suppressed (own fingerprint) from ${body.alias}" }
                 call.respond(HttpStatusCode.OK, emptyMap<String, String>())
                 return@post
             }
