@@ -81,6 +81,8 @@ Events are plain method calls on the Component. No `LaunchedEffect` business log
 
 **Components do not own domain logic.** Domain lives in the domain layer in plain Kotlin without framework dependencies. Presentation logic is restricted to mapping domain data to user-facing representation and relaying user actions to the appropriate domain class. Litmus test: if the UI is rewritten ground-up and the logic must still exist — it belongs in the domain layer, not the presentation layer.
 
+**Domain types do not carry view-state fields.** The inverse litmus: if a field would disappear with a different UI (a card's expanded/collapsed flag, hover, selection inside a list) — it does not belong on the domain type. Wrap the domain state in a presentation type that adds those fields, and let the Component combine the domain `StateFlow` with its local view state into the single `Value<PresentationState>` the screen subscribes to.
+
 ## Long-lived state lives outside Components
 
 A Component's lifetime is bound to the screen (or flow) it represents. Anything that must outlive a screen — active file transfers, peer state, long-running connections — lives in repositories owned by `AppContainer`. Components observe these repositories via injected dependencies and never duplicate the state internally.
