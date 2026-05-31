@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.launchIn
 /**
  * Domain-layer trigger: when pending files arrive (share-sheet / drag-drop / CLI hand-off)
  * and exactly one peer is online with per-peer auto-send ON, start the transfer immediately
- * and clear pending. Lives next to `PeerTransferEngineRegistry` so any caller that has the
+ * and clear pending. Lives in the transfer layer so any surface that already has the engine
  * registry — UI Components, CLI, future surfaces — gets auto-send for free.
  */
 class AutoSendDispatcher(
