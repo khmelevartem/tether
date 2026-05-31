@@ -13,9 +13,9 @@ class FakeDeviceDiscovery(
 
     override suspend fun start(deviceName: String, port: Int) = Unit
 
-    override fun stop() = Unit
+    override suspend fun stop() = Unit
 
-    override fun republish(name: String) {
+    override suspend fun republish(name: String) {
         republishCalls.add(name)
     }
 }

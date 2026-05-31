@@ -9,6 +9,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.debug
 import ru.pocketbyte.kydra.log.info
@@ -51,7 +53,7 @@ internal class MdnsDiscoveryJmdns(
 
     override val discoveredDevices: StateFlow<List<Device>> = store.devices
 
-    private val lifecycleLock = Any()
+    private val lifecycleLock = Mutex()
 
     /** Keyed by (interface name, IPv4 address). */
     internal val instances = mutableMapOf<Pair<String, InetAddress>, JmDNS>()
@@ -66,7 +68,7 @@ internal class MdnsDiscoveryJmdns(
 
     override suspend fun start(deviceName: String, port: Int) {
         val fingerprint = deviceIdentityStore.getOrCreate()
-        synchronized(lifecycleLock) {
+        lifecycleLock.withLock {
             if (started) throw IllegalStateException("MdnsDiscovery already started; call stop() first")
             this.deviceName = deviceName
             this.ownPort = port
@@ -81,7 +83,7 @@ internal class MdnsDiscoveryJmdns(
                 var requeryInterval = REQUERY_INITIAL_INTERVAL_MS
                 while (isActive) {
                     delay(requeryInterval)
-                    synchronized(this@MdnsDiscoveryJmdns) {
+                    lifecycleLock.withLock {
                         for (jmdns in instances.values) {
                             try {
                                 jmdns.addServiceListener(SERVICE_TYPE, makeListener(jmdns))
@@ -102,8 +104,8 @@ internal class MdnsDiscoveryJmdns(
         }
     }
 
-    override fun republish(name: String) {
-        synchronized(lifecycleLock) {
+    override suspend fun republish(name: String) {
+        lifecycleLock.withLock {
             if (!started) return
             deviceName = name
             for (jmdns in instances.values) {
@@ -121,8 +123,8 @@ internal class MdnsDiscoveryJmdns(
         }
     }
 
-    override fun stop() {
-        synchronized(lifecycleLock) {
+    override suspend fun stop() {
+        lifecycleLock.withLock {
             started = false
             discoveryScope.cancel()
             for ((key, jmdns) in instances) {
@@ -165,8 +167,8 @@ internal class MdnsDiscoveryJmdns(
         log.info { "JmDNS torn down from ${key.second.hostAddress} (${key.first})" }
     }
 
-    internal fun diffInterfaces() {
-        synchronized(lifecycleLock) {
+    internal suspend fun diffInterfaces() {
+        lifecycleLock.withLock {
             val current = networkInterfaceProvider.bindAddresses().toSet()
             val existing = instances.keys.toSet()
             val added = current - existing

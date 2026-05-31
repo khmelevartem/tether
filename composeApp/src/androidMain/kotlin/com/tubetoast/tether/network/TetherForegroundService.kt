@@ -21,6 +21,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.error
 import ru.pocketbyte.kydra.log.info
@@ -114,7 +115,8 @@ class TetherForegroundService : LifecycleService() {
         container.rendezvousAnnouncer.stop()
         runningMdnsDiscovery?.let { mdnsDiscovery ->
             try {
-                mdnsDiscovery.stop()
+                // lifecycleScope is already cancelled by onDestroy; runBlocking for brief teardown.
+                runBlocking { mdnsDiscovery.stop() }
                 log.info { "mDNS stopped" }
             } catch (e: Exception) {
                 log.warn { "mDNS stop failed: ${e.message}" }

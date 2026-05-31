@@ -8,7 +8,7 @@ expect class MdnsDiscovery : DeviceDiscovery {
 
     override suspend fun start(deviceName: String, port: Int)
 
-    override fun stop()
+    override suspend fun stop()
 
-    override fun republish(name: String)
+    override suspend fun republish(name: String)
 }

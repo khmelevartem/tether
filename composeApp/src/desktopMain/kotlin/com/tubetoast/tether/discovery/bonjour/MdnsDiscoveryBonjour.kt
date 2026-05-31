@@ -20,6 +20,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.warn
 import ru.pocketbyte.kydra.log.wrapper.withTag
@@ -46,7 +48,7 @@ internal class MdnsDiscoveryBonjour(
 ) : DeviceDiscovery {
     override val discoveredDevices: StateFlow<List<Device>> = store.devices
 
-    private val lifecycleLock = Any()
+    private val lifecycleLock = Mutex()
 
     @Volatile private var session: Session? = null
 
@@ -58,7 +60,7 @@ internal class MdnsDiscoveryBonjour(
 
     override suspend fun start(deviceName: String, port: Int) {
         val fingerprint = deviceIdentityStore.getOrCreate()
-        synchronized(lifecycleLock) {
+        lifecycleLock.withLock {
             if (session != null) throw IllegalStateException("MdnsDiscovery already started; call stop() first")
             stopped = false
             currentPort = port
@@ -67,8 +69,8 @@ internal class MdnsDiscoveryBonjour(
         }
     }
 
-    override fun stop() {
-        val toClose = synchronized(lifecycleLock) {
+    override suspend fun stop() {
+        val toClose = lifecycleLock.withLock {
             stopped = true
             val current = session
             session = null
@@ -79,15 +81,15 @@ internal class MdnsDiscoveryBonjour(
         store.clear()
     }
 
-    override fun republish(name: String) {
-        val (toClose, port) = synchronized(lifecycleLock) {
+    override suspend fun republish(name: String) {
+        val (toClose, port) = lifecycleLock.withLock {
             val current = session ?: return
             val port = currentPort
             session = null
             current to port
         }
         toClose.close()
-        synchronized(lifecycleLock) {
+        lifecycleLock.withLock {
             if (stopped) return
             if (session == null) session = Session.start(name, port, store, fingerprint)
         }

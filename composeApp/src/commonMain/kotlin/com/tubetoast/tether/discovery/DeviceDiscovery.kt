@@ -8,8 +8,8 @@ interface DeviceDiscovery {
 
     suspend fun start(deviceName: String, port: Int)
 
-    fun stop()
+    suspend fun stop()
 
     /** No-op if [start] was never called. */
-    fun republish(name: String)
+    suspend fun republish(name: String)
 }

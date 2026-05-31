@@ -7,6 +7,9 @@ import android.os.Build
 import com.tubetoast.tether.identity.DeviceIdentityStore
 import com.tubetoast.tether.protocol.Device
 import kotlinx.coroutines.flow.StateFlow
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.debug
 import ru.pocketbyte.kydra.log.warn
@@ -23,7 +26,7 @@ actual class MdnsDiscovery(
 ) : DeviceDiscovery {
     actual override val discoveredDevices: StateFlow<List<Device>> = store.devices
 
-    private val lifecycleLock = Any()
+    private val lifecycleLock = Mutex()
 
     @Volatile private var fingerprint: String = ""
 
@@ -32,7 +35,7 @@ actual class MdnsDiscovery(
     @Volatile private var ownName: String? = null
 
     @Volatile private var currentPort: Int = 0
-    private var resolving = false
+    private val resolving = AtomicBoolean(false)
     private val resolveQueue = ConcurrentLinkedQueue<NsdServiceInfo>()
 
     @Volatile private var registrationListener: NsdManager.RegistrationListener? = null
@@ -140,36 +143,31 @@ actual class MdnsDiscovery(
     }
 
     private fun onResolveComplete() {
-        synchronized(lifecycleLock) {
-            resolving = false
-            startNextResolve()
-        }
+        resolving.set(false)
+        startNextResolve()
     }
 
     private fun startNextResolve() {
-        synchronized(lifecycleLock) {
-            if (resolving) return
-            val nm = nsdManager ?: return
-            val next = resolveQueue.poll() ?: return
-            resolving = true
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                nm.resolveService(next, Runnable::run, makeResolveListener())
-            } else {
-                @Suppress("DEPRECATION")
-                nm.resolveService(next, makeResolveListener())
-            }
+        if (!resolving.compareAndSet(false, true)) return
+        val nm = nsdManager ?: run { resolving.set(false); return }
+        val next = resolveQueue.poll() ?: run { resolving.set(false); return }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            nm.resolveService(next, Runnable::run, makeResolveListener())
+        } else {
+            @Suppress("DEPRECATION")
+            nm.resolveService(next, makeResolveListener())
         }
     }
 
     actual override suspend fun start(deviceName: String, port: Int) {
         val fingerprint = deviceIdentityStore.getOrCreate()
-        synchronized(lifecycleLock) {
+        lifecycleLock.withLock {
             if (nsdManager != null) throw IllegalStateException("MdnsDiscovery already started; call stop() first")
             this.fingerprint = fingerprint
             ownName = deviceName
             currentPort = port
             resolveQueue.clear()
-            resolving = false
+            resolving.set(false)
             val nm = context.getSystemService(Context.NSD_SERVICE) as NsdManager
             nsdManager = nm
             val serviceInfo = NsdServiceInfo().apply {
@@ -198,8 +196,8 @@ actual class MdnsDiscovery(
         }
     }
 
-    actual override fun republish(name: String) {
-        synchronized(lifecycleLock) {
+    actual override suspend fun republish(name: String) {
+        lifecycleLock.withLock {
             val nm = nsdManager ?: return
             log.debug { "Republishing NSD as name=$name" }
             unregisterPreviousListener(nm, "republish")
@@ -217,8 +215,8 @@ actual class MdnsDiscovery(
         }
     }
 
-    actual override fun stop() {
-        synchronized(lifecycleLock) {
+    actual override suspend fun stop() {
+        lifecycleLock.withLock {
             val nm = nsdManager ?: return
             log.debug { "Stopping NSD" }
             unregisterPreviousListener(nm, "stop")
@@ -232,7 +230,7 @@ actual class MdnsDiscovery(
             ownName = null
             currentPort = 0
             resolveQueue.clear()
-            resolving = false
+            resolving.set(false)
             store.clear()
         }
     }

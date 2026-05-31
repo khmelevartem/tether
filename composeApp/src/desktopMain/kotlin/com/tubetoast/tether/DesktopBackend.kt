@@ -6,6 +6,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.warn
 import ru.pocketbyte.kydra.log.wrapper.withTag
@@ -58,7 +59,7 @@ internal suspend fun DesktopAppContainer.startBackendOrFail(): BackendHandle {
             log.warn { "rendezvousAnnouncer stop failed — ${it.message}" }
         }
         runCatching { backendScope.cancel() }
-        runCatching { mdnsDiscovery.stop() }.onFailure {
+        runCatching { runBlocking { mdnsDiscovery.stop() } }.onFailure {
             log.warn { "mDNS stop failed — ${it.message}" }
         }
         runCatching { server.stop() }.onFailure {

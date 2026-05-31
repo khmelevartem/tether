@@ -14,7 +14,7 @@ import kotlin.test.assertTrue
 @Suppress("ktlint:tether:no-run-blocking-in-tests")
 class MdnsDiscoveryTest {
     @Test
-    fun `stop before start does not throw`() {
+    fun `stop before start does not throw`(): Unit = runBlocking {
         testDiscovery().stop()
     }
 

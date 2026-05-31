@@ -9,7 +9,7 @@ import kotlin.test.assertTrue
 
 class MdnsDiscoveryRepublishTest {
     @Test
-    fun `republish before start is a no-op and adds no peers`() {
+    fun `republish before start is a no-op and adds no peers`(): Unit = runBlocking {
         val store = DiscoveredDevicesStore()
         val discovery = testDiscovery(store)
         discovery.republish("SomeName")

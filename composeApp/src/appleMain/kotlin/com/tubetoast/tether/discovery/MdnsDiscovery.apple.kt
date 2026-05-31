@@ -9,8 +9,9 @@ import kotlinx.cinterop.ObjCSignatureOverride
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.usePinned
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import platform.Foundation.NSData
-import platform.Foundation.NSLock
 import platform.Foundation.NSNetService
 import platform.Foundation.NSNetServiceBrowser
 import platform.Foundation.NSNetServiceBrowserDelegateProtocol
@@ -26,26 +27,17 @@ import ru.pocketbyte.kydra.log.wrapper.withTag
 private const val SERVICE_TYPE = "_tether._tcp."
 private val log = KydraLog.withTag(default = "MdnsDiscovery.Apple")
 
-private inline fun <T> NSLock.withLock(block: () -> T): T {
-    lock()
-    try {
-        return block()
-    } finally {
-        unlock()
-    }
-}
-
 // Public entry points (start/stop/republish) acquire lifecycleLock for atomicity of
 // precondition + state mutation. NSNetService and NSNetServiceBrowser delegate callbacks
-// (didPublish, didFind, didResolve) are delivered on the run-loop thread that owns the
-// service/browser — they do not acquire the lock.
+// are delivered on the run-loop thread that owns the service/browser — they do not acquire
+// the lock.
 actual class MdnsDiscovery(
     private val store: DiscoveredDevicesStore,
     private val deviceIdentityStore: DeviceIdentityStore,
 ) : DeviceDiscovery {
     actual override val discoveredDevices: StateFlow<List<Device>> get() = store.devices
 
-    private val lifecycleLock = NSLock()
+    private val lifecycleLock = Mutex()
 
     private var fingerprint: String = ""
     private var netService: NSNetService? = null
@@ -98,7 +90,7 @@ actual class MdnsDiscovery(
         }
     }
 
-    actual override fun stop() {
+    actual override suspend fun stop() {
         lifecycleLock.withLock {
             try {
                 netService?.stop()
@@ -130,7 +122,7 @@ actual class MdnsDiscovery(
      * is a weak ObjC ref; clearing the strong Kotlin ref would create a GC window.
      * Each delegate self-removes on resolve/timeout.
      */
-    actual override fun republish(name: String) {
+    actual override suspend fun republish(name: String) {
         lifecycleLock.withLock {
             if (netService == null && browser == null) return
             log.info { "republishing as $name" }

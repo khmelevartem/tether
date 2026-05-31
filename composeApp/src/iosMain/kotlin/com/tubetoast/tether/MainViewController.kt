@@ -18,6 +18,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.error
 import ru.pocketbyte.kydra.log.wrapper.withTag
@@ -51,7 +52,8 @@ fun MainViewController() = run {
                 container.nameRepublisher.stop()
                 container.rendezvousAnnouncer.stop()
                 scope.cancel()
-                container.mdnsDiscovery.stop()
+                // scope is cancelled above; runBlocking for brief teardown.
+                runBlocking { container.mdnsDiscovery.stop() }
                 container.fileServer.stop()
                 lifecycle.stop()
                 lifecycle.destroy()

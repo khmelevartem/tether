@@ -41,7 +41,7 @@ class MdnsDiscoveryTest {
     // --- Lifecycle tests (no network required) ---
 
     @Test
-    fun `stop before start does not throw`() {
+    fun `stop before start does not throw`(): Unit = runBlocking {
         testDiscovery().stop()
     }
 
