@@ -123,6 +123,10 @@ The composition root is the only place that knows lifecycles. Everywhere else, y
 
 The logging façade ([`KydraLog`](logging.md)) is the documented exception: a process-global cross-cutting infra singleton initialised once per platform entry point, accessed directly (`KydraLog.withTag(...)`) without passing through the graph. Rationale and trade-offs in [`adr/adr-logging-kydra.md`](adr/adr-logging-kydra.md).
 
+**`AppContainer` composes; entry points start.** A singleton that owns a long-lived collector or background subscription is constructed lazily in `AppContainer` like any other graph node, but its `start()` is invoked from each platform's entry point (Android `Application.onCreate`, Desktop `main`, iOS `MainViewController`, future CLI `main`) alongside `fileServer.start()` / `mdnsDiscovery.start()`. The base container cannot do this from its own `init` block — abstract collaborators are not yet assigned when `AppContainer.<init>` runs. Adding the `start()` line to a new entry point is the explicit, compile-noisy way to opt in; a forgotten line surfaces as silent inactivity, not a crash.
+
+**Domain-layer orchestrators live in the relevant domain package.** When a singleton coordinates domain primitives (e.g. `AutoSendDispatcher` reading `peersRepository.peers` + `pendingFilesRepository.sources` + `peerPreferencesStore` and driving `PeerTransferEngineRegistry`) it goes into the matching domain package (`com.tubetoast.tether.transfer`, etc.), not into `presentation`. CLI and UI then share the same orchestrator through `AppContainer` without each surface re-implementing the rule.
+
 ### 4. Don't instantiate dependencies inside composables
 
 ❌
