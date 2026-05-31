@@ -7,7 +7,6 @@ import android.os.Build
 import com.tubetoast.tether.identity.DeviceIdentityStore
 import com.tubetoast.tether.protocol.Device
 import kotlinx.coroutines.flow.StateFlow
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import ru.pocketbyte.kydra.log.KydraLog
@@ -15,6 +14,7 @@ import ru.pocketbyte.kydra.log.debug
 import ru.pocketbyte.kydra.log.warn
 import ru.pocketbyte.kydra.log.wrapper.withTag
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.atomic.AtomicBoolean
 
 private const val SERVICE_TYPE = "_tether._tcp."
 private val log = KydraLog.withTag(default = "MdnsDiscovery.Android")
@@ -149,8 +149,14 @@ actual class MdnsDiscovery(
 
     private fun startNextResolve() {
         if (!resolving.compareAndSet(false, true)) return
-        val nm = nsdManager ?: run { resolving.set(false); return }
-        val next = resolveQueue.poll() ?: run { resolving.set(false); return }
+        val nm = nsdManager ?: run {
+            resolving.set(false)
+            return
+        }
+        val next = resolveQueue.poll() ?: run {
+            resolving.set(false)
+            return
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             nm.resolveService(next, Runnable::run, makeResolveListener())
         } else {

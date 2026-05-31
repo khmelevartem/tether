@@ -2,6 +2,7 @@ package com.tubetoast.tether.discovery
 
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -9,7 +10,7 @@ import kotlin.test.assertTrue
 
 class MdnsDiscoveryRepublishTest {
     @Test
-    fun `republish before start is a no-op and adds no peers`(): Unit = runBlocking {
+    fun `republish before start is a no-op and adds no peers`() = runTest {
         val store = DiscoveredDevicesStore()
         val discovery = testDiscovery(store)
         discovery.republish("SomeName")
