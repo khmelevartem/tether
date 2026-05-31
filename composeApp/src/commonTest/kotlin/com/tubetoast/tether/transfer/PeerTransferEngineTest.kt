@@ -95,12 +95,13 @@ class PeerTransferEngineTest {
         runCurrent()
 
         assertIs<PeerTransferState.Cancelled>(engine.state.value)
-        assertEquals(1, factoryInvocations)
+        // First launch was cancelled before its body executed — factory never called.
+        assertEquals(0, factoryInvocations)
 
         engine.onRetryOutbound()
         runCurrent()
 
-        assertEquals(2, factoryInvocations)
+        assertEquals(1, factoryInvocations)
         assertIs<PeerTransferState.Sent>(engine.state.value)
     }
 
