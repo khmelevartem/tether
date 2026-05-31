@@ -46,10 +46,10 @@ class PeerTransferComponent(
     fun startOutbound(sources: List<FileSource>) = engine.startOutbound(sources)
 
     fun onCardClick() {
-        val sources = pendingFilesRepository?.sources?.value.orEmpty()
-        if (sources.isNotEmpty()) {
-            engine.startOutbound(sources)
-            pendingFilesRepository?.clearIfMatches(sources)
+        val pending = pendingFilesRepository?.pending?.value
+        if (pending != null) {
+            engine.startOutbound(pending.sources)
+            pendingFilesRepository.clearIfMatches(pending)
         } else {
             onOpenPicker()
         }

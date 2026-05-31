@@ -75,7 +75,7 @@ class AutoSendDispatcherTest {
         repeat(4) { runCurrent() }
 
         assertIs<PeerTransferState.Idle>(registry.engineFor(peerA.id).state.value)
-        assertNotNull(pendingRepo.summary.value)
+        assertNotNull(pendingRepo.pending.value?.summary)
     }
 
     @Test
@@ -92,7 +92,7 @@ class AutoSendDispatcherTest {
         repeat(4) { runCurrent() }
 
         assertIs<PeerTransferState.Sent>(registry.engineFor(peerA.id).state.value)
-        assertNull(pendingRepo.summary.value)
+        assertNull(pendingRepo.pending.value?.summary)
     }
 
     @Test
@@ -108,7 +108,7 @@ class AutoSendDispatcherTest {
         repeat(4) { runCurrent() }
 
         assertIs<PeerTransferState.Idle>(registry.engineFor(peerA.id).state.value)
-        assertNotNull(pendingRepo.summary.value)
+        assertNotNull(pendingRepo.pending.value?.summary)
     }
 
     @Test
@@ -137,7 +137,7 @@ class AutoSendDispatcherTest {
         repeat(4) { runCurrent() }
 
         assertEquals(0, factoryCallCount)
-        assertNotNull(pendingRepo.summary.value)
+        assertNotNull(pendingRepo.pending.value?.summary)
     }
 
     @Test
@@ -161,7 +161,7 @@ class AutoSendDispatcherTest {
         repeat(4) { runCurrent() }
 
         assertIs<PeerTransferState.Idle>(registry.engineFor(peerA.id).state.value)
-        assertNotNull(pendingRepo.summary.value)
+        assertNotNull(pendingRepo.pending.value?.summary)
     }
 
     @Test
@@ -184,7 +184,7 @@ class AutoSendDispatcherTest {
         repeat(4) { runCurrent() }
 
         assertIs<PeerTransferState.Idle>(registry.engineFor(peerA.id).state.value)
-        assertNull(pendingRepo.summary.value)
+        assertNull(pendingRepo.pending.value?.summary)
     }
 
     @Test
@@ -210,7 +210,7 @@ class AutoSendDispatcherTest {
         repeat(4) { runCurrent() }
 
         // Engine already transitioned; auto-send must not start a second batch or clear pending.
-        assertNotNull(pendingRepo.summary.value)
+        assertNotNull(pendingRepo.pending.value?.summary)
     }
 
     @Test
@@ -240,14 +240,14 @@ class AutoSendDispatcherTest {
         repeat(4) { runCurrent() }
 
         assertIs<PeerTransferState.Idle>(registry.engineFor(peerA.id).state.value)
-        assertNotNull(pendingRepo.summary.value)
+        assertNotNull(pendingRepo.pending.value?.summary)
 
         pendingRepo.clear()
         pendingRepo.setPending(PendingFilesSummary(1, 100L), listOf(FakeFileSource("a.txt", 100L)))
         repeat(4) { runCurrent() }
 
         assertIs<PeerTransferState.Sent>(registry.engineFor(peerA.id).state.value)
-        assertNull(pendingRepo.summary.value)
+        assertNull(pendingRepo.pending.value?.summary)
     }
 }
 

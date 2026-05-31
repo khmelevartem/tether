@@ -48,7 +48,7 @@ class BannersComponentTest {
         repo.setPending(PendingFilesSummary(1, 100L), emptyList())
         component.onCancelPending()
 
-        assertNull(repo.summary.value)
+        assertNull(repo.pending.value?.summary)
     }
 
     @Test

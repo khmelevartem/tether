@@ -8,43 +8,47 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class PendingFilesRepositoryTest {
+    private val firstSummary = PendingFilesSummary(1, 100L)
+    private val secondSummary = PendingFilesSummary(1, 200L)
     private val first = listOf(FakeFileSource("first.txt", 100L))
     private val second = listOf(FakeFileSource("second.txt", 200L))
 
     @Test
-    fun `clear unconditionally drops sources and summary`() {
+    fun `clear unconditionally drops pending`() {
         val repo = PendingFilesRepository()
-        repo.setPending(PendingFilesSummary(1, 100L), first)
+        repo.setPending(firstSummary, first)
         repo.clear()
-        assertEquals(emptyList(), repo.sources.value)
-        assertNull(repo.summary.value)
+        assertNull(repo.pending.value)
     }
 
     @Test
-    fun `clearIfMatches returns true and clears when snapshot matches`() {
+    fun `clearIfMatches returns true and clears when token matches current snapshot`() {
         val repo = PendingFilesRepository()
-        repo.setPending(PendingFilesSummary(1, 100L), first)
-        assertTrue(repo.clearIfMatches(first))
-        assertEquals(emptyList(), repo.sources.value)
-        assertNull(repo.summary.value)
+        repo.setPending(firstSummary, first)
+        val token = repo.pending.value!!
+        assertTrue(repo.clearIfMatches(token))
+        assertNull(repo.pending.value)
     }
 
     @Test
     fun `clearIfMatches returns false and preserves state when a fresh setPending raced ahead`() {
         val repo = PendingFilesRepository()
-        repo.setPending(PendingFilesSummary(1, 100L), first)
-        // Simulate the race: the caller captured `first` but a new share landed before clearIfMatches.
-        repo.setPending(PendingFilesSummary(1, 200L), second)
-        assertFalse(repo.clearIfMatches(first))
-        assertEquals(second, repo.sources.value)
-        assertNotNull(repo.summary.value)
+        repo.setPending(firstSummary, first)
+        val token = repo.pending.value!!
+        // Simulate the race: the caller captured `token` but a new share landed before clearIfMatches.
+        repo.setPending(secondSummary, second)
+        assertFalse(repo.clearIfMatches(token))
+        assertEquals(second, repo.pending.value?.sources)
+        assertNotNull(repo.pending.value?.summary)
     }
 
     @Test
-    fun `clearIfMatches against empty fails when something landed since the empty snapshot`() {
+    fun `setPending atomically pairs summary and sources`() {
         val repo = PendingFilesRepository()
-        repo.setPending(PendingFilesSummary(1, 100L), first)
-        assertFalse(repo.clearIfMatches(emptyList()))
-        assertEquals(first, repo.sources.value)
+        repo.setPending(firstSummary, first)
+        val snapshot = repo.pending.value
+        assertNotNull(snapshot)
+        assertEquals(firstSummary, snapshot.summary)
+        assertEquals(first, snapshot.sources)
     }
 }

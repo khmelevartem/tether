@@ -123,7 +123,7 @@ class PeerTransferComponentTest {
         runCurrent()
 
         assertIs<PeerTransferState.Sent>(component.state.value.transfer)
-        assertNull(repo.summary.value)
+        assertNull(repo.pending.value?.summary)
     }
 
     @Test
