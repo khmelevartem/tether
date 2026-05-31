@@ -9,9 +9,9 @@ import com.arkivanov.decompose.value.update
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.coroutines.coroutineScope
 import com.arkivanov.essenty.lifecycle.resume
+import com.tubetoast.tether.peer.Peer
+import com.tubetoast.tether.peer.PeersRepository
 import com.tubetoast.tether.presentation.banners.BannersComponent
-import com.tubetoast.tether.presentation.peer.Peer
-import com.tubetoast.tether.presentation.peer.PeersRepository
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.transfer.PeerIdentity
 import kotlinx.coroutines.CoroutineScope

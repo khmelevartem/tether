@@ -1,4 +1,4 @@
-package com.tubetoast.tether.presentation.peer
+package com.tubetoast.tether.peer
 
 import com.tubetoast.tether.discovery.DeviceDiscovery
 import com.tubetoast.tether.transfer.toPeerIdentity

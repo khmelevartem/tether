@@ -226,15 +226,15 @@ If a device is present:
    ```
    If emulator and IP is `10.0.2.x` — host access via `adb forward tcp:18080 tcp:$ANDROID_PORT` and `localhost:18080`. For a physical device — directly `$ANDROID_IP:$ANDROID_PORT`.
 6. **`/health` sanity:** `curl -sf http://$ANDROID_IP:$ANDROID_PORT/health` → `Tether OK`. This is the only place where curl is acceptable — endpoint sanity, not a user flow.
-7. **Cross-discovery with timing:** poll the Desktop CLI log for `Tether-<MODEL>`. Delta from `NSD_READY_MS`, not from `am start`:
+7. **Cross-discovery with timing:** parse the Desktop CLI's `[peers]` line by the Android device's IP — Android advertises under the device name (`CPH2653`, `Pixel 7`, vendor-specific), not under any `Tether-*` prefix. Match the entry that ends with `@$ANDROID_IP:port` and strip everything after `@`:
    ```bash
    for i in $(seq 1 30); do
      sleep 1
-     grep -E "\[peers\] .*Tether-" $LOG_A | grep -v "none" | tail -1 | grep -q . && break
+     grep -aE "\[peers\] .*@${ANDROID_IP}:" $LOG_A | tail -1 | grep -q . && break
    done
    NOW_MS=$(python3 -c "import time; print(int(time.time() * 1000))")
    DELTA_MS=$((NOW_MS - NSD_READY_MS))
-   ANDROID_NAME=$(grep -oE 'Tether-[A-Za-z0-9_]+' $LOG_A | head -1)
+   ANDROID_NAME=$(grep -aE "\[peers\]" $LOG_A | tail -1 | grep -oE '[^, ]+@'"$ANDROID_IP" | head -1 | sed 's/@.*//')
    echo "cross-discovery: ${DELTA_MS}ms, peer=$ANDROID_NAME"
    ```
    In the report: `Android | cross-discovery | ✓ PASS | 250 ms` — network-propagation + JmDNS resolve.
@@ -297,8 +297,12 @@ Otherwise:
    ```bash
    IOS_NAME=""
    for i in $(seq 1 30); do
+     # `dns-sd -B` prints each match as a tab-separated line ending with the instance name;
+     # the name is the trailing token after the last tab. The previous regex `[…]*iPhone[…]*`
+     # captured leading junk (`tcp.        iPhone 17 Pro`) and broke the subsequent TXT query.
      IOS_NAME=$( ( dns-sd -B _tether._tcp local. & DNSSD=$!; sleep 2; kill $DNSSD 2>/dev/null ) \
-       | grep -oE '[A-Za-z0-9 .-]*iPhone[A-Za-z0-9 .-]*' | head -1 | tr -d '\r')
+       | awk -F'\t' '/_tether._tcp/ && NF>1 { print $NF }' \
+       | grep -E 'iPhone|iPad' | head -1 | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
      [ -n "$IOS_NAME" ] && break
      sleep 1
    done

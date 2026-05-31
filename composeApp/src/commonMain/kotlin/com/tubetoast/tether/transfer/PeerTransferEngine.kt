@@ -8,7 +8,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.time.Duration
@@ -27,14 +26,14 @@ class PeerTransferEngine(
     private val inboundEvents: Flow<ReceiveEvent> = MutableSharedFlow(),
     private val reconnectionTimeout: Duration = ReconnectionTimeout.DEFAULT,
     private val scope: CoroutineScope,
-    private val peerPreferencesStore: PeerPreferencesStore? = null,
+    private val peerPreferencesStore: PeerPreferencesStore,
 ) {
     private val _state = MutableStateFlow<PeerTransferState>(PeerTransferState.Idle(peer))
     val state: StateFlow<PeerTransferState> = _state.asStateFlow()
 
     private var activeJob: Job? = null
     private var currentSender: BatchSender? = null
-    private var originalSources: List<FileSource> = emptyList()
+    private val originalSources = MutableStateFlow<List<FileSource>>(emptyList())
     private val confirmedReceived = MutableStateFlow<Set<String>>(emptySet())
     private val cancelledFileNames = MutableStateFlow<Set<String>>(emptySet())
 
@@ -46,15 +45,19 @@ class PeerTransferEngine(
 
     fun startOutbound(sources: List<FileSource>) {
         val current = _state.value
-        if (current is PeerTransferState.ActiveOutbound ||
-            current is PeerTransferState.ActiveInbound ||
-            current is PeerTransferState.Reconnecting
-        ) {
+        if (current !is PeerTransferState.Idle) {
             // TODO(#327): surface "transfer already in flight" to the user; the caller still
             //              clears PendingFilesRepository on this path, dropping the share-sheet payload.
             return
         }
-        originalSources = sources
+        val claim = PeerTransferState.ActiveOutbound.Claimed(
+            peer = peer,
+            totalFiles = sources.size,
+            totalBytes = sources.sumOf { it.sizeBytes ?: 0L },
+            perFile = sources.map { PerFileStatus.Queued(it.name, it.sizeBytes) },
+        )
+        if (!_state.compareAndSet(current, claim)) return
+        originalSources.value = sources
         cancelledFileNames.update { emptySet() }
         launchBatch(sources)
     }
@@ -62,6 +65,9 @@ class PeerTransferEngine(
     fun onCancel() {
         activeJob?.cancel()
         activeJob = null
+        _state.update { current ->
+            if (current is PeerTransferState.ActiveOutbound) cancelledFromActive(current) else current
+        }
     }
 
     fun onRetryOutbound() {
@@ -74,14 +80,14 @@ class PeerTransferEngine(
         }
         val failedNames = lastPerFile.filterIsInstance<PerFileStatus.Failed>().map { it.name }.toSet()
         val confirmed = confirmedReceived.value
-        val retryable = originalSources.filter { it.name in failedNames && it.name !in confirmed }
+        val retryable = originalSources.value.filter { it.name in failedNames && it.name !in confirmed }
         if (retryable.isEmpty()) return
         cancelledFileNames.update { emptySet() }
         launchBatch(retryable)
     }
 
     fun onRetryFile(name: String) {
-        val source = originalSources.firstOrNull { it.name == name } ?: return
+        val source = originalSources.value.firstOrNull { it.name == name } ?: return
         cancelledFileNames.update { it - name }
         val job = activeJob
         activeJob = scope.launch {
@@ -103,7 +109,7 @@ class PeerTransferEngine(
             is PerFileStatus.Queued -> {
                 cancelledFileNames.update { it + name }
                 _state.update { s ->
-                    val active = s as? PeerTransferState.ActiveOutbound ?: return@update s
+                    val active = s as? PeerTransferState.ActiveOutbound.Sending ?: return@update s
                     val rowIndex = active.perFile.indexOfFirst { it.name == name }.takeIf { it >= 0 } ?: return@update s
                     val updated = active.perFile.toMutableList()
                     updated[rowIndex] = PerFileStatus.Failed(
@@ -136,12 +142,10 @@ class PeerTransferEngine(
         }
     }
 
-    fun observeAutoSend(): Flow<Boolean> =
-        peerPreferencesStore?.observeAutoSend(peer) ?: flowOf(false)
+    fun observeAutoSend(): Flow<Boolean> = peerPreferencesStore.observeAutoSend(peer)
 
     fun setAutoSend(enabled: Boolean) {
-        val store = peerPreferencesStore ?: return
-        scope.launch { store.setAutoSend(peer, enabled) }
+        scope.launch { peerPreferencesStore.setAutoSend(peer, enabled) }
     }
 
     private fun launchBatch(sources: List<FileSource>) {
@@ -159,11 +163,27 @@ class PeerTransferEngine(
             }
         } finally {
             currentSender = null
+            _state.update { current ->
+                if (current is PeerTransferState.ActiveOutbound) cancelledFromActive(current) else current
+            }
         }
     }
 
+    private fun cancelledFromActive(current: PeerTransferState.ActiveOutbound): PeerTransferState.Cancelled {
+        val perFile = current.perFile.map { entry ->
+            if (entry is PerFileStatus.Done) {
+                entry
+            } else {
+                PerFileStatus.Failed(entry.name, entry.size, FailureReason.TransferCancelled)
+            }
+        }
+        val sent = perFile.count { it is PerFileStatus.Done }
+        val remaining = perFile.filter { it !is PerFileStatus.Done }.map { it.name }
+        return PeerTransferState.Cancelled(peer = peer, sent = sent, remaining = remaining, perFile = perFile)
+    }
+
     private fun mapProgress(progress: BatchProgress): PeerTransferState = when (progress) {
-        is BatchProgress.Sending -> PeerTransferState.ActiveOutbound(
+        is BatchProgress.Sending -> PeerTransferState.ActiveOutbound.Sending(
             peer = progress.peer,
             currentFile = progress.currentFile,
             currentIndex = progress.currentIndex,

@@ -1,5 +1,6 @@
 package com.tubetoast.tether.transfer
 
+import com.tubetoast.tether.preferences.FakePeerPreferencesStore
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -24,6 +25,7 @@ class PeerTransferEngineTest {
         batchSenderFactory = fakeBatchSender(sendOneOverride = sendOneOverride, pauseChannel = pauseChannel),
         inboundEvents = events,
         scope = scope,
+        peerPreferencesStore = FakePeerPreferencesStore(),
     )
 
     @Test
@@ -33,13 +35,13 @@ class PeerTransferEngineTest {
 
         engine.startOutbound(listOf(FakeFileSource("a.txt", 100L)))
         runCurrent()
-        assertIs<PeerTransferState.ActiveOutbound>(engine.state.value)
-        val firstFile = (engine.state.value as PeerTransferState.ActiveOutbound).currentFile
+        val firstState = assertIs<PeerTransferState.ActiveOutbound.Sending>(engine.state.value)
+        val firstFile = firstState.currentFile
 
         engine.startOutbound(listOf(FakeFileSource("b.txt", 200L)))
         runCurrent()
 
-        val state = engine.state.value as PeerTransferState.ActiveOutbound
+        val state = assertIs<PeerTransferState.ActiveOutbound.Sending>(engine.state.value)
         assertEquals(firstFile, state.currentFile)
     }
 
@@ -56,6 +58,51 @@ class PeerTransferEngineTest {
         runCurrent()
 
         assertIs<PeerTransferState.Cancelled>(engine.state.value)
+    }
+
+    @Test
+    fun `cancel during Claimed phase transitions to Cancelled`() = runTest {
+        val pauseChannel = Channel<Unit>(0)
+        val engine = buildEngine(pauseChannel = pauseChannel, scope = backgroundScope)
+
+        engine.startOutbound(listOf(FakeFileSource("a.txt", 100L), FakeFileSource("b.txt", 100L)))
+        assertIs<PeerTransferState.ActiveOutbound.Claimed>(engine.state.value)
+
+        engine.onCancel()
+        runCurrent()
+
+        assertIs<PeerTransferState.Cancelled>(engine.state.value)
+    }
+
+    @Test
+    fun `cancel during Claimed phase produces retryable Cancelled`() = runTest {
+        var factoryInvocations = 0
+        val engine = PeerTransferEngine(
+            peer = peer,
+            batchSenderFactory = {
+                factoryInvocations++
+                fakeBatchSender()()
+            },
+            inboundEvents = MutableSharedFlow(),
+            scope = backgroundScope,
+            peerPreferencesStore = FakePeerPreferencesStore(),
+        )
+
+        engine.startOutbound(listOf(FakeFileSource("a.txt", 100L), FakeFileSource("b.txt", 100L)))
+        assertIs<PeerTransferState.ActiveOutbound.Claimed>(engine.state.value)
+
+        engine.onCancel()
+        runCurrent()
+
+        assertIs<PeerTransferState.Cancelled>(engine.state.value)
+        // First launch was cancelled before its body executed — factory never called.
+        assertEquals(0, factoryInvocations)
+
+        engine.onRetryOutbound()
+        runCurrent()
+
+        assertEquals(1, factoryInvocations)
+        assertIs<PeerTransferState.Sent>(engine.state.value)
     }
 
     @Test
@@ -335,6 +382,31 @@ class PeerTransferEngineTest {
         val state = engine.state.value
         assertIs<PeerTransferState.Sent>(state)
         assertEquals(PartialOutcome.ConnectionLost, state.partialReason)
+    }
+
+    @Test
+    fun `concurrent startOutbound calls produce one launchBatch`() = runTest {
+        var factoryInvocations = 0
+        val engine = PeerTransferEngine(
+            peer = peer,
+            batchSenderFactory = {
+                factoryInvocations++
+                fakeBatchSender()()
+            },
+            inboundEvents = MutableSharedFlow(),
+            scope = backgroundScope,
+            peerPreferencesStore = FakePeerPreferencesStore(),
+        )
+
+        val sourcesA = listOf(FakeFileSource("a.txt", 100L))
+        val sourcesB = listOf(FakeFileSource("b.txt", 200L))
+        engine.startOutbound(sourcesA)
+        engine.startOutbound(sourcesB)
+        runCurrent()
+
+        assertEquals(1, factoryInvocations)
+        val state = engine.state.value as PeerTransferState.Sent
+        assertEquals("a.txt", state.perFile.first().name)
     }
 
     @Test

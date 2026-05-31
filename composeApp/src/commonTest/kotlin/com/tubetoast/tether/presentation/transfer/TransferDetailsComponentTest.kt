@@ -3,7 +3,8 @@ package com.tubetoast.tether.presentation.transfer
 import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.resume
-import com.tubetoast.tether.presentation.peer.Peer
+import com.tubetoast.tether.peer.Peer
+import com.tubetoast.tether.preferences.FakePeerPreferencesStore
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.FailureReason
 import com.tubetoast.tether.transfer.FakeFileSource
@@ -60,6 +61,7 @@ class TransferDetailsComponentTest {
             batchSenderFactory = fakeBatchSender(sendOneOverride = sendOneOverride, pauseChannel = pauseChannel),
             inboundEvents = MutableSharedFlow(),
             scope = scope,
+            peerPreferencesStore = FakePeerPreferencesStore(),
         )
         return PeerTransferComponent(
             componentContext = context,
@@ -139,8 +141,7 @@ class TransferDetailsComponentTest {
         )
         runCurrent()
 
-        val stateOnB = peerComponent.state.value.transfer
-        assertIs<PeerTransferState.ActiveOutbound>(stateOnB)
+        val stateOnB = assertIs<PeerTransferState.ActiveOutbound.Sending>(peerComponent.state.value.transfer)
         assertEquals("b.txt", stateOnB.currentFile)
 
         details.onCancelFile("b.txt")
@@ -174,8 +175,7 @@ class TransferDetailsComponentTest {
         )
         runCurrent()
 
-        val activeState = peerComponent.state.value.transfer
-        assertIs<PeerTransferState.ActiveOutbound>(activeState)
+        val activeState = assertIs<PeerTransferState.ActiveOutbound.Sending>(peerComponent.state.value.transfer)
         assertEquals("file1.txt", activeState.currentFile)
 
         details.onCancelFile("file2.txt")

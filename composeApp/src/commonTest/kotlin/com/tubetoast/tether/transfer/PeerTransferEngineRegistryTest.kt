@@ -1,5 +1,6 @@
 package com.tubetoast.tether.transfer
 
+import com.tubetoast.tether.preferences.FakePeerPreferencesStore
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -32,6 +33,7 @@ class PeerTransferEngineRegistryTest {
                     batchSenderFactory = fakeBatchSender(),
                     inboundEvents = MutableSharedFlow(),
                     scope = engineScope,
+                    peerPreferencesStore = FakePeerPreferencesStore(),
                 )
             },
         )
@@ -79,6 +81,7 @@ class PeerTransferEngineRegistryTest {
                     batchSenderFactory = fakeBatchSender(),
                     inboundEvents = MutableSharedFlow(),
                     scope = engineScope,
+                    peerPreferencesStore = FakePeerPreferencesStore(),
                 )
             },
         )
