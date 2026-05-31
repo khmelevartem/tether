@@ -187,6 +187,17 @@ private fun TransferProgressBar(
     ProgressBar(progress = progress, modifier = modifier)
 }
 
+@Preview(name = "PeerCardActiveOutbound — claimed")
+@Composable
+private fun PreviewActiveOutboundClaimed(@PreviewParameter(Themes::class) dark: Boolean) =
+    PreviewSurface(darkTheme = dark) {
+        PeerCardActiveOutbound(
+            state = TransferPreviewFixtures.activeOutboundClaimed,
+            device = TransferPreviewFixtures.device,
+            callbacks = previewCardCallbacks(),
+        )
+    }
+
 @Preview(name = "PeerCardActiveOutbound — normal")
 @Composable
 private fun PreviewActiveOutbound(@PreviewParameter(Themes::class) dark: Boolean) =

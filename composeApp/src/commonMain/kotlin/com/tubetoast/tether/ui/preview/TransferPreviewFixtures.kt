@@ -16,6 +16,17 @@ object TransferPreviewFixtures {
     val idleCollapsed = PeerTransferState.Idle(peer)
     val idleExpanded = PeerTransferState.Idle(peer)
 
+    val activeOutboundClaimed = PeerTransferState.ActiveOutbound.Claimed(
+        peer = peer,
+        totalFiles = 3,
+        totalBytes = 31_457_280L,
+        perFile = listOf(
+            PerFileStatus.Queued("photo_001.jpg", 10_485_760L),
+            PerFileStatus.Queued("photo_002.jpg", 10_485_760L),
+            PerFileStatus.Queued("photo_003.jpg", 10_485_760L),
+        ),
+    )
+
     val activeOutbound = PeerTransferState.ActiveOutbound.Sending(
         peer = peer,
         currentFile = "vacation_photo_2024_summer_beach_holiday.jpg",
