@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -106,6 +107,35 @@ class AutoSendDispatcherTest {
         repeat(4) { runCurrent() }
 
         assertIs<PeerTransferState.Idle>(registry.engineFor(peerA.id).state.value)
+        assertNotNull(pendingRepo.summary.value)
+    }
+
+    @Test
+    fun `engine is not created when auto-send is OFF`() = runTest {
+        val store = FakePeerPreferencesStore()
+        val peersRepo = FakePeersRepository(MutableStateFlow(listOf(peerA)))
+        val pendingRepo = PendingFilesRepository()
+        var factoryCallCount = 0
+        val registry = PeerTransferEngineRegistry(
+            appScope = backgroundScope,
+            engineFactory = { peer, scope ->
+                factoryCallCount++
+                PeerTransferEngine(
+                    peer = peer,
+                    batchSenderFactory = fakeBatchSender(),
+                    inboundEvents = MutableSharedFlow(),
+                    scope = scope,
+                    peerPreferencesStore = store,
+                )
+            },
+        )
+        buildDispatcher(peersRepo, pendingRepo, store, registry, backgroundScope).start()
+        runCurrent()
+
+        pendingRepo.setPending(PendingFilesSummary(1, 100L), listOf(FakeFileSource("a.txt", 100L)))
+        repeat(4) { runCurrent() }
+
+        assertEquals(0, factoryCallCount)
         assertNotNull(pendingRepo.summary.value)
     }
 

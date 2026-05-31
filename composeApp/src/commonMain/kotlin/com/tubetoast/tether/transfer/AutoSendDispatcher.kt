@@ -26,19 +26,19 @@ class AutoSendDispatcher(
             if (sources.isEmpty()) return@combine
             val onlinePaired = peers.filter { it.isOnline }.map { it.id }
             val singleCandidate = onlinePaired.singleOrNull() ?: return@combine
-            val engine = engineRegistry.engineFor(singleCandidate)
-            if (engine.state.value !is PeerTransferState.Idle) return@combine
             val autoSendEnabled = peerPreferencesStore
                 .observeAutoSend(singleCandidate)
                 .catch { emit(false) }
                 .first()
+            if (!autoSendEnabled) return@combine
             // mDNS may have added a peer, sources may have been cleared, or the engine may have transitioned out of Idle.
             val sourcesAfter = pendingFilesRepository.sources.value
             if (sourcesAfter.isEmpty()) return@combine
             val onlineAfter = peersRepository.peers.value
                 .filter { it.isOnline }
                 .map { it.id }
-            if (onlineAfter.singleOrNull() != singleCandidate || !autoSendEnabled) return@combine
+            if (onlineAfter.singleOrNull() != singleCandidate) return@combine
+            val engine = engineRegistry.engineFor(singleCandidate)
             if (engine.state.value !is PeerTransferState.Idle) return@combine
             engine.startOutbound(sourcesAfter)
             pendingFilesRepository.clear()
