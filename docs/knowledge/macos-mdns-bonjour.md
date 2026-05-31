@@ -60,6 +60,17 @@ platform-specific patterns (ObjC delegate GC, NSRunLoop in tests,
 Local Network Privacy on iOS) that remain relevant for all
 NSNetService-based implementations.
 
+## Self-suppression: snapshot vs live evaluation
+
+The set of local IPv4 addresses changes whenever the user switches networks (Wi-Fi → hotspot → home Wi-Fi). A self-suppression predicate that captures `NetworkInterface.getNetworkInterfaces()` once at start time is stale the moment the device joins a different network: an inbound mDNS announce arriving from an IP not in the snapshot passes through and the device enters its own peer list.
+
+Two layered checks together cover the cases the snapshot misses:
+
+- Match the peer's TXT `fp` against own fingerprint — the only check that survives mid-session network switches because the fingerprint is per-install-stable.
+- Fall back to a **live** `localAddresses().contains(host)` call inside the predicate for the window where TXT has not yet been resolved (`DNSServiceResolve` and `DNSServiceGetAddrInfo` are separate callbacks).
+
+Capturing local-IP state once into a lambda or field is the anti-pattern; re-resolve on every `emitIfReady` call.
+
 ## Where to look
 
 - [`MdnsDiscovery.jvm.kt`](../../composeApp/src/desktopMain/kotlin/com/tubetoast/tether/discovery/MdnsDiscovery.jvm.kt) — factory by `os.name`
