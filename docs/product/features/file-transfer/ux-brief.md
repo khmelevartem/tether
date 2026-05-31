@@ -31,6 +31,10 @@ DeviceListScreen  (existing — touched)
       │                                                           │
       │                                           (PeerCard → Active outbound)
       │
+      ├── [tap peer, busy (active/reconnecting), pending outbound exists]
+      │       (inert tap; pending selection preserved;
+      │        banner switches to busy-peer variant)
+      │
       └── [tap peer, idle, no pending outbound] ─────────────────┐
                                                                   ▼
                                           MobilePickerChooserSheet (Android + iOS only)
@@ -67,22 +71,31 @@ DeviceListScreen is owned by [device-list/ux-brief.md](../device-list/ux-brief.m
 
 - **iOS foreground constraint banner** (iOS only, present during any active transfer): persistent, non-dismissible. Copy: "Keep Tether open to complete the transfer."
 - **Pending-outbound banner** (present only when files are queued but no peer chosen yet): renders below the iOS constraint banner when both are shown. Copy: "Ready to send \<N\> files (\<size\>). Pick a device below." with [Cancel button] on the right. No self-dismiss.
+  - **Busy-peer variant** (rendered in place of the default copy when the pending selection is still held AND any of: the user just tapped a PeerCard that is currently in Active outbound, Active inbound, or Connection paused / reconnecting state; or Flow 3 auto-send was suppressed because the sole online paired peer is in one of those states on share-sheet / drag-drop arrival): "\<peer\> is busy with another transfer. Your \<N\> files (\<size\>) are still ready — tap \<peer\> again when it's done, or pick a different device." [Cancel button] stays available on the right. When the busy peer's transfer reaches a terminal state (Sent / Received / Error / Cancelled) the card does NOT return to Idle — it sits in the terminal state until the user dismisses it. The banner accordingly switches to the **terminal-display variant** described next.
+  - **Terminal-display variant** (rendered when the pending selection is still held AND any of: the user just tapped — or is still holding pending against — a PeerCard that is in a terminal state Sent / Received / Error / Cancelled; or Flow 3 auto-send was suppressed because the sole online paired peer is in one of those terminal states on share-sheet / drag-drop arrival): "\<peer\>'s last transfer is still showing. Tap × on \<peer\>'s card to dismiss it, then tap \<peer\> again — or pick a different device." [Cancel button] stays available on the right. The banner reverts to the default copy as soon as the user dismisses the terminal state on that PeerCard or taps a different idle peer.
 
 **State overlays on the populated list.**
 
-- **With pending outbound:** Tapping any PeerCard body transitions that card to Active outbound (per PeerCard below) and dismisses the pending-outbound banner.
+- **With pending outbound, peer Idle:** Tapping that PeerCard body transitions it to Active outbound (per PeerCard below) and dismisses the pending-outbound banner.
+- **With pending outbound, peer busy (Active outbound / Active inbound / Connection paused / reconnecting):** Tapping that PeerCard body is a no-op for the card state — the card stays in its current transfer state and the pending selection is preserved verbatim. The pending-outbound banner stays on screen and updates its copy to explain why the tap did not start a send (see banner busy-peer variant above). On the next tap of the same card while it is still busy, the banner copy is re-asserted (live-region re-announced) so screen-reader users get feedback.
+- **With pending outbound, peer in a terminal state (Sent / Error / Cancelled):** Tapping that PeerCard body is a no-op for the card state — the existing terminal layout stays exactly as it is (its own [Dismiss ×], [Retry], [Show details →] affordances behave per PeerCard § Interactions and remain reachable). The pending selection is preserved verbatim. The pending-outbound banner switches to (or re-asserts) the terminal-display variant naming this peer. The terminal state is intentionally not auto-dismissed by the tap: dismissing it is the user's call, and overloading the tap would silently throw away a Sent / Error / Cancelled notification the user may want to read or retry (Error). Once the user taps [Dismiss ×] on the card, it returns to Idle, the banner reverts to default copy, and the next tap on the card initiates the send per the Idle rule above.
+- **With pending outbound, peer in Received (inbound complete):** Tapping that PeerCard body fires its own Received card-body behaviour (OS deep-link to the saved folder, with inline-hint fallback) per PeerCard § Received. The card-body tap does NOT initiate the pending send — opening just-received files and starting a new send are distinct user intents, and the Received affordance wins. The pending selection is preserved verbatim. The pending-outbound banner switches to (or re-asserts) the terminal-display variant naming this peer. Once the user taps [Dismiss ×] on the card, it returns to Idle, the banner reverts to default copy, and the next tap on the card initiates the send per the Idle rule above.
 - **iOS foreground constraint:** banner persists while any transfer is active; disappears automatically when no transfer is active.
 
 **Interactions contributed by file-transfer.**
 
-- Tap pending-outbound banner [Cancel button]: clears pending selection, dismisses the banner. No confirm dialog.
-- Tap PeerCard body when pending outbound exists: initiates send to that peer. On any platform: first shows LargeSelectionConfirmDialog if threshold exceeded, then transitions card to Active outbound.
+- Tap pending-outbound banner [Cancel button]: clears pending selection, dismisses the banner. No confirm dialog. Available in both default and busy-peer banner variants.
+- Tap PeerCard body when pending outbound exists and the peer is Idle: initiates send to that peer. On any platform: first shows LargeSelectionConfirmDialog if threshold exceeded, then transitions card to Active outbound.
+- Tap PeerCard body when pending outbound exists and the peer is busy (Active outbound / Active inbound / Connection paused / reconnecting): no card-state change; pending selection preserved; banner switches to (or re-asserts) the busy-peer variant naming this peer. Tapping the busy card's own [Cancel button] (the in-card transfer cancel) is unaffected and still cancels the in-flight transfer per PeerCard.
+- Tap PeerCard body when pending outbound exists and the peer is in a terminal state (Sent / Received / Error / Cancelled): no card-state change; pending selection preserved; banner switches to (or re-asserts) the terminal-display variant naming this peer. The card's in-place affordances ([Dismiss ×], [Retry] on Error, [Show details →], Received-state deep-link via the card body's Received-specific tap target) continue to work; only the "tap the empty card body to start a new send" semantics are suppressed while a terminal state is on display. Tapping [Dismiss ×] returns the card to Idle and the banner to default copy; the next tap on the card then initiates the send.
 - Tap PeerCard body when no pending outbound exists: on Android/iOS, opens MobilePickerChooserSheet. On macOS/Desktop, opens system file dialog. (This extends device-list's "tap reachable PeerCard → file-send flow" hand-off.)
 - All other PeerCard interactions: handled within the card itself (see PeerCard below).
 
 **Copy contributed by file-transfer.**
 
 - "Ready to send \<N\> files (\<size\>). Pick a device below."
+- "\<peer\> is busy with another transfer. Your \<N\> files (\<size\>) are still ready — tap \<peer\> again when it's done, or pick a different device." (pending-outbound banner, busy-peer variant)
+- "\<peer\>'s last transfer is still showing. Tap × on \<peer\>'s card to dismiss it, then tap \<peer\> again — or pick a different device." (pending-outbound banner, terminal-display variant)
 - "Keep Tether open to complete the transfer." (iOS only)
 
 **Per-platform deltas contributed by file-transfer.**
@@ -94,7 +107,8 @@ DeviceListScreen is owned by [device-list/ux-brief.md](../device-list/ux-brief.m
 
 **Accessibility contributed by file-transfer.**
 
-- Pending-outbound banner is a live region (assertive); announces once when it first appears and when content changes.
+- Pending-outbound banner is a live region (assertive); announces once when it first appears and when content changes. Switching between the default, busy-peer, and terminal-display variants counts as a content change and is re-announced. A repeat tap on the same already-busy or already-terminal PeerCard also re-announces the matching copy so the user gets feedback that their tap was received even though no transfer started.
+- After a no-op tap on a busy PeerCard or on a terminal-state PeerCard (with pending outbound held), keyboard focus (Desktop/macOS) stays on that PeerCard — focus does not jump to the banner. The banner's content-change announcement is the user-visible feedback; focus relocation would be disorienting.
 - [Cancel button] semantic label: "Cancel pending transfer".
 - iOS foreground constraint banner: role is `alert`; announced once when it appears.
 
@@ -136,6 +150,7 @@ Card swells. Transfer in progress from this device to the peer.
 - Skip-count badge (appears only when ≥1 file skipped): muted-tone secondary badge: "\<N\> files skipped".
 - A [Show details →] button opens TransferDetailsScreen in its in-progress mode (live view of files-received-so-far). Optional drill-down for large batches; the card remains the primary surface.
 - [Cancel button] in the trailing position (explicitly a button, visually distinct, labeled "Cancel").
+- Tap on the card body (anywhere other than [Cancel button] / [Show details →]) is inert in this state. If a pending outbound exists, the tap is acknowledged via the pending-outbound banner's busy-peer variant (see DeviceListScreen § Banners and § Interactions) — no card-state change, pending selection preserved verbatim.
 
 #### 4. Active inbound (receiving)
 
@@ -148,6 +163,7 @@ Symmetric to Active outbound. Card swells.
 - A [Show details →] button opens TransferDetailsScreen in its in-progress mode.
 - Transfer speed: "3.2 MB/s".
 - [Cancel button] in the trailing position.
+- Tap on the card body (anywhere other than [Cancel button] / [Show details →]) is inert in this state. If a pending outbound exists, the tap is acknowledged via the pending-outbound banner's busy-peer variant — no card-state change, pending selection preserved verbatim.
 
 #### 5. Connection paused / reconnecting
 
@@ -161,6 +177,7 @@ Triggered when the underlying connection drops without a graceful end (neither s
 - If `RECONNECTION_TIMEOUT` elapses without reconnection: card transitions to Error state.
 - Each disconnect starts a fresh `RECONNECTION_TIMEOUT` countdown. A successful reconnect followed by a new disconnect restarts the timer from zero.
 - No user action required or available in this state (no Cancel — user cannot cancel a reconnecting transfer; they can wait or the system will timeout to Error).
+- Tap on the card body is inert. If a pending outbound exists, the tap is acknowledged via the pending-outbound banner's busy-peer variant — no card-state change, pending selection preserved verbatim. Once this state resolves (back to Active outbound/inbound, or forward to Error), pending-outbound tap semantics follow that successor state.
 
 #### 6. Received (inbound complete)
 
@@ -243,6 +260,9 @@ Brief inline state. Persistent — does not self-dismiss.
 **Interactions (all states).**
 
 - Tap card body (Idle): initiates send flow (see DeviceListScreen interactions).
+- Tap card body (Active outbound / Active inbound / Connection paused / reconnecting): inert for card state. If pending outbound exists, surfaces the pending-outbound banner's busy-peer variant (see DeviceListScreen § Banners and § Interactions); pending selection preserved verbatim.
+- Tap card body (Sent / Cancelled / Error) when pending outbound exists: inert for card state — the terminal layout stays put with all its affordances ([Dismiss ×], [Retry] on Error, [Show details →]) reachable. The pending-outbound banner switches to (or re-asserts) the terminal-display variant naming this peer; pending selection preserved verbatim. Card returns to Idle only when the user taps [Dismiss ×], at which point the banner reverts to default copy and the next card-body tap initiates the send.
+- Tap card body (Received) when pending outbound exists: the Received-state deep-link-tap behaviour wins — tap attempts the OS deep-link to the saved folder (per Received state above). The card stays in Received; pending selection is preserved verbatim; the pending-outbound banner shows the terminal-display variant naming this peer to remind the user the pending send is still queued. Dismissing the Received state via [Dismiss ×] returns the card to Idle and the banner to default copy; the next card-body tap then initiates the send.
 - Tap chevron `▾` (Idle collapsed): expands card to Idle (expanded).
 - Tap chevron `▴` (Idle expanded): collapses card.
 - Tap per-peer auto-send toggle (Idle expanded): flips preference immediately (no confirm dialog — preference is local to this peer).
@@ -588,11 +608,23 @@ Auto-send is configured per-peer via the expanded PeerCard (see PeerCard § Idle
 4. If selection exceeds threshold: LargeSelectionConfirmDialog. Otherwise: proceeds directly.
 5. PeerCard transitions to Active outbound — same as Flow 1 from step 5.
 
+### Flow 2a — Share-sheet entry, target peer is busy with another transfer
+
+1. User taps Share → Tether (or drags files onto the Tether window). Tether opens at DeviceListScreen with the pending-outbound banner (default copy): "Ready to send \<N\> files (\<size\>). Pick a device below."
+2. User taps target PeerCard body. That PeerCard is currently in Active outbound, Active inbound, or Connection paused / reconnecting (a transfer with that peer is already in flight).
+3. No card-state change. Pending selection stays held verbatim. The pending-outbound banner switches to its busy-peer variant: "\<peer\> is busy with another transfer. Your \<N\> files (\<size\>) are still ready — tap \<peer\> again when it's done, or pick a different device." The banner's content change is announced (assertive live region); keyboard focus stays on the PeerCard.
+4. From here, the user has three deterministic paths back:
+   - **Wait for the busy peer.** When the in-flight transfer reaches a terminal state (Sent / Received / Error / Cancelled — including post-Reconnecting Error), the PeerCard sits in that terminal state — it does NOT return to Idle on its own. The pending-outbound banner switches from the busy-peer variant to the terminal-display variant: "\<peer\>'s last transfer is still showing. Tap × on \<peer\>'s card to dismiss it, then tap \<peer\> again — or pick a different device." The user taps [Dismiss ×] on that PeerCard; the card returns to Idle and the banner reverts to default copy. The user taps the same PeerCard body again — now Idle — and the original pending-outbound flow proceeds from Flow 2 step 4 (LargeSelectionConfirmDialog if threshold exceeded, else card transitions to Active outbound). The user MAY instead choose to inspect the terminal state first ([Show details →], the Received-state OS deep-link, or [Retry] on Error); those affordances stay reachable while pending is held, and the pending selection is preserved verbatim throughout.
+   - **Pick a different idle peer.** User taps any other Idle PeerCard. The pending-outbound banner is dismissed and the send proceeds against the newly-chosen peer per Flow 2 step 4.
+   - **Abandon the send.** User taps [Cancel button] on the banner. Pending selection cleared, banner dismissed; busy peer's transfer is unaffected.
+
 ### Flow 3 — Auto-send ON, one peer online (share-sheet entry)
 
 1. User taps Share → Tether (or drags files onto the Tether window on macOS/Desktop). Per-peer auto-send toggle for the sole online peer is On.
-2. DeviceListScreen opens. PeerCard transitions immediately to Active outbound without requiring a device-list tap.
-3. Transfer begins. PeerCard shows Active outbound state.
+2. DeviceListScreen opens.
+   - **Sole online peer is Idle:** PeerCard transitions immediately to Active outbound without requiring a device-list tap. Transfer begins.
+   - **Sole online peer is busy (Active outbound / Active inbound / Connection paused / reconnecting) or in a terminal state (Sent / Received / Error / Cancelled):** auto-send cannot fire — the peer is not Idle, and queueing the new payload to follow the active transfer is out of scope. The screen falls back to the manual pending-outbound flow: the pending-outbound banner appears in the matching variant (busy-peer variant when the peer is busy; terminal-display variant when the peer is in a terminal state) naming the auto-send peer. From here the user follows Flow 2a — wait for the busy peer (and dismiss its terminal state), pick a different idle peer (none available if this is the sole online peer, so the user waits or abandons), or tap the banner's [Cancel button] to abandon the send. Auto-send does not re-fire automatically once the peer becomes Idle: the user must tap the PeerCard to initiate the send. This mirrors the UX the user would have gotten had auto-send been Off.
+3. Transfer begins (in the Idle branch). PeerCard shows Active outbound state.
 
 ### Flow 4 — First-time auto-send discovery via PeerCard expansion
 
@@ -715,7 +747,7 @@ Auto-send is configured per-peer via the expanded PeerCard (see PeerCard § Idle
 4. **Transfer success affirmation** — brief visual moment after completion. Used in PeerCard Received/Sent states.
 5. **Transfer error indicator** — illustration distinct from progress and searching. Used in PeerCard Error state.
 6. **Transfer reconnecting indicator** — animated searching illustration. Used in PeerCard Connection paused/reconnecting state to indicate the app is searching for the peer again.
-7. **Pending-outbound banner** — non-dismissible strip above peer-cards; persistent until peer chosen or [Cancel button] tapped; no self-dismiss.
+7. **Pending-outbound banner** — non-dismissible strip above peer-cards; persistent until peer chosen or [Cancel button] tapped; no self-dismiss. Carries two copy variants asserted on top of the default copy: a **busy-peer variant** when the user taps a PeerCard already in an active or reconnecting state while pending files are held, and a **terminal-display variant** when the user taps (or holds pending against) a PeerCard sitting in a terminal state (Sent / Received / Error / Cancelled) that has not yet been dismissed.
 8. **iOS foreground constraint banner** — persistent non-dismissible system-style banner informing the user to keep Tether open during transfers; iOS only.
 9. **Current-file label** — one-line center-truncated filename display. Used on PeerCard Active states.
 10. **Progress and speed label pair** — "X.X MB of Y.Y MB" and "3.2 MB/s" shown together; always both visible during active transfer.
