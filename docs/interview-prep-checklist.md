@@ -16,7 +16,7 @@
 - [ ] `copy` — поверхностная копия, что с этим делать
 - [ ] `value class` (`@JvmInline`) — боксинг/анбоксинг, когда vs `data class`
 - [ ] `data object` (Kotlin 1.9+) — чем отличается от `object` и `data class`
-- [ ] `sealed class` vs `sealed interface` — когда что, exhaustive `when`
+- [x] `sealed class` vs `sealed interface` — когда что, exhaustive `when`
 - [ ] `object` — singleton, companion object, thread-safety, порядок инициализации
 - [ ] `inner class` vs вложенный класс — захват ссылки, утечки памяти
 - [ ] Делегирование через `by` — `lazy`, `observable`, `vetoable`, кастомные делегаты
