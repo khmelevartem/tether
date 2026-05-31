@@ -66,14 +66,7 @@ class PeerTransferEngine(
         activeJob?.cancel()
         activeJob = null
         _state.update { current ->
-            if (current is PeerTransferState.ActiveOutbound) {
-                val perFile = current.perFile
-                val sent = perFile.count { it is PerFileStatus.Done }
-                val remaining = perFile.filter { it !is PerFileStatus.Done }.map { it.name }
-                PeerTransferState.Cancelled(peer = peer, sent = sent, remaining = remaining, perFile = perFile)
-            } else {
-                current
-            }
+            if (current is PeerTransferState.ActiveOutbound) cancelledFromActive(current) else current
         }
     }
 
@@ -171,16 +164,22 @@ class PeerTransferEngine(
         } finally {
             currentSender = null
             _state.update { current ->
-                if (current is PeerTransferState.ActiveOutbound) {
-                    val perFile = current.perFile
-                    val sent = perFile.count { it is PerFileStatus.Done }
-                    val remaining = perFile.filter { it !is PerFileStatus.Done }.map { it.name }
-                    PeerTransferState.Cancelled(peer = peer, sent = sent, remaining = remaining, perFile = perFile)
-                } else {
-                    current
-                }
+                if (current is PeerTransferState.ActiveOutbound) cancelledFromActive(current) else current
             }
         }
+    }
+
+    private fun cancelledFromActive(current: PeerTransferState.ActiveOutbound): PeerTransferState.Cancelled {
+        val perFile = current.perFile.map { entry ->
+            if (entry is PerFileStatus.Done) {
+                entry
+            } else {
+                PerFileStatus.Failed(entry.name, entry.size, FailureReason.TransferCancelled)
+            }
+        }
+        val sent = perFile.count { it is PerFileStatus.Done }
+        val remaining = perFile.filter { it !is PerFileStatus.Done }.map { it.name }
+        return PeerTransferState.Cancelled(peer = peer, sent = sent, remaining = remaining, perFile = perFile)
     }
 
     private fun mapProgress(progress: BatchProgress): PeerTransferState = when (progress) {

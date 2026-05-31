@@ -75,6 +75,36 @@ class PeerTransferEngineTest {
     }
 
     @Test
+    fun `cancel during Claimed phase produces retryable Cancelled`() = runTest {
+        var factoryInvocations = 0
+        val engine = PeerTransferEngine(
+            peer = peer,
+            batchSenderFactory = {
+                factoryInvocations++
+                fakeBatchSender()()
+            },
+            inboundEvents = MutableSharedFlow(),
+            scope = backgroundScope,
+            peerPreferencesStore = FakePeerPreferencesStore(),
+        )
+
+        engine.startOutbound(listOf(FakeFileSource("a.txt", 100L), FakeFileSource("b.txt", 100L)))
+        assertIs<PeerTransferState.ActiveOutbound.Claimed>(engine.state.value)
+
+        engine.onCancel()
+        runCurrent()
+
+        assertIs<PeerTransferState.Cancelled>(engine.state.value)
+        assertEquals(1, factoryInvocations)
+
+        engine.onRetryOutbound()
+        runCurrent()
+
+        assertEquals(2, factoryInvocations)
+        assertIs<PeerTransferState.Sent>(engine.state.value)
+    }
+
+    @Test
     fun `inbound Started Progress FileCompleted BatchCompleted produces Received`() = runTest {
         val events = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
         val engine = buildEngine(events = events, scope = backgroundScope)
