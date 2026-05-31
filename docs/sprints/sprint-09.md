@@ -1,3 +1,5 @@
+# Sprint 09 · Маяки в Тумане
+
 ## Цель спринта
 
 Дозакрыть transfer UI-полотно (#191 carryover) и параллельно поднять reliability-слой перед MVP: Android FGS-тип, app-layer keepalive, hotspot Phase A. Sender wiring и receiver UI ждут окончания #191 — едут следующим спринтом.

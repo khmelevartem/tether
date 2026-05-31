@@ -1,3 +1,5 @@
+# Sprint 08 · Полотно Передачи
+
 ## Цель спринта
 
 Прицельный заход на file-transfer: общий UI-слой передачи (TransferScreen, dialogs, PeerCard expansion) поверх state-machine из #190, плюс закрытие двух concurrent-upload рейсов в FileServer. После спринта появляется видимый transfer-флоу на всех платформах, а receiver больше не теряет данные при параллельных upload'ах в одну папку.

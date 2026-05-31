@@ -173,26 +173,30 @@ Good combinations for parallel work:
 
 ## Step 6 — Sprint doc format
 
-Save to `docs/sprints/sprint-NN.md`. Only three mandatory sections + one optional. Nothing beyond that.
+Save to `docs/sprints/sprint-NN.md`. Format:
 
 ```markdown
-## Sprint goal
+# Sprint NN · <Skyrim-codename>
 
-<1–2 sentences. User-facing increment after the sprint — not a task list, but what changes in the product / for development.>
+**Направления:** <area1> · <area2> · <area3>
 
-## Composition
+## Состав
 
-| # | Issue | Title | Type | Size |
-| - | ----- | ----- | ---- | ---- |
+| # | Issue | Название | Тип | Размер |
+| - | ----- | -------- | --- | ------ |
 
-## Consequences
+## Что разблокирует
 
-<1–3 items. Unblocked directions — what becomes possible after this sprint. Not "task N is done, now we have result N" — the increment is already described in the Goal. Minor infra/bug fixes don't need a mention.>
+<1–3 буллета. Только «после X следующее становится возможным Y» — не пересказ того, что задача делает. Если буллет начинается с «После X шипнуто Y» без следующего шага — выкинуть.>
 
-## Merge order (optional)
+## Порядок мерджа (опционально)
 
-<If it matters for minimising rebases: #A → #B → #C. Otherwise omit the section.>
+<Если важен для минимизации rebase: #A → #B → #C, `||` маркирует параллельные ветки. Иначе секция опускается.>
 ```
+
+**Направления.** Функциональные области, по которым идут задачи спринта: `паринг`, `передача`, `обнаружение`, `UI`, `надёжность`, `скиллы`, `документация`, и т.п. Flat list через `·`. Не цели и не commit'ы — просто метка, куда смотреть. Один спринт обычно покрывает 2–4 направления; больше — сигнал что задачи разъезжаются и спринт теряет фокус.
+
+**Skyrim-codename.** Декоративное название в стиле провинций Тамриэля / эпических заветов («Печать Первого Касания», «Завет Четырёх Клинков») — для атмосферы и удобства узнавания в `/progress` и retro. **Не несёт смысловой нагрузки.** `/sprint-pick`, `/progress`, агенты при выборе задач — не должны парсить или анализировать subtitle. Номер `NN` остаётся единственным machine-readable идентификатором.
 
 **Size (for the column):**
 - **S** — isolated change with no platform specifics
@@ -200,13 +204,14 @@ Save to `docs/sprints/sprint-NN.md`. Only three mandatory sections + one optiona
 - **L** — new component / multiple platforms / lots of unknowns
 
 **What must NOT be in the sprint doc:**
+- A prose "Sprint goal" paragraph. Sprints in this project = parallel agent loadout + merge order, not a customer-visible increment commitment. Directions tag + composition table + merge order carry all the load.
 - Justifications for why a task was chosen ("priority", "because it blocks #N").
 - Parallelism tables by layer, conflict matrices.
-- External blocking chains — that goes in Consequences, in one sentence.
+- External blocking chains — that goes in «Что разблокирует», in one sentence.
 - A "not included intentionally" list — it lives in the issue backlog, not the sprint doc.
 - A list of related product specs — specs are linked from issues, not duplicated here.
 - Per-task DoD / acceptance criteria expansion.
 
-When closing the sprint (Step 0), an `Outcome` column is appended to the "Composition" table, and a `## Additional results` section is added — this is the only thing that grows on top of the plan.
+When closing the sprint (Step 0), an `Итог` column is appended to the «Состав» table, and a `## Дополнительные результаты` section is added — this is the only thing that grows on top of the plan.
 
 If there are tasks among the candidates without a spec — explicitly ask before saving whether a spec needs to be created.
