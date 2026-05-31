@@ -13,6 +13,7 @@ import com.tubetoast.tether.preferences.PeerPreferencesStore
 import com.tubetoast.tether.presentation.RootComponentFactory
 import com.tubetoast.tether.presentation.peer.PeersRepository
 import com.tubetoast.tether.security.TrustedDeviceStore
+import com.tubetoast.tether.transfer.AutoSendDispatcher
 import com.tubetoast.tether.transfer.BatchSender
 import com.tubetoast.tether.transfer.ConnectionMonitor
 import com.tubetoast.tether.transfer.NoOpConnectionMonitor
@@ -71,7 +72,18 @@ abstract class AppContainer {
         )
     }
 
+    open val autoSendDispatcher: AutoSendDispatcher by lazy {
+        AutoSendDispatcher(
+            peersRepository = peersRepository,
+            pendingFilesRepository = pendingFilesRepository,
+            peerPreferencesStore = peerPreferencesStore,
+            engineRegistry = peerTransferEngineRegistry,
+            scope = appScope,
+        ).also { it.start() }
+    }
+
     open val rootComponentFactory: RootComponentFactory by lazy {
+        autoSendDispatcher
         RootComponentFactory(
             peersRepository = peersRepository,
             peerTransferEngineRegistry = peerTransferEngineRegistry,

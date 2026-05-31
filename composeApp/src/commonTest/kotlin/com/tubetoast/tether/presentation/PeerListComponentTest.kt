@@ -4,6 +4,7 @@ import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.resume
 import com.tubetoast.tether.discovery.FakeDeviceDiscovery
+import com.tubetoast.tether.preferences.FakePeerPreferencesStore
 import com.tubetoast.tether.presentation.banners.BannersComponent
 import com.tubetoast.tether.presentation.peer.FakePeersRepository
 import com.tubetoast.tether.presentation.peer.Peer
@@ -346,6 +347,7 @@ class PeerListComponentTest {
                     batchSenderFactory = fakeBatchSender(),
                     inboundEvents = MutableSharedFlow(),
                     scope = coroutineScope,
+                    peerPreferencesStore = FakePeerPreferencesStore(),
                 )
                 PeerTransferComponent(
                     componentContext = childCtx,
@@ -390,6 +392,7 @@ class PeerListComponentTest {
                     batchSenderFactory = fakeBatchSender(),
                     inboundEvents = MutableSharedFlow(),
                     scope = coroutineScope,
+                    peerPreferencesStore = FakePeerPreferencesStore(),
                 )
                 PeerTransferComponent(
                     componentContext = childCtx,

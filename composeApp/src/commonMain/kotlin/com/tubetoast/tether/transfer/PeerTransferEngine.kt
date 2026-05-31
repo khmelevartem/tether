@@ -8,7 +8,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.time.Duration
@@ -27,7 +26,7 @@ class PeerTransferEngine(
     private val inboundEvents: Flow<ReceiveEvent> = MutableSharedFlow(),
     private val reconnectionTimeout: Duration = ReconnectionTimeout.DEFAULT,
     private val scope: CoroutineScope,
-    private val peerPreferencesStore: PeerPreferencesStore? = null,
+    private val peerPreferencesStore: PeerPreferencesStore,
 ) {
     private val _state = MutableStateFlow<PeerTransferState>(PeerTransferState.Idle(peer))
     val state: StateFlow<PeerTransferState> = _state.asStateFlow()
@@ -136,12 +135,10 @@ class PeerTransferEngine(
         }
     }
 
-    fun observeAutoSend(): Flow<Boolean> =
-        peerPreferencesStore?.observeAutoSend(peer) ?: flowOf(false)
+    fun observeAutoSend(): Flow<Boolean> = peerPreferencesStore.observeAutoSend(peer)
 
     fun setAutoSend(enabled: Boolean) {
-        val store = peerPreferencesStore ?: return
-        scope.launch { store.setAutoSend(peer, enabled) }
+        scope.launch { peerPreferencesStore.setAutoSend(peer, enabled) }
     }
 
     private fun launchBatch(sources: List<FileSource>) {

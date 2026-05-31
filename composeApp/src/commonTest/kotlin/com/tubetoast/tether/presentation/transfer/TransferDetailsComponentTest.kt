@@ -3,6 +3,7 @@ package com.tubetoast.tether.presentation.transfer
 import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.resume
+import com.tubetoast.tether.preferences.FakePeerPreferencesStore
 import com.tubetoast.tether.presentation.peer.Peer
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.FailureReason
@@ -60,6 +61,7 @@ class TransferDetailsComponentTest {
             batchSenderFactory = fakeBatchSender(sendOneOverride = sendOneOverride, pauseChannel = pauseChannel),
             inboundEvents = MutableSharedFlow(),
             scope = scope,
+            peerPreferencesStore = FakePeerPreferencesStore(),
         )
         return PeerTransferComponent(
             componentContext = context,

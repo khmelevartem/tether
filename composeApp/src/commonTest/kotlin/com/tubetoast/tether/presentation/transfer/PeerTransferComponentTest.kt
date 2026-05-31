@@ -4,6 +4,7 @@ import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.essenty.lifecycle.Lifecycle
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.resume
+import com.tubetoast.tether.preferences.FakePeerPreferencesStore
 import com.tubetoast.tether.presentation.peer.Peer
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.FakeFileSource
@@ -61,6 +62,7 @@ class PeerTransferComponentTest {
             batchSenderFactory = fakeBatchSender(),
             inboundEvents = MutableSharedFlow(),
             scope = scope,
+            peerPreferencesStore = FakePeerPreferencesStore(),
         )
         val component = PeerTransferComponent(
             componentContext = context,
@@ -155,6 +157,7 @@ class PeerTransferComponentTest {
                     batchSenderFactory = fakeBatchSender(pauseChannel = pauseChannel),
                     inboundEvents = MutableSharedFlow(),
                     scope = engineScope,
+                    peerPreferencesStore = FakePeerPreferencesStore(),
                 )
             },
         )

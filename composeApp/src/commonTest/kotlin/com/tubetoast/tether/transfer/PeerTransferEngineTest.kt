@@ -1,5 +1,6 @@
 package com.tubetoast.tether.transfer
 
+import com.tubetoast.tether.preferences.FakePeerPreferencesStore
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -24,6 +25,7 @@ class PeerTransferEngineTest {
         batchSenderFactory = fakeBatchSender(sendOneOverride = sendOneOverride, pauseChannel = pauseChannel),
         inboundEvents = events,
         scope = scope,
+        peerPreferencesStore = FakePeerPreferencesStore(),
     )
 
     @Test
