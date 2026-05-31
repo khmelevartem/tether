@@ -27,7 +27,10 @@ import com.tubetoast.tether.security.TrustedDeviceStore
 import com.tubetoast.tether.transfer.BatchSender
 import com.tubetoast.tether.transfer.ConnectionMonitor
 import com.tubetoast.tether.transfer.NoOpConnectionMonitor
+import com.tubetoast.tether.transfer.PeerTransferEngine
+import com.tubetoast.tether.transfer.PeerTransferEngineRegistry
 import com.tubetoast.tether.transfer.PeerUnreachableException
+import com.tubetoast.tether.transfer.ReconnectionTimeout
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -81,12 +84,27 @@ abstract class AppContainer {
         )
     }
 
+    open val peerTransferEngineRegistry: PeerTransferEngineRegistry by lazy {
+        PeerTransferEngineRegistry(
+            appScope = appScope,
+            engineFactory = { peer, engineScope ->
+                PeerTransferEngine(
+                    peer = peer,
+                    batchSenderFactory = batchSenderFactory,
+                    // TODO(#195): wire real ReceiveEvent source when Receiver UI lands
+                    reconnectionTimeout = ReconnectionTimeout.DEFAULT,
+                    scope = engineScope,
+                    peerPreferencesStore = peerPreferencesStore,
+                )
+            },
+        )
+    }
+
     open val rootComponentFactory: RootComponentFactory by lazy {
         RootComponentFactory(
             peersRepository = peersRepository,
-            batchSenderFactory = batchSenderFactory,
+            peerTransferEngineRegistry = peerTransferEngineRegistry,
             pendingFilesRepository = pendingFilesRepository,
-            peerPreferencesStore = peerPreferencesStore,
         )
     }
 }

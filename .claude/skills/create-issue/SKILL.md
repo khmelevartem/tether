@@ -1,6 +1,6 @@
 ---
 name: create-issue
-description: Create a GitHub issue via `gh` CLI. Use when the user asks to file a task, open a ticket, or mentions `gh issue create`. Single issue or epic + sub-issues.
+description: Create a GitHub issue via `gh` CLI — single issue or epic + sub-issues. Trigger whenever the user asks to file a task, open a ticket, draft an issue, log a bug into the tracker, or split a large task into an epic + children — including colloquial / non-English phrasings like "заведи задачу", "заведи тикет", "создай issue", "оформи задачу", "запиши в трекер", "оформи багу". Also trigger when the user describes a feature or bug and implies it goes into the tracker, even without saying the word "issue". Do NOT trigger for in-chat discussion, writing into a spec / UX brief (that's spec-writer / `/document`), or creating a PR / starting implementation (that's `/implement`).
 ---
 
 # Create Issue
@@ -13,14 +13,15 @@ The body answers **what** and **why**, plus where to start looking. **How** is d
 
 Default — **English**. Titles and bodies are in English; technical terms (class names, files, flags, APIs) stay in English as-is. Switch language only on explicit user request or in a non-English repository (confirm in one sentence first).
 
-## When to apply
+## Self-check before drafting
 
-- User says "create an issue / task / ticket", "file a task on github", "open an issue about X".
-- User describes a feature or bug and implies it goes into the tracker.
-- User asks to split a large task into an epic + children.
-- User mentions `gh issue create`.
+The matcher in the frontmatter already filtered positive cases. One last check before you start the process: this skill is for **filing a new GitHub issue**. If the request is actually one of the below, hand off instead of proceeding:
 
-Do not apply for **discussion**, writing into a spec document, or creating a PR — those are different.
+- writing or extending a spec / UX brief — `spec-writer` or `/document`
+- starting implementation / opening a PR — `/implement`
+- in-chat discussion that doesn't need a tracker entry — answer in chat
+
+Aborting early here is cheaper than walking the user through Recon → Interview → Draft and discovering at approval time that the wrong skill ran.
 
 ## Process
 

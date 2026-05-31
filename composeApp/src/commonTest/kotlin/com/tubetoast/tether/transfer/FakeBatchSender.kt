@@ -3,9 +3,13 @@ package com.tubetoast.tether.transfer
 import kotlinx.coroutines.Dispatchers
 import kotlin.time.Duration.Companion.milliseconds
 
-internal fun fakeBatchSender(): () -> BatchSender = {
+internal fun fakeBatchSender(
+    sendOneOverride: (suspend (FileSource, (Long, Long?) -> Unit) -> Unit)? = null,
+    pauseChannel: kotlinx.coroutines.channels.Channel<Unit>? = null,
+): () -> BatchSender = {
     BatchSender(
-        sendOne = { src, onProgress ->
+        sendOne = sendOneOverride ?: { src, onProgress ->
+            pauseChannel?.receive()
             onProgress(src.sizeBytes ?: 0L, src.sizeBytes)
         },
         connectionMonitor = FakeConnectionMonitor(),

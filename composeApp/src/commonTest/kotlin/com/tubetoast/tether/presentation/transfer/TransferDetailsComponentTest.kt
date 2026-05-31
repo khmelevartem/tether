@@ -5,28 +5,43 @@ import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.resume
 import com.tubetoast.tether.presentation.peer.Peer
 import com.tubetoast.tether.protocol.Device
-import com.tubetoast.tether.transfer.BatchSender
 import com.tubetoast.tether.transfer.FailureReason
-import com.tubetoast.tether.transfer.FakeConnectionMonitor
 import com.tubetoast.tether.transfer.FakeFileSource
 import com.tubetoast.tether.transfer.FileSource
 import com.tubetoast.tether.transfer.PeerIdentity
+import com.tubetoast.tether.transfer.PeerTransferEngine
+import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.PerFileStatus
 import com.tubetoast.tether.transfer.ReceiverWriteFailedException
+import com.tubetoast.tether.transfer.fakeBatchSender
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
-import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class TransferDetailsComponentTest {
+    @BeforeTest
+    fun setUp() {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+    }
+
+    @AfterTest
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
     private val peer = Peer(
         id = PeerIdentity("test-peer"),
         device = Device(name = "TestDevice", host = "127.0.0.1", port = 8080),
@@ -40,23 +55,17 @@ class TransferDetailsComponentTest {
         val lifecycle = LifecycleRegistry()
         lifecycle.resume()
         val context = DefaultComponentContext(lifecycle)
-        val monitor = FakeConnectionMonitor()
+        val engine = PeerTransferEngine(
+            peer = peer.id,
+            batchSenderFactory = fakeBatchSender(sendOneOverride = sendOneOverride, pauseChannel = pauseChannel),
+            inboundEvents = MutableSharedFlow(),
+            scope = scope,
+        )
         return PeerTransferComponent(
             componentContext = context,
             peer = peer,
             lifecycleRegistry = lifecycle,
-            batchSenderFactory = {
-                BatchSender(
-                    sendOne = sendOneOverride ?: { src, onProgress ->
-                        pauseChannel?.receive()
-                        onProgress(src.sizeBytes ?: 0L, src.sizeBytes)
-                    },
-                    connectionMonitor = monitor,
-                    progressThrottle = 100.milliseconds,
-                    dispatcher = Dispatchers.Unconfined,
-                )
-            },
-            inboundEvents = MutableSharedFlow(),
+            engine = engine,
             onShowDetails = {},
             scope = scope,
         )
@@ -84,12 +93,12 @@ class TransferDetailsComponentTest {
 
         peerComponent.startOutbound(listOf(FakeFileSource("a.txt", 100L), FakeFileSource("b.txt", 100L)))
         runCurrent()
-        assertIs<PeerTransferState.ActiveOutbound>(peerComponent.state.value)
+        assertIs<PeerTransferState.ActiveOutbound>(peerComponent.state.value.transfer)
 
         details.onCancelTransfer()
         runCurrent()
 
-        assertIs<PeerTransferState.Cancelled>(peerComponent.state.value)
+        assertIs<PeerTransferState.Cancelled>(peerComponent.state.value.transfer)
     }
 
     @Test
@@ -130,7 +139,7 @@ class TransferDetailsComponentTest {
         )
         runCurrent()
 
-        val stateOnB = peerComponent.state.value
+        val stateOnB = peerComponent.state.value.transfer
         assertIs<PeerTransferState.ActiveOutbound>(stateOnB)
         assertEquals("b.txt", stateOnB.currentFile)
 
@@ -138,7 +147,7 @@ class TransferDetailsComponentTest {
         runCurrent()
         runCurrent()
 
-        val finalState = peerComponent.state.value
+        val finalState = peerComponent.state.value.transfer
         assertIs<PeerTransferState.Sent>(finalState)
         assertEquals(2, finalState.sent)
         assertEquals(3, finalState.total)
@@ -165,14 +174,14 @@ class TransferDetailsComponentTest {
         )
         runCurrent()
 
-        val activeState = peerComponent.state.value
+        val activeState = peerComponent.state.value.transfer
         assertIs<PeerTransferState.ActiveOutbound>(activeState)
         assertEquals("file1.txt", activeState.currentFile)
 
         details.onCancelFile("file2.txt")
         runCurrent()
 
-        val stateAfterCancel = peerComponent.state.value
+        val stateAfterCancel = peerComponent.state.value.transfer
         assertIs<PeerTransferState.ActiveOutbound>(stateAfterCancel)
         val file2Status = stateAfterCancel.perFile.first { it.name == "file2.txt" }
         assertIs<PerFileStatus.Failed>(file2Status)
@@ -182,7 +191,7 @@ class TransferDetailsComponentTest {
         pauseChannel.send(Unit)
         runCurrent()
 
-        val finalState = peerComponent.state.value
+        val finalState = peerComponent.state.value.transfer
         assertIs<PeerTransferState.Sent>(finalState)
         val finalFile2 = finalState.perFile.first { it.name == "file2.txt" }
         assertIs<PerFileStatus.Failed>(finalFile2)
@@ -207,13 +216,13 @@ class TransferDetailsComponentTest {
 
         peerComponent.startOutbound(listOf(FakeFileSource("a.txt", 100L), FakeFileSource("b.txt", 100L)))
         runCurrent()
-        assertIs<PeerTransferState.Sent>(peerComponent.state.value)
+        assertIs<PeerTransferState.Sent>(peerComponent.state.value.transfer)
 
         details.onRetryAll()
         runCurrent()
 
         assertEquals(1, sendCalls["a.txt"])
         assertEquals(2, sendCalls["b.txt"])
-        assertNull((peerComponent.state.value as? PeerTransferState.Sent)?.partialReason)
+        assertNull((peerComponent.state.value.transfer as? PeerTransferState.Sent)?.partialReason)
     }
 }

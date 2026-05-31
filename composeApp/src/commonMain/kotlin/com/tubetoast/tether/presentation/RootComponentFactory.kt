@@ -2,22 +2,19 @@ package com.tubetoast.tether.presentation
 
 import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.essenty.lifecycle.coroutines.withLifecycle
-import com.tubetoast.tether.preferences.PeerPreferencesStore
 import com.tubetoast.tether.presentation.banners.BannersComponent
 import com.tubetoast.tether.presentation.peer.PeersRepository
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.presentation.transfer.PendingFilesRepository
-import com.tubetoast.tether.transfer.BatchSender
 import com.tubetoast.tether.transfer.PeerIdentity
-import com.tubetoast.tether.transfer.ReconnectionTimeout
+import com.tubetoast.tether.transfer.PeerTransferEngineRegistry
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 
 class RootComponentFactory(
     private val peersRepository: PeersRepository,
-    private val batchSenderFactory: () -> BatchSender,
+    private val peerTransferEngineRegistry: PeerTransferEngineRegistry,
     private val pendingFilesRepository: PendingFilesRepository,
-    private val peerPreferencesStore: PeerPreferencesStore? = null,
     private val onPickerPick: (PeerIdentity) -> Unit = {},
 ) {
     fun create(componentContext: ComponentContext): RootComponent =
@@ -28,16 +25,16 @@ class RootComponentFactory(
                     componentContext = ctx,
                     peersRepository = peersRepository,
                     peerTransferComponentFactory = { childCtx, lifecycle, peer ->
+                        val engine = peerTransferEngineRegistry.engineFor(peer.id)
+                        val componentScope = CoroutineScope(Dispatchers.Main.immediate).withLifecycle(lifecycle)
                         PeerTransferComponent(
                             componentContext = childCtx,
                             peer = peer,
                             lifecycleRegistry = lifecycle,
-                            batchSenderFactory = batchSenderFactory,
+                            engine = engine,
+                            scope = componentScope,
                             onShowDetails = onShowDetails,
-                            reconnectionTimeout = ReconnectionTimeout.DEFAULT,
-                            scope = CoroutineScope(Dispatchers.Main).withLifecycle(lifecycle),
                             pendingFilesRepository = pendingFilesRepository,
-                            peerPreferencesStore = peerPreferencesStore,
                             onOpenPicker = { onPickerPick(peer.id) },
                         )
                     },

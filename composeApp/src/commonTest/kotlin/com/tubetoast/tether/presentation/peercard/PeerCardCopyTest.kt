@@ -1,8 +1,8 @@
 package com.tubetoast.tether.presentation.peercard
 
-import com.tubetoast.tether.presentation.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.PartialOutcome
 import com.tubetoast.tether.transfer.PeerIdentity
+import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.TransferErrorReason
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -188,7 +188,7 @@ class PeerCardCopyTest {
     fun reconnectingCopy() {
         val state = PeerTransferState.Reconnecting(
             peer = peer,
-            direction = com.tubetoast.tether.presentation.transfer.Direction.Outbound,
+            direction = com.tubetoast.tether.transfer.Direction.Outbound,
             remainingSeconds = 12,
             snapshotBeforeDrop = PeerTransferState.Idle(peer),
         )

@@ -25,6 +25,8 @@ Engineering concepts. The vocabulary [`architect`](../.claude/agents/architect.m
 - **Discovery** — the layer that announces a device's presence and finds peers on the local network. _Avoid:_ announce (verb only). (see [discovery.md](engineering/discovery.md))
 - **Rendezvous** — a post-discovery `/hello` mechanism that resolves asymmetric discovery (one side saw the other but not vice versa), primarily for the hotspot scenario. Distinct from Discovery itself.
 - **Peer** — a device visible through discovery, regardless of pairing status. _Avoid:_ node, neighbour; device when pairing status matters (use **Trusted device** then).
+- **Outbound** — a transfer this device initiates and sends to a peer. _Avoid:_ upload, send (verb only).
+- **Inbound** — a transfer this device receives from a peer. _Avoid:_ download, receive (verb only).
 - **FileServer** — the per-device HTTP server that accepts incoming transfers. _Avoid:_ receiver, listener.
 - **FileClient** — the per-device HTTP client that initiates outgoing transfers. _Avoid:_ sender, uploader.
 - **Fingerprint** — the stable per-device identity carried in discovery announces and `/hello` payloads. Used by every node to recognise its own announces and suppress them, and (once pairing lands) as the trust key two devices agree on at pairing time. _Avoid:_ device id when the cross-network identity property matters; install token. (see [discovery.md §Identity and self-suppression](engineering/discovery.md#identity-and-self-suppression))
@@ -32,6 +34,7 @@ Engineering concepts. The vocabulary [`architect`](../.claude/agents/architect.m
 - **Composition root** — the platform entry point that constructs the DI container; by extension, the `AppContainer` instance it constructs. (see [dependency-injection.md](engineering/dependency-injection.md))
 - **Container** — the DI container that holds singletons for one process lifetime; the construct that lives at the composition root.
 - **Session** — the post-rendezvous logical connection between two peers, lasting from `/hello` until either side closes it.
+- **Reconnect window** — the bounded time after a connection drop during which an active transfer waits for the peer to reappear and resumes from where it left off; expiry yields a definitive `NetworkLost` failure.
 - **Drift** — a usage of a term that contradicts its glossary definition, or absence of a glossary entry for a term that recurs across long-lived artifacts.
 - **Living doc** — a `docs/engineering/<name>.md` artifact that captures the present-tense rules for a subsystem; distinct from an ADR (one-time decision) and a knowledge entry (solved-problem note).
 - **Long-lived artifact** — any prose surface that outlives the task that birthed it: `CLAUDE.md`, `docs/`, `.claude/skills/**`, `.claude/agents/**`, `.claude/commands/**`, KDoc, inline comments, error messages. Governed by the discipline in [long-lived-artifacts.md](engineering/long-lived-artifacts.md). _Avoid:_ doc, documentation when the lifetime contrast with task-scoped prose (commit message, PR description) is what matters.

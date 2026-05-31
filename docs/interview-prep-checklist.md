@@ -73,7 +73,7 @@
 
 ### Flow
 - [ ] Cold flow vs Hot flow — новый поток на каждого collector vs один общий
-- [ ] `StateFlow` vs `SharedFlow` — replay, conflation, начальное значение
+- [x] `StateFlow` vs `SharedFlow` — replay, conflation, начальное значение
 - [ ] `StateFlow` под нагрузкой — механизм conflation, 100 collectors + 120 updates/sec
 - [ ] `flatMapLatest` vs `flatMapMerge` vs `flatMapConcat` — параллелизм
 - [ ] `combine` vs `zip` — эмит при любом изменении vs ждёт пару

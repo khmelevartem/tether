@@ -12,8 +12,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
-import com.tubetoast.tether.presentation.transfer.PeerTransferState
 import com.tubetoast.tether.protocol.Device
+import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.ui.designsystem.BodyText
 import com.tubetoast.tether.ui.designsystem.ChevronToggleIcon
 import com.tubetoast.tether.ui.designsystem.TitleText
@@ -26,6 +26,7 @@ import com.tubetoast.tether.ui.theme.TetherTheme
 @Composable
 internal fun PeerCardIdle(
     state: PeerTransferState.Idle,
+    expanded: Boolean,
     device: Device,
     isOnline: Boolean,
     isAutoSendEnabled: Boolean,
@@ -57,13 +58,13 @@ internal fun PeerCardIdle(
                 )
             }
             ChevronToggleIcon(
-                expanded = state.expanded,
+                expanded = expanded,
                 onClick = callbacks.onToggleExpand,
-                contentDescription = if (state.expanded) "Collapse $peerName settings" else "Expand $peerName settings",
+                contentDescription = if (expanded) "Collapse $peerName settings" else "Expand $peerName settings",
             )
         }
 
-        if (state.expanded) {
+        if (expanded) {
             AutoSendToggle(
                 enabled = isAutoSendEnabled,
                 onToggle = callbacks.onToggleAutoSend,
@@ -83,6 +84,7 @@ private fun PreviewIdleCollapsedOnline(@PreviewParameter(Themes::class) dark: Bo
     PreviewSurface(darkTheme = dark) {
         PeerCardIdle(
             state = TransferPreviewFixtures.idleCollapsed,
+            expanded = false,
             device = TransferPreviewFixtures.device,
             isOnline = true,
             isAutoSendEnabled = false,
@@ -96,6 +98,7 @@ private fun PreviewIdleCollapsedOffline(@PreviewParameter(Themes::class) dark: B
     PreviewSurface(darkTheme = dark) {
         PeerCardIdle(
             state = TransferPreviewFixtures.idleCollapsed,
+            expanded = false,
             device = TransferPreviewFixtures.device,
             isOnline = false,
             isAutoSendEnabled = false,
@@ -109,6 +112,7 @@ private fun PreviewIdleExpandedAutoSendOff(@PreviewParameter(Themes::class) dark
     PreviewSurface(darkTheme = dark) {
         PeerCardIdle(
             state = TransferPreviewFixtures.idleExpanded,
+            expanded = true,
             device = TransferPreviewFixtures.device,
             isOnline = true,
             isAutoSendEnabled = false,
@@ -122,6 +126,7 @@ private fun PreviewIdleExpandedAutoSendOn(@PreviewParameter(Themes::class) dark:
     PreviewSurface(darkTheme = dark) {
         PeerCardIdle(
             state = TransferPreviewFixtures.idleExpanded,
+            expanded = true,
             device = TransferPreviewFixtures.device,
             isOnline = true,
             isAutoSendEnabled = true,
@@ -134,7 +139,7 @@ private fun previewCallbacks() = PeerCardCallbacks(
     onToggleAutoSend = {},
     onCancel = {},
     onDismiss = {},
-    onRetry = {},
+    onRetryOutbound = {},
     onShowDetails = {},
     onOpenFiles = {},
 )

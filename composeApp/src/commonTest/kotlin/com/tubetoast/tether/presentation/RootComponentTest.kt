@@ -9,19 +9,26 @@ import com.tubetoast.tether.discovery.FakeDeviceDiscovery
 import com.tubetoast.tether.presentation.banners.BannersComponent
 import com.tubetoast.tether.presentation.peer.PeersRepository
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
-import com.tubetoast.tether.presentation.transfer.PeerTransferState
 import com.tubetoast.tether.presentation.transfer.PendingFilesRepository
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.FakeFileSource
+import com.tubetoast.tether.transfer.PeerTransferEngine
+import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.fakeBatchSender
 import com.tubetoast.tether.transfer.toPeerIdentity
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
 import kotlinx.serialization.builtins.serializer
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -32,6 +39,16 @@ import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class RootComponentTest {
+    @BeforeTest
+    fun setUp() {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+    }
+
+    @AfterTest
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
     private val deviceA = Device(name = "DeviceA", host = "192.168.1.1", port = 8080)
     private val peer = deviceA.toPeerIdentity()
 
@@ -117,7 +134,7 @@ class RootComponentTest {
         peerComponent.onCardClick()
         runCurrent()
 
-        assertIs<PeerTransferState.Sent>(peerComponent.state.value)
+        assertIs<PeerTransferState.Sent>(peerComponent.state.value.transfer)
         assertNull(repo.summary.value)
     }
 
@@ -218,12 +235,17 @@ class RootComponentTest {
                     componentContext = childCtx,
                     peersRepository = peersRepository,
                     peerTransferComponentFactory = { peerCtx, peerLifecycle, peerModel ->
+                        val engine = PeerTransferEngine(
+                            peer = peerModel.id,
+                            batchSenderFactory = fakeBatchSender(),
+                            inboundEvents = MutableSharedFlow(),
+                            scope = coroutineScope,
+                        )
                         PeerTransferComponent(
                             componentContext = peerCtx,
                             peer = peerModel,
                             lifecycleRegistry = peerLifecycle,
-                            batchSenderFactory = fakeBatchSender(),
-                            inboundEvents = MutableSharedFlow(),
+                            engine = engine,
                             onShowDetails = onShowDetails,
                             scope = coroutineScope,
                             pendingFilesRepository = pendingFilesRepository,
