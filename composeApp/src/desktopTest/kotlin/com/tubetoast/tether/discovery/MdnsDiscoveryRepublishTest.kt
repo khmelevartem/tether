@@ -1,20 +1,11 @@
 package com.tubetoast.tether.discovery
 
-import com.tubetoast.tether.identity.DeviceIdentityStore
-import com.tubetoast.tether.preferences.TempDataStore
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
-
-private fun testDiscovery(
-    store: DiscoveredDevicesStore = DiscoveredDevicesStore(),
-): MdnsDiscovery {
-    val temp = TempDataStore()
-    return MdnsDiscovery(store, DeviceIdentityStore(temp.dataStore))
-}
 
 class MdnsDiscoveryRepublishTest {
     @Test

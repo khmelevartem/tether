@@ -1,7 +1,5 @@
 package com.tubetoast.tether.discovery
 
-import com.tubetoast.tether.identity.DeviceIdentityStore
-import com.tubetoast.tether.preferences.TempDataStore
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
@@ -11,11 +9,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
-
-private fun testDiscovery(): MdnsDiscovery {
-    val store = TempDataStore()
-    return MdnsDiscovery(DiscoveredDevicesStore(), DeviceIdentityStore(store.dataStore))
-}
 
 // JmDNS delivers callbacks on real threads outside our CoroutineScope
 @Suppress("ktlint:tether:no-run-blocking-in-tests")

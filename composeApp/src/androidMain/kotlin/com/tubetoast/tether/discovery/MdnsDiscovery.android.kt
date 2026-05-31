@@ -23,6 +23,8 @@ actual class MdnsDiscovery(
 ) : DeviceDiscovery {
     actual override val discoveredDevices: StateFlow<List<Device>> = store.devices
 
+    private val lifecycleLock = Any()
+
     @Volatile private var fingerprint: String = ""
 
     @Volatile private var nsdManager: NsdManager? = null
@@ -137,53 +139,52 @@ actual class MdnsDiscovery(
         }
     }
 
-    @Synchronized
     private fun onResolveComplete() {
-        resolving = false
-        startNextResolve()
+        synchronized(lifecycleLock) {
+            resolving = false
+            startNextResolve()
+        }
     }
 
-    @Synchronized
     private fun startNextResolve() {
-        if (resolving) return
-        val nm = nsdManager ?: return
-        val next = resolveQueue.poll() ?: return
-        resolving = true
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            nm.resolveService(next, Runnable::run, makeResolveListener())
-        } else {
-            @Suppress("DEPRECATION")
-            nm.resolveService(next, makeResolveListener())
+        synchronized(lifecycleLock) {
+            if (resolving) return
+            val nm = nsdManager ?: return
+            val next = resolveQueue.poll() ?: return
+            resolving = true
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                nm.resolveService(next, Runnable::run, makeResolveListener())
+            } else {
+                @Suppress("DEPRECATION")
+                nm.resolveService(next, makeResolveListener())
+            }
         }
     }
 
     actual override suspend fun start(deviceName: String, port: Int) {
         val fingerprint = deviceIdentityStore.getOrCreate()
-        startSynchronized(deviceName, port, fingerprint)
-    }
-
-    @Synchronized
-    private fun startSynchronized(deviceName: String, port: Int, fingerprint: String) {
-        if (nsdManager != null) throw IllegalStateException("MdnsDiscovery already started; call stop() first")
-        this.fingerprint = fingerprint
-        ownName = deviceName
-        currentPort = port
-        resolveQueue.clear()
-        resolving = false
-        val nm = context.getSystemService(Context.NSD_SERVICE) as NsdManager
-        nsdManager = nm
-        val serviceInfo = NsdServiceInfo().apply {
-            serviceName = deviceName
-            serviceType = SERVICE_TYPE
-            this.port = port
-            txtProps(fingerprint).forEach { (k, v) -> setAttribute(k, v) }
+        synchronized(lifecycleLock) {
+            if (nsdManager != null) throw IllegalStateException("MdnsDiscovery already started; call stop() first")
+            this.fingerprint = fingerprint
+            ownName = deviceName
+            currentPort = port
+            resolveQueue.clear()
+            resolving = false
+            val nm = context.getSystemService(Context.NSD_SERVICE) as NsdManager
+            nsdManager = nm
+            val serviceInfo = NsdServiceInfo().apply {
+                serviceName = deviceName
+                serviceType = SERVICE_TYPE
+                this.port = port
+                txtProps(fingerprint).forEach { (k, v) -> setAttribute(k, v) }
+            }
+            log.debug { "Starting NSD: name=$deviceName, port=$port" }
+            makeRegistrationListener().also { fresh ->
+                registrationListener = fresh
+                nm.registerService(serviceInfo, NsdManager.PROTOCOL_DNS_SD, fresh)
+            }
+            nm.discoverServices(SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, discoveryListener)
         }
-        log.debug { "Starting NSD: name=$deviceName, port=$port" }
-        makeRegistrationListener().also { fresh ->
-            registrationListener = fresh
-            nm.registerService(serviceInfo, NsdManager.PROTOCOL_DNS_SD, fresh)
-        }
-        nm.discoverServices(SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, discoveryListener)
     }
 
     private fun unregisterPreviousListener(nm: NsdManager, label: String) {
@@ -197,40 +198,42 @@ actual class MdnsDiscovery(
         }
     }
 
-    @Synchronized
     actual override fun republish(name: String) {
-        val nm = nsdManager ?: return
-        log.debug { "Republishing NSD as name=$name" }
-        unregisterPreviousListener(nm, "republish")
-        ownName = name
-        val serviceInfo = NsdServiceInfo().apply {
-            serviceName = name
-            serviceType = SERVICE_TYPE
-            this.port = currentPort
-            txtProps(fingerprint).forEach { (k, v) -> setAttribute(k, v) }
-        }
-        makeRegistrationListener().also { fresh ->
-            registrationListener = fresh
-            nm.registerService(serviceInfo, NsdManager.PROTOCOL_DNS_SD, fresh)
+        synchronized(lifecycleLock) {
+            val nm = nsdManager ?: return
+            log.debug { "Republishing NSD as name=$name" }
+            unregisterPreviousListener(nm, "republish")
+            ownName = name
+            val serviceInfo = NsdServiceInfo().apply {
+                serviceName = name
+                serviceType = SERVICE_TYPE
+                this.port = currentPort
+                txtProps(fingerprint).forEach { (k, v) -> setAttribute(k, v) }
+            }
+            makeRegistrationListener().also { fresh ->
+                registrationListener = fresh
+                nm.registerService(serviceInfo, NsdManager.PROTOCOL_DNS_SD, fresh)
+            }
         }
     }
 
-    @Synchronized
     actual override fun stop() {
-        val nm = nsdManager ?: return
-        log.debug { "Stopping NSD" }
-        unregisterPreviousListener(nm, "stop")
-        registrationListener = null
-        try {
-            nm.stopServiceDiscovery(discoveryListener)
-        } catch (e: Exception) {
-            log.warn { "NSD stopServiceDiscovery failed: ${e.message}" }
+        synchronized(lifecycleLock) {
+            val nm = nsdManager ?: return
+            log.debug { "Stopping NSD" }
+            unregisterPreviousListener(nm, "stop")
+            registrationListener = null
+            try {
+                nm.stopServiceDiscovery(discoveryListener)
+            } catch (e: Exception) {
+                log.warn { "NSD stopServiceDiscovery failed: ${e.message}" }
+            }
+            nsdManager = null
+            ownName = null
+            currentPort = 0
+            resolveQueue.clear()
+            resolving = false
+            store.clear()
         }
-        nsdManager = null
-        ownName = null
-        currentPort = 0
-        resolveQueue.clear()
-        resolving = false
-        store.clear()
     }
 }

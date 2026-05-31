@@ -51,6 +51,8 @@ internal class MdnsDiscoveryJmdns(
 
     override val discoveredDevices: StateFlow<List<Device>> = store.devices
 
+    private val lifecycleLock = Any()
+
     /** Keyed by (interface name, IPv4 address). */
     internal val instances = mutableMapOf<Pair<String, InetAddress>, JmDNS>()
 
@@ -64,73 +66,72 @@ internal class MdnsDiscoveryJmdns(
 
     override suspend fun start(deviceName: String, port: Int) {
         val fingerprint = deviceIdentityStore.getOrCreate()
-        startSynchronized(deviceName, port, fingerprint)
-    }
+        synchronized(lifecycleLock) {
+            if (started) throw IllegalStateException("MdnsDiscovery already started; call stop() first")
+            this.deviceName = deviceName
+            this.ownPort = port
+            this.fingerprint = fingerprint
+            started = true
 
-    @Synchronized
-    private fun startSynchronized(deviceName: String, port: Int, fingerprint: String) {
-        if (started) throw IllegalStateException("MdnsDiscovery already started; call stop() first")
-        this.deviceName = deviceName
-        this.ownPort = port
-        this.fingerprint = fingerprint
-        started = true
+            for (entry in networkInterfaceProvider.bindAddresses()) {
+                bringUp(entry, entry.second, deviceName, port)
+            }
 
-        for (entry in networkInterfaceProvider.bindAddresses()) {
-            bringUp(entry, entry.second, deviceName, port)
-        }
-
-        discoveryScope.launch {
-            var requeryInterval = REQUERY_INITIAL_INTERVAL_MS
-            while (isActive) {
-                delay(requeryInterval)
-                synchronized(this@MdnsDiscoveryJmdns) {
-                    for (jmdns in instances.values) {
-                        try {
-                            jmdns.addServiceListener(SERVICE_TYPE, makeListener(jmdns))
-                        } catch (_: Exception) {
+            discoveryScope.launch {
+                var requeryInterval = REQUERY_INITIAL_INTERVAL_MS
+                while (isActive) {
+                    delay(requeryInterval)
+                    synchronized(this@MdnsDiscoveryJmdns) {
+                        for (jmdns in instances.values) {
+                            try {
+                                jmdns.addServiceListener(SERVICE_TYPE, makeListener(jmdns))
+                            } catch (_: Exception) {
+                            }
                         }
                     }
+                    requeryInterval = minOf(requeryInterval * 2, REQUERY_MAX_INTERVAL_MS)
                 }
-                requeryInterval = minOf(requeryInterval * 2, REQUERY_MAX_INTERVAL_MS)
             }
-        }
 
-        discoveryScope.launch {
-            while (isActive) {
-                delay(INTERFACE_POLL_INTERVAL_MS)
-                diffInterfaces()
+            discoveryScope.launch {
+                while (isActive) {
+                    delay(INTERFACE_POLL_INTERVAL_MS)
+                    diffInterfaces()
+                }
             }
         }
     }
 
-    @Synchronized
     override fun republish(name: String) {
-        if (!started) return
-        deviceName = name
-        for (jmdns in instances.values) {
-            try {
-                jmdns.unregisterAllServices()
-            } catch (e: Exception) {
-                log.warn { "unregisterAllServices (republish) failed — ${e.message}" }
-            }
-            try {
-                jmdns.registerService(ServiceInfo.create(SERVICE_TYPE, name, ownPort, 0, 0, txtProps(fingerprint)))
-            } catch (e: Exception) {
-                log.warn { "registerService (republish) failed — ${e.message}" }
+        synchronized(lifecycleLock) {
+            if (!started) return
+            deviceName = name
+            for (jmdns in instances.values) {
+                try {
+                    jmdns.unregisterAllServices()
+                } catch (e: Exception) {
+                    log.warn { "unregisterAllServices (republish) failed — ${e.message}" }
+                }
+                try {
+                    jmdns.registerService(ServiceInfo.create(SERVICE_TYPE, name, ownPort, 0, 0, txtProps(fingerprint)))
+                } catch (e: Exception) {
+                    log.warn { "registerService (republish) failed — ${e.message}" }
+                }
             }
         }
     }
 
-    @Synchronized
     override fun stop() {
-        started = false
-        discoveryScope.cancel()
-        for ((key, jmdns) in instances) {
-            tearDown(key, jmdns)
+        synchronized(lifecycleLock) {
+            started = false
+            discoveryScope.cancel()
+            for ((key, jmdns) in instances) {
+                tearDown(key, jmdns)
+            }
+            instances.clear()
+            ownPort = -1
+            store.clear()
         }
-        instances.clear()
-        ownPort = -1
-        store.clear()
     }
 
     private fun bringUp(key: Pair<String, InetAddress>, addr: InetAddress, name: String, port: Int) {
@@ -164,17 +165,18 @@ internal class MdnsDiscoveryJmdns(
         log.info { "JmDNS torn down from ${key.second.hostAddress} (${key.first})" }
     }
 
-    @Synchronized
     internal fun diffInterfaces() {
-        val current = networkInterfaceProvider.bindAddresses().toSet()
-        val existing = instances.keys.toSet()
-        val added = current - existing
-        val removed = existing - current
-        for (key in removed) {
-            instances.remove(key)?.let { tearDown(key, it) }
-        }
-        for (key in added) {
-            bringUp(key, key.second, deviceName, ownPort)
+        synchronized(lifecycleLock) {
+            val current = networkInterfaceProvider.bindAddresses().toSet()
+            val existing = instances.keys.toSet()
+            val added = current - existing
+            val removed = existing - current
+            for (key in removed) {
+                instances.remove(key)?.let { tearDown(key, it) }
+            }
+            for (key in added) {
+                bringUp(key, key.second, deviceName, ownPort)
+            }
         }
     }
 

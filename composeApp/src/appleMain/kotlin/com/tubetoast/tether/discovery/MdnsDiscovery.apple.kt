@@ -10,6 +10,7 @@ import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.usePinned
 import kotlinx.coroutines.flow.StateFlow
 import platform.Foundation.NSData
+import platform.Foundation.NSLock
 import platform.Foundation.NSNetService
 import platform.Foundation.NSNetServiceBrowser
 import platform.Foundation.NSNetServiceBrowserDelegateProtocol
@@ -25,17 +26,26 @@ import ru.pocketbyte.kydra.log.wrapper.withTag
 private const val SERVICE_TYPE = "_tether._tcp."
 private val log = KydraLog.withTag(default = "MdnsDiscovery.Apple")
 
-// Thread-safety note: NSNetService and NSNetServiceBrowser must be created and used on
-// the thread that owns their run loop. All callbacks (didPublish, didFind, didResolve)
-// are delivered on that same run loop thread. As long as start() and stop() are called
-// from the same thread (main thread via DisposableEffect in Compose), all accesses to
-// mutable state are single-threaded — no @Synchronized or @Volatile needed.
-// @Synchronized is a JVM-only annotation and is not available in Kotlin/Native.
+private inline fun <T> NSLock.withLock(block: () -> T): T {
+    lock()
+    try {
+        return block()
+    } finally {
+        unlock()
+    }
+}
+
+// Public entry points (start/stop/republish) acquire lifecycleLock for atomicity of
+// precondition + state mutation. NSNetService and NSNetServiceBrowser delegate callbacks
+// (didPublish, didFind, didResolve) are delivered on the run-loop thread that owns the
+// service/browser — they do not acquire the lock.
 actual class MdnsDiscovery(
     private val store: DiscoveredDevicesStore,
     private val deviceIdentityStore: DeviceIdentityStore,
 ) : DeviceDiscovery {
     actual override val discoveredDevices: StateFlow<List<Device>> get() = store.devices
+
+    private val lifecycleLock = NSLock()
 
     private var fingerprint: String = ""
     private var netService: NSNetService? = null
@@ -50,64 +60,69 @@ actual class MdnsDiscovery(
     private val resolutionDelegates = mutableListOf<ResolutionDelegate>()
 
     actual override suspend fun start(deviceName: String, port: Int) {
-        fingerprint = deviceIdentityStore.getOrCreate()
-        if (netService != null || browser != null) {
-            throw IllegalStateException("MdnsDiscovery already started; call stop() first")
+        val fingerprint = deviceIdentityStore.getOrCreate()
+        lifecycleLock.withLock {
+            if (netService != null || browser != null) {
+                throw IllegalStateException("MdnsDiscovery already started; call stop() first")
+            }
+
+            this.fingerprint = fingerprint
+            ownServiceName = deviceName
+            currentPort = port
+
+            val service = NSNetService(
+                domain = "",
+                type = SERVICE_TYPE,
+                name = deviceName,
+                port = port,
+            )
+
+            val delegate = ServiceDelegate(this)
+            serviceDelegate = delegate
+            service.delegate = delegate
+            service.setTXTRecordData(txtRecordData())
+            service.publish()
+            netService = service
+
+            log.info { "publishing service $deviceName on port $port" }
+
+            val newBrowserDelegate = BrowserDelegate(this)
+            this.browserDelegate = newBrowserDelegate
+
+            val newBrowser = NSNetServiceBrowser()
+            newBrowser.delegate = newBrowserDelegate
+            newBrowser.searchForServicesOfType(SERVICE_TYPE, inDomain = "")
+            this.browser = newBrowser
+
+            log.info { "started discovery for $SERVICE_TYPE" }
         }
-
-        ownServiceName = deviceName
-        currentPort = port
-
-        val service = NSNetService(
-            domain = "",
-            type = SERVICE_TYPE,
-            name = deviceName,
-            port = port,
-        )
-
-        val delegate = ServiceDelegate(this)
-        serviceDelegate = delegate
-        service.delegate = delegate
-        service.setTXTRecordData(txtRecordData())
-        service.publish()
-        netService = service
-
-        log.info { "publishing service $deviceName on port $port" }
-
-        val browserDelegate = BrowserDelegate(this)
-        this.browserDelegate = browserDelegate
-
-        val browser = NSNetServiceBrowser()
-        browser.delegate = browserDelegate
-        browser.searchForServicesOfType(SERVICE_TYPE, inDomain = "")
-        this.browser = browser
-
-        log.info { "started discovery for $SERVICE_TYPE" }
     }
 
     actual override fun stop() {
-        try {
-            netService?.stop()
-        } catch (e: Exception) {
-            log.warn { "failed to stop service — ${e.message ?: "unknown error"}" }
+        lifecycleLock.withLock {
+            try {
+                netService?.stop()
+            } catch (e: Exception) {
+                log.warn { "failed to stop service — ${e.message ?: "unknown error"}" }
+            }
+
+            try {
+                browser?.stop()
+            } catch (e: Exception) {
+                log.warn { "failed to stop browser — ${e.message ?: "unknown error"}" }
+            }
+
+            netService = null
+            browser = null
+            ownServiceName = null
+            currentPort = 0
+            serviceDelegate = null
+            browserDelegate = null
+            resolutionDelegates.clear()
+            store.clear()
+
+            log.info { "stopped" }
         }
-
-        try {
-            browser?.stop()
-        } catch (e: Exception) {
-            log.warn { "failed to stop browser — ${e.message ?: "unknown error"}" }
-        }
-
-        netService = null
-        browser = null
-        ownServiceName = null
-        currentPort = 0
-        serviceDelegate = null
-        browserDelegate = null
-        resolutionDelegates.clear()
-        store.clear()
-
-        log.info { "stopped" }
     }
 
     /**
@@ -116,29 +131,31 @@ actual class MdnsDiscovery(
      * Each delegate self-removes on resolve/timeout.
      */
     actual override fun republish(name: String) {
-        if (netService == null && browser == null) return
-        log.info { "republishing as $name" }
-        try {
-            netService?.stop()
-        } catch (e: Exception) {
-            log.warn { "failed to stop service for republish — ${e.message ?: "unknown error"}" }
+        lifecycleLock.withLock {
+            if (netService == null && browser == null) return
+            log.info { "republishing as $name" }
+            try {
+                netService?.stop()
+            } catch (e: Exception) {
+                log.warn { "failed to stop service for republish — ${e.message ?: "unknown error"}" }
+            }
+            ownServiceName = name
+
+            val service = NSNetService(
+                domain = "",
+                type = SERVICE_TYPE,
+                name = name,
+                port = currentPort,
+            )
+            val delegate = ServiceDelegate(this)
+            serviceDelegate = delegate
+            service.delegate = delegate
+            service.setTXTRecordData(txtRecordData())
+            service.publish()
+            netService = service
+
+            log.info { "republished service $name on port $currentPort" }
         }
-        ownServiceName = name
-
-        val service = NSNetService(
-            domain = "",
-            type = SERVICE_TYPE,
-            name = name,
-            port = currentPort,
-        )
-        val delegate = ServiceDelegate(this)
-        serviceDelegate = delegate
-        service.delegate = delegate
-        service.setTXTRecordData(txtRecordData())
-        service.publish()
-        netService = service
-
-        log.info { "republished service $name on port $currentPort" }
     }
 
     private fun txtRecordData(): NSData? {
