@@ -6,14 +6,13 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
 import com.tubetoast.tether.config.DeviceNameStore
 import com.tubetoast.tether.config.EphemeralDeviceNamePersistence
+import com.tubetoast.tether.di.CliAppContainer
 import com.tubetoast.tether.di.DefaultDesktopAppConfig
-import com.tubetoast.tether.di.DesktopAppContainer
 import com.tubetoast.tether.discovery.DiscoveredDevicesStore
 import com.tubetoast.tether.logging.initTetherLogging
 import com.tubetoast.tether.logging.isDebugEnabled
 import com.tubetoast.tether.network.FileClient
 import com.tubetoast.tether.protocol.Device
-import com.tubetoast.tether.protocol.DeviceType
 import com.tubetoast.tether.protocol.SendResult
 import com.tubetoast.tether.transfer.BatchSender
 import com.tubetoast.tether.transfer.ConnectionMonitor
@@ -81,18 +80,8 @@ class TetherCommand :
 
         val activeEngineRef = AtomicReference<PeerTransferEngine?>(null)
 
-        lateinit var container: DesktopAppContainer
-        container = DesktopAppContainer(
+        val container = CliAppContainer(
             DefaultDesktopAppConfig(port = port ?: 0, namePersistenceOverride = EphemeralDeviceNamePersistence()),
-            ownDeviceType = DeviceType.Cli,
-            batchSenderFactoryOverride = { peer ->
-                buildCliBatchSender(
-                    peer = peer,
-                    fileClient = container.fileClient,
-                    connectionMonitor = container.connectionMonitor,
-                    discoveredDevicesStore = container.discoveredDevicesStore,
-                )
-            },
         )
 
         container.nameStore.init()
@@ -196,7 +185,7 @@ class TetherCommand :
     }
 }
 
-private fun buildCliBatchSender(
+internal fun buildCliBatchSender(
     peer: PeerIdentity,
     fileClient: FileClient,
     connectionMonitor: ConnectionMonitor,

@@ -25,395 +25,123 @@ All these items must appear in the **"Manual verification required"** section of
 
 ## Starting the CLI
 
-```bash
-./gradlew :composeApp:cliJar -q
-JAR=$(ls composeApp/build/libs/tether-cli*.jar 2>/dev/null | head -1)
-[ -z "$JAR" ] && { echo "cli jar not found"; exit 1; }
-java -jar "$JAR" --name SmokeMacA --port 0 < fifo
-```
-
-The FIFO keeps stdin open for `list`, `send`, `quit` commands.
+The FIFO keeps stdin open for `list`, `send`, `quit` commands. All blocks that launch a CLI instance follow this pattern — see `block-1-desktop-cli-a.sh` for the canonical form.
 
 ## Run plan
 
-The skill executes blocks sequentially. A block failure does not prevent subsequent blocks from running. Cleanup is performed **always**, even if there were earlier FAILs.
+Execute blocks sequentially. A block failure does not prevent subsequent blocks from running. Run cleanup (`block-7-cleanup.sh`) **always**, even after earlier FAILs.
+
+All scripts live in `.claude/skills/smoke-test/` and are self-contained — run them from that directory or the repo root.
 
 ### Block 0: Preparation
 
-1. Make sure no CLI instances are running:
-   ```bash
-   pgrep -fl 'com.tubetoast.tether-.*\.jar|composeApp:run' || echo "clean"
-   ```
-   If there are — `kill` them: external mDNS services interfere with the run.
-2. Build the CLI jar:
-   ```bash
-   ./gradlew :composeApp:cliJar -q
-   JAR=$(ls composeApp/build/libs/tether-cli-*.jar composeApp/build/libs/tether-cli.jar 2>/dev/null | head -1)
-   ```
-   Remember the path.
+Run: `./block-0-preparation.sh`
 
-If the build fails or the JAR is not found — all remaining blocks SKIP with reason "cli jar build failed".
+Kills lingering CLI instances, builds the CLI jar, and sets `$JAR`.
+
+FAIL → all remaining blocks SKIP with reason "cli jar build failed".
 
 ### Block 1: Desktop CLI (instance A)
 
-Launch via FIFO (stdin keeper). Name — `SmokeMacA`, must match what Block 2 looks for in instance B's log.
+Run: `./block-1-desktop-cli-a.sh`
 
-```bash
-LOG_A=/tmp/smoke-cliA.log
-mkfifo /tmp/smoke-cliA-in
-sleep 600 > /tmp/smoke-cliA-in &
-KEEPER_A=$!; disown $KEEPER_A
-echo $KEEPER_A > /tmp/smoke-cliA-keeper.pid
+Launches CLI A (`SmokeMacA`, random port), then checks:
 
-nohup java -jar "$JAR" --name SmokeMacA --port 0 < /tmp/smoke-cliA-in > "$LOG_A" 2>&1 &
-JPID_A=$!; disown $JPID_A
-echo $JPID_A > /tmp/smoke-cliA.pid
-```
+1. **Startup** — port parsed, java pid alive. PASS if both.
+2. **`/health`** — must return `Tether OK`.
+3. **`/pair` — X.509 EC P-256 shape.** Response must be 91 bytes, first byte `0x30`, byte 26 `0x04`. Verifies real key material, not a placeholder.
+4. **Port LISTEN** — java listener shown by `lsof`.
+5. **mDNS publish (log)** — `mDNS started → advertising 'SmokeMacA'` in the log.
+6. **mDNS publish (dns-sd, optional)** — `dns-sd -B` browse. SKIP if `dns-sd` unavailable (Linux).
+7. **stdin `list`** — must produce a `[list]` or `[peers]` line.
 
-Wait up to 30 sec, polling the log:
-```bash
-for i in $(seq 1 30); do grep -q 'FileServer started' $LOG_A && break; sleep 1; done
-PORT_A=$(grep -oE 'port[[:space:]]*:[[:space:]]*[0-9]+' $LOG_A | grep -oE '[0-9]+' | head -1)
-```
-
-Scenarios:
-1. **Startup** — port parsed, java pid is alive (`ps -p $JPID_A`). PASS if both conditions met.
-2. **`/health`** — `curl -sf --max-time 5 http://localhost:$PORT_A/health` → must return `Tether OK`.
-3. **`/pair` — public key format.** The endpoint returns an X.509-encoded EC P-256 SubjectPublicKeyInfo: exactly 91 bytes, first byte `0x30` (DER `SEQUENCE`), byte 26 — `0x04` (uncompressed EC point marker). We check the shape, not "non-empty response" — a placeholder would pass a superficial check.
-   ```bash
-   PAIR_RESP=$(curl -sf --max-time 5 -X POST http://localhost:$PORT_A/pair \
-     -H "Content-Type: application/json" \
-     -d '{"publicKey":[1,2,3], "deviceName":"smoke"}')
-   echo "$PAIR_RESP" | jq -e '.publicKey | length == 91 and .[0] == 48 and .[26] == 4' > /dev/null \
-     && echo "PASS: X.509 EC P-256 SubjectPublicKeyInfo" \
-     || { echo "FAIL: bad publicKey shape: $PAIR_RESP"; }
-   ```
-4. **Port LISTEN** — `lsof -nP -iTCP:$PORT_A | head -3` shows a java listener.
-5. **mDNS publish (primary)** — poll the CLI log, look for `mDNS started → advertising 'SmokeMacA' on port`.
-6. **mDNS publish (secondary, optional)** — `( dns-sd -B _tether._tcp. local. 2>&1 & DNSSD_PID=$!; sleep 8; kill $DNSSD_PID 2>/dev/null ) | grep SmokeMacA`. If `dns-sd` is unavailable (Linux) — this step SKIP, the overall result is still PASS via primary.
-7. **stdin `list`** — `echo "list" > /tmp/smoke-cliA-in &; sleep 1; tail $LOG_A` — must print a `[list]` or `[peers]` line.
-
-Keep instance A alive until the end of Block 3. Graceful `quit` check — in Block 4.
+CLI A stays alive through Block 3. Graceful quit — Block 4.
 
 ### Block 2: Desktop ↔ Desktop send (via CLI)
 
-**Important:** send must go via the **CLI `send` command**, not via `curl POST /upload`. This is a smoke test of the user scenario, not of the endpoint.
+**Important:** send must go via the CLI `send` command, not via `curl POST /upload`.
 
-Start a second CLI instance (`SmokeMacB`) in parallel with A, wait until mDNS lets both see each other. The CLI's terminal output is `[send] done — N/N sent` (success), `[send] partial — N/M sent` (partial), or `[send] error — <reason>`. The `savedPath` is not in the log; verify by walking the receiver's downloads dir (`$HOME/Downloads/Tether/`).
-
-```bash
-LOG_B=/tmp/smoke-cliB.log
-mkfifo /tmp/smoke-cliB-in
-sleep 600 > /tmp/smoke-cliB-in & KEEPER_B=$!; disown $KEEPER_B
-echo $KEEPER_B > /tmp/smoke-cliB-keeper.pid
-nohup java -jar "$JAR" --name SmokeMacB --port 0 < /tmp/smoke-cliB-in > "$LOG_B" 2>&1 &
-JPID_B=$!; disown $JPID_B
-echo $JPID_B > /tmp/smoke-cliB.pid
-
-# Names must exactly match the --name above.
-for i in $(seq 1 30); do
-  grep -q 'SmokeMacA' $LOG_B 2>/dev/null && \
-  grep -q 'SmokeMacB' $LOG_A 2>/dev/null && break
-  sleep 1
-done
-
-DOWNLOADS_B="$HOME/Downloads/Tether"
-```
+Scenario 2.1 starts CLI B (`SmokeMacB`) and waits for mutual mDNS discovery; 2.2 and 2.3 assume B is still alive. Each scenario is independently re-runnable (re-running 2.2 or 2.3 alone requires B to already be running).
 
 #### Scenario 2.1 — single-file send
 
-```bash
-SEND1_NAME="smoke-send-$(date +%s).txt"
-SEND1_SRC="/tmp/$SEND1_NAME"
-echo "send-via-cli-$(date +%s)" > "$SEND1_SRC"
-echo "send SmokeMacB $SEND1_SRC" > /tmp/smoke-cliA-in &
+Run: `./block-2.1-single-file-send.sh`
 
-for i in $(seq 1 15); do
-  grep -qE "^\[send\] (done|partial|error)" $LOG_A && break
-  sleep 1
-done
-grep -qE "^\[send\] done" $LOG_A && [ -f "$DOWNLOADS_B/$SEND1_NAME" ] && \
-  diff "$SEND1_SRC" "$DOWNLOADS_B/$SEND1_NAME" >/dev/null && echo PASS || echo FAIL
-```
-
-PASS if `[send] done` appears in log A AND the file lands at `$DOWNLOADS_B/$SEND1_NAME` byte-identical to the source.
+Sends one file from A to B. PASS if `[send] done` appears in A's log AND the file lands at `$HOME/Downloads/Tether/` byte-identical to the source.
 
 #### Scenario 2.2 — multi-file send (3 files in one `send` command)
 
-```bash
-TS=$(date +%s)
-M1="/tmp/smoke-multi-${TS}-1.txt"; echo "m1-$TS" > "$M1"
-M2="/tmp/smoke-multi-${TS}-2.txt"; echo "m2-$TS" > "$M2"
-M3="/tmp/smoke-multi-${TS}-3.txt"; echo "m3-$TS" > "$M3"
-echo "send SmokeMacB $M1 $M2 $M3" > /tmp/smoke-cliA-in &
+Run: `./block-2.2-multi-file-send.sh`
 
-PREV_DONE=$(grep -cE "^\[send\] done" $LOG_A 2>/dev/null || echo 0)
-for i in $(seq 1 20); do
-  NOW_DONE=$(grep -cE "^\[send\] done" $LOG_A 2>/dev/null || echo 0)
-  [ "$NOW_DONE" -gt "$PREV_DONE" ] && break
-  sleep 1
-done
-grep -qE '^\[send\] done — 3/3 sent' $LOG_A && \
-  diff "$M1" "$DOWNLOADS_B/$(basename $M1)" >/dev/null && \
-  diff "$M2" "$DOWNLOADS_B/$(basename $M2)" >/dev/null && \
-  diff "$M3" "$DOWNLOADS_B/$(basename $M3)" >/dev/null && echo PASS || echo FAIL
-```
-
-PASS if `[send] done — 3/3 sent` appears AND all 3 files land byte-identical.
+Sends 3 files in one command. PASS if `[send] done — 3/3 sent` appears AND all 3 files land byte-identical.
 
 #### Scenario 2.3 — `retry` happy path
 
-Provoke partial by mixing a non-existent path in. The CLI's `handleSend` validates paths up front and returns `Failed` when any path is missing — so for `retry` we drive a real engine-level failure: stop instance B, send to it, expect `error`, restart B, then `retry`.
+Run: `./block-2.3-retry.sh`
 
-Simpler reproducible trigger: send while B is stopped → `[send] error` → start B → `retry SmokeMacB` → `[send] done`.
-
-```bash
-# Stop B
-kill $(cat /tmp/smoke-cliB.pid) 2>/dev/null
-sleep 2
-
-RETRY_NAME="smoke-retry-$(date +%s).txt"
-RETRY_SRC="/tmp/$RETRY_NAME"
-echo "retry-payload-$(date +%s)" > "$RETRY_SRC"
-PREV_ERR=$(grep -cE "^\[send\] error" $LOG_A 2>/dev/null || echo 0)
-echo "send SmokeMacB $RETRY_SRC" > /tmp/smoke-cliA-in &
-for i in $(seq 1 15); do
-  NOW_ERR=$(grep -cE "^\[send\] error" $LOG_A 2>/dev/null || echo 0)
-  [ "$NOW_ERR" -gt "$PREV_ERR" ] && break
-  sleep 1
-done
-
-# Restart B with the same name so the engine's PeerIdentity resolves again
-nohup java -jar "$JAR" --name SmokeMacB --port 0 < /tmp/smoke-cliB-in > "$LOG_B" 2>&1 &
-JPID_B=$!; disown $JPID_B
-echo $JPID_B > /tmp/smoke-cliB.pid
-for i in $(seq 1 30); do
-  grep -q 'SmokeMacB' $LOG_A 2>/dev/null && break
-  sleep 1
-done
-
-PREV_DONE=$(grep -cE "^\[send\] done" $LOG_A 2>/dev/null || echo 0)
-echo "retry SmokeMacB" > /tmp/smoke-cliA-in &
-for i in $(seq 1 15); do
-  NOW_DONE=$(grep -cE "^\[send\] done" $LOG_A 2>/dev/null || echo 0)
-  [ "$NOW_DONE" -gt "$PREV_DONE" ] && break
-  sleep 1
-done
-[ -f "$DOWNLOADS_B/$RETRY_NAME" ] && diff "$RETRY_SRC" "$DOWNLOADS_B/$RETRY_NAME" >/dev/null && echo PASS || echo FAIL
-```
-
-PASS if the file lands byte-identical after `retry`. If `[send] done` did not increment, retry silently no-op'd — FAIL.
+Stops B to provoke `[send] error`, restarts B, then issues `retry SmokeMacB`. PASS if the file lands byte-identical after retry.
 
 #### Scenario 2.4 — exit code on `quit`
 
-The REPL accumulates a `lastExit` from each `send`/`retry`; `quit` exits with it. Verified later in Block 4 — see the exit-code check there.
-
-Cleanup of instance B and the scratch files — in Block 7.
+Verified in Block 4 — `lastExit` accumulates per `send`/`retry`; after the retry the last result was AllSent → expected exit code 0.
 
 ### Block 3: Same-name discovery
 
-Verifies that three peers with the same requested service name see each other after mDNS conflict-rename: a third instance is launched with the same `--name SmokeMacA` as A, in parallel with A and B.
+Run: `./block-3-same-name-discovery.sh`
 
-```bash
-LOG_C=/tmp/smoke-cliC.log
-mkfifo /tmp/smoke-cliC-in
-sleep 600 > /tmp/smoke-cliC-in & KEEPER_C=$!; disown $KEEPER_C
-echo $KEEPER_C > /tmp/smoke-cliC-keeper.pid
-nohup java -jar "$JAR" --name SmokeMacA --port 0 < /tmp/smoke-cliC-in > "$LOG_C" 2>&1 &
-JPID_C=$!; disown $JPID_C
-echo $JPID_C > /tmp/smoke-cliC.pid
+Launches a third instance (`SmokeMacA` — same name as A) to verify mDNS conflict-rename: each of A/B/C must see ≥ 2 unique SmokeMac peers within 20 s.
 
-for i in $(seq 1 20); do
-  echo "list" > /tmp/smoke-cliA-in &
-  echo "list" > /tmp/smoke-cliB-in &
-  echo "list" > /tmp/smoke-cliC-in &
-  sleep 1
-  # `[peers]` lines append on each change; take the last, catch name up to `@` to capture
-  # the renamed form `SmokeMacA (2)`.
-  A_OK=$(grep -aE "\[peers\]" $LOG_A | tail -1 | grep -oE 'SmokeMac[A-Z][^@]*' | sort -u | wc -l | tr -d ' ')
-  B_OK=$(grep -aE "\[peers\]" $LOG_B | tail -1 | grep -oE 'SmokeMac[A-Z][^@]*' | sort -u | wc -l | tr -d ' ')
-  C_OK=$(grep -aE "\[peers\]" $LOG_C | tail -1 | grep -oE 'SmokeMac[A-Z][^@]*' | sort -u | wc -l | tr -d ' ')
-  [ "$A_OK" -ge 2 ] && [ "$B_OK" -ge 2 ] && [ "$C_OK" -ge 2 ] && break
-done
-```
-
-PASS if each of A/B/C sees ≥ 2 unique SmokeMac peers within 20 sec. FAIL — attach the last `[peers]` lines from all three logs in Details.
+FAIL → attach the last `[peers]` lines from all three logs in Details.
 
 Cleanup of instance C — in Block 7.
 
-### Block 3.5: Device name rename — peer sees the new name
+### Block 3.5: Device name rename
 
-stdin `name <new>` on A; B must see the new name via mDNS republish.
+Run: `./block-3.5-rename.sh`
 
-```bash
-echo "name RenamedA" > /tmp/smoke-cliA-in &
-for i in $(seq 1 15); do
-  grep -q "RenamedA" $LOG_B && break
-  sleep 1
-done
-grep -q "RenamedA" $LOG_B && echo PASS || echo FAIL
-```
+Sends `name RenamedA` to A via stdin; B must see the new name via mDNS republish within 15 s.
 
 ### Block 4: Graceful quit of instance A — and `lastExit` propagation
 
-`echo "quit" > /tmp/smoke-cliA-in &`, wait up to 8 sec, check `ps -p $JPID_A`. PASS if the process exited.
+Run: `./block-4-graceful-quit.sh`
 
-Then check the exit code matches `lastExit` from the most recent send/retry. After the Block 2 retry scenario, the last result was `AllSent` → exit code 0:
+Sends `quit` to A, waits up to 8 s, checks exit. PASS if the process exited.
 
-```bash
-wait $JPID_A 2>/dev/null
-EXIT_A=$?
-[ "$EXIT_A" = "0" ] && echo "PASS: exit=0 (last send AllSent)" || echo "FAIL: exit=$EXIT_A"
-```
-
-If `quit` didn't exit — FAIL "not graceful", `kill -9` and move on; exit-code check SKIP.
+Checks exit code = 0 (last send was AllSent after the retry scenario). If the process had to be force-killed — exit-code check SKIP.
 
 ### Block 5: Android (conditional)
 
-First check for a device:
-```bash
-adb devices | awk '/device$/ && !/List/ {print $1}'
-```
+Run: `./block-5-android.sh`
 
-If empty — the entire block SKIP with reason "no adb device connected".
+SKIP if no adb device connected. If present:
 
-If a device is present:
-
-1. **Install:** `./gradlew -q :composeApp:installDebug`
-2. **Logcat clear:** `adb logcat -c`
-3. **Start activity:**
-   ```bash
-   adb shell am start -n com.tubetoast.tether/.MainActivity
-   ```
-4. **Wait for `NSD service registered` as the readiness anchor.**
-   The anchor for the cross-discovery metric is placed **after** the Android side has published — the delta measures only network propagation + JmDNS resolve, without Android boot/init:
-   ```bash
-   DEADLINE=$(($(date +%s) + 12))
-   while [ $(date +%s) -lt $DEADLINE ]; do
-     adb logcat -d 2>/dev/null | grep -q "NSD service registered" && break
-     sleep 1
-   done
-   NSD_READY_MS=$(python3 -c "import time; print(int(time.time() * 1000))")
-   ```
-   Parse:
-   - `TetherFGService: FileServer started on port <N>` → `ANDROID_PORT`
-   - `Starting NSD: name=Tether-...` and `NSD service registered: ...` — time difference = NSD probing latency, output in Details.
-5. **Get IP** via `ip addr`, not `ip route` — the format differs on some vendors (ColorOS, MIUI):
-   ```bash
-   ANDROID_IP=$(adb shell ip addr show wlan0 2>&1 | grep "inet " | awk '{print $2}' | cut -d/ -f1 | head -1)
-   ```
-   If emulator and IP is `10.0.2.x` — host access via `adb forward tcp:18080 tcp:$ANDROID_PORT` and `localhost:18080`. For a physical device — directly `$ANDROID_IP:$ANDROID_PORT`.
-6. **`/health` sanity:** `curl -sf http://$ANDROID_IP:$ANDROID_PORT/health` → `Tether OK`. This is the only place where curl is acceptable — endpoint sanity, not a user flow.
-7. **Cross-discovery with timing:** parse the Desktop CLI's `[peers]` line by the Android device's IP — Android advertises under the device name (`CPH2653`, `Pixel 7`, vendor-specific), not under any `Tether-*` prefix. Match the entry that ends with `@$ANDROID_IP:port` and strip everything after `@`:
-   ```bash
-   for i in $(seq 1 30); do
-     sleep 1
-     grep -aE "\[peers\] .*@${ANDROID_IP}:" $LOG_A | tail -1 | grep -q . && break
-   done
-   NOW_MS=$(python3 -c "import time; print(int(time.time() * 1000))")
-   DELTA_MS=$((NOW_MS - NSD_READY_MS))
-   ANDROID_NAME=$(grep -aE "\[peers\]" $LOG_A | tail -1 | grep -oE '[^, ]+@'"$ANDROID_IP" | head -1 | sed 's/@.*//')
-   echo "cross-discovery: ${DELTA_MS}ms, peer=$ANDROID_NAME"
-   ```
-   In the report: `Android | cross-discovery | ✓ PASS | 250 ms` — network-propagation + JmDNS resolve.
-8. **Send Desktop → Android (via CLI):**
-   ```bash
-   if echo "$ANDROID_IP" | grep -q "^10\.0\.2\."; then
-     echo "SKIP: Android emulator detected — QEMU user-mode NAT drops host→guest TCP payload; see docs/knowledge/android-emulator-networking.md"
-   elif [ -z "$ANDROID_NAME" ]; then
-     echo "SKIP: cross-discovery did not surface Android peer"
-   else
-     ANDROID_NAME_FILE="smoke-android-$(date +%s).txt"
-     ANDROID_SRC="/tmp/$ANDROID_NAME_FILE"
-     echo "send-to-android-$(date +%s)" > "$ANDROID_SRC"
-     PREV_DONE=$(grep -cE "^\[send\] done" $LOG_A 2>/dev/null || echo 0)
-     echo "send $ANDROID_NAME $ANDROID_SRC" > /tmp/smoke-cliA-in &
-     for i in $(seq 1 15); do
-       NOW_DONE=$(grep -cE "^\[send\] done" $LOG_A 2>/dev/null || echo 0)
-       [ "$NOW_DONE" -gt "$PREV_DONE" ] && break
-       sleep 1
-     done
-     # The CLI no longer prints savedPath — Android stores under app-private external storage;
-     # the filename matches the source. Locate it via shell glob, then diff.
-     ANDROID_DEST=$(adb shell run-as com.tubetoast.tether ls -1 \
-       "/data/data/com.tubetoast.tether/files/Tether/$ANDROID_NAME_FILE" 2>/dev/null \
-       || adb shell ls -1 "/sdcard/Android/data/com.tubetoast.tether/files/Tether/$ANDROID_NAME_FILE" 2>/dev/null)
-     ANDROID_DEST=$(echo "$ANDROID_DEST" | tr -d '\r' | head -1)
-     [ -n "$ANDROID_DEST" ] && adb shell cat "$ANDROID_DEST" 2>/dev/null \
-       | diff - "$ANDROID_SRC" && echo PASS || echo FAIL
-   fi
-   ```
-   PASS if Desktop CLI log shows a `[send] done` increment AND the file on Android (located by name under the app's external/private Tether dir) is identical. SKIP if `10.0.2.x` (QEMU NAT) or ANDROID_NAME is empty — not FAIL.
-9. **Stop service:** `adb shell am force-stop com.tubetoast.tether`. PASS if the app exited. (Notification "Stop" tap — manual.)
-
-Mark each sub-scenario separately: install, FGS+mDNS up (with NSD probing latency), /health sanity, cross-discovery (with ms), send-desktop-to-android, stop.
+1. `installDebug`
+2. Start activity, wait for `NSD service registered`.
+3. Parse Android port and IP.
+4. `/health` sanity.
+5. Cross-discovery with timing (ms from NSD ready to peer appearing on Desktop A).
+6. Send Desktop → Android via CLI `send`. SKIP if emulator with QEMU NAT (`10.0.2.x`) or Android peer not discovered.
+7. `force-stop`.
 
 ### Block 5.5: iOS simulator runtime (conditional)
 
-Pre-checks (any fail → entire block SKIP with reason):
-- `xcrun simctl help >/dev/null 2>&1` — Xcode CLI tools installed.
-- `[ -d iosApp/iosApp.xcodeproj ]` — project exists.
+Run: `./block-5.5-ios.sh`
 
-Otherwise:
+SKIP if Xcode CLI tools absent or `iosApp/iosApp.xcodeproj` not found.
 
-1. **Resolve + boot the simulator.** Default `iPhone 17` (as in `scripts/run-all.sh`). If another is needed — variable `IOS_DEVICE`.
-   ```bash
-   IOS_DEVICE="${IOS_DEVICE:-iPhone 17}"
-   UDID=$(xcrun simctl list devices available \
-     | awk -F '[()]' -v n="$IOS_DEVICE" '$0 ~ n && $0 !~ /unavailable/ { print $2; exit }')
-   [ -z "$UDID" ] && { echo "SKIP: no available simulator matching '$IOS_DEVICE'"; }
-   xcrun simctl boot "$UDID" 2>/dev/null || true
-   open -a Simulator
-   ```
-2. **Build + install + launch.** Use `build/ios` as derivedDataPath to reuse the cache between runs.
-   ```bash
-   IOS_DERIVED=build/ios
-   IOS_APP="$IOS_DERIVED/Build/Products/Debug-iphonesimulator/Tether.app"
-   IOS_BUNDLE_ID=com.tubetoast.tether.Tether
-   xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp \
-     -configuration Debug \
-     -destination "platform=iOS Simulator,id=$UDID" \
-     -derivedDataPath "$IOS_DERIVED" \
-     build > /tmp/smoke-ios-build.log 2>&1
-   xcrun simctl install "$UDID" "$IOS_APP"
-   xcrun simctl launch "$UDID" "$IOS_BUNDLE_ID" > /tmp/smoke-ios-launch.log 2>&1
-   ```
-   PASS if build exit=0, install exit=0, launch exit=0. FAIL — tail `/tmp/smoke-ios-build.log`.
-3. **mDNS publish.** Poll `dns-sd` for up to 30 sec:
-   ```bash
-   IOS_NAME=""
-   for i in $(seq 1 30); do
-     # `dns-sd -B` prints each match as a tab-separated line ending with the instance name;
-     # the name is the trailing token after the last tab. The previous regex `[…]*iPhone[…]*`
-     # captured leading junk (`tcp.        iPhone 17 Pro`) and broke the subsequent TXT query.
-     IOS_NAME=$( ( dns-sd -B _tether._tcp local. & DNSSD=$!; sleep 2; kill $DNSSD 2>/dev/null ) \
-       | awk -F'\t' '/_tether._tcp/ && NF>1 { print $NF }' \
-       | grep -E 'iPhone|iPad' | head -1 | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-     [ -n "$IOS_NAME" ] && break
-     sleep 1
-   done
-   ```
-   PASS if `IOS_NAME` is non-empty. FAIL reason — most likely a Local Network Privacy prompt (see "What the skill does NOT check").
-4. **TXT publish.** `dns-sd -q "${IOS_NAME}._tether._tcp.local." TXT` for ~3 sec, must return `4 bytes: 03 76 3D 31` (`v=1`). PASS if the binary pattern matched.
-5. **Cross-discovery.** Wait up to 30 sec for the iOS peer to appear in Desktop CLI A's log:
-   ```bash
-   for i in $(seq 1 30); do grep -q "$IOS_NAME" "$LOG_A" && break; sleep 1; done
-   ```
-   PASS if a line with `IOS_NAME` appeared in log A.
+1. Resolve + boot simulator (default `iPhone 17`; override via `IOS_DEVICE` env var).
+2. `xcodebuild`, install, launch.
+3. mDNS publish — `dns-sd -B` for up to 30 s.
+4. TXT record — must return `03 76 3D 31` (`v=1`).
+5. Cross-discovery — iOS peer must appear in Desktop A's log within 30 s.
 
 iOS cleanup — in Block 7.
 
 ### Block 7: Cleanup
 
-Executed **always**:
-- `kill $(cat /tmp/smoke-cliA.pid /tmp/smoke-cliB.pid /tmp/smoke-cliC.pid /tmp/smoke-cliA-keeper.pid /tmp/smoke-cliB-keeper.pid /tmp/smoke-cliC-keeper.pid 2>/dev/null) 2>/dev/null`
-- `pkill -f 'com.tubetoast.tether.*\.jar'` (safety net)
-- `rm -f /tmp/smoke-cli*-in /tmp/smoke-cli*.log /tmp/smoke-cli*.pid /tmp/smoke-cli*-keeper.pid /tmp/smoke-send.txt /tmp/smoke-android.txt`
-- Files in `~/Downloads/Tether/` that we created — clean up by name: `rm -f "$DOWNLOADS_B/$SEND1_NAME" "$DOWNLOADS_B/$(basename $M1)" "$DOWNLOADS_B/$(basename $M2)" "$DOWNLOADS_B/$(basename $M3)" "$DOWNLOADS_B/$RETRY_NAME"`.
-- `adb shell rm -f /sdcard/Android/data/com.tubetoast.tether/files/Tether/smoke-android.txt` (or by `SAVED_PATH` if parsed)
-- `adb shell am force-stop com.tubetoast.tether`
-- `xcrun simctl terminate "$UDID" com.tubetoast.tether.Tether 2>/dev/null || true` (if `UDID` was resolved in Block 5.5)
-- `rm -f /tmp/smoke-ios-build.log /tmp/smoke-ios-launch.log`
+Run: `./block-7-cleanup.sh` — **always**.
+
+Kills all CLI instances and keepers, removes FIFOs, logs, PIDs, scratch files in `$HOME/Downloads/Tether/`, Android device files, iOS simulator app, and build logs.
 
 ## Report format
 
@@ -505,14 +233,14 @@ Don't ask the user for clarification — the skill must be "zero-question": ever
 
 - **Gradle daemon busy** — don't kill it, it will be reused.
 - **CLI jar stale (code changed)** — `cliJar` will rebuild what's needed. Don't run `clean`.
-- **Jar name may contain version** — determine dynamically via glob `composeApp/build/libs/tether-cli-*.jar composeApp/build/libs/tether-cli.jar | head -1`. Don't hardcode the filename.
+- **Jar name may contain version** — determine dynamically via glob. Don't hardcode the filename.
 - **`dns-sd` not on macOS** — unavailable on Linux; secondary mDNS check SKIP with reason "dns-sd not available". Primary check (grep CLI log for `mDNS started`) still works.
 - **`timeout` absent on macOS** — use pattern `( cmd & PID=$!; sleep N; kill $PID )` instead of `timeout`.
 - **FIFO writer keeper died early** — readLine() returns null, CLI exits; check `ps -p $KEEPER`.
-- **Android emulator in NAT (10.0.2.x)** — cross-discovery works both ways (multicast passes). QEMU user-mode NAT does not proxy host→guest TCP payload: handshake passes, data doesn't arrive. Send block (step 8) — SKIP at `10.0.2.x`, not FAIL. Health is accessible via `adb forward`. See `docs/knowledge/android-emulator-networking.md`.
+- **Android emulator in NAT (10.0.2.x)** — cross-discovery works both ways (multicast passes). QEMU user-mode NAT does not proxy host→guest TCP payload: handshake passes, data doesn't arrive. Send block — SKIP at `10.0.2.x`, not FAIL. Health is accessible via `adb forward`. See `docs/knowledge/android-emulator-networking.md`.
 - **`ip route` unreliable on some vendors** (ColorOS, MIUI return subnet instead of src) — use `ip addr show wlan0`.
 - **Multiple adb devices** — pick the first or fail with a clarification. Don't hang the skill on a specific serial.
-- **Receiver downloads path** — Desktop receiver writes to `$HOME/Downloads/Tether/` by default; smoke walks that dir by filename. If the smoke run sets a non-default `downloadsDir`, update `DOWNLOADS_B`. On Android, the location is app-private — locate by basename under the app's Tether dir, not by parsed path.
+- **Receiver downloads path** — Desktop receiver writes to `$HOME/Downloads/Tether/` by default; smoke walks that dir by filename. On Android, the location is app-private — locate by basename under the app's Tether dir, not by parsed path.
 - **Terminal output format** — `[send] done — N/N sent` (success), `[send] partial — N/M sent` (partial), `[send] error — <reason>` (failure). No `savedPath` in the log.
 
 ## What NOT to do
