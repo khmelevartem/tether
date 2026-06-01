@@ -35,7 +35,6 @@ import kotlin.test.assertTrue
 class FileServerPairTest {
     private val tempDirs = TempDirs(slug = "tether-fs-pair")
     private val cleanupTempStores = mutableListOf<TempDataStore>()
-    private lateinit var configDir: String
     private lateinit var store: TrustedDeviceStore
     private lateinit var keyPair: DeviceKeyPair
     private lateinit var server: FileServer
@@ -44,7 +43,6 @@ class FileServerPairTest {
 
     @BeforeTest
     fun setup() {
-        configDir = newTempDir()
         val temp = TempDataStore().also { cleanupTempStores += it }
         store = DefaultTrustedDeviceStore(temp.dataStore)
         keyPair = DeviceKeyPair(keychain = InMemoryKeychainStore())

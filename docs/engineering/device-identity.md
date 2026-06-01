@@ -1,6 +1,6 @@
 # Device identity
 
-Per-install asymmetric keypair, the root of trust pinned during pairing and wrapped into a self-signed certificate for TLS by the [channel-encryption ADR](adr/adr-channel-encryption.md). One `expect` declaration in the common layer; one actual per OS family.
+Per-install asymmetric keypair, the root of trust pinned during pairing and wrapped into a self-signed certificate for TLS by the [channel-encryption ADR](adr/adr-channel-encryption.md). One common-layer declaration with one actual per OS family.
 
 ## Goal
 
@@ -18,13 +18,13 @@ Both platforms produce the same bytes for a given key.
 
 ## Contract
 
-The exposed public key is **91 bytes of X.509 SubjectPublicKeyInfo for EC P-256**. The interoperability claim: the JVM EC public-key import API accepts the bytes and round-trips them to an equal public-key instance. Verified by a cross-format unit test on the JVM side and by simulator-bundle smoke that POSTs `/pair` against the running iOS app — the only environment where the Apple Keychain path actually runs, see [knowledge entry](../knowledge/apple-platform.md#keychain-query-dicts-must-be-built-via-cfmutabledictionary).
+The exposed public key is **91 bytes of X.509 SubjectPublicKeyInfo for EC P-256**. The interoperability claim: the JVM EC public-key import API accepts the bytes and round-trips them to an equal public-key instance. Verified by a cross-format unit test on the JVM side and by simulator-bundle smoke that POSTs `/pair` against the running iOS app — the only environment where the Apple Keychain path actually runs, see [docs/knowledge/apple-platform.md](../knowledge/apple-platform.md).
 
 ## Cross-cutting
 
-- **Lifecycle.** Generated lazily on first construction, persisted; subsequent constructions return the same bytes. Identity rotates only when the user uninstalls the app (clearing the Keychain / the config directory). Pre-MVP there is no migration story for prior installs; debug device rotation is via uninstall.
-- **Authority.** The keypair is the root of trust for the install. Keychain access is wrapped behind a small seam so unit tests inject an in-memory fake — the test harness has no app identity, so the real Keychain returns errors uniformly. Production wiring happens at the iOS composition root.
-- **Placement.** Apple-only code in `appleMain`, JVM-only in `jvmMain`, the wire-format wrapper in `commonMain` (pure bytes, no platform API). DI wiring in `iosMain`.
+- **Lifecycle.** Generated lazily on first construction, persisted; subsequent constructions return the same bytes. Identity rotation is via uninstall (clearing the Keychain / the config directory); migration from a prior install is out of scope until the first shipped version creates legacy to migrate from.
+- **Authority.** The keypair is the root of trust for the install. Keychain access is wrapped behind a small seam so unit tests inject an in-memory fake — the test harness has no app identity, so the real Keychain returns errors uniformly. Production wiring lives in each platform's composition root.
+- **Placement.** Apple code in the Apple source set, JVM code in the JVM source set, the wire-format wrapper in the common layer (pure bytes, no platform API).
 - **Observability.** Corruption recovery (load returns a key but extract fails) logs and regenerates once. A non-success Keychain delete is logged because it precedes a likely duplicate-item error on the next generate.
 
 ## What this doc does *not* commit to
