@@ -47,7 +47,7 @@ class FileServerPairTest {
         configDir = newTempDir()
         val temp = TempDataStore().also { cleanupTempStores += it }
         store = DefaultTrustedDeviceStore(temp.dataStore)
-        keyPair = DeviceKeyPair(configDir = configDir, keychain = InMemoryKeychainStore())
+        keyPair = DeviceKeyPair(keychain = InMemoryKeychainStore())
         server = FileServer(
             configuredPort = 0,
             downloadsDir = newTempDir(),

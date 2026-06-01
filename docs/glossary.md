@@ -45,9 +45,5 @@ Engineering concepts. The vocabulary [`architect`](../.claude/agents/architect.m
 - **Path sanitization** — the two-layer boundary that maps an untrusted `name` parameter to a safe on-disk destination: Layer 1 is the lexical sanitizer in the route handler, Layer 2 is the canonical-realisation check in UploadStorage. (see [file-transfer-wire.md](engineering/file-transfer-wire.md))
 - **Abort** — UploadStorage's failure-path cleanup: deletes the partial destination file and removes only the empty parent directories this upload created, leaving directories shared with other in-flight uploads alone. _Avoid:_ cancel, rollback.
 - **Downloads root** — the per-device root directory into which incoming files are landed; the security boundary every received file must stay inside. _Avoid:_ destination root, downloads folder when the security property matters.
-- **application tag** — a reverse-DNS string (e.g. `com.example.app.mykey`) that identifies a Keychain item within the app's bundle. Scopes Keychain queries so multiple keys in the same keychain do not collide. _Avoid:_ key label, key alias.
-- **EC P-256** — the NIST P-256 elliptic curve (also called prime256v1 or secp256r1); the asymmetric key type Tether uses for device identity.
 - **Keychain** — the platform-managed secure store for cryptographic keys; on Apple platforms, accessed via Security framework APIs. _Avoid:_ keystore (Android term), secure enclave (a sub-component of the Keychain stack, not the Keychain itself).
-- **uncompressed point** — the 65-byte encoding of an EC public key: `0x04 || X || Y`, where X and Y are the 32-byte big-endian coordinates. This is the form Apple's Keychain returns when exporting a P-256 key.
-- **X.509 SPKI** — SubjectPublicKeyInfo, a 91-byte DER structure wrapping an uncompressed EC point with an AlgorithmIdentifier header. The format accepted by the JVM's EC public-key import API and what Tether exchanges in the pairing handshake.
 

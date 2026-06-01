@@ -74,7 +74,7 @@ class FileServerTest {
             configuredPort = 0,
             downloadsDir = downloadsDir,
             trustedDeviceStore = DefaultTrustedDeviceStore(temp.dataStore),
-            deviceKeyPair = DeviceKeyPair(configDir = configDir, keychain = InMemoryKeychainStore()),
+            deviceKeyPair = DeviceKeyPair(keychain = InMemoryKeychainStore()),
         )
     }
 
