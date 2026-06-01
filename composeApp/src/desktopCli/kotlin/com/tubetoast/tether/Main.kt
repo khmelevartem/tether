@@ -126,12 +126,9 @@ class TetherCommand :
         }
 
         val discovery = container.mdnsDiscovery
-        var lastPeerIds: String? = null
         launch {
             discovery.discoveredDevices.collect { peers ->
                 val ids = if (peers.isEmpty()) "none" else peers.joinToString(", ") { it.id }
-                if (ids == lastPeerIds) return@collect
-                lastPeerIds = ids
                 echo("[peers] $ids")
             }
         }
