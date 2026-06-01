@@ -1,6 +1,6 @@
-## Цель спринта
+# Sprint 10 · Завет Четырёх Клинков
 
-Разблокировать pairing-эпик — Apple-ключи и handshake-CLI готовы под PIN UI следующего спринта — привести transfer surface к зафиксированным v0-референсам, закодифицировать четырёхслойную архитектуру в едином документе и закрыть остаточные race-условия в `PendingFilesRepository`. Sender-wiring волна (#192 / #193 / #194) сдвигается на sprint-11.
+**Направления:** паринг · UI-полотно · документация · надёжность pending-буфера · CLI
 
 ## Состав
 
@@ -15,16 +15,16 @@
 | 7 | [#10](https://github.com/khmelevartem/tether/issues/10) | Pairing — handshake, вычисление PIN-кода, CLI-флоу | feature | M |
 | 8 | [#328](https://github.com/khmelevartem/tether/issues/328) | Batch send + retry in CLI via PeerTransferEngine | feature | M |
 
-## Следствия
+## Что разблокирует
 
-- После #116 + #10 pairing работает сквозным CLI-флоу: JVM↔Apple handshake идёт по настоящему EC P-256, PIN-код считается детерминированно с обеих сторон. Разблокирован #11 (PIN UI на 4 платформах) — единственный оставшийся pairing-таск до feature-completeness.
-- После #317 transfer surface получает финальную визуальную поверхность по v0-референсам и `ui-style-guide.md`; sender-wiring волна следующего спринта приклеивается к стабильному визуалу.
-- После #321 четырёхслойная архитектура (UI → Presentation → Domain → Data) живёт одним документом вместо россыпи фрагментов в `presentation-layer.md` / `architecture-principles.md` / `modules.md` / `dependency-injection.md`. Любая последующая задача обсуждается на общем словаре слоёв.
-- После #327 + #336 `PendingFilesRepository` устойчив к share-sheet payload-drop'ам и к гонке между auto-send consumer'ами и concurrent `setPending` — share-intent / drag-drop entry points (#192 / #193 / #194 следующего спринта) приземляются на детерминированную базу.
-- После #328 CLI ходит через тот же `PeerTransferEngine`, что и UI — fix на одной стороне автоматически работает на другой. Удобная база для smoke-валидации sender-wiring в sprint-11.
+- После #116 + #10 разблокирован #11 (PIN UI на 4 платформах) — единственный оставшийся pairing-таск до feature-completeness.
+- После #317 sender-wiring волна следующего спринта (#192 / #193 / #194) приземляется на стабильный визуал, а не на движущуюся поверхность.
+- После #327 + #336 share-intent / drag-drop entry points sprint-11 приземляются на детерминированный `PendingFilesRepository` без race-условий.
+- После #321 любая последующая задача обсуждается на общем словаре четырёх слоёв вместо россыпи фрагментов.
+- После #328 CLI и UI ходят через один `PeerTransferEngine` — smoke-валидация sender-wiring в sprint-11 дешевле.
 
 ## Порядок мерджа
 
-#333 → #327 → #336 → #317 → #321 (параллельно с UI) → #116 → #10 → #328 (параллельно с pairing)
+#333 → #327 → #336 → #317 → #321 || #116 → #10 || #328
 
-#333 — UX-решение по конфликту share-sheet vs active transfer, без него #327 не может выбрать surface (banner / dialog / disabled card). #327 — фикс по принятому решению, ложится до реcкина и освобождает `PeerTransferComponent` от TODO. #336 — атомарный `clearIfMatches` на ту же поверхность `PendingFilesRepository`; идёт сразу после #327, чтобы оба фикса разъехались по одному файлу одной волной. #317 — широкий рефакторинг по common-UI, должен лечь до любых других UI-задач. #321 — чистые docs, параллелится с UI. #116 — изолированный Apple-блокер для #10. #10 — единственная задача с pairing-нагрузкой на `network/FileServerRoutes` (`/pair` route). #328 — изолированный CLI, параллелится с pairing.
+`||` маркирует параллельные ветки. #333 — UX-решение, без него #327 не может выбрать surface. #327 → #336 — оба правят `PendingFilesRepository`, одной волной. #317 — широкий рефакторинг по common-UI, ложится до любых других UI-задач. #321 — чистые docs. #116 — изолированный Apple-блокер для #10. #328 — изолированный CLI.

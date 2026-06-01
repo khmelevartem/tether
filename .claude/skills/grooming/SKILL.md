@@ -1,6 +1,6 @@
 ---
 name: grooming
-description: Run a backlog grooming session — close the current sprint-NN.md by actuals (task statuses, extra results within the window), go through open issues, find unfiled tasks via gap-analysis (platform symmetry, TODOs in code, MVP blockers from the roadmap) and compose a compact candidate for the next sprint in a fixed format (Goal / Composition / Consequences / optional merge order). Use when the user says "groom", "grooming", "plan the sprint", "close the sprint".
+description: Run a backlog grooming session — close the current sprint-NN.md by actuals (task statuses, extra results within the window), go through open issues, find unfiled tasks via gap-analysis (platform symmetry, TODOs in code, MVP blockers from the roadmap) and compose a compact candidate for the next sprint in a fixed format (directions tag / composition / what it unblocks / optional merge order). Use when the user says "groom", "grooming", "plan the sprint", "close the sprint".
 ---
 
 Run a backlog grooming session and compose a candidate plan for the next sprint.
@@ -173,26 +173,33 @@ Good combinations for parallel work:
 
 ## Step 6 — Sprint doc format
 
-Save to `docs/sprints/sprint-NN.md`. Only three mandatory sections + one optional. Nothing beyond that.
+Save to `docs/sprints/sprint-NN.md`. Format:
 
 ```markdown
-## Sprint goal
+# Sprint NN · <Skyrim-codename>
 
-<1–2 sentences. User-facing increment after the sprint — not a task list, but what changes in the product / for development.>
+**Направления:** <area1> · <area2> · <area3>
 
-## Composition
+## Состав
 
-| # | Issue | Title | Type | Size |
-| - | ----- | ----- | ---- | ---- |
+| # | Issue | Название | Тип | Размер |
+| - | ----- | -------- | --- | ------ |
 
-## Consequences
+## Что разблокирует
 
-<1–3 items. Unblocked directions — what becomes possible after this sprint. Not "task N is done, now we have result N" — the increment is already described in the Goal. Minor infra/bug fixes don't need a mention.>
+<1–3 bullets. Only "after X, Y becomes possible" — not a paraphrase of what the task does. If a bullet starts with "after X shipped Y" without a downstream step — drop it.>
 
-## Merge order (optional)
+<!-- Optional: omit if there's no rebase risk. Heading is literal — no parenthetical suffix in the actual doc. -->
+## Порядок мерджа
 
-<If it matters for minimising rebases: #A → #B → #C. Otherwise omit the section.>
+<#A → #B → #C; `||` marks parallel branches.>
 ```
+
+Section names in the template — `Состав`, `Что разблокирует`, `Порядок мерджа`, the leading `**Направления:**` tag — are literal output strings written to the sprint doc as-is. Sprint docs in this repo are authored in Russian; the literals match that convention. Tooling matches them by exact string.
+
+**Направления (Directions).** Short labels for the functional areas this sprint touches. Flat list separated by `·`. Not goals, not commitments — just a "where to look" tag. A sprint typically covers 2–4 directions; more signals tasks are diverging and the sprint is losing focus.
+
+**Skyrim-codename.** A decorative subtitle in epic-fantasy style — for atmosphere and recognisability. **Carries no operational load.** Any tool reading `sprint-NN.md` must rely only on the number `NN`; the subtitle must not be parsed or analysed.
 
 **Size (for the column):**
 - **S** — isolated change with no platform specifics
@@ -200,13 +207,14 @@ Save to `docs/sprints/sprint-NN.md`. Only three mandatory sections + one optiona
 - **L** — new component / multiple platforms / lots of unknowns
 
 **What must NOT be in the sprint doc:**
+- A prose "Sprint goal" paragraph. Sprints in this project = parallel agent loadout + merge order, not a customer-visible increment commitment. Directions tag + composition table + merge order carry all the load.
 - Justifications for why a task was chosen ("priority", "because it blocks #N").
 - Parallelism tables by layer, conflict matrices.
-- External blocking chains — that goes in Consequences, in one sentence.
+- External blocking chains — that goes in `## Что разблокирует`, in one sentence.
 - A "not included intentionally" list — it lives in the issue backlog, not the sprint doc.
 - A list of related product specs — specs are linked from issues, not duplicated here.
 - Per-task DoD / acceptance criteria expansion.
 
-When closing the sprint (Step 0), an `Outcome` column is appended to the "Composition" table, and a `## Additional results` section is added — this is the only thing that grows on top of the plan.
+When closing the sprint (Step 0), an `Итог` column is appended to the `## Состав` table, and a `## Дополнительные результаты` section is added — this is the only thing that grows on top of the plan.
 
 If there are tasks among the candidates without a spec — explicitly ask before saving whether a spec needs to be created.

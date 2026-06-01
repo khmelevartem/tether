@@ -1,3 +1,5 @@
+# Sprint 07 · Двойная Дорога
+
 ## Цель спринта
 
 Эпик #8 двигается параллельно по двум независимым осям: общая transfer-state-machine в `commonMain` (фундамент под все sender/receiver задачи) и device-list row contract (UI-surface paired × reachable, который потребляет PeerCard). Параллельно закрывается macOS-вход как минимальная нативная точка запуска и точечный bug на Android-эмуляторе.
