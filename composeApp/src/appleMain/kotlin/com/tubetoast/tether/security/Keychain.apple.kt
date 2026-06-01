@@ -55,6 +55,11 @@ import platform.Security.kSecPrivateKeyAttrs
 import platform.Security.kSecReturnRef
 import platform.Security.kSecUseDataProtectionKeychain
 import platform.darwin.NSObject
+import ru.pocketbyte.kydra.log.KydraLog
+import ru.pocketbyte.kydra.log.warn
+import ru.pocketbyte.kydra.log.wrapper.withTag
+
+private val log = KydraLog.withTag(default = "Keychain")
 
 /**
  * [findPrivateKey] returns null when no key is stored yet.
@@ -139,8 +144,15 @@ internal class Keychain(
             put(kSecAttrApplicationTag, tagData())
             put(kSecUseDataProtectionKeychain, kCFBooleanTrue)
         }
-        SecItemDelete(query)
+        val status = SecItemDelete(query)
         CFRelease(query)
+        // A non-deleted entry will collide with the next generate via errSecDuplicateItem;
+        // log it so the resulting startup crash is debuggable.
+        if (status != errSecSuccess && status != errSecItemNotFound) {
+            log.warn {
+                "SecItemDelete failed: OSStatus=$status; subsequent regenerate may fail with errSecDuplicateItem"
+            }
+        }
     }
 
     override fun extractPublicKeyBytes(key: SecKeyRef): ByteArray? {
