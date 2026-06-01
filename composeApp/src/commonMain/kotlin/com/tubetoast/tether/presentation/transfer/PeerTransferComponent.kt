@@ -29,7 +29,7 @@ class PeerTransferComponent(
     private val pendingFilesRepository: PendingFilesRepository? = null,
     // TODO(#192/#193/#194): platform actuals wire real file picker here
     private val onOpenPicker: () -> Unit = {},
-    private val conflictRelay: PeerConflictRelay? = null,
+    private val conflictRelay: PeerConflictRelay,
 ) : ComponentContext by componentContext {
     fun destroyContext() {
         lifecycleRegistry.destroy()
@@ -57,7 +57,7 @@ class PeerTransferComponent(
         if (accepted) {
             pendingFilesRepository.clearIfMatches(pending)
         } else {
-            conflictRelay?.reportBusyTap(peer.id)
+            conflictRelay.reportBusyTap(peer.id)
         }
     }
 

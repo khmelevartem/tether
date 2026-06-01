@@ -169,10 +169,17 @@ class BannersComponentTest {
     }
 
     @Test
-    fun `busy tap with no pending files leaves banner Hidden`() = runTest {
+    fun `busy tap with no pending does not poison selectedConflictPeer`() = runTest {
         val relay = PeerConflictRelay()
-        val registry = pausedRegistry(Channel(0), backgroundScope)
+        val pauseChannel = Channel<Unit>(0)
+        val registry = pausedRegistry(pauseChannel, backgroundScope)
+        registry.engineFor(peerId).startOutbound(listOf(FakeFileSource("in-flight.txt", 50L)))
+        runCurrent()
+        assertIs<PeerTransferState.ActiveOutbound>(registry.engineFor(peerId).state.value)
+
+        val repo = PendingFilesRepository()
         val component = buildComponent(
+            repo = repo,
             peersRepository = fakePeersRepository(),
             engineRegistry = registry,
             conflictRelay = relay,
@@ -182,7 +189,12 @@ class BannersComponentTest {
         relay.reportBusyTap(peerId)
         runCurrent()
 
-        assertIs<PendingBannerState.Hidden>(component.pendingBanner.value)
+        val summary = PendingFilesSummary(1, 100L)
+        repo.setPending(summary, listOf(FakeFileSource("share.txt", 100L)))
+        runCurrent()
+
+        val state = assertIs<PendingBannerState.Default>(component.pendingBanner.value)
+        assertEquals(summary, state.summary)
     }
 
     @Test

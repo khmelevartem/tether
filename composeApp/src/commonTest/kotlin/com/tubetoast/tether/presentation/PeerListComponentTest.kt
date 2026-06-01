@@ -358,6 +358,7 @@ class PeerListComponentTest {
                     engine = engine,
                     onShowDetails = {},
                     scope = coroutineScope,
+                    conflictRelay = PeerConflictRelay(),
                 )
             },
             bannersComponentFactory = { bannersCtx ->
@@ -417,6 +418,7 @@ class PeerListComponentTest {
                     engine = engine,
                     onShowDetails = {},
                     scope = coroutineScope,
+                    conflictRelay = PeerConflictRelay(),
                 )
             },
             bannersComponentFactory = { bannersCtx ->

@@ -54,7 +54,7 @@ class PeerTransferComponentTest {
     private fun buildComponent(
         pendingFilesRepository: PendingFilesRepository? = null,
         onOpenPicker: () -> Unit = {},
-        conflictRelay: PeerConflictRelay? = null,
+        conflictRelay: PeerConflictRelay = PeerConflictRelay(),
         scope: kotlinx.coroutines.CoroutineScope,
     ): Pair<PeerTransferComponent, LifecycleRegistry> {
         val lifecycle = LifecycleRegistry()
@@ -221,6 +221,7 @@ class PeerTransferComponentTest {
             engine = registry.engineFor(peer.id),
             onShowDetails = {},
             scope = backgroundScope,
+            conflictRelay = PeerConflictRelay(),
         )
 
         componentA.startOutbound(listOf(FakeFileSource("file.txt", 100L)))
@@ -238,6 +239,7 @@ class PeerTransferComponentTest {
             engine = registry.engineFor(peer.id),
             onShowDetails = {},
             scope = backgroundScope,
+            conflictRelay = PeerConflictRelay(),
         )
         runCurrent()
 

@@ -255,6 +255,7 @@ class RootComponentTest {
                             scope = coroutineScope,
                             pendingFilesRepository = pendingFilesRepository,
                             onOpenPicker = onPickerPick,
+                            conflictRelay = PeerConflictRelay(),
                         )
                     },
                     bannersComponentFactory = { bannersCtx ->
