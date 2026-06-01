@@ -2,6 +2,7 @@
 
 package com.tubetoast.tether.network
 
+import com.tubetoast.tether.TempDirs
 import com.tubetoast.tether.preferences.TempDataStore
 import com.tubetoast.tether.protocol.PairRequest
 import com.tubetoast.tether.protocol.PairResponse
@@ -22,9 +23,6 @@ import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.runBlocking
-import platform.Foundation.NSFileManager
-import platform.Foundation.NSTemporaryDirectory
-import platform.Foundation.NSUUID
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -35,7 +33,7 @@ import kotlin.test.assertTrue
 // real CIO server — CIOApplicationEngine hardcodes real-thread dispatchers
 @Suppress("ktlint:tether:no-run-blocking-in-tests")
 class FileServerPairTest {
-    private val tempPaths = mutableListOf<String>()
+    private val tempDirs = TempDirs(slug = "tether-fs-pair")
     private val cleanupTempStores = mutableListOf<TempDataStore>()
     private lateinit var configDir: String
     private lateinit var store: TrustedDeviceStore
@@ -64,24 +62,12 @@ class FileServerPairTest {
     fun teardown() {
         client.close()
         server.stop()
-        val fm = NSFileManager.defaultManager
-        tempPaths.forEach { fm.removeItemAtPath(it, error = null) }
-        tempPaths.clear()
+        tempDirs.cleanup()
         cleanupTempStores.forEach { it.tearDown() }
         cleanupTempStores.clear()
     }
 
-    private fun newTempDir(): String {
-        val path = "${NSTemporaryDirectory()}tether-apple-pair-${NSUUID().UUIDString}"
-        NSFileManager.defaultManager.createDirectoryAtPath(
-            path,
-            withIntermediateDirectories = true,
-            attributes = null,
-            error = null,
-        )
-        tempPaths += path
-        return path
-    }
+    private fun newTempDir(): String = tempDirs.newDir()
 
     @Test
     fun pair_endpoint_returns_200_with_server_public_key() {

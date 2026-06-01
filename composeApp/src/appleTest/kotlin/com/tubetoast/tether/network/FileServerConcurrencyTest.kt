@@ -2,6 +2,7 @@
 
 package com.tubetoast.tether.network
 
+import com.tubetoast.tether.TempDirs
 import com.tubetoast.tether.preferences.TempDataStore
 import com.tubetoast.tether.security.DefaultTrustedDeviceStore
 import com.tubetoast.tether.security.DeviceKeyPair
@@ -25,9 +26,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSString
-import platform.Foundation.NSTemporaryDirectory
 import platform.Foundation.NSUTF8StringEncoding
-import platform.Foundation.NSUUID
 import platform.Foundation.stringWithContentsOfFile
 import kotlin.test.AfterTest
 import kotlin.test.Test
@@ -41,29 +40,17 @@ import kotlin.time.Duration.Companion.seconds
 // real CIO server — CIOApplicationEngine hardcodes real-thread dispatchers
 @Suppress("ktlint:tether:no-run-blocking-in-tests")
 class FileServerConcurrencyTest {
-    private val tempDirs = mutableListOf<String>()
+    private val tempDirs = TempDirs(slug = "tether-fs-concurrency")
     private val cleanupTempStores = mutableListOf<TempDataStore>()
 
     @AfterTest
     fun cleanup() {
-        val fm = NSFileManager.defaultManager
-        tempDirs.forEach { fm.removeItemAtPath(it, error = null) }
-        tempDirs.clear()
+        tempDirs.cleanup()
         cleanupTempStores.forEach { it.tearDown() }
         cleanupTempStores.clear()
     }
 
-    private fun newTempDir(): String {
-        val path = "${NSTemporaryDirectory()}tether-${NSUUID().UUIDString}"
-        NSFileManager.defaultManager.createDirectoryAtPath(
-            path,
-            withIntermediateDirectories = true,
-            attributes = null,
-            error = null,
-        )
-        tempDirs += path
-        return path
-    }
+    private fun newTempDir(): String = tempDirs.newDir()
 
     private fun makeClient(): HttpClient = HttpClient(CIO) { install(ContentNegotiation) { json() } }
 

@@ -2,6 +2,7 @@
 
 package com.tubetoast.tether.security
 
+import com.tubetoast.tether.TempDirs
 import com.tubetoast.tether.util.toNSData
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.alloc
@@ -13,8 +14,6 @@ import platform.CoreFoundation.CFRelease
 import platform.Foundation.CFBridgingRetain
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSNumber
-import platform.Foundation.NSTemporaryDirectory
-import platform.Foundation.NSUUID
 import platform.Foundation.writeToFile
 import platform.Security.SecKeyCreateWithData
 import platform.Security.SecKeyRef
@@ -31,26 +30,12 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class DeviceKeyPairTest {
-    private val tempDirs = mutableListOf<String>()
+    private val tempDirs = TempDirs(slug = "tether-keypair")
 
     @AfterTest
-    fun cleanup() {
-        val fm = NSFileManager.defaultManager
-        tempDirs.forEach { fm.removeItemAtPath(it, error = null) }
-        tempDirs.clear()
-    }
+    fun cleanup() = tempDirs.cleanup()
 
-    private fun newTempDir(): String {
-        val path = "${NSTemporaryDirectory()}tether-keypair-${NSUUID().UUIDString}"
-        NSFileManager.defaultManager.createDirectoryAtPath(
-            path,
-            withIntermediateDirectories = true,
-            attributes = null,
-            error = null,
-        )
-        tempDirs += path
-        return path
-    }
+    private fun newTempDir(): String = tempDirs.newDir()
 
     @Test
     fun publicKey_has_x509_p256_spki_shape() {
