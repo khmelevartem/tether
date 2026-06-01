@@ -2,12 +2,27 @@
 
 package com.tubetoast.tether.security
 
+import com.tubetoast.tether.util.toNSData
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.alloc
+import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.ptr
+import kotlinx.cinterop.value
+import platform.CoreFoundation.CFErrorRefVar
+import platform.CoreFoundation.CFRelease
+import platform.Foundation.CFBridgingRetain
 import platform.Foundation.NSFileManager
+import platform.Foundation.NSNumber
 import platform.Foundation.NSTemporaryDirectory
 import platform.Foundation.NSUUID
 import platform.Foundation.writeToFile
+import platform.Security.SecKeyCreateWithData
 import platform.Security.SecKeyRef
+import platform.Security.kSecAttrKeyClass
+import platform.Security.kSecAttrKeyClassPublic
+import platform.Security.kSecAttrKeySizeInBits
+import platform.Security.kSecAttrKeyType
+import platform.Security.kSecAttrKeyTypeECSECPrimeRandom
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -61,7 +76,7 @@ class DeviceKeyPairTest {
         val rawPoint = kp.publicKey.copyOfRange(26, 91)
         assertEquals(65, rawPoint.size)
         assertEquals(0x04.toByte(), rawPoint[0])
-        val secKey: SecKeyRef? = Keychain("unused").publicKeyFromRawPoint(rawPoint)
+        val secKey: SecKeyRef? = parseP256PublicKey(rawPoint)
         assertNotNull(secKey, "raw EC point must be accepted by SecKeyCreateWithData as a valid P-256 public key")
     }
 
@@ -113,5 +128,23 @@ class DeviceKeyPairTest {
         assertFailsWith<IllegalStateException> {
             DeviceKeyPair(configDir = newTempDir(), keychain = alwaysFailing)
         }
+    }
+}
+
+private fun parseP256PublicKey(rawPoint: ByteArray): SecKeyRef? {
+    val nsData = rawPoint.toNSData() ?: return null
+    val attrs = buildQuery {
+        put(kSecAttrKeyType, kSecAttrKeyTypeECSECPrimeRandom)
+        put(kSecAttrKeyClass, kSecAttrKeyClassPublic)
+        put(kSecAttrKeySizeInBits, NSNumber(int = 256))
+    }
+    return memScoped {
+        val errorRef = alloc<CFErrorRefVar>()
+        val cfData = CFBridgingRetain(nsData) as platform.CoreFoundation.CFDataRef
+        val key = SecKeyCreateWithData(cfData, attrs, errorRef.ptr)
+        CFRelease(cfData)
+        CFRelease(attrs)
+        if (key == null) errorRef.value?.let { CFRelease(it) }
+        key
     }
 }

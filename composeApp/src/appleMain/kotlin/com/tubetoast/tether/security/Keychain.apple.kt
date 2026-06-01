@@ -3,9 +3,9 @@
 
 package com.tubetoast.tether.security
 
+import com.tubetoast.tether.util.toNSData
 import kotlinx.cinterop.ByteVar
 import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.alloc
 import kotlinx.cinterop.interpretCPointer
 import kotlinx.cinterop.interpretObjCPointer
@@ -13,7 +13,6 @@ import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.rawValue
 import kotlinx.cinterop.readBytes
-import kotlinx.cinterop.usePinned
 import kotlinx.cinterop.value
 import platform.CoreFoundation.CFDataGetBytePtr
 import platform.CoreFoundation.CFDataGetLength
@@ -30,23 +29,20 @@ import platform.Foundation.NSData
 import platform.Foundation.NSMutableDictionary
 import platform.Foundation.NSNumber
 import platform.Foundation.NSString
-import platform.Foundation.dataWithBytes
 import platform.Security.SecItemCopyMatching
 import platform.Security.SecItemDelete
 import platform.Security.SecKeyCopyExternalRepresentation
 import platform.Security.SecKeyCopyPublicKey
 import platform.Security.SecKeyCreateRandomKey
-import platform.Security.SecKeyCreateWithData
 import platform.Security.SecKeyRef
 import platform.Security.errSecItemNotFound
+import platform.Security.errSecMissingEntitlement
 import platform.Security.errSecNotAvailable
 import platform.Security.errSecSuccess
 import platform.Security.kSecAttrAccessible
 import platform.Security.kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
 import platform.Security.kSecAttrApplicationTag
 import platform.Security.kSecAttrIsPermanent
-import platform.Security.kSecAttrKeyClass
-import platform.Security.kSecAttrKeyClassPublic
 import platform.Security.kSecAttrKeySizeInBits
 import platform.Security.kSecAttrKeyType
 import platform.Security.kSecAttrKeyTypeECSECPrimeRandom
@@ -84,11 +80,11 @@ internal class Keychain(
         val privateAttrs = buildQuery {
             put(kSecAttrIsPermanent, kCFBooleanTrue)
             put(kSecAttrApplicationTag, tagData())
-            put(kSecAttrAccessible, kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly)
         }
         val attrs = buildQuery {
             put(kSecAttrKeyType, kSecAttrKeyTypeECSECPrimeRandom)
             put(kSecAttrKeySizeInBits, NSNumber(int = 256))
+            put(kSecAttrAccessible, kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly)
             put(kSecUseDataProtectionKeychain, kCFBooleanTrue)
             put(kSecPrivateKeyAttrs, CFBridgingRelease(privateAttrs))
         }
@@ -121,7 +117,10 @@ internal class Keychain(
                 errSecSuccess -> resultRef.value as? SecKeyRef
                 errSecItemNotFound -> null
                 errSecNotAvailable -> throw IllegalStateException(
-                    "Keychain unavailable on this platform — DeviceKeyPair requires a signed app bundle",
+                    "Keychain service unavailable (errSecNotAvailable). Restart and retry, or verify the system Keychain is running.",
+                )
+                errSecMissingEntitlement -> throw IllegalStateException(
+                    "Keychain entitlement missing — DeviceKeyPair requires a signed app bundle with keychain-access-groups",
                 )
                 else -> throw IllegalStateException("SecItemCopyMatching failed: OSStatus=$status")
             }
@@ -157,28 +156,6 @@ internal class Keychain(
         }
     }
 
-    /**
-     * Reconstructs a public SecKeyRef from a 65-byte uncompressed EC point.
-     * Returns null if the bytes don't represent a valid P-256 public key.
-     */
-    fun publicKeyFromRawPoint(rawPoint: ByteArray): SecKeyRef? {
-        val nsData = rawPoint.toNSData() ?: return null
-        val attrs = buildQuery {
-            put(kSecAttrKeyType, kSecAttrKeyTypeECSECPrimeRandom)
-            put(kSecAttrKeyClass, kSecAttrKeyClassPublic)
-            put(kSecAttrKeySizeInBits, NSNumber(int = 256))
-        }
-        return memScoped {
-            val errorRef = alloc<CFErrorRefVar>()
-            val cfData = CFBridgingRetain(nsData) as platform.CoreFoundation.CFDataRef
-            val key = SecKeyCreateWithData(cfData, attrs, errorRef.ptr)
-            CFRelease(cfData)
-            CFRelease(attrs)
-            if (key == null) errorRef.value?.let { CFRelease(it) }
-            key
-        }
-    }
-
     private fun tagData(): NSData = applicationTag.encodeToByteArray().toNSData()!!
 }
 
@@ -210,13 +187,6 @@ private fun cfDataToByteArray(cfData: platform.CoreFoundation.CFDataRef, length:
     val rawPtr = CFDataGetBytePtr(cfData) ?: return null
     val bytes = interpretCPointer<ByteVar>(rawPtr.rawValue) ?: return null
     return bytes.readBytes(length)
-}
-
-internal fun ByteArray.toNSData(): NSData? {
-    if (isEmpty()) return NSData()
-    return usePinned { pinned ->
-        NSData.dataWithBytes(pinned.addressOf(0), size.toULong())
-    }
 }
 
 private fun errorDescription(cfError: CFErrorRef?): String {
