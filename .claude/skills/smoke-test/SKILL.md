@@ -51,7 +51,7 @@ Launches CLI A (`SmokeMacA`, random port), then checks:
 2. **`/health`** — must return `Tether OK`.
 3. **`/pair` — X.509 EC P-256 shape.** Response must be 91 bytes, first byte `0x30`, byte 26 `0x04`. Verifies real key material, not a placeholder.
 4. **Port LISTEN** — java listener shown by `lsof`.
-5. **mDNS publish (log)** — `mDNS started → advertising 'SmokeMacA'` in the log.
+5. **mDNS publish (log)** — the CLI's startup log shows that mDNS advertising started for its configured instance name.
 6. **mDNS publish (dns-sd, optional)** — `dns-sd -B` browse. SKIP if `dns-sd` unavailable (Linux).
 7. **stdin `list`** — must produce a `[list]` or `[peers]` line.
 

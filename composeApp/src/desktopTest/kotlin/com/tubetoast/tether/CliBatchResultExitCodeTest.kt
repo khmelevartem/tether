@@ -4,9 +4,9 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**
- * Pins the exit-code contract from issue #328's DoD (0=AllSent, 1=Partial, 2=Failed, 130=Cancelled)
- * so that future edits to the mapping fail here and require explicit re-confirmation against the
- * user-facing contract, not just a passing build.
+ * Pins the CLI's user-facing exit-code contract: 0=AllSent, 1=Partial, 2=Failed, 130=Cancelled.
+ * Any change to the mapping fails this test, requiring the author to verify the user-facing
+ * contract is intentionally updated.
  */
 class CliBatchResultExitCodeTest {
     @Test
