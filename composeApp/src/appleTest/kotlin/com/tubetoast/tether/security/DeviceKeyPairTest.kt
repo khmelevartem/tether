@@ -39,7 +39,7 @@ class DeviceKeyPairTest {
 
     @Test
     fun publicKey_has_x509_p256_spki_shape() {
-        val kp = DeviceKeyPair.withStore(newTempDir(), InMemoryKeychainStore())
+        val kp = DeviceKeyPair(configDir = newTempDir(), keychain = InMemoryKeychainStore())
         assertEquals(91, kp.publicKey.size)
         assertEquals(0x30.toByte(), kp.publicKey[0])
         assertEquals(0x59.toByte(), kp.publicKey[1])
@@ -50,14 +50,14 @@ class DeviceKeyPairTest {
     fun publicKey_stable_across_instances() {
         val store = InMemoryKeychainStore()
         val dir = newTempDir()
-        val first = DeviceKeyPair.withStore(dir, store)
-        val second = DeviceKeyPair.withStore(dir, store)
+        val first = DeviceKeyPair(configDir = dir, keychain = store)
+        val second = DeviceKeyPair(configDir = dir, keychain = store)
         assertTrue(first.publicKey.contentEquals(second.publicKey))
     }
 
     @Test
     fun publicKey_inner_point_parses_as_p256_via_sec_key() {
-        val kp = DeviceKeyPair.withStore(newTempDir(), InMemoryKeychainStore())
+        val kp = DeviceKeyPair(configDir = newTempDir(), keychain = InMemoryKeychainStore())
         val rawPoint = kp.publicKey.copyOfRange(26, 91)
         assertEquals(65, rawPoint.size)
         assertEquals(0x04.toByte(), rawPoint[0])
@@ -74,7 +74,7 @@ class DeviceKeyPairTest {
         dummyData.writeToFile(legacyPath, atomically = true)
         assertTrue(fm.fileExistsAtPath(legacyPath), "pre-condition: legacy file must exist")
 
-        DeviceKeyPair.withStore(dir, InMemoryKeychainStore())
+        DeviceKeyPair(configDir = dir, keychain = InMemoryKeychainStore())
 
         assertTrue(!fm.fileExistsAtPath(legacyPath), "legacy placeholder must be removed on init")
     }
@@ -82,7 +82,28 @@ class DeviceKeyPairTest {
     @Test
     fun keychain_unavailable_throws() {
         assertFailsWith<IllegalStateException> {
-            DeviceKeyPair.withStore(newTempDir(), UnavailableKeychainStore())
+            DeviceKeyPair(configDir = newTempDir(), keychain = UnavailableKeychainStore())
+        }
+    }
+
+    @Test
+    fun corrupt_entry_triggers_regeneration_on_load() {
+        val store = InMemoryKeychainStore()
+        val dir = newTempDir()
+        DeviceKeyPair(configDir = dir, keychain = store)
+
+        val flaky = FlakyExtractKeychainStore(failCount = 1, delegate = store)
+        val kp = DeviceKeyPair(configDir = dir, keychain = flaky)
+
+        assertTrue(flaky.deleteCallCount >= 1, "deleteEntry must be called when extraction returns null")
+        assertEquals(91, kp.publicKey.size, "a fresh key must be generated after corruption")
+    }
+
+    @Test
+    fun extract_fails_twice_throws_illegal_state() {
+        val alwaysFailing = FlakyExtractKeychainStore(failCount = Int.MAX_VALUE)
+        assertFailsWith<IllegalStateException> {
+            DeviceKeyPair(configDir = newTempDir(), keychain = alwaysFailing)
         }
     }
 }

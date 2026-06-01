@@ -63,7 +63,35 @@ internal class InMemoryKeychainStore : KeychainStore {
         Keychain("unused").extractPublicKeyBytes(key)
 
     override fun deleteEntry() {
+        stored?.let { CFRelease(it) }
         stored = null
+    }
+}
+
+/**
+ * Wraps an [InMemoryKeychainStore] and returns null from [extractPublicKeyBytes] for the first
+ * [failCount] calls, then delegates to the real implementation. Used to simulate transient
+ * key-extraction failures.
+ */
+internal class FlakyExtractKeychainStore(
+    private val failCount: Int,
+    private val delegate: InMemoryKeychainStore = InMemoryKeychainStore(),
+) : KeychainStore by delegate {
+    private var failsRemaining = failCount
+    var deleteCallCount = 0
+        private set
+
+    override fun extractPublicKeyBytes(key: SecKeyRef): ByteArray? {
+        if (failsRemaining > 0) {
+            failsRemaining--
+            return null
+        }
+        return delegate.extractPublicKeyBytes(key)
+    }
+
+    override fun deleteEntry() {
+        deleteCallCount++
+        delegate.deleteEntry()
     }
 }
 

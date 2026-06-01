@@ -74,6 +74,8 @@ internal interface KeychainStore {
     fun deleteEntry()
 
     companion object {
+        const val DEFAULT_DEVICE_KEY_TAG = "com.tubetoast.tether.devicekey"
+
         fun real(applicationTag: String): KeychainStore = Keychain(applicationTag)
     }
 }
@@ -82,25 +84,27 @@ internal class Keychain(
     private val applicationTag: String,
 ) : KeychainStore {
     override fun generatePrivateKey(): SecKeyRef {
-        // SecKeyCreateRandomKey expects private key attributes nested under kSecPrivateKeyAttrs.
         val privateAttrs = buildQuery {
             put(kSecAttrIsPermanent, kCFBooleanTrue)
             put(kSecAttrApplicationTag, tagData())
             put(kSecAttrAccessible, kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly)
-            put(kSecUseDataProtectionKeychain, kCFBooleanTrue)
         }
         val attrs = buildQuery {
             put(kSecAttrKeyType, kSecAttrKeyTypeECSECPrimeRandom)
             put(kSecAttrKeySizeInBits, NSNumber(int = 256))
+            put(kSecUseDataProtectionKeychain, kCFBooleanTrue)
             put(kSecPrivateKeyAttrs, CFBridgingRelease(privateAttrs))
         }
         return memScoped {
             val errorRef = alloc<CFErrorRefVar>()
             val key = SecKeyCreateRandomKey(attrs, errorRef.ptr)
             CFRelease(attrs)
-            key ?: throw IllegalStateException(
-                "SecKeyCreateRandomKey failed: ${errorDescription(errorRef.value)}",
-            )
+            if (key == null) {
+                val description = errorDescription(errorRef.value)
+                errorRef.value?.let { CFRelease(it) }
+                throw IllegalStateException("SecKeyCreateRandomKey failed: $description")
+            }
+            key
         }
     }
 
@@ -139,13 +143,13 @@ internal class Keychain(
     }
 
     override fun extractPublicKeyBytes(key: SecKeyRef): ByteArray? {
-        val privateKey = key
-        val publicKey = SecKeyCopyPublicKey(privateKey) ?: return null
+        val publicKey = SecKeyCopyPublicKey(key) ?: return null
         return memScoped {
             val errorRef = alloc<CFErrorRefVar>()
             val cfData = SecKeyCopyExternalRepresentation(publicKey, errorRef.ptr)
             CFRelease(publicKey)
             if (cfData == null) {
+                errorRef.value?.let { CFRelease(it) }
                 null
             } else {
                 val length = CFDataGetLength(cfData).toInt()
@@ -173,6 +177,7 @@ internal class Keychain(
             val key = SecKeyCreateWithData(cfData, attrs, errorRef.ptr)
             CFRelease(cfData)
             CFRelease(attrs)
+            if (key == null) errorRef.value?.let { CFRelease(it) }
             key
         }
     }
@@ -180,11 +185,7 @@ internal class Keychain(
     private fun tagData(): NSData = applicationTag.encodeToByteArray().toNSData()!!
 }
 
-/**
- * Builds a Keychain query as CFDictionaryRef using NSMutableDictionary for type safety.
- * The lambda receives a builder that accepts CF constants as keys (toll-free bridged to NSString)
- * and any ObjC/CF object as value. The caller owns the returned ref.
- */
+/** The caller owns the returned ref. */
 private fun buildQuery(block: QueryBuilder.() -> Unit): CFDictionaryRef {
     val dict = NSMutableDictionary()
     QueryBuilder(dict).block()
@@ -194,10 +195,6 @@ private fun buildQuery(block: QueryBuilder.() -> Unit): CFDictionaryRef {
 private class QueryBuilder(
     private val dict: NSMutableDictionary,
 ) {
-    /**
-     * Adds a key-value pair where the key is a CF string constant (toll-free bridged to NSString)
-     * and the value is any ObjC-compatible object (NSNumber, NSData, CFStringRef, CFBooleanRef).
-     */
     fun put(key: kotlinx.cinterop.CPointer<*>?, value: Any?) {
         if (key == null || value == null) return
         // Toll-free bridge: CF string constants share memory layout with NSString.
