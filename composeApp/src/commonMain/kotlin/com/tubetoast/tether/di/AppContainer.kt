@@ -20,6 +20,7 @@ import com.tubetoast.tether.preferences.DefaultPeerPreferencesStore
 import com.tubetoast.tether.preferences.FileTransferPreferences
 import com.tubetoast.tether.preferences.PeerPreferencesStore
 import com.tubetoast.tether.presentation.RootComponentFactory
+import com.tubetoast.tether.presentation.banners.PeerConflictRelay
 import com.tubetoast.tether.protocol.DeviceType
 import com.tubetoast.tether.security.DefaultTrustedDeviceStore
 import com.tubetoast.tether.security.TrustedDeviceStore
@@ -27,7 +28,6 @@ import com.tubetoast.tether.transfer.AutoSendDispatcher
 import com.tubetoast.tether.transfer.BatchSender
 import com.tubetoast.tether.transfer.ConnectionMonitor
 import com.tubetoast.tether.transfer.NoOpConnectionMonitor
-import com.tubetoast.tether.transfer.PeerConflictRelay
 import com.tubetoast.tether.transfer.PeerTransferEngine
 import com.tubetoast.tether.transfer.PeerTransferEngineRegistry
 import com.tubetoast.tether.transfer.PeerUnreachableException

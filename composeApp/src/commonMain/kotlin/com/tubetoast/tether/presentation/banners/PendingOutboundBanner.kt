@@ -41,7 +41,7 @@ private fun DefaultBanner(
     Banner(
         text = "Ready to send ${summary.fileCount} $noun ($sizeLabel). Pick a device below.",
         severity = if (dropFeedback) BannerSeverity.Error else BannerSeverity.Info,
-        modifier = modifier,
+        modifier = modifier.semantics { liveRegion = LiveRegionMode.Assertive },
     ) {
         Button(
             label = "Cancel",

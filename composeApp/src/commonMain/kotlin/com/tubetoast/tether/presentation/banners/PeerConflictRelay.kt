@@ -1,5 +1,6 @@
-package com.tubetoast.tether.transfer
+package com.tubetoast.tether.presentation.banners
 
+import com.tubetoast.tether.transfer.PeerIdentity
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow

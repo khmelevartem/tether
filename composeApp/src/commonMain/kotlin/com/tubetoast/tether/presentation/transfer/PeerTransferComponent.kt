@@ -7,8 +7,8 @@ import com.arkivanov.decompose.value.update
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.destroy
 import com.tubetoast.tether.peer.Peer
+import com.tubetoast.tether.presentation.banners.PeerConflictRelay
 import com.tubetoast.tether.transfer.FileSource
-import com.tubetoast.tether.transfer.PeerConflictRelay
 import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PeerTransferEngine
 import com.tubetoast.tether.transfer.PendingFilesRepository

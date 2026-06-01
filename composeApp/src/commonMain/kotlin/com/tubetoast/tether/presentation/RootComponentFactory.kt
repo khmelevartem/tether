@@ -4,8 +4,8 @@ import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.essenty.lifecycle.coroutines.withLifecycle
 import com.tubetoast.tether.peer.PeersRepository
 import com.tubetoast.tether.presentation.banners.BannersComponent
+import com.tubetoast.tether.presentation.banners.PeerConflictRelay
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
-import com.tubetoast.tether.transfer.PeerConflictRelay
 import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PeerTransferEngineRegistry
 import com.tubetoast.tether.transfer.PendingFilesRepository
@@ -16,7 +16,7 @@ class RootComponentFactory(
     private val peersRepository: PeersRepository,
     private val peerTransferEngineRegistry: PeerTransferEngineRegistry,
     private val pendingFilesRepository: PendingFilesRepository,
-    private val peerConflictRelay: PeerConflictRelay = PeerConflictRelay(),
+    private val peerConflictRelay: PeerConflictRelay,
     private val onPickerPick: (PeerIdentity) -> Unit = {},
 ) {
     fun create(componentContext: ComponentContext): RootComponent =

@@ -9,10 +9,12 @@ import com.tubetoast.tether.discovery.FakeDeviceDiscovery
 import com.tubetoast.tether.peer.PeersRepository
 import com.tubetoast.tether.preferences.FakePeerPreferencesStore
 import com.tubetoast.tether.presentation.banners.BannersComponent
+import com.tubetoast.tether.presentation.banners.PeerConflictRelay
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.FakeFileSource
 import com.tubetoast.tether.transfer.PeerTransferEngine
+import com.tubetoast.tether.transfer.PeerTransferEngineRegistry
 import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.PendingFilesRepository
 import com.tubetoast.tether.transfer.PendingFilesSummary
@@ -259,6 +261,20 @@ class RootComponentTest {
                         BannersComponent(
                             componentContext = bannersCtx,
                             pendingFilesRepository = pendingFilesRepository,
+                            peersRepository = peersRepository,
+                            engineRegistry = PeerTransferEngineRegistry(
+                                appScope = coroutineScope,
+                                engineFactory = { id, engineScope ->
+                                    PeerTransferEngine(
+                                        peer = id,
+                                        batchSenderFactory = fakeBatchSender(),
+                                        inboundEvents = MutableSharedFlow(),
+                                        scope = engineScope,
+                                        peerPreferencesStore = FakePeerPreferencesStore(),
+                                    )
+                                },
+                            ),
+                            conflictRelay = PeerConflictRelay(),
                             coroutineScope = coroutineScope,
                         )
                     },

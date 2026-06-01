@@ -3,7 +3,6 @@ package com.tubetoast.tether.presentation.banners
 import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.essenty.lifecycle.coroutines.coroutineScope
 import com.tubetoast.tether.peer.PeersRepository
-import com.tubetoast.tether.transfer.PeerConflictRelay
 import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PeerTransferEngineRegistry
 import com.tubetoast.tether.transfer.PeerTransferState
@@ -25,9 +24,9 @@ import kotlinx.coroutines.launch
 class BannersComponent(
     componentContext: ComponentContext,
     private val pendingFilesRepository: PendingFilesRepository,
-    private val peersRepository: PeersRepository? = null,
-    private val engineRegistry: PeerTransferEngineRegistry? = null,
-    private val conflictRelay: PeerConflictRelay? = null,
+    private val peersRepository: PeersRepository,
+    private val engineRegistry: PeerTransferEngineRegistry,
+    private val conflictRelay: PeerConflictRelay,
     coroutineScope: CoroutineScope = componentContext.coroutineScope(),
 ) : ComponentContext by componentContext {
     private val scope = coroutineScope
@@ -49,6 +48,7 @@ class BannersComponent(
     init {
         collectBusyTaps()
         resetOnPendingCleared()
+        resetOnEngineIdle()
     }
 
     fun onCancelPending() {
@@ -66,32 +66,39 @@ class BannersComponent(
 
     private fun collectBusyTaps() {
         conflictRelay
-            ?.busyTaps
-            ?.onEach { peerId ->
+            .busyTaps
+            .onEach { peerId ->
                 if (pendingFilesRepository.pending.value != null) {
-                    selectedConflictPeer.value = peerId
+                    selectedConflictPeer.update { peerId }
                     announcementTick.update { it + 1 }
                 }
-            }?.launchIn(scope)
+            }.launchIn(scope)
     }
 
     private fun resetOnPendingCleared() {
         pendingFilesRepository.pending
-            .onEach { pending -> if (pending == null) selectedConflictPeer.value = null }
+            .onEach { pending -> if (pending == null) selectedConflictPeer.update { null } }
+            .launchIn(scope)
+    }
+
+    private fun resetOnEngineIdle() {
+        val engineStateFlow = selectedConflictPeer.flatMapLatest { conflictPeerEngineStateFlow(it) }
+        engineStateFlow
+            .onEach { state -> if (state is PeerTransferState.Idle) selectedConflictPeer.update { null } }
             .launchIn(scope)
     }
 
     private fun conflictPeerName(peerId: PeerIdentity): String =
         peersRepository
-            ?.peers
-            ?.value
-            ?.firstOrNull { it.id == peerId }
+            .peers
+            .value
+            .firstOrNull { it.id == peerId }
             ?.device
             ?.name ?: peerId.id
 
     private fun conflictPeerEngineStateFlow(peerId: PeerIdentity?) =
         if (peerId != null) {
-            engineRegistry?.engineFor(peerId)?.state ?: flowOf(null)
+            engineRegistry.engineFor(peerId).state
         } else {
             flowOf(null)
         }
@@ -127,16 +134,13 @@ class BannersComponent(
                     is PeerTransferState.Cancelled,
                     -> PendingBannerState.TerminalDisplay(peerName, tick)
 
-                    is PeerTransferState.Idle -> {
-                        selectedConflictPeer.value = null
-                        PendingBannerState.Default(pending.summary, dropFeedback)
-                    }
-
-                    null -> PendingBannerState.Default(pending.summary, dropFeedback)
+                    is PeerTransferState.Idle,
+                    null,
+                    -> PendingBannerState.Default(pending.summary, dropFeedback)
                 }
             }
         }.onEach { state ->
-            result.value = state
+            result.update { state }
         }.launchIn(scope)
 
         return result
