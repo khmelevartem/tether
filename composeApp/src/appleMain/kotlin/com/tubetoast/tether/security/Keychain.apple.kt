@@ -186,9 +186,9 @@ internal class QueryBuilder(
 
     fun put(key: CPointer<*>?, value: NSObject?) {
         if (key == null || value == null) return
-        // CFBridgingRetain gives +1; CFDictionarySetValue retains a copy; release our +1.
         val cfValue = CFBridgingRetain(value)
         CFDictionarySetValue(dict, key, cfValue)
+        // CFDictionarySetValue retains; release the +1 from CFBridgingRetain.
         CFRelease(cfValue)
     }
 }
