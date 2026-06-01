@@ -134,6 +134,9 @@ SKIP if Xcode CLI tools absent or `iosApp/iosApp.xcodeproj` not found.
 3. mDNS publish — `dns-sd -B` for up to 30 s.
 4. TXT record — must return `03 76 3D 31` (`v=1`).
 5. Cross-discovery — iOS peer must appear in Desktop A's log within 30 s.
+6. `/health` on the real iOS bundle — port discovered via `lsof` on the host loopback.
+7. `/pair` X.509 EC P-256 SPKI shape (91 bytes, `[0]=0x30`, `[26]=0x04`). Load-bearing gate for the class of Apple-Keychain regression that unit tests cannot reach — `simctl spawn` binaries have no app identity, so `SecItem*` returns "unavailable" regardless of correctness. See `docs/knowledge/apple-platform.md`.
+8. Keychain persistence across cold launches — restart the app, fetch `/pair` again, compare the public key byte-for-byte.
 
 iOS cleanup — in Block 7.
 
@@ -195,6 +198,9 @@ At the end of the run print a markdown report:
 | iOS | launch | ✓ PASS | pid=<...> |
 | iOS | mDNS publish | ✓ PASS | service=<IOS_NAME>, TXT=03 76 3D 31 |
 | iOS | cross-discovery | ✓ PASS | seen on Desktop A in 4s |
+| iOS | /health (real bundle) | ✓ PASS | port=55171, "Tether OK" |
+| iOS | /pair X.509 EC P-256 | ✓ PASS | 91 bytes via real Keychain |
+| iOS | Keychain persistence | ✓ PASS | publicKey identical across cold launches |
 
 ## Failures
 

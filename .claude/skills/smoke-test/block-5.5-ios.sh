@@ -73,4 +73,45 @@ done
 set +e; grep -q "$IOS_NAME" "$LOG_A" 2>/dev/null; RC=$?; set -e
 [ $RC -eq 0 ] && echo "PASS: cross-discovery — iOS peer seen on Desktop A" || echo "FAIL: cross-discovery — $IOS_NAME not seen in Desktop A log"
 
+# /health on real iOS bundle (port via lsof on host loopback; simulator binds to host's localhost)
+IOS_PORT=$(lsof -nP -iTCP -a -c Tether 2>/dev/null \
+  | awk '/LISTEN/ && $1=="Tether" {print $9}' | sed 's/.*://' | head -1)
+if [ -z "$IOS_PORT" ]; then
+  echo "FAIL: /health — iOS FileServer port not found via lsof"
+else
+  set +e; curl -sf --max-time 5 "http://localhost:$IOS_PORT/health" | grep -q "Tether OK"; RC=$?; set -e
+  [ $RC -eq 0 ] && echo "PASS: /health — Tether OK on $IOS_PORT" || echo "FAIL: /health — bad response on $IOS_PORT"
+fi
+
+# /pair X.509 EC P-256 SPKI shape — load-bearing gate for real-Keychain regression
+PAIR_RESP=""
+if [ -n "$IOS_PORT" ]; then
+  PAIR_RESP=$(curl -sf --max-time 5 -X POST "http://localhost:$IOS_PORT/pair" \
+    -H "Content-Type: application/json" \
+    -d '{"publicKey":[1,2,3], "deviceName":"smoke"}')
+  set +e
+  echo "$PAIR_RESP" | jq -e '.publicKey | length == 91 and .[0] == 48 and .[26] == 4' > /dev/null
+  RC=$?
+  set -e
+  [ $RC -eq 0 ] && echo "PASS: /pair X.509 EC P-256 SPKI (91 bytes, real Keychain)" \
+    || echo "FAIL: /pair bad shape — $PAIR_RESP"
+fi
+
+# Keychain persistence across cold launches
+if [ -n "$PAIR_RESP" ]; then
+  K1=$(echo "$PAIR_RESP" | jq -c '.publicKey')
+  xcrun simctl terminate "$UDID" "$IOS_BUNDLE_ID" 2>/dev/null
+  sleep 2
+  xcrun simctl launch "$UDID" "$IOS_BUNDLE_ID" >/dev/null
+  sleep 5
+  IOS_PORT2=$(lsof -nP -iTCP -a -c Tether 2>/dev/null \
+    | awk '/LISTEN/ && $1=="Tether" {print $9}' | sed 's/.*://' | head -1)
+  K2=$(curl -sf --max-time 5 -X POST "http://localhost:$IOS_PORT2/pair" \
+    -H "Content-Type: application/json" \
+    -d '{"publicKey":[1,2,3], "deviceName":"smoke"}' | jq -c '.publicKey')
+  [ -n "$K1" ] && [ "$K1" = "$K2" ] \
+    && echo "PASS: publicKey identical across cold launches (Keychain persisted)" \
+    || echo "FAIL: publicKey changed across cold launches"
+fi
+
 export UDID
