@@ -2,11 +2,13 @@
 
 package com.tubetoast.tether.network
 
+import com.tubetoast.tether.TempDirs
 import com.tubetoast.tether.preferences.TempDataStore
 import com.tubetoast.tether.protocol.PairRequest
 import com.tubetoast.tether.protocol.PairResponse
 import com.tubetoast.tether.security.DefaultTrustedDeviceStore
 import com.tubetoast.tether.security.DeviceKeyPair
+import com.tubetoast.tether.security.InMemoryKeychainStore
 import com.tubetoast.tether.security.TrustedDeviceStore
 import com.tubetoast.tether.security.deviceIdFromPublicKey
 import io.ktor.client.HttpClient
@@ -21,9 +23,6 @@ import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.runBlocking
-import platform.Foundation.NSFileManager
-import platform.Foundation.NSTemporaryDirectory
-import platform.Foundation.NSUUID
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -34,9 +33,8 @@ import kotlin.test.assertTrue
 // real CIO server — CIOApplicationEngine hardcodes real-thread dispatchers
 @Suppress("ktlint:tether:no-run-blocking-in-tests")
 class FileServerPairTest {
-    private val tempPaths = mutableListOf<String>()
+    private val tempDirs = TempDirs(slug = "tether-fs-pair")
     private val cleanupTempStores = mutableListOf<TempDataStore>()
-    private lateinit var configDir: String
     private lateinit var store: TrustedDeviceStore
     private lateinit var keyPair: DeviceKeyPair
     private lateinit var server: FileServer
@@ -45,10 +43,9 @@ class FileServerPairTest {
 
     @BeforeTest
     fun setup() {
-        configDir = newTempDir()
         val temp = TempDataStore().also { cleanupTempStores += it }
         store = DefaultTrustedDeviceStore(temp.dataStore)
-        keyPair = DeviceKeyPair(configDir)
+        keyPair = DeviceKeyPair(keychain = InMemoryKeychainStore())
         server = FileServer(
             configuredPort = 0,
             downloadsDir = newTempDir(),
@@ -63,24 +60,12 @@ class FileServerPairTest {
     fun teardown() {
         client.close()
         server.stop()
-        val fm = NSFileManager.defaultManager
-        tempPaths.forEach { fm.removeItemAtPath(it, error = null) }
-        tempPaths.clear()
+        tempDirs.cleanup()
         cleanupTempStores.forEach { it.tearDown() }
         cleanupTempStores.clear()
     }
 
-    private fun newTempDir(): String {
-        val path = "${NSTemporaryDirectory()}tether-apple-pair-${NSUUID().UUIDString}"
-        NSFileManager.defaultManager.createDirectoryAtPath(
-            path,
-            withIntermediateDirectories = true,
-            attributes = null,
-            error = null,
-        )
-        tempPaths += path
-        return path
-    }
+    private fun newTempDir(): String = tempDirs.newDir()
 
     @Test
     fun pair_endpoint_returns_200_with_server_public_key() {
@@ -91,7 +76,12 @@ class FileServerPairTest {
             }
             assertEquals(HttpStatusCode.OK, response.status)
             val body = response.body<PairResponse>()
-            assertTrue(body.publicKey.isNotEmpty(), "server public key must be non-empty")
+            assertTrue(
+                body.publicKey.size == 91 &&
+                    body.publicKey[0].toInt() and 0xff == 0x30 &&
+                    body.publicKey[26].toInt() and 0xff == 0x04,
+                "server public key must be 91-byte X.509 P-256 SPKI",
+            )
             assertTrue(
                 body.publicKey.contentEquals(keyPair.publicKey),
                 "server public key must match the server's key pair",
