@@ -40,8 +40,6 @@ import java.util.concurrent.atomic.AtomicReference
 import kotlin.io.path.exists
 import kotlin.time.Duration.Companion.seconds
 
-private const val ESC = ""
-
 sealed class CliBatchResult {
     data object AllSent : CliBatchResult()
 
@@ -128,20 +126,13 @@ class TetherCommand :
         }
 
         val discovery = container.mdnsDiscovery
-        var peersLinePrinted = false
         var lastPeerIds: String? = null
         launch {
             discovery.discoveredDevices.collect { peers ->
                 val ids = if (peers.isEmpty()) "none" else peers.joinToString(", ") { it.id }
                 if (ids == lastPeerIds) return@collect
                 lastPeerIds = ids
-                if (peersLinePrinted) {
-                    print("$ESC[1A\r$ESC[K[peers] $ids\n")
-                } else {
-                    print("[peers] $ids\n")
-                    peersLinePrinted = true
-                }
-                System.out.flush()
+                echo("[peers] $ids")
             }
         }
 

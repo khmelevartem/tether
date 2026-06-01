@@ -228,8 +228,8 @@ for i in $(seq 1 20); do
   echo "list" > /tmp/smoke-cliB-in &
   echo "list" > /tmp/smoke-cliC-in &
   sleep 1
-  # The `[peers]` line starts with an ANSI escape (`\x1b[1A\r\x1b[K`); catch name up to `@`,
-  # to capture the renamed form `SmokeMacA (2)`.
+  # `[peers]` lines append on each change; take the last, catch name up to `@` to capture
+  # the renamed form `SmokeMacA (2)`.
   A_OK=$(grep -aE "\[peers\]" $LOG_A | tail -1 | grep -oE 'SmokeMac[A-Z][^@]*' | sort -u | wc -l | tr -d ' ')
   B_OK=$(grep -aE "\[peers\]" $LOG_B | tail -1 | grep -oE 'SmokeMac[A-Z][^@]*' | sort -u | wc -l | tr -d ' ')
   C_OK=$(grep -aE "\[peers\]" $LOG_C | tail -1 | grep -oE 'SmokeMac[A-Z][^@]*' | sort -u | wc -l | tr -d ' ')
