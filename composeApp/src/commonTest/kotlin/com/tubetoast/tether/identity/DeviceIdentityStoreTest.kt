@@ -1,5 +1,6 @@
 package com.tubetoast.tether.identity
 
+import com.tubetoast.tether.identity.DataStoreFingerprintPersistence
 import com.tubetoast.tether.preferences.TempDataStore
 import kotlinx.coroutines.test.runTest
 import kotlin.test.AfterTest
@@ -16,7 +17,7 @@ class DeviceIdentityStoreTest {
 
     @Test
     fun `getOrCreate returns a 32-char hex string`() = runTest {
-        val store = DeviceIdentityStore(temp.dataStore)
+        val store = DeviceIdentityStore(DataStoreFingerprintPersistence(temp.dataStore))
         val fingerprint = store.getOrCreate()
         assertNotNull(fingerprint)
         assertEquals(32, fingerprint.length, "fingerprint must be 32 hex chars (128-bit)")
@@ -28,7 +29,7 @@ class DeviceIdentityStoreTest {
 
     @Test
     fun `getOrCreate is idempotent across calls on same store`() = runTest {
-        val store = DeviceIdentityStore(temp.dataStore)
+        val store = DeviceIdentityStore(DataStoreFingerprintPersistence(temp.dataStore))
         val first = store.getOrCreate()
         val second = store.getOrCreate()
         assertEquals(first, second)
@@ -36,8 +37,12 @@ class DeviceIdentityStoreTest {
 
     @Test
     fun `getOrCreate persists across new store instances with same dataStore`() = runTest {
-        val firstInstanceFingerprint = DeviceIdentityStore(temp.dataStore).getOrCreate()
-        val secondInstanceFingerprint = DeviceIdentityStore(temp.dataStore).getOrCreate()
+        val firstInstanceFingerprint = DeviceIdentityStore(
+            DataStoreFingerprintPersistence(temp.dataStore),
+        ).getOrCreate()
+        val secondInstanceFingerprint = DeviceIdentityStore(
+            DataStoreFingerprintPersistence(temp.dataStore),
+        ).getOrCreate()
         assertEquals(
             firstInstanceFingerprint,
             secondInstanceFingerprint,

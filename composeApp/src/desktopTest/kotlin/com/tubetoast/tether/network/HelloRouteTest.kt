@@ -1,6 +1,7 @@
 package com.tubetoast.tether.network
 
 import com.tubetoast.tether.discovery.DiscoveredDevicesStore
+import com.tubetoast.tether.identity.DataStoreFingerprintPersistence
 import com.tubetoast.tether.identity.DeviceIdentityStore
 import com.tubetoast.tether.preferences.TempDataStore
 import com.tubetoast.tether.protocol.DeviceType
@@ -44,7 +45,9 @@ class HelloRouteTest {
 
     private fun newServer(
         identityStore: DeviceIdentityStore =
-            DeviceIdentityStore(TempDataStore().also { cleanupTempStores += it }.dataStore),
+            DeviceIdentityStore(
+                DataStoreFingerprintPersistence(TempDataStore().also { cleanupTempStores += it }.dataStore),
+            ),
         store: DiscoveredDevicesStore = DiscoveredDevicesStore(),
     ): FileServer {
         val configDir = Files.createTempDirectory("tether-hello-test-keys").toFile().also(cleanupPaths::add)
@@ -105,7 +108,7 @@ class HelloRouteTest {
     fun `hello with own fingerprint does not upsert into store`() {
         val store = DiscoveredDevicesStore()
         val identityTemp = TempDataStore().also { cleanupTempStores += it }
-        val identityStore = DeviceIdentityStore(identityTemp.dataStore)
+        val identityStore = DeviceIdentityStore(DataStoreFingerprintPersistence(identityTemp.dataStore))
         val server = newServer(identityStore = identityStore, store = store)
         val port = server.start()
         val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
