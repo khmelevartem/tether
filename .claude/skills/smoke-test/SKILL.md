@@ -99,7 +99,7 @@ Keep instance A alive until the end of Block 3. Graceful `quit` check — in Blo
 
 **Important:** send must go via the **CLI `send` command**, not via `curl POST /upload`. This is a smoke test of the user scenario, not of the endpoint.
 
-Start a second CLI instance (`SmokeMacB`) in parallel with A, wait until mDNS lets both see each other, send `send SmokeMacB <path>` to stdin A.
+Start a second CLI instance (`SmokeMacB`) in parallel with A, wait until mDNS lets both see each other. The CLI drives the same `PeerTransferEngine` as the UI — terminal output is `[send] done — N/N sent` (success), `[send] partial — N/M sent` (partial), or `[send] error — …`. The savedPath is not in the log; verify by walking the receiver's downloads dir (`$HOME/Downloads/Tether/`).
 
 ```bash
 LOG_B=/tmp/smoke-cliB.log
@@ -117,30 +117,98 @@ for i in $(seq 1 30); do
   sleep 1
 done
 
-echo "send-via-cli-$(date +%s)" > /tmp/smoke-send.txt
-echo "send SmokeMacB /tmp/smoke-send.txt" > /tmp/smoke-cliA-in &
-
-for i in $(seq 1 15); do
-  grep -qE "^\[send\] (OK|FAIL)" $LOG_A && break
-  sleep 1
-done
-SEND_LINE=$(grep -E "^\[send\] (OK|FAIL)" $LOG_A | tail -1)
-echo "$SEND_LINE"
-
-# Parse savedPath from the line "[send] OK — <ms> ms → <savedPath>", don't guess the directory.
-SAVED_B=$(echo "$SEND_LINE" | sed -nE 's/.*→[[:space:]]+(.+)$/\1/p')
-if [ -n "$SAVED_B" ] && [ -f "$SAVED_B" ]; then
-  diff /tmp/smoke-send.txt "$SAVED_B" && echo PASS || echo FAIL
-else
-  echo "FAIL: savedPath not parsed or file missing"
-fi
+DOWNLOADS_B="$HOME/Downloads/Tether"
 ```
 
-PASS if:
-1. log A contains `[send] OK — <ms> ms → <savedPath>`
-2. the file at `savedPath` is identical to the original
+#### Scenario 2.1 — single-file send
 
-Cleanup of instance B — in Block 7.
+```bash
+SEND1_NAME="smoke-send-$(date +%s).txt"
+SEND1_SRC="/tmp/$SEND1_NAME"
+echo "send-via-cli-$(date +%s)" > "$SEND1_SRC"
+echo "send SmokeMacB $SEND1_SRC" > /tmp/smoke-cliA-in &
+
+for i in $(seq 1 15); do
+  grep -qE "^\[send\] (done|partial|error)" $LOG_A && break
+  sleep 1
+done
+grep -qE "^\[send\] done" $LOG_A && [ -f "$DOWNLOADS_B/$SEND1_NAME" ] && \
+  diff "$SEND1_SRC" "$DOWNLOADS_B/$SEND1_NAME" >/dev/null && echo PASS || echo FAIL
+```
+
+PASS if `[send] done` appears in log A AND the file lands at `$DOWNLOADS_B/$SEND1_NAME` byte-identical to the source.
+
+#### Scenario 2.2 — multi-file send (3 files in one `send` command)
+
+```bash
+TS=$(date +%s)
+M1="/tmp/smoke-multi-${TS}-1.txt"; echo "m1-$TS" > "$M1"
+M2="/tmp/smoke-multi-${TS}-2.txt"; echo "m2-$TS" > "$M2"
+M3="/tmp/smoke-multi-${TS}-3.txt"; echo "m3-$TS" > "$M3"
+echo "send SmokeMacB $M1 $M2 $M3" > /tmp/smoke-cliA-in &
+
+PREV_DONE=$(grep -cE "^\[send\] done" $LOG_A 2>/dev/null || echo 0)
+for i in $(seq 1 20); do
+  NOW_DONE=$(grep -cE "^\[send\] done" $LOG_A 2>/dev/null || echo 0)
+  [ "$NOW_DONE" -gt "$PREV_DONE" ] && break
+  sleep 1
+done
+grep -qE '^\[send\] done — 3/3 sent' $LOG_A && \
+  diff "$M1" "$DOWNLOADS_B/$(basename $M1)" >/dev/null && \
+  diff "$M2" "$DOWNLOADS_B/$(basename $M2)" >/dev/null && \
+  diff "$M3" "$DOWNLOADS_B/$(basename $M3)" >/dev/null && echo PASS || echo FAIL
+```
+
+PASS if `[send] done — 3/3 sent` appears AND all 3 files land byte-identical.
+
+#### Scenario 2.3 — `retry` happy path
+
+Provoke partial by mixing a non-existent path in. The CLI's `handleSend` validates paths up front and returns `Failed` when any path is missing — so for `retry` we drive a real engine-level failure: stop instance B, send to it, expect `error`, restart B, then `retry`.
+
+Simpler reproducible trigger: send while B is stopped → `[send] error` → start B → `retry SmokeMacB` → `[send] done`.
+
+```bash
+# Stop B
+kill $(cat /tmp/smoke-cliB.pid) 2>/dev/null
+sleep 2
+
+RETRY_NAME="smoke-retry-$(date +%s).txt"
+RETRY_SRC="/tmp/$RETRY_NAME"
+echo "retry-payload-$(date +%s)" > "$RETRY_SRC"
+PREV_ERR=$(grep -cE "^\[send\] error" $LOG_A 2>/dev/null || echo 0)
+echo "send SmokeMacB $RETRY_SRC" > /tmp/smoke-cliA-in &
+for i in $(seq 1 15); do
+  NOW_ERR=$(grep -cE "^\[send\] error" $LOG_A 2>/dev/null || echo 0)
+  [ "$NOW_ERR" -gt "$PREV_ERR" ] && break
+  sleep 1
+done
+
+# Restart B with the same name so the engine's PeerIdentity resolves again
+nohup java -jar "$JAR" --name SmokeMacB --port 0 < /tmp/smoke-cliB-in > "$LOG_B" 2>&1 &
+JPID_B=$!; disown $JPID_B
+echo $JPID_B > /tmp/smoke-cliB.pid
+for i in $(seq 1 30); do
+  grep -q 'SmokeMacB' $LOG_A 2>/dev/null && break
+  sleep 1
+done
+
+PREV_DONE=$(grep -cE "^\[send\] done" $LOG_A 2>/dev/null || echo 0)
+echo "retry SmokeMacB" > /tmp/smoke-cliA-in &
+for i in $(seq 1 15); do
+  NOW_DONE=$(grep -cE "^\[send\] done" $LOG_A 2>/dev/null || echo 0)
+  [ "$NOW_DONE" -gt "$PREV_DONE" ] && break
+  sleep 1
+done
+[ -f "$DOWNLOADS_B/$RETRY_NAME" ] && diff "$RETRY_SRC" "$DOWNLOADS_B/$RETRY_NAME" >/dev/null && echo PASS || echo FAIL
+```
+
+PASS if the file lands byte-identical after `retry`. If `[send] done` did not increment, retry silently no-op'd — FAIL.
+
+#### Scenario 2.4 — exit code on `quit`
+
+Per #328, the REPL accumulates a `lastExit` from each `send`/`retry`; `quit` exits with it. Verified later in Block 4 — see the exit-code check there.
+
+Cleanup of instance B and the scratch files — in Block 7.
 
 ### Block 3: Same-name discovery
 
@@ -186,9 +254,19 @@ done
 grep -q "RenamedA" $LOG_B && echo PASS || echo FAIL
 ```
 
-### Block 4: Graceful quit of instance A
+### Block 4: Graceful quit of instance A — and `lastExit` propagation
 
-`echo "quit" > /tmp/smoke-cliA-in &`, wait up to 8 sec, check `ps -p $JPID_A`. PASS if the process exited. If not — FAIL "not graceful", `kill -9` and move on.
+`echo "quit" > /tmp/smoke-cliA-in &`, wait up to 8 sec, check `ps -p $JPID_A`. PASS if the process exited.
+
+Then check the exit code matches `lastExit` from the most recent send/retry (per #328: REPL accumulates `lastExit` from each `send`/`retry`; `quit` exits with it). After the Block 2 retry scenario, the last result was `AllSent` → exit code 0:
+
+```bash
+wait $JPID_A 2>/dev/null
+EXIT_A=$?
+[ "$EXIT_A" = "0" ] && echo "PASS: exit=0 (last send AllSent)" || echo "FAIL: exit=$EXIT_A"
+```
+
+If `quit` didn't exit — FAIL "not graceful", `kill -9` and move on; exit-code check SKIP.
 
 ### Block 5: Android (conditional)
 
@@ -245,19 +323,27 @@ If a device is present:
    elif [ -z "$ANDROID_NAME" ]; then
      echo "SKIP: cross-discovery did not surface Android peer"
    else
-     echo "send-to-android-$(date +%s)" > /tmp/smoke-android.txt
-     echo "send $ANDROID_NAME /tmp/smoke-android.txt" > /tmp/smoke-cliA-in &
+     ANDROID_NAME_FILE="smoke-android-$(date +%s).txt"
+     ANDROID_SRC="/tmp/$ANDROID_NAME_FILE"
+     echo "send-to-android-$(date +%s)" > "$ANDROID_SRC"
+     PREV_DONE=$(grep -cE "^\[send\] done" $LOG_A 2>/dev/null || echo 0)
+     echo "send $ANDROID_NAME $ANDROID_SRC" > /tmp/smoke-cliA-in &
      for i in $(seq 1 15); do
-       grep -qE "^\[send\] (OK|FAIL)" $LOG_A && break
+       NOW_DONE=$(grep -cE "^\[send\] done" $LOG_A 2>/dev/null || echo 0)
+       [ "$NOW_DONE" -gt "$PREV_DONE" ] && break
        sleep 1
      done
-     SEND_LINE=$(grep -E "^\[send\] (OK|FAIL)" $LOG_A | tail -1)
-     # On Android savedPath is absolute — cat it directly via adb shell
-     SAVED_PATH=$(echo "$SEND_LINE" | sed -nE 's/.*→[[:space:]]+(.+)$/\1/p')
-     adb shell cat "$SAVED_PATH" 2>/dev/null | diff - /tmp/smoke-android.txt && echo PASS || echo FAIL
+     # The CLI no longer prints savedPath — Android stores under app-private external storage;
+     # the filename matches the source. Locate it via shell glob, then diff.
+     ANDROID_DEST=$(adb shell run-as com.tubetoast.tether ls -1 \
+       "/data/data/com.tubetoast.tether/files/Tether/$ANDROID_NAME_FILE" 2>/dev/null \
+       || adb shell ls -1 "/sdcard/Android/data/com.tubetoast.tether/files/Tether/$ANDROID_NAME_FILE" 2>/dev/null)
+     ANDROID_DEST=$(echo "$ANDROID_DEST" | tr -d '\r' | head -1)
+     [ -n "$ANDROID_DEST" ] && adb shell cat "$ANDROID_DEST" 2>/dev/null \
+       | diff - "$ANDROID_SRC" && echo PASS || echo FAIL
    fi
    ```
-   PASS if Desktop CLI log has `[send] OK` AND the file on Android at the parsed savedPath is identical. SKIP if `10.0.2.x` (QEMU NAT) or ANDROID_NAME is empty — not FAIL.
+   PASS if Desktop CLI log shows a `[send] done` increment AND the file on Android (located by name under the app's external/private Tether dir) is identical. SKIP if `10.0.2.x` (QEMU NAT) or ANDROID_NAME is empty — not FAIL.
 9. **Stop service:** `adb shell am force-stop com.tubetoast.tether`. PASS if the app exited. (Notification "Stop" tap — manual.)
 
 Mark each sub-scenario separately: install, FGS+mDNS up (with NSD probing latency), /health sanity, cross-discovery (with ms), send-desktop-to-android, stop.
@@ -361,7 +447,10 @@ At the end of the run print a markdown report:
 | Desktop CLI A | mDNS publish (log) | ✓ PASS | advertising 'SmokeMacA' |
 | Desktop CLI A | mDNS publish (dns-sd) | ✓ PASS | SmokeMacA in browse |
 | Desktop CLI A | stdin `list` | ✓ PASS | peer printed |
-| Desktop↔Desktop | send via CLI | ✓ PASS | savedPath parsed, diff empty |
+| Desktop↔Desktop | single-file send | ✓ PASS | file lands in receiver downloads, diff empty |
+| Desktop↔Desktop | multi-file send (3 files) | ✓ PASS | `[send] done — 3/3 sent`, all 3 diff empty |
+| Desktop↔Desktop | retry after error | ✓ PASS | file lands after `retry`, diff empty |
+| Desktop CLI A | exit code on `quit` | ✓ PASS | exit=0 (last send AllSent) |
 | Same-name discovery | A/B/C convergence | ✓ PASS | each sees 2 SmokeMac peers in 3s |
 | Device name | rename via stdin | ✓ PASS | peer sees new name in <15s |
 | Desktop CLI A | graceful `quit` | ✓ PASS | exit in 3s |
@@ -423,7 +512,8 @@ Don't ask the user for clarification — the skill must be "zero-question": ever
 - **Android emulator in NAT (10.0.2.x)** — cross-discovery works both ways (multicast passes). QEMU user-mode NAT does not proxy host→guest TCP payload: handshake passes, data doesn't arrive. Send block (step 8) — SKIP at `10.0.2.x`, not FAIL. Health is accessible via `adb forward`. See `docs/knowledge/android-emulator-networking.md`.
 - **`ip route` unreliable on some vendors** (ColorOS, MIUI return subnet instead of src) — use `ip addr show wlan0`.
 - **Multiple adb devices** — pick the first or fail with a clarification. Don't hang the skill on a specific serial.
-- **`savedPath` must always be parsed from the log**, don't guess `$HOME/Downloads/Tether/...` — the downloads directory is user-configurable.
+- **Receiver downloads path** — Desktop receiver writes to `$HOME/Downloads/Tether/` by default; smoke walks that dir by filename. If the smoke run sets a non-default `downloadsDir`, update `DOWNLOADS_B`. On Android, the location is app-private — locate by basename under the app's Tether dir, not by parsed path.
+- **`[send] OK` is gone** — since #328 the CLI drives `PeerTransferEngine`; the terminal output is `[send] done — N/N sent` (success), `[send] partial — N/M sent`, or `[send] error — <reason>`. No `savedPath` in the log.
 
 ## What NOT to do
 
