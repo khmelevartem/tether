@@ -15,6 +15,7 @@ AppContainer            (commonMain)
 ├── JvmAppContainer     (jvmMain)
 │   ├── AndroidAppContainer  (androidMain)
 │   └── DesktopAppContainer  (desktopMain — ships on Windows / Linux / macOS)
+│       └── CliAppContainer  (desktopCli — CLI runner, overrides batchSenderFactory)
 └── AppleAppContainer   (appleMain)
     └── IosAppContainer     (iosMain)
 ```
@@ -27,9 +28,9 @@ Concrete `*AppConfig` implementations are **named classes in their own files** (
 
 Each platform builds its container in its entry point and passes components down:
 
-- **Desktop** — two entry points, both build `DesktopAppContainer` via the shared helpers in `DesktopBackend.kt`:
-  - [`Main.kt`](../../composeApp/src/desktopCli/kotlin/com/tubetoast/tether/Main.kt) — CLI runner (`desktopCli` source set), launched via `./gradlew :composeApp:runDesktopCli` or `installCli` + `tether` wrapper. Clikt is only on this compilation's classpath.
-  - [`MainUi.kt`](../../composeApp/src/desktopMain/kotlin/com/tubetoast/tether/MainUi.kt) — Compose UI runner (`desktopMain` source set, default for `nativeDistributions` packaging), launched via `./gradlew :composeApp:run`.
+- **Desktop** — two entry points, each building its own container leaf:
+  - [`Main.kt`](../../composeApp/src/desktopCli/kotlin/com/tubetoast/tether/Main.kt) — CLI runner (`desktopCli` source set), builds `CliAppContainer`. Launched via `./gradlew :composeApp:runDesktopCli` or `installCli` + `tether` wrapper. Clikt is only on this compilation's classpath.
+  - [`MainUi.kt`](../../composeApp/src/desktopMain/kotlin/com/tubetoast/tether/MainUi.kt) — Compose UI runner (`desktopMain` source set, default for `nativeDistributions` packaging), builds `DesktopAppContainer`. Launched via `./gradlew :composeApp:run`.
 - **Android** ([`TetherApp`](../../composeApp/src/androidMain/kotlin/com/tubetoast/tether/TetherApp.kt)): builds `AndroidAppContainer` lazily in the `Application` subclass and exposes it via the [`AppContainerProvider`](../../composeApp/src/androidMain/kotlin/com/tubetoast/tether/di/AppContainerProvider.kt) interface. [`TetherForegroundService`](../../composeApp/src/androidMain/kotlin/com/tubetoast/tether/network/TetherForegroundService.kt) reads it via `(application as AppContainerProvider).container`.
 - **iOS** ([`MainViewController`](../../composeApp/src/iosMain/kotlin/com/tubetoast/tether/MainViewController.kt)): builds `IosAppContainer` outside the `ComposeUIViewController { ... }` lambda so the composable does not act as a composition root (see rule 5 below).
 - **macOS**: ships via Desktop JVM (see [`adr-macos-native-vs-jvm.md`](adr/adr-macos-native-vs-jvm.md)) — no separate entry point; uses the Desktop `MainUi.kt` runner.
