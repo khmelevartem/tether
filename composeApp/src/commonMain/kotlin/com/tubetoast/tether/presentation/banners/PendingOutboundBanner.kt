@@ -2,9 +2,8 @@ package com.tubetoast.tether.presentation.banners
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import com.tubetoast.tether.transfer.ByteFormatting
@@ -24,8 +23,19 @@ fun PendingOutboundBanner(
     when (state) {
         PendingBannerState.Hidden -> Unit
         is PendingBannerState.Default -> DefaultBanner(state.summary, state.dropFeedback, onCancel, modifier)
-        is PendingBannerState.BusyPeer -> BusyPeerBanner(state.summary, state.peerName, onCancel, modifier)
-        is PendingBannerState.TerminalDisplay -> TerminalDisplayBanner(state.peerName, onCancel, modifier)
+        is PendingBannerState.BusyPeer -> BusyPeerBanner(
+            state.summary,
+            state.peerName,
+            state.announcementTick,
+            onCancel,
+            modifier,
+        )
+        is PendingBannerState.TerminalDisplay -> TerminalDisplayBanner(
+            state.peerName,
+            state.announcementTick,
+            onCancel,
+            modifier,
+        )
     }
 }
 
@@ -41,7 +51,7 @@ private fun DefaultBanner(
     Banner(
         text = "Ready to send ${summary.fileCount} $noun ($sizeLabel). Pick a device below.",
         severity = if (dropFeedback) BannerSeverity.Error else BannerSeverity.Info,
-        modifier = modifier.semantics { liveRegion = LiveRegionMode.Assertive },
+        modifier = modifier,
     ) {
         Button(
             label = "Cancel",
@@ -55,6 +65,7 @@ private fun DefaultBanner(
 private fun BusyPeerBanner(
     summary: PendingFilesSummary,
     peerName: String,
+    announcementTick: Int,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -64,7 +75,7 @@ private fun BusyPeerBanner(
         text = "$peerName is busy with another transfer. Your ${summary.fileCount} $noun ($sizeLabel) are still" +
             " ready — tap $peerName again when it's done, or pick a different device.",
         severity = BannerSeverity.Info,
-        modifier = modifier.semantics { liveRegion = LiveRegionMode.Assertive },
+        modifier = modifier.semantics { stateDescription = announcementTick.toString() },
     ) {
         Button(
             label = "Cancel",
@@ -77,6 +88,7 @@ private fun BusyPeerBanner(
 @Composable
 private fun TerminalDisplayBanner(
     peerName: String,
+    announcementTick: Int,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -84,7 +96,7 @@ private fun TerminalDisplayBanner(
         text = "$peerName's last transfer is still showing. Tap × on $peerName's card to dismiss it," +
             " then tap $peerName again — or pick a different device.",
         severity = BannerSeverity.Info,
-        modifier = modifier.semantics { liveRegion = LiveRegionMode.Assertive },
+        modifier = modifier.semantics { stateDescription = announcementTick.toString() },
     ) {
         Button(
             label = "Cancel",

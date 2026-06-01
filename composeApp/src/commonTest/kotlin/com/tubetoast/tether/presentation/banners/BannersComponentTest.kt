@@ -16,6 +16,7 @@ import com.tubetoast.tether.transfer.PendingFilesRepository
 import com.tubetoast.tether.transfer.PendingFilesSummary
 import com.tubetoast.tether.transfer.ReceiveEvent
 import com.tubetoast.tether.transfer.fakeBatchSender
+import com.tubetoast.tether.transfer.fakePeerTransferEngineRegistry
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
@@ -39,7 +40,7 @@ class BannersComponentTest {
     private fun buildComponent(
         repo: PendingFilesRepository = PendingFilesRepository(),
         peersRepository: FakePeersRepository = FakePeersRepository(),
-        engineRegistry: PeerTransferEngineRegistry = emptyRegistry(),
+        engineRegistry: PeerTransferEngineRegistry? = null,
         conflictRelay: PeerConflictRelay = PeerConflictRelay(),
         coroutineScope: CoroutineScope,
     ): BannersComponent {
@@ -48,7 +49,7 @@ class BannersComponentTest {
             componentContext = DefaultComponentContext(lifecycle),
             pendingFilesRepository = repo,
             peersRepository = peersRepository,
-            engineRegistry = engineRegistry,
+            engineRegistry = engineRegistry ?: fakePeerTransferEngineRegistry(coroutineScope),
             conflictRelay = conflictRelay,
             coroutineScope = coroutineScope,
         )
@@ -57,22 +58,6 @@ class BannersComponentTest {
     private fun fakePeersRepository() = FakePeersRepository(
         MutableStateFlow(listOf(Peer(peerId, Device(peerName, "127.0.0.1", 8080)))),
     )
-
-    private fun emptyRegistry(scope: CoroutineScope? = null): PeerTransferEngineRegistry {
-        val registryScope = scope ?: CoroutineScope(kotlinx.coroutines.SupervisorJob())
-        return PeerTransferEngineRegistry(
-            appScope = registryScope,
-            engineFactory = { id, _ ->
-                PeerTransferEngine(
-                    peer = id,
-                    batchSenderFactory = fakeBatchSender(),
-                    inboundEvents = MutableSharedFlow(),
-                    scope = registryScope,
-                    peerPreferencesStore = FakePeerPreferencesStore(),
-                )
-            },
-        )
-    }
 
     private fun pausedRegistry(pauseChannel: Channel<Unit>, scope: CoroutineScope) =
         PeerTransferEngineRegistry(
@@ -87,22 +72,6 @@ class BannersComponentTest {
                 )
             },
         )
-
-    private fun registryWithInbound(
-        inboundEvents: MutableSharedFlow<ReceiveEvent>,
-        scope: CoroutineScope,
-    ) = PeerTransferEngineRegistry(
-        appScope = scope,
-        engineFactory = { id, _ ->
-            PeerTransferEngine(
-                peer = id,
-                batchSenderFactory = fakeBatchSender(),
-                inboundEvents = inboundEvents,
-                scope = scope,
-                peerPreferencesStore = FakePeerPreferencesStore(),
-            )
-        },
-    )
 
     @Test
     fun `onCancelPending clears repo`() = runTest {
@@ -233,7 +202,7 @@ class BannersComponentTest {
         val repo = PendingFilesRepository()
         val relay = PeerConflictRelay()
         val inboundEvents = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 8)
-        val registry = registryWithInbound(inboundEvents, backgroundScope)
+        val registry = fakePeerTransferEngineRegistry(backgroundScope, inboundEvents)
         val component = buildComponent(
             repo = repo,
             peersRepository = fakePeersRepository(),
@@ -265,7 +234,7 @@ class BannersComponentTest {
         val repo = PendingFilesRepository()
         val relay = PeerConflictRelay()
         val inboundEvents = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 8)
-        val registry = registryWithInbound(inboundEvents, backgroundScope)
+        val registry = fakePeerTransferEngineRegistry(backgroundScope, inboundEvents)
         val component = buildComponent(
             repo = repo,
             peersRepository = fakePeersRepository(),
@@ -394,7 +363,7 @@ class BannersComponentTest {
     fun `TerminalDisplay shown when outbound transfer completes as Sent`() = runTest {
         val repo = PendingFilesRepository()
         val relay = PeerConflictRelay()
-        val registry = emptyRegistry(backgroundScope)
+        val registry = fakePeerTransferEngineRegistry(backgroundScope)
         val component = buildComponent(
             repo = repo,
             peersRepository = fakePeersRepository(),
@@ -423,7 +392,7 @@ class BannersComponentTest {
         val repo = PendingFilesRepository()
         val relay = PeerConflictRelay()
         val inboundEvents = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 8)
-        val registry = registryWithInbound(inboundEvents, backgroundScope)
+        val registry = fakePeerTransferEngineRegistry(backgroundScope, inboundEvents)
         val component = buildComponent(
             repo = repo,
             peersRepository = fakePeersRepository(),
@@ -453,7 +422,7 @@ class BannersComponentTest {
         val repo = PendingFilesRepository()
         val relay = PeerConflictRelay()
         val inboundEvents = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 8)
-        val registry = registryWithInbound(inboundEvents, backgroundScope)
+        val registry = fakePeerTransferEngineRegistry(backgroundScope, inboundEvents)
         val component = buildComponent(
             repo = repo,
             peersRepository = fakePeersRepository(),
