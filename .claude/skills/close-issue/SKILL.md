@@ -1,6 +1,6 @@
 ---
 name: close-issue
-description: Finish a GitHub issue and merge its PR — rebase, walk acceptance criteria, gate on manual smoke + user confirmation, ask one interview-prep comprehension question, sweep PR review comments, update docs touched by the change, record any engineering decisions made in chat, post-factum size label, squash-merge, follow-ups, optional retro. Use when the user says "close issue N", "merge the PR", "finish task N", "ship #N", or invokes `/close-issue`.
+description: Finish a GitHub issue and merge its PR — pull main, walk acceptance criteria, gate on manual smoke + user confirmation, ask one interview-prep comprehension question, sweep PR review comments, update docs touched by the change, record any engineering decisions made in chat, post-factum size label, squash-merge, follow-ups, optional retro. Use when the user says "close issue N", "merge the PR", "finish task N", "ship #N", or invokes `/close-issue`.
 ---
 
 Complete task <issue number> and merge the PR.
@@ -11,7 +11,7 @@ Work strictly step by step. Each step is a stop point: if something is not done,
 
 ## Step 0 — Pull main
 
-Run `/rebase` — it will pull `origin/main` and assess semantic overlap with the current work. If the step reports significant overlap — adjust the work to the new context before starting AC, smoke, review.
+Run `/merge` — it will pull `origin/main` and assess semantic overlap with the current work. If the step reports significant overlap — adjust the work to the new context before starting AC, smoke, review.
 
 ---
 

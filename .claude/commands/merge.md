@@ -9,15 +9,15 @@ git log $(git merge-base HEAD origin/main)..origin/main --oneline
 
 Empty — main already included, stop.
 
-## 2. Rebase
+## 2. Merge
 
-Default — `rebase` (linear history on top of fresh main):
+Default — `merge` (preserves branch history, no force-push needed):
 
 ```bash
-git rebase origin/main
+git merge origin/main
 ```
 
-If the branch was already pushed, follow up with `git push --force-with-lease` after step 3 passes. Use `merge` instead only when explicitly asked or when the branch has multiple authors / shared work that would suffer from history rewrite.
+If the branch was already pushed, a plain `git push` is enough after step 3 passes. Use `rebase` instead only when explicitly asked or when a linear history is required (e.g. the branch is solo-authored and you want to keep it tidy before squash-merge).
 
 Resolve conflicts before step 3.
 
@@ -29,6 +29,6 @@ Read the incoming commits (`git show <sha>` for the suspicious ones) and answer 
 - Are there changes that make the current work stale, incomplete, or semantically conflicting (not line-conflicting)?
 - Does the current work need adjustment to the new context?
 
-A clean rebase / merge without textual conflicts **does not mean** the absence of semantic collision. If overlap found — tell the user in one sentence and propose a plan.
+A clean merge / rebase without textual conflicts **does not mean** the absence of semantic collision. If overlap found — tell the user in one sentence and propose a plan.
 
 If no overlap — one line «main pulled in, no overlap with current work» and continue.
