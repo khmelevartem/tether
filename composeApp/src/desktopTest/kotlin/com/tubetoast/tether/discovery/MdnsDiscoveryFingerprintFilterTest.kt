@@ -2,44 +2,61 @@ package com.tubetoast.tether.discovery
 
 import com.tubetoast.tether.identity.DeviceIdentityStore
 import com.tubetoast.tether.identity.EphemeralFingerprintPersistence
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-/**
- * Guards the self-suppression predicate in MdnsDiscoveryJmdns: a peer whose fp TXT record
- * differs from our own fingerprint must not be dropped.
- *
- * Regression guard for two CLI instances on the same host sharing a DataStore fingerprint.
- */
+/** MdnsDiscoveryJmdns suppresses peers whose fp TXT matches own fingerprint, and only those. */
 class MdnsDiscoveryFingerprintFilterTest {
-    private fun isSelf(ownFp: String, peerFp: String?): Boolean =
-        peerFp != null && peerFp == ownFp
-
-    @Test
-    fun `peer with different fingerprint is not self`() {
-        assertFalse(isSelf("aaaa1111aaaa1111aaaa1111aaaa1111", "bbbb2222bbbb2222bbbb2222bbbb2222"))
+    private fun discovery(identityStore: DeviceIdentityStore): MdnsDiscoveryJmdns {
+        val store = DiscoveredDevicesStore()
+        val fakeProvider = FakeNetworkInterfaceProvider(emptyList())
+        return MdnsDiscoveryJmdns(store, Dispatchers.IO, identityStore, fakeProvider)
     }
 
     @Test
-    fun `peer with same fingerprint is self`() {
-        assertTrue(isSelf("aaaa1111aaaa1111aaaa1111aaaa1111", "aaaa1111aaaa1111aaaa1111aaaa1111"))
-    }
-
-    @Test
-    fun `peer with null fingerprint is not self`() {
-        assertFalse(isSelf("aaaa1111aaaa1111aaaa1111aaaa1111", null))
-    }
-
-    @Test
-    fun `distinct EphemeralFingerprintPersistence instances yield distinct fingerprints`() =
-        runTest {
-            val fpA = DeviceIdentityStore(EphemeralFingerprintPersistence()).getOrCreate()
-            val fpB = DeviceIdentityStore(EphemeralFingerprintPersistence()).getOrCreate()
-            assertFalse(
-                fpA == fpB,
-                "distinct EphemeralFingerprintPersistence instances must produce distinct fingerprints",
+    fun `peer with matching fingerprint is suppressed`() = runTest {
+        val identityStore = DeviceIdentityStore(EphemeralFingerprintPersistence())
+        val d = discovery(identityStore)
+        d.start("Self", 29600)
+        try {
+            val ownFp = identityStore.getOrCreate()
+            assertTrue(
+                d.isOwnAnnounce(ownFp),
+                "peer with matching fingerprint must be suppressed",
             )
+        } finally {
+            d.stop()
         }
+    }
+
+    @Test
+    fun `peer with different fingerprint is not suppressed`() = runTest {
+        val d = discovery(DeviceIdentityStore(EphemeralFingerprintPersistence()))
+        d.start("Self", 29601)
+        try {
+            assertFalse(
+                d.isOwnAnnounce("bbbb2222bbbb2222bbbb2222bbbb2222"),
+                "peer with different fingerprint must not be suppressed",
+            )
+        } finally {
+            d.stop()
+        }
+    }
+
+    @Test
+    fun `peer with null fingerprint is not suppressed`() = runTest {
+        val d = discovery(DeviceIdentityStore(EphemeralFingerprintPersistence()))
+        d.start("Self", 29602)
+        try {
+            assertFalse(
+                d.isOwnAnnounce(null),
+                "peer with null fingerprint must not be suppressed",
+            )
+        } finally {
+            d.stop()
+        }
+    }
 }

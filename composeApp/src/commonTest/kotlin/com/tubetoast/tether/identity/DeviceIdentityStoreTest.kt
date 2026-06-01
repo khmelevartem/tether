@@ -2,12 +2,26 @@ package com.tubetoast.tether.identity
 
 import com.tubetoast.tether.identity.DataStoreFingerprintPersistence
 import com.tubetoast.tether.preferences.TempDataStore
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+
+private class CountingFingerprintPersistence : FingerprintPersistence {
+    var writes = 0
+    private var stored: String? = null
+
+    override suspend fun read(): String? = stored
+
+    override suspend fun write(value: String) {
+        writes++
+        stored = value
+    }
+}
 
 class DeviceIdentityStoreTest {
     private val temp = TempDataStore()
@@ -49,4 +63,21 @@ class DeviceIdentityStoreTest {
             "fingerprint must survive re-instantiation with same dataStore",
         )
     }
+
+    @Test
+    fun `concurrent getOrCreate calls on a fresh store yield the same fingerprint and only one write`() =
+        runTest {
+            val writeCount = CountingFingerprintPersistence()
+            val store = DeviceIdentityStore(writeCount)
+            val results = mutableListOf<String>()
+            coroutineScope {
+                repeat(20) {
+                    launch {
+                        results += store.getOrCreate()
+                    }
+                }
+            }
+            assertEquals(1, writeCount.writes, "exactly one write must happen on concurrent first-call")
+            assertTrue(results.all { it == results[0] }, "all concurrent calls must return the same fingerprint")
+        }
 }

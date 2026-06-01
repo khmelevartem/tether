@@ -205,7 +205,7 @@ internal class MdnsDiscoveryJmdns(
                 // expose a null peer fingerprint while the announce is unambiguously ours.
                 if (event.name == deviceName) return
                 val peerFingerprint = info.getPropertyString("fp")
-                if (peerFingerprint != null && peerFingerprint == fingerprint) return
+                if (isOwnAnnounce(peerFingerprint)) return
                 val ipv4 = resolveIPv4(info, event.name) ?: return
                 val device = Device(
                     name = event.name,
@@ -218,6 +218,9 @@ internal class MdnsDiscoveryJmdns(
             }
         }
     }
+
+    internal fun isOwnAnnounce(peerFingerprint: String?): Boolean =
+        peerFingerprint != null && peerFingerprint == fingerprint
 
     /** JmDNS resolves A/AAAA in stages; first callback may carry only IPv6. Returns `null` to wait for next event. */
     private fun resolveIPv4(info: ServiceInfo, serviceName: String): String? {
