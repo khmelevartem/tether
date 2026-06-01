@@ -166,6 +166,32 @@ class CliSendTest {
     }
 
     @Test
+    fun `consecutive sends on the same engine both transfer`() {
+        val first = Files.createTempFile("cli-seq-1", ".txt").also { it.writeBytes("first".toByteArray()) }
+        val second = Files.createTempFile("cli-seq-2", ".txt").also { it.writeBytes("second".toByteArray()) }
+
+        val firstResult = runBlocking {
+            handleSend(engineRegistry, listOf(device), device.name, listOf(first))
+        }
+        val secondResult = runBlocking {
+            handleSend(engineRegistry, listOf(device), device.name, listOf(second))
+        }
+
+        assertEquals(CliBatchResult.AllSent, firstResult)
+        assertEquals(CliBatchResult.AllSent, secondResult)
+        val landed = tmpDir
+            .walk()
+            .filter { it.isFile }
+            .map { it.name }
+            .toSet()
+        assertTrue(landed.contains(first.fileName.toString()), "first missing: $landed")
+        assertTrue(landed.contains(second.fileName.toString()), "second missing: $landed")
+
+        Files.deleteIfExists(first)
+        Files.deleteIfExists(second)
+    }
+
+    @Test
     fun `send reports Failed when peer not found`() {
         val file = Files.createTempFile("cli-no-peer", ".txt")
         file.writeBytes("data".toByteArray())

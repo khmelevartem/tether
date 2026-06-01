@@ -263,6 +263,10 @@ suspend fun handleSend(
 
     val sources = paths.map { JvmPathFileSource(it) }
     val engine = engineRegistry.engineFor(peer.toPeerIdentity())
+    // A fresh `send` discards any prior terminal state; without this the engine sits in
+    // Sent/Error/Cancelled and startOutbound silently no-ops. `retry` reads the terminal
+    // *before* this path runs and so is unaffected.
+    if (engine.state.value.isTerminal()) engine.onDismiss()
     onActiveEngine(engine)
     return try {
         runEngineAndRender(engine, sources, output, errorOutput) { engine.startOutbound(it) }
