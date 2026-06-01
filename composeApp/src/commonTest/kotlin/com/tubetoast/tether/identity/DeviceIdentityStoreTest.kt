@@ -5,30 +5,11 @@ import com.tubetoast.tether.preferences.TempDataStore
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.yield
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
-
-private class CountingFingerprintPersistence : FingerprintPersistence {
-    var writes = 0
-    private var stored: String? = null
-
-    override suspend fun read(): String? {
-        // Yield so concurrent coroutines can interleave inside the lock acquisition window — without
-        // a real suspension point the cooperative test scheduler would let the first caller finish
-        // its withLock body before any sibling enters, making the mutex contention untestable.
-        yield()
-        return stored
-    }
-
-    override suspend fun write(value: String) {
-        writes++
-        stored = value
-    }
-}
 
 class DeviceIdentityStoreTest {
     private val temp = TempDataStore()
@@ -74,7 +55,7 @@ class DeviceIdentityStoreTest {
     @Test
     fun `concurrent getOrCreate calls on a fresh store yield the same fingerprint and only one write`() =
         runTest {
-            val writeCount = CountingFingerprintPersistence()
+            val writeCount = InMemoryFingerprintPersistence()
             val store = DeviceIdentityStore(writeCount)
             val results = mutableListOf<String>()
             coroutineScope {
