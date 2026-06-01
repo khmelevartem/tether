@@ -95,7 +95,15 @@ class DeviceKeyPairTest {
         val flaky = FlakyExtractKeychainStore(failCount = 1, delegate = store)
         val kp = DeviceKeyPair(configDir = dir, keychain = flaky)
 
-        assertTrue(flaky.deleteCallCount >= 1, "deleteEntry must be called when extraction returns null")
+        // The load-path corruption branch must run in this exact order:
+        // find the existing key, fail extraction, delete the corrupt entry, then regenerate.
+        // If the branch were removed and execution jumped straight to generate, the log would
+        // start with "find:hit", "generate" instead of "find:hit", "extract:fail", "delete".
+        assertEquals(
+            listOf("find:hit", "extract:fail", "delete", "generate", "extract:ok"),
+            flaky.callLog,
+            "loadOrCreate must detect corruption before regenerating",
+        )
         assertEquals(91, kp.publicKey.size, "a fresh key must be generated after corruption")
     }
 

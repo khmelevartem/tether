@@ -3,7 +3,7 @@ package com.tubetoast.tether.security
 // Fixed 26-byte DER prefix for a P-256 (prime256v1) SubjectPublicKeyInfo:
 //   SEQUENCE { AlgorithmIdentifier { OID ecPublicKey, OID prime256v1 }, BIT STRING uncompressed-point }
 // Prepending this to the raw 65-byte uncompressed point yields 91-byte X.509 SPKI
-// compatible with JVM KeyFactory("EC").generatePublic(X509EncodedKeySpec(bytes)).
+// compatible with the JVM X.509 EC public-key import API.
 private val P256_SPKI_PREFIX = byteArrayOf(
     0x30,
     0x59, // SEQUENCE, 89 bytes

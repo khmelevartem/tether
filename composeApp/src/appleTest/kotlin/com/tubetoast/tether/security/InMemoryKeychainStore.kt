@@ -72,25 +72,39 @@ internal class InMemoryKeychainStore : KeychainStore {
  * Wraps an [InMemoryKeychainStore] and returns null from [extractPublicKeyBytes] for the first
  * [failCount] calls, then delegates to the real implementation. Used to simulate transient
  * key-extraction failures.
+ *
+ * [callLog] records the sequence of store interactions as string tokens so tests can assert
+ * the exact control-flow path taken through the production code:
+ * - `"find:hit"` / `"find:miss"` — [findPrivateKey] returned non-null / null
+ * - `"extract:fail"` / `"extract:ok"` — [extractPublicKeyBytes] returned null / non-null
+ * - `"delete"` — [deleteEntry] was called
+ * - `"generate"` — [generatePrivateKey] was called
  */
 internal class FlakyExtractKeychainStore(
     private val failCount: Int,
     private val delegate: InMemoryKeychainStore = InMemoryKeychainStore(),
 ) : KeychainStore by delegate {
     private var failsRemaining = failCount
-    var deleteCallCount = 0
-        private set
+    val callLog = mutableListOf<String>()
 
-    override fun extractPublicKeyBytes(key: SecKeyRef): ByteArray? {
-        if (failsRemaining > 0) {
-            failsRemaining--
-            return null
+    override fun findPrivateKey(): SecKeyRef? =
+        delegate.findPrivateKey().also { result ->
+            callLog += if (result != null) "find:hit" else "find:miss"
         }
-        return delegate.extractPublicKeyBytes(key)
+
+    override fun generatePrivateKey(): SecKeyRef =
+        delegate.generatePrivateKey().also { callLog += "generate" }
+
+    override fun extractPublicKeyBytes(key: SecKeyRef): ByteArray? = if (failsRemaining > 0) {
+        failsRemaining--
+        callLog += "extract:fail"
+        null
+    } else {
+        delegate.extractPublicKeyBytes(key).also { callLog += "extract:ok" }
     }
 
     override fun deleteEntry() {
-        deleteCallCount++
+        callLog += "delete"
         delegate.deleteEntry()
     }
 }
