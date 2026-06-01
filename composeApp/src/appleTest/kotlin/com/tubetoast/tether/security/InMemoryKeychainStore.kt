@@ -10,7 +10,6 @@ import platform.CoreFoundation.CFErrorRefVar
 import platform.CoreFoundation.CFRelease
 import platform.CoreFoundation.CFRetain
 import platform.CoreFoundation.kCFBooleanFalse
-import platform.Foundation.CFBridgingRelease
 import platform.Foundation.NSNumber
 import platform.Security.SecKeyCreateRandomKey
 import platform.Security.SecKeyRef
@@ -38,8 +37,9 @@ internal class InMemoryKeychainStore : KeychainStore {
         val attrs = buildQuery {
             put(kSecAttrKeyType, kSecAttrKeyTypeECSECPrimeRandom)
             put(kSecAttrKeySizeInBits, NSNumber(int = 256))
-            put(kSecPrivateKeyAttrs, CFBridgingRelease(privateAttrs))
+            put(kSecPrivateKeyAttrs, privateAttrs)
         }
+        CFRelease(privateAttrs)
         val key = memScoped {
             val errorRef = alloc<CFErrorRefVar>()
             val k = SecKeyCreateRandomKey(attrs, errorRef.ptr)

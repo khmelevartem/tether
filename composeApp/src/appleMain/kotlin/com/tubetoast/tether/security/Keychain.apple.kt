@@ -1,32 +1,35 @@
-@file:OptIn(ExperimentalForeignApi::class, kotlinx.cinterop.BetaInteropApi::class)
+@file:OptIn(ExperimentalForeignApi::class)
 @file:Suppress("UNCHECKED_CAST")
 
 package com.tubetoast.tether.security
 
 import com.tubetoast.tether.util.toNSData
 import kotlinx.cinterop.ByteVar
+import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.alloc
 import kotlinx.cinterop.interpretCPointer
-import kotlinx.cinterop.interpretObjCPointer
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
-import kotlinx.cinterop.rawValue
 import kotlinx.cinterop.readBytes
 import kotlinx.cinterop.value
 import platform.CoreFoundation.CFDataGetBytePtr
 import platform.CoreFoundation.CFDataGetLength
+import platform.CoreFoundation.CFDictionaryCreateMutable
 import platform.CoreFoundation.CFDictionaryRef
+import platform.CoreFoundation.CFDictionarySetValue
 import platform.CoreFoundation.CFErrorCopyDescription
 import platform.CoreFoundation.CFErrorRef
 import platform.CoreFoundation.CFErrorRefVar
+import platform.CoreFoundation.CFMutableDictionaryRef
 import platform.CoreFoundation.CFRelease
 import platform.CoreFoundation.CFTypeRefVar
 import platform.CoreFoundation.kCFBooleanTrue
+import platform.CoreFoundation.kCFTypeDictionaryKeyCallBacks
+import platform.CoreFoundation.kCFTypeDictionaryValueCallBacks
 import platform.Foundation.CFBridgingRelease
 import platform.Foundation.CFBridgingRetain
 import platform.Foundation.NSData
-import platform.Foundation.NSMutableDictionary
 import platform.Foundation.NSNumber
 import platform.Foundation.NSString
 import platform.Security.SecItemCopyMatching
@@ -51,6 +54,7 @@ import platform.Security.kSecClassKey
 import platform.Security.kSecPrivateKeyAttrs
 import platform.Security.kSecReturnRef
 import platform.Security.kSecUseDataProtectionKeychain
+import platform.darwin.NSObject
 
 /**
  * [findPrivateKey] returns null when no key is stored yet.
@@ -86,8 +90,9 @@ internal class Keychain(
             put(kSecAttrKeySizeInBits, NSNumber(int = 256))
             put(kSecAttrAccessible, kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly)
             put(kSecUseDataProtectionKeychain, kCFBooleanTrue)
-            put(kSecPrivateKeyAttrs, CFBridgingRelease(privateAttrs))
+            put(kSecPrivateKeyAttrs, privateAttrs)
         }
+        CFRelease(privateAttrs)
         return memScoped {
             val errorRef = alloc<CFErrorRefVar>()
             val key = SecKeyCreateRandomKey(attrs, errorRef.ptr)
@@ -161,25 +166,30 @@ internal class Keychain(
 
 /** The caller owns the returned ref. */
 internal fun buildQuery(block: QueryBuilder.() -> Unit): CFDictionaryRef {
-    val dict = NSMutableDictionary()
+    val dict = CFDictionaryCreateMutable(
+        null,
+        0,
+        kCFTypeDictionaryKeyCallBacks.ptr,
+        kCFTypeDictionaryValueCallBacks.ptr,
+    )!!
     QueryBuilder(dict).block()
-    return CFBridgingRetain(dict) as CFDictionaryRef
+    return dict
 }
 
 internal class QueryBuilder(
-    private val dict: NSMutableDictionary,
+    private val dict: CFMutableDictionaryRef,
 ) {
-    fun put(key: kotlinx.cinterop.CPointer<*>?, value: Any?) {
+    fun put(key: CPointer<*>?, value: CPointer<*>?) {
         if (key == null || value == null) return
-        // Toll-free bridge: CF string constants share memory layout with NSString.
-        val nsKey = interpretObjCPointer<NSString>(key.rawValue)
-        val nsValue: Any = when (value) {
-            is kotlinx.cinterop.CPointer<*> ->
-                // Toll-free bridge: CFBooleanRef, CFStringRef, etc. bridge to ObjC objects.
-                interpretObjCPointer<platform.darwin.NSObject>(value.rawValue)
-            else -> value
-        }
-        dict.setObject(nsValue, forKey = nsKey)
+        CFDictionarySetValue(dict, key, value)
+    }
+
+    fun put(key: CPointer<*>?, value: NSObject?) {
+        if (key == null || value == null) return
+        // CFBridgingRetain gives +1; CFDictionarySetValue retains a copy; release our +1.
+        val cfValue = CFBridgingRetain(value)
+        CFDictionarySetValue(dict, key, cfValue)
+        CFRelease(cfValue)
     }
 }
 
