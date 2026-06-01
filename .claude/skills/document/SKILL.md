@@ -29,7 +29,7 @@ The skill is idempotent per issue. At each invocation, first check `gh pr list -
   git merge-base --is-ancestor origin/main HEAD && echo up-to-date || echo behind
   ```
 
-  If `behind` → run `/rebase` and adjust to whatever it brought before classifying comments or running reviewers. Doc-track work is especially vulnerable to canon drift — an in-flight rule promotion or canon hoist on main can invalidate the very edits the current PR makes (e.g. adding a glossary entry that a freshly-merged rule now declares unnecessary). If `up-to-date` → skip.
+  If `behind` → run `/merge` and adjust to whatever it brought before classifying comments or running reviewers. Doc-track work is especially vulnerable to canon drift — an in-flight rule promotion or canon hoist on main can invalidate the very edits the current PR makes (e.g. adding a glossary entry that a freshly-merged rule now declares unnecessary). If `up-to-date` → skip.
 
   Then read **all** human comments on the PR (`gh api repos/<owner>/<repo>/pulls/<PR>/comments` + `gh pr view <PR> --comments`) and for each determine its status: addressed in commits after it — or not. **Creation date does not determine relevance** — filtering comments by `created_at > <date-of-previous-run>` is forbidden, because an unaddressed comment remains relevant regardless of how old it is. **Counted is not read** — returning a `length`/count without fetching the `body` of each comment does not count as reading; while unaddressed comments remain outstanding, the consistency wave (Step 4) and review wave (Step 5) must not run, otherwise both will process a diff that needs to be redone. The run **must** include on a fresh diff (`docs/` + `.claude/`): Step 4 (consistency pass) → Step 5 (review wave).
 
