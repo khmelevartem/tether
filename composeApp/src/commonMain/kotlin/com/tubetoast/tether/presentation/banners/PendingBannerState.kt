@@ -11,10 +11,12 @@ sealed interface PendingBannerState {
     ) : PendingBannerState
 
     /**
-     * [announcementTick] increments on each repeat tap so that the data-class identity changes
-     * and Compose recomposes the banner. The banner composable maps it to a `stateDescription`
-     * semantics property so the semantics tree always differs between recompositions, giving
-     * the live-region machinery a content change to fire on — even when [peerName] is unchanged.
+     * Increments on every busy-tap so the data-class identity changes; Compose recomposes the
+     * banner. When the [peerName] differs between taps the rendered copy differs and the
+     * platform live region re-announces. Same-peer repeat taps stay silent — the rendered text
+     * is identical and Android TalkBack / iOS VoiceOver only re-announce on text-content change.
+     * Full re-announcement on same-peer repeat tap requires platform actuals
+     * (View.announceForAccessibility / UIAccessibility.post(.announcement)) — not in scope.
      */
     data class BusyPeer(
         val summary: PendingFilesSummary,
@@ -23,7 +25,7 @@ sealed interface PendingBannerState {
     ) : PendingBannerState
 
     /**
-     * [announcementTick] — see [BusyPeer].
+     * [announcementTick] — see [BusyPeer.announcementTick].
      */
     data class TerminalDisplay(
         val peerName: String,
