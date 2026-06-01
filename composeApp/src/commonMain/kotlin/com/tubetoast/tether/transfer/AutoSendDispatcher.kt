@@ -22,8 +22,8 @@ class AutoSendDispatcher(
     private val scope: CoroutineScope,
 ) {
     fun start() {
-        combine(peersRepository.peers, pendingFilesRepository.sources) { peers, sources ->
-            if (sources.isEmpty()) return@combine
+        combine(peersRepository.peers, pendingFilesRepository.pending) { peers, pending ->
+            if (pending == null) return@combine
             val onlinePaired = peers.filter { it.isOnline }.map { it.id }
             val singleCandidate = onlinePaired.singleOrNull() ?: return@combine
             val autoSendEnabled = peerPreferencesStore
@@ -31,17 +31,17 @@ class AutoSendDispatcher(
                 .catch { emit(false) }
                 .first()
             if (!autoSendEnabled) return@combine
-            // mDNS may have added a peer, sources may have been cleared, or the engine may have transitioned out of Idle.
-            val sourcesAfter = pendingFilesRepository.sources.value
-            if (sourcesAfter.isEmpty()) return@combine
+            // mDNS may have added a peer, pending may have been cleared, or the engine may have transitioned out of Idle.
+            val pendingAfter = pendingFilesRepository.pending.value ?: return@combine
             val onlineAfter = peersRepository.peers.value
                 .filter { it.isOnline }
                 .map { it.id }
             if (onlineAfter.singleOrNull() != singleCandidate) return@combine
             val engine = engineRegistry.engineFor(singleCandidate)
             if (engine.state.value !is PeerTransferState.Idle) return@combine
-            engine.startOutbound(sourcesAfter)
-            pendingFilesRepository.clear()
+            engine.startOutbound(pendingAfter.sources)
+            // CAS on the snapshot — a fresh setPending that landed between startOutbound and here survives.
+            pendingFilesRepository.clearIfMatches(pendingAfter)
         }.launchIn(scope)
     }
 }

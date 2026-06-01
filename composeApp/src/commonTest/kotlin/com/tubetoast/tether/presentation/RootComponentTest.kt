@@ -104,17 +104,17 @@ class RootComponentTest {
     fun `setPending stores summary and clear resets to null`() = runTest {
         val repo = PendingFilesRepository()
 
-        assertNull(repo.summary.value)
+        assertNull(repo.pending.value?.summary)
 
         val summary = PendingFilesSummary(fileCount = 2, totalBytes = 1024L)
         repo.setPending(summary, emptyList())
 
-        assertEquals(summary, repo.summary.value)
-        assertNotEquals(null, repo.summary.value)
+        assertEquals(summary, repo.pending.value?.summary)
+        assertNotEquals(null, repo.pending.value?.summary)
 
         repo.clear()
 
-        assertNull(repo.summary.value)
+        assertNull(repo.pending.value?.summary)
     }
 
     @Test
@@ -137,7 +137,7 @@ class RootComponentTest {
         runCurrent()
 
         assertIs<PeerTransferState.Sent>(peerComponent.state.value.transfer)
-        assertNull(repo.summary.value)
+        assertNull(repo.pending.value?.summary)
     }
 
     @Test

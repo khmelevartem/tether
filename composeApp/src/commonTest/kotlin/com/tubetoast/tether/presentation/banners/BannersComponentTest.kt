@@ -36,6 +36,7 @@ class BannersComponentTest {
 
         val summary = PendingFilesSummary(2, 1024L)
         repo.setPending(summary, emptyList())
+        runCurrent()
 
         assertTrue(component.pendingSummary.value == summary)
     }
@@ -48,7 +49,7 @@ class BannersComponentTest {
         repo.setPending(PendingFilesSummary(1, 100L), emptyList())
         component.onCancelPending()
 
-        assertNull(repo.summary.value)
+        assertNull(repo.pending.value?.summary)
     }
 
     @Test

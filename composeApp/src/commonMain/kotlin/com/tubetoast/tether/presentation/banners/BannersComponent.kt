@@ -8,7 +8,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -19,7 +22,9 @@ class BannersComponent(
 ) : ComponentContext by componentContext {
     private val scope = coroutineScope
 
-    val pendingSummary: StateFlow<PendingFilesSummary?> = pendingFilesRepository.summary
+    val pendingSummary: StateFlow<PendingFilesSummary?> = pendingFilesRepository.pending
+        .map { it?.summary }
+        .stateIn(scope, SharingStarted.Eagerly, pendingFilesRepository.pending.value?.summary)
 
     private val _dropFeedback = MutableStateFlow(false)
     val dropFeedback: StateFlow<Boolean> = _dropFeedback
