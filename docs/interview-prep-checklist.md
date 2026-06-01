@@ -53,7 +53,7 @@
 ### Structured concurrency
 - [x] Что такое structured concurrency — scope, parent-child, когда parent завершается
 - [x] `Job` vs `SupervisorJob` — поведение при ошибке дочернего корутина
-- [ ] `coroutineScope` vs `supervisorScope` — разница в обработке исключений
+- [x] `coroutineScope` vs `supervisorScope` — разница в обработке исключений
 - [ ] Отмена: `cancel()`, `CancellationException`, `isActive`, `ensureActive`, `yield`
 - [ ] `NonCancellable` — зачем, как использовать в `finally`
 - [ ] Исключение в `async` без `await` — куда девается, когда выбрасывается
