@@ -99,7 +99,7 @@ Keep instance A alive until the end of Block 3. Graceful `quit` check — in Blo
 
 **Important:** send must go via the **CLI `send` command**, not via `curl POST /upload`. This is a smoke test of the user scenario, not of the endpoint.
 
-Start a second CLI instance (`SmokeMacB`) in parallel with A, wait until mDNS lets both see each other. The CLI drives the same `PeerTransferEngine` as the UI — terminal output is `[send] done — N/N sent` (success), `[send] partial — N/M sent` (partial), or `[send] error — …`. The savedPath is not in the log; verify by walking the receiver's downloads dir (`$HOME/Downloads/Tether/`).
+Start a second CLI instance (`SmokeMacB`) in parallel with A, wait until mDNS lets both see each other. The CLI's terminal output is `[send] done — N/N sent` (success), `[send] partial — N/M sent` (partial), or `[send] error — <reason>`. The `savedPath` is not in the log; verify by walking the receiver's downloads dir (`$HOME/Downloads/Tether/`).
 
 ```bash
 LOG_B=/tmp/smoke-cliB.log
@@ -206,7 +206,7 @@ PASS if the file lands byte-identical after `retry`. If `[send] done` did not in
 
 #### Scenario 2.4 — exit code on `quit`
 
-Per #328, the REPL accumulates a `lastExit` from each `send`/`retry`; `quit` exits with it. Verified later in Block 4 — see the exit-code check there.
+The REPL accumulates a `lastExit` from each `send`/`retry`; `quit` exits with it. Verified later in Block 4 — see the exit-code check there.
 
 Cleanup of instance B and the scratch files — in Block 7.
 
@@ -258,7 +258,7 @@ grep -q "RenamedA" $LOG_B && echo PASS || echo FAIL
 
 `echo "quit" > /tmp/smoke-cliA-in &`, wait up to 8 sec, check `ps -p $JPID_A`. PASS if the process exited.
 
-Then check the exit code matches `lastExit` from the most recent send/retry (per #328: REPL accumulates `lastExit` from each `send`/`retry`; `quit` exits with it). After the Block 2 retry scenario, the last result was `AllSent` → exit code 0:
+Then check the exit code matches `lastExit` from the most recent send/retry. After the Block 2 retry scenario, the last result was `AllSent` → exit code 0:
 
 ```bash
 wait $JPID_A 2>/dev/null
@@ -409,7 +409,7 @@ Executed **always**:
 - `kill $(cat /tmp/smoke-cliA.pid /tmp/smoke-cliB.pid /tmp/smoke-cliC.pid /tmp/smoke-cliA-keeper.pid /tmp/smoke-cliB-keeper.pid /tmp/smoke-cliC-keeper.pid 2>/dev/null) 2>/dev/null`
 - `pkill -f 'com.tubetoast.tether.*\.jar'` (safety net)
 - `rm -f /tmp/smoke-cli*-in /tmp/smoke-cli*.log /tmp/smoke-cli*.pid /tmp/smoke-cli*-keeper.pid /tmp/smoke-send.txt /tmp/smoke-android.txt`
-- Files in `~/Downloads/Tether/` that we created — clean up by `savedPath` from log A.
+- Files in `~/Downloads/Tether/` that we created — clean up by name: `rm -f "$DOWNLOADS_B/$SEND1_NAME" "$DOWNLOADS_B/$(basename $M1)" "$DOWNLOADS_B/$(basename $M2)" "$DOWNLOADS_B/$(basename $M3)" "$DOWNLOADS_B/$RETRY_NAME"`.
 - `adb shell rm -f /sdcard/Android/data/com.tubetoast.tether/files/Tether/smoke-android.txt` (or by `SAVED_PATH` if parsed)
 - `adb shell am force-stop com.tubetoast.tether`
 - `xcrun simctl terminate "$UDID" com.tubetoast.tether.Tether 2>/dev/null || true` (if `UDID` was resolved in Block 5.5)
@@ -461,7 +461,7 @@ At the end of the run print a markdown report:
 | Android | mDNS publish | ✓ PASS | Tether-<MODEL> |
 | Android | /health (over WiFi) | ✓ PASS | "Tether OK" |
 | Android | cross-discovery | ✓ PASS | 2154ms (launch→peer-on-Desktop) |
-| Android | send Desktop→Android | ✓ PASS | savedPath parsed, diff empty |
+| Android | send Desktop→Android | ✓ PASS | file lands in app Tether dir, diff empty |
 | Android | force-stop | ✓ PASS | process killed |
 | iOS | xcodebuild + install | ✓ PASS | UDID=<...>, 28s |
 | iOS | launch | ✓ PASS | pid=<...> |
@@ -513,7 +513,7 @@ Don't ask the user for clarification — the skill must be "zero-question": ever
 - **`ip route` unreliable on some vendors** (ColorOS, MIUI return subnet instead of src) — use `ip addr show wlan0`.
 - **Multiple adb devices** — pick the first or fail with a clarification. Don't hang the skill on a specific serial.
 - **Receiver downloads path** — Desktop receiver writes to `$HOME/Downloads/Tether/` by default; smoke walks that dir by filename. If the smoke run sets a non-default `downloadsDir`, update `DOWNLOADS_B`. On Android, the location is app-private — locate by basename under the app's Tether dir, not by parsed path.
-- **`[send] OK` is gone** — since #328 the CLI drives `PeerTransferEngine`; the terminal output is `[send] done — N/N sent` (success), `[send] partial — N/M sent`, or `[send] error — <reason>`. No `savedPath` in the log.
+- **Terminal output format** — `[send] done — N/N sent` (success), `[send] partial — N/M sent` (partial), `[send] error — <reason>` (failure). No `savedPath` in the log.
 
 ## What NOT to do
 
@@ -523,4 +523,4 @@ Don't ask the user for clarification — the skill must be "zero-question": ever
 - **Don't go into `~/Downloads`** beyond your own files — that is user content.
 - **Don't run `./gradlew clean`** — it will eat the cache and slow down the next run.
 - **Don't send anything over the network** other than localhost and `$ANDROID_IP` (the latter — only if an adb device is connected).
-- **Don't guess file destination paths** — always parse from `[send] OK — ... → <savedPath>`.
+- **Don't guess file destination paths** — verify by filename: walk `$DOWNLOADS_B` (Desktop receiver) or the app-private Tether dir (Android) for the expected filename, then diff against the source.

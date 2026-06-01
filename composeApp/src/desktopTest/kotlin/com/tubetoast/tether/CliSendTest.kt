@@ -13,12 +13,17 @@ import com.tubetoast.tether.transfer.NoOpConnectionMonitor
 import com.tubetoast.tether.transfer.PeerTransferEngine
 import com.tubetoast.tether.transfer.PeerTransferEngineRegistry
 import com.tubetoast.tether.transfer.PeerUnreachableException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.io.File
 import java.nio.file.Files
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.io.path.writeBytes
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -74,17 +79,23 @@ class CliSendTest {
                     batchSenderFactory = {
                         BatchSender(
                             sendOne = { source, onProgress ->
-                                when (
-                                    val r = client.send(
-                                        target,
-                                        source.openReadChannel(),
-                                        source.name,
-                                        source.sizeBytes,
-                                        onProgress,
-                                    )
-                                ) {
-                                    is SendResult.Success -> Unit
-                                    is SendResult.Failure -> throw PeerUnreachableException(RuntimeException(r.reason))
+                                try {
+                                    when (
+                                        val r = client.send(
+                                            target,
+                                            source.openReadChannel(),
+                                            source.name,
+                                            source.sizeBytes,
+                                            onProgress,
+                                        )
+                                    ) {
+                                        is SendResult.Success -> Unit
+                                        is SendResult.Failure -> throw PeerUnreachableException(
+                                            RuntimeException(r.reason),
+                                        )
+                                    }
+                                } finally {
+                                    source.close()
                                 }
                             },
                             connectionMonitor = NoOpConnectionMonitor,
@@ -248,41 +259,29 @@ class CliSendTest {
 
     @Test
     fun `retry after partial sends only the failed file`() {
-        // Use one real file and one path that won't exist to force partial on first send.
         val realFile = Files.createTempFile("cli-retry-real", ".txt")
         realFile.writeBytes("real content".toByteArray())
-        val missingPath = Files.createTempDirectory("cli-retry-missing").resolve("missing.bin")
+        val realFile2 = Files.createTempFile("cli-retry-real2", ".txt")
+        realFile2.writeBytes("real content 2".toByteArray())
 
-        val messages = mutableListOf<String>()
+        val callCount = AtomicInteger(0)
+        val (partialRegistry, _) = buildPartialRegistry(device, fileClient, callCount, failOnCall = 2)
 
-        // First send — partial because missingPath doesn't exist
-        val firstResult = runBlocking {
-            handleSend(
-                engineRegistry = engineRegistry,
-                peers = listOf(device),
-                peerName = device.name,
-                paths = listOf(realFile, missingPath),
-                output = messages::add,
-            )
-        }
-
-        // The real file exists and the missing one is caught pre-engine — returns Failed (both paths validated up-front)
-        // Alternatively: partial only happens when the engine detects a missing file mid-flight.
-        // Since our handleSend validates all paths up-front and returns Failed early, we test retry
-        // from an Error terminal state: build a registry that fails one file inside the engine.
+        // First send — 2 files, second fails inside engine
         val partialMessages = mutableListOf<String>()
-        val partialRegistry = buildPartialRegistry(device, fileClient, failSecond = true)
         val partialResult = runBlocking {
             handleSend(
                 engineRegistry = partialRegistry,
                 peers = listOf(device),
                 peerName = device.name,
-                paths = listOf(realFile, realFile), // second will fail inside engine
+                paths = listOf(realFile, realFile2),
                 output = partialMessages::add,
             )
         }
+        // callCount == 2: both files attempted, second failed
+        assertEquals(2, callCount.get(), "Expected 2 send attempts on first batch: $callCount")
 
-        // After partial, retry
+        // After partial, retry — should attempt only the failed file (realFile2)
         val retryMessages = mutableListOf<String>()
         val retryResult = runBlocking {
             handleRetry(
@@ -293,17 +292,200 @@ class CliSendTest {
             )
         }
 
-        // Retry should have attempted — result may vary, but must not be a pre-flight error
-        assertFalse(
-            retryMessages.any { it.contains("nothing to retry") && retryMessages.size == 1 },
-            "Retry should attempt something: $retryMessages",
+        assertEquals(CliBatchResult.AllSent, retryResult, "Retry should complete successfully: $retryMessages")
+        // callCount == 3: first batch 2 calls + retry 1 call (only the failed file)
+        assertEquals(3, callCount.get(), "Retry should attempt only the 1 failed file, total calls=3: $callCount")
+
+        // Both files should be in downloads dir after retry
+        val downloads = tmpDir
+            .walk()
+            .filter { it.isFile }
+            .map { it.name }
+            .toSet()
+        assertTrue(
+            downloads.contains(realFile.fileName.toString()),
+            "realFile not in downloads after retry: $downloads",
+        )
+        assertTrue(
+            downloads.contains(realFile2.fileName.toString()),
+            "realFile2 not in downloads after retry: $downloads",
         )
 
         Files.deleteIfExists(realFile)
+        Files.deleteIfExists(realFile2)
     }
 
     @Test
-    fun `retry on peer with no terminal state reports nothing to retry`() {
+    fun `send returns Partial when one file fails mid-batch`() {
+        val file1 = Files.createTempFile("cli-partial-1", ".txt").also { it.writeBytes("data1".toByteArray()) }
+        val file2 = Files.createTempFile("cli-partial-2", ".txt").also { it.writeBytes("data2".toByteArray()) }
+
+        val callCount = AtomicInteger(0)
+        val (partialRegistry, _) = buildPartialRegistry(device, fileClient, callCount, failOnCall = 2)
+
+        val messages = mutableListOf<String>()
+        val result = runBlocking {
+            handleSend(
+                engineRegistry = partialRegistry,
+                peers = listOf(device),
+                peerName = device.name,
+                paths = listOf(file1, file2),
+                output = messages::add,
+            )
+        }
+
+        assertEquals(CliBatchResult.Partial, result, "Expected Partial but got: $result — $messages")
+        assertEquals(1, result.toExitCode(), "Partial exit code must be 1")
+
+        Files.deleteIfExists(file1)
+        Files.deleteIfExists(file2)
+    }
+
+    @Test
+    fun `send returns Cancelled when engine is cancelled mid-flight`() {
+        val file = Files.createTempFile("cli-cancel", ".txt").also { it.writeBytes("data".toByteArray()) }
+
+        var capturedEngine: PeerTransferEngine? = null
+        val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        val cancelRegistry = PeerTransferEngineRegistry(
+            appScope = appScope,
+            engineFactory = { peer, engineScope ->
+                PeerTransferEngine(
+                    peer = peer,
+                    batchSenderFactory = {
+                        BatchSender(
+                            sendOne = { _, _ -> awaitCancellation() },
+                            connectionMonitor = NoOpConnectionMonitor,
+                        )
+                    },
+                    scope = engineScope,
+                    peerPreferencesStore = FakePeerPreferencesStore(),
+                )
+            },
+        )
+
+        val messages = mutableListOf<String>()
+        val result = runBlocking {
+            var sendResult: CliBatchResult? = null
+            val sendJob = launch {
+                sendResult = handleSend(
+                    engineRegistry = cancelRegistry,
+                    peers = listOf(device),
+                    peerName = device.name,
+                    paths = listOf(file),
+                    output = messages::add,
+                    onActiveEngine = { capturedEngine = it },
+                )
+            }
+            while (capturedEngine == null) delay(10)
+            delay(50)
+            capturedEngine!!.onCancel()
+            sendJob.join()
+            sendResult
+        }
+
+        assertEquals(CliBatchResult.Cancelled, result, "Expected Cancelled result")
+        assertEquals(130, CliBatchResult.Cancelled.toExitCode(), "Cancelled exit code must be 130")
+        assertTrue(
+            messages.any { it.contains("cancelled") },
+            "Expected cancelled message but got: $messages",
+        )
+
+        Files.deleteIfExists(file)
+    }
+
+    @Test
+    fun `collectUntilTerminal does not return prematurely on Reconnecting state`() {
+        val file = Files.createTempFile("cli-reconnect", ".txt").also { it.writeBytes("data".toByteArray()) }
+
+        // sendOne blocks on sendStarted until the test emits a drop; after reconnect it succeeds.
+        val sendStarted = CompletableDeferred<Unit>()
+        val dropFlow = kotlinx.coroutines.flow.MutableSharedFlow<com.tubetoast.tether.transfer.ConnectionDrop>(
+            extraBufferCapacity = 1,
+        )
+        val reconnectMonitor = object : com.tubetoast.tether.transfer.ConnectionMonitor {
+            override val drops = dropFlow
+
+            override suspend fun awaitReconnect(timeout: kotlin.time.Duration): Boolean = true
+        }
+
+        var sendCallCount = 0
+        val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        val reconnectRegistry = PeerTransferEngineRegistry(
+            appScope = appScope,
+            engineFactory = { peer, engineScope ->
+                PeerTransferEngine(
+                    peer = peer,
+                    batchSenderFactory = {
+                        BatchSender(
+                            sendOne = { source, onProgress ->
+                                sendCallCount++
+                                if (sendCallCount == 1) {
+                                    // Signal that send is in flight, then block until drop cancels us
+                                    sendStarted.complete(Unit)
+                                    awaitCancellation()
+                                }
+                                try {
+                                    when (
+                                        val r = fileClient.send(
+                                            device,
+                                            source.openReadChannel(),
+                                            source.name,
+                                            source.sizeBytes,
+                                            onProgress,
+                                        )
+                                    ) {
+                                        is SendResult.Success -> Unit
+                                        is SendResult.Failure -> throw PeerUnreachableException(
+                                            RuntimeException(r.reason),
+                                        )
+                                    }
+                                } finally {
+                                    source.close()
+                                }
+                            },
+                            connectionMonitor = reconnectMonitor,
+                        )
+                    },
+                    scope = engineScope,
+                    peerPreferencesStore = FakePeerPreferencesStore(),
+                )
+            },
+        )
+
+        val messages = mutableListOf<String>()
+        runBlocking {
+            val sendJob = launch {
+                handleSend(
+                    engineRegistry = reconnectRegistry,
+                    peers = listOf(device),
+                    peerName = device.name,
+                    paths = listOf(file),
+                    output = messages::add,
+                )
+            }
+            // Wait until the first sendOne is blocking, then emit a drop
+            sendStarted.await()
+            dropFlow.emit(com.tubetoast.tether.transfer.ConnectionDrop)
+            sendJob.join()
+        }
+
+        // Reconnecting message must appear (non-terminal state was rendered, not skipped)
+        assertTrue(
+            messages.any { it.contains("reconnecting") },
+            "Expected reconnecting message but got: $messages",
+        )
+        // Terminal done message must also appear (collectUntilTerminal didn't return prematurely)
+        assertTrue(
+            messages.any { it.contains("done") },
+            "Expected done message after reconnect but got: $messages",
+        )
+
+        Files.deleteIfExists(file)
+    }
+
+    @Test
+    fun `retry on peer with no terminal state reports has no terminal state to retry from`() {
         val messages = mutableListOf<String>()
         val result = runBlocking {
             handleRetry(
@@ -314,22 +496,22 @@ class CliSendTest {
             )
         }
 
-        // Engine starts in Idle (non-terminal), so onRetryOutbound is a no-op and we report nothing
         assertTrue(
-            messages.any { it.contains("nothing to retry") || it.contains("no terminal state") },
-            "Expected nothing-to-retry but got: $messages",
+            messages.any { it.contains("has no terminal state to retry from") },
+            "Expected 'has no terminal state to retry from' but got: $messages",
         )
         assertEquals(CliBatchResult.AllSent, result)
     }
 
+    /** Returns a registry and the external call counter. `failOnCall` = which call number to throw on (1-based). */
     private fun buildPartialRegistry(
         target: Device,
         client: FileClient,
-        failSecond: Boolean,
-    ): PeerTransferEngineRegistry {
+        callCount: AtomicInteger,
+        failOnCall: Int,
+    ): Pair<PeerTransferEngineRegistry, AtomicInteger> {
         val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-        var callCount = 0
-        return PeerTransferEngineRegistry(
+        val registry = PeerTransferEngineRegistry(
             appScope = appScope,
             engineFactory = { peer, engineScope ->
                 PeerTransferEngine(
@@ -337,21 +519,27 @@ class CliSendTest {
                     batchSenderFactory = {
                         BatchSender(
                             sendOne = { source, onProgress ->
-                                callCount++
-                                if (failSecond && callCount % 2 == 0) {
-                                    throw PeerUnreachableException(RuntimeException("forced failure"))
+                                val n = callCount.incrementAndGet()
+                                if (n == failOnCall) {
+                                    throw PeerUnreachableException(RuntimeException("forced failure on call $n"))
                                 }
-                                when (
-                                    val r = client.send(
-                                        target,
-                                        source.openReadChannel(),
-                                        source.name,
-                                        source.sizeBytes,
-                                        onProgress,
-                                    )
-                                ) {
-                                    is SendResult.Success -> Unit
-                                    is SendResult.Failure -> throw PeerUnreachableException(RuntimeException(r.reason))
+                                try {
+                                    when (
+                                        val r = client.send(
+                                            target,
+                                            source.openReadChannel(),
+                                            source.name,
+                                            source.sizeBytes,
+                                            onProgress,
+                                        )
+                                    ) {
+                                        is SendResult.Success -> Unit
+                                        is SendResult.Failure -> throw PeerUnreachableException(
+                                            RuntimeException(r.reason),
+                                        )
+                                    }
+                                } finally {
+                                    source.close()
                                 }
                             },
                             connectionMonitor = NoOpConnectionMonitor,
@@ -362,5 +550,6 @@ class CliSendTest {
                 )
             },
         )
+        return registry to callCount
     }
 }

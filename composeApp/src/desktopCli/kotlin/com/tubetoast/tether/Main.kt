@@ -8,12 +8,15 @@ import com.tubetoast.tether.config.DeviceNameStore
 import com.tubetoast.tether.config.EphemeralDeviceNamePersistence
 import com.tubetoast.tether.di.DefaultDesktopAppConfig
 import com.tubetoast.tether.di.DesktopAppContainer
+import com.tubetoast.tether.discovery.DiscoveredDevicesStore
 import com.tubetoast.tether.logging.initTetherLogging
 import com.tubetoast.tether.logging.isDebugEnabled
+import com.tubetoast.tether.network.FileClient
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.protocol.DeviceType
 import com.tubetoast.tether.protocol.SendResult
 import com.tubetoast.tether.transfer.BatchSender
+import com.tubetoast.tether.transfer.ConnectionMonitor
 import com.tubetoast.tether.transfer.JvmPathFileSource
 import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PeerTransferEngine
@@ -25,7 +28,8 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -34,7 +38,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.io.path.exists
-import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 private const val ESC = ""
 
@@ -78,16 +82,20 @@ class TetherCommand :
         initTetherLogging(debugEnabled = isDebugEnabled())
 
         val activeEngineRef = AtomicReference<PeerTransferEngine?>(null)
-        val containerRef = AtomicReference<DesktopAppContainer?>(null)
 
-        val container = DesktopAppContainer(
+        lateinit var container: DesktopAppContainer
+        container = DesktopAppContainer(
             DefaultDesktopAppConfig(port = port ?: 0, namePersistenceOverride = EphemeralDeviceNamePersistence()),
             ownDeviceType = DeviceType.Cli,
             batchSenderFactoryOverride = { peer ->
-                buildCliBatchSender(peer, containerRef)
+                buildCliBatchSender(
+                    peer = peer,
+                    fileClient = container.fileClient,
+                    connectionMonitor = container.connectionMonitor,
+                    discoveredDevicesStore = container.discoveredDevicesStore,
+                )
             },
         )
-        containerRef.set(container)
 
         container.nameStore.init()
         nameOverride?.let { name ->
@@ -199,17 +207,15 @@ class TetherCommand :
 
 private fun buildCliBatchSender(
     peer: PeerIdentity,
-    containerRef: AtomicReference<DesktopAppContainer?>,
-): BatchSender {
-    // Factory is called after containerRef.set(container) — safe to require non-null.
-    val container = requireNotNull(containerRef.get())
-    val fileClient = container.fileClient
-    val connectionMonitor = container.connectionMonitor
-    return BatchSender(
-        sendOne = { source, onProgress ->
-            val device = container.discoveredDevicesStore.devices.value
-                .firstOrNull { it.toPeerIdentity() == peer }
-                ?: throw PeerUnreachableException()
+    fileClient: FileClient,
+    connectionMonitor: ConnectionMonitor,
+    discoveredDevicesStore: DiscoveredDevicesStore,
+): BatchSender = BatchSender(
+    sendOne = { source, onProgress ->
+        val device = discoveredDevicesStore.devices.value
+            .firstOrNull { it.toPeerIdentity() == peer }
+            ?: throw PeerUnreachableException()
+        try {
             // FileClient.send swallows all exceptions into SendResult.Failure — map to typed exceptions.
             when (
                 val result = fileClient.send(
@@ -223,10 +229,12 @@ private fun buildCliBatchSender(
                 is SendResult.Success -> Unit
                 is SendResult.Failure -> throw PeerUnreachableException(RuntimeException(result.reason))
             }
-        },
-        connectionMonitor = connectionMonitor,
-    )
-}
+        } finally {
+            source.close()
+        }
+    },
+    connectionMonitor = connectionMonitor,
+)
 
 suspend fun handleSend(
     engineRegistry: PeerTransferEngineRegistry,
@@ -288,12 +296,13 @@ suspend fun handleRetry(
         return CliBatchResult.AllSent
     }
 
-    engine.onRetryOutbound()
-
-    val transitioned = withTimeoutOrNull(50.milliseconds) {
-        engine.state.filter { !it.isTerminal() }.first()
+    // Subscribe before triggering the retry so no transition is missed between the call and the collect.
+    val next = coroutineScope {
+        val observer = async { engine.state.first { it !== stateBefore } }
+        engine.onRetryOutbound()
+        withTimeoutOrNull(2.seconds) { observer.await() }.also { observer.cancel() }
     }
-    if (transitioned == null) {
+    if (next == null || next.isTerminal()) {
         output("[retry] nothing to retry on '$peerName'")
         return CliBatchResult.AllSent
     }
@@ -323,17 +332,15 @@ private suspend fun awaitAndRenderTerminal(
     errorOutput: (String) -> Unit,
 ): CliBatchResult = collectUntilTerminal(engine, output, errorOutput)
 
-// Renders state transitions and returns only after the terminal state was rendered.
 // `state.first { terminal }` returning before the separate renderer observed the terminal would
 // drop the final "done/error/cancelled" line — this collapses both into one collector.
 private suspend fun collectUntilTerminal(
     engine: PeerTransferEngine,
     output: (String) -> Unit,
     errorOutput: (String) -> Unit,
-): CliBatchResult {
+): CliBatchResult = coroutineScope {
     val terminalSeen = CompletableDeferred<PeerTransferState>()
-    val rendererScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    val rendererJob = rendererScope.launch {
+    val rendererJob = launch {
         var lastState: PeerTransferState? = null
         engine.state.collect { state ->
             renderStateTransition(lastState, state, output, errorOutput)
@@ -343,7 +350,7 @@ private suspend fun collectUntilTerminal(
     }
     val terminal = terminalSeen.await()
     rendererJob.cancel()
-    return terminalToResult(terminal)
+    terminalToResult(terminal)
 }
 
 private fun renderStateTransition(

@@ -1,6 +1,7 @@
 package com.tubetoast.tether.transfer
 
 import io.ktor.utils.io.jvm.javaio.toByteReadChannel
+import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.exists
@@ -13,11 +14,18 @@ class JvmPathFileSource(
     override val relativePath: String = name
     override val sizeBytes: Long? = if (path.exists()) Files.size(path) else null
 
+    private var openStream: InputStream? = null
+
     override suspend fun openReadChannel() = if (!path.exists()) {
         throw UnreadableSourceException(name)
     } else {
-        path.inputStream().toByteReadChannel()
+        val stream = path.inputStream()
+        openStream = stream
+        stream.toByteReadChannel()
     }
 
-    override fun close() = Unit
+    override fun close() {
+        openStream?.close()
+        openStream = null
+    }
 }
