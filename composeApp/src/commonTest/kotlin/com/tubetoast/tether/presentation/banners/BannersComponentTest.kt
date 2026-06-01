@@ -357,18 +357,7 @@ class BannersComponentTest {
         val repo = PendingFilesRepository()
         val relay = PeerConflictRelay()
         val pauseChannel = Channel<Unit>(0)
-        val registry = PeerTransferEngineRegistry(
-            appScope = backgroundScope,
-            engineFactory = { id, engineScope ->
-                PeerTransferEngine(
-                    peer = id,
-                    batchSenderFactory = fakeBatchSender(pauseChannel = pauseChannel),
-                    inboundEvents = MutableSharedFlow(),
-                    scope = engineScope,
-                    peerPreferencesStore = FakePeerPreferencesStore(),
-                )
-            },
-        )
+        val registry = pausedRegistry(pauseChannel, backgroundScope)
         val component = buildComponent(
             repo = repo,
             peersRepository = fakePeersRepository(),

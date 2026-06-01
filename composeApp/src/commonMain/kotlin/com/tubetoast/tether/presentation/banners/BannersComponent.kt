@@ -12,12 +12,14 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -81,6 +83,7 @@ class BannersComponent(
             .launchIn(scope)
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     private fun resetOnEngineIdle() {
         val engineStateFlow = selectedConflictPeer.flatMapLatest { conflictPeerEngineStateFlow(it) }
         engineStateFlow
@@ -105,11 +108,8 @@ class BannersComponent(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun buildPendingBannerFlow(): StateFlow<PendingBannerState> {
-        val result = MutableStateFlow<PendingBannerState>(PendingBannerState.Hidden)
-
         val engineStateFlow = selectedConflictPeer.flatMapLatest { conflictPeerEngineStateFlow(it) }
-
-        combine(
+        return combine(
             pendingFilesRepository.pending,
             selectedConflictPeer,
             announcementTick,
@@ -139,11 +139,7 @@ class BannersComponent(
                     -> PendingBannerState.Default(pending.summary, dropFeedback)
                 }
             }
-        }.onEach { state ->
-            result.update { state }
-        }.launchIn(scope)
-
-        return result
+        }.stateIn(scope, SharingStarted.Eagerly, PendingBannerState.Hidden)
     }
 
     private companion object {
