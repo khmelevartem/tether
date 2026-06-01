@@ -65,10 +65,13 @@ open class FileClient(
             setBody(ownInfo)
         }
         val ok = response.status.isSuccess()
-        if (ok) log.info { "hello sent → ${target.host}:${target.port}" }
+        if (ok) log.debug { "hello sent → ${target.host}:${target.port}" }
         ok
     } catch (e: Exception) {
-        log.error { "hello failed → ${target.host}:${target.port} — ${e.message}" }
+        // Hello attempts churn on stale mDNS records (peer left, advertisement TTL not expired) —
+        // each retry surfaces a Connection refused. Demoted to DEBUG so default CLI/UI stays clean;
+        // the rendezvous announcer retries on its own and acknowledgedIds tracks success.
+        log.debug { "hello failed → ${target.host}:${target.port} — ${e.message}" }
         false
     }
 
