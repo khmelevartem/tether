@@ -27,6 +27,7 @@ import com.tubetoast.tether.transfer.AutoSendDispatcher
 import com.tubetoast.tether.transfer.BatchSender
 import com.tubetoast.tether.transfer.ConnectionMonitor
 import com.tubetoast.tether.transfer.NoOpConnectionMonitor
+import com.tubetoast.tether.transfer.PeerConflictRelay
 import com.tubetoast.tether.transfer.PeerTransferEngine
 import com.tubetoast.tether.transfer.PeerTransferEngineRegistry
 import com.tubetoast.tether.transfer.PeerUnreachableException
@@ -60,6 +61,8 @@ abstract class AppContainer {
     open val peersRepository: PeersRepository by lazy { PeersRepository(mdnsDiscovery, appScope) }
 
     open val pendingFilesRepository: PendingFilesRepository by lazy { PendingFilesRepository() }
+
+    open val peerConflictRelay: PeerConflictRelay by lazy { PeerConflictRelay() }
 
     open val connectionMonitor: ConnectionMonitor = NoOpConnectionMonitor
 
@@ -116,6 +119,7 @@ abstract class AppContainer {
             peersRepository = peersRepository,
             peerTransferEngineRegistry = peerTransferEngineRegistry,
             pendingFilesRepository = pendingFilesRepository,
+            peerConflictRelay = peerConflictRelay,
         )
     }
 }

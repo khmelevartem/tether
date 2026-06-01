@@ -2,38 +2,54 @@ package com.tubetoast.tether.presentation.banners
 
 import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.essenty.lifecycle.coroutines.coroutineScope
+import com.tubetoast.tether.peer.PeersRepository
+import com.tubetoast.tether.transfer.PeerConflictRelay
+import com.tubetoast.tether.transfer.PeerIdentity
+import com.tubetoast.tether.transfer.PeerTransferEngineRegistry
+import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.PendingFilesRepository
-import com.tubetoast.tether.transfer.PendingFilesSummary
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class BannersComponent(
     componentContext: ComponentContext,
     private val pendingFilesRepository: PendingFilesRepository,
+    private val peersRepository: PeersRepository? = null,
+    private val engineRegistry: PeerTransferEngineRegistry? = null,
+    private val conflictRelay: PeerConflictRelay? = null,
     coroutineScope: CoroutineScope = componentContext.coroutineScope(),
 ) : ComponentContext by componentContext {
     private val scope = coroutineScope
 
-    val pendingSummary: StateFlow<PendingFilesSummary?> = pendingFilesRepository.pending
-        .map { it?.summary }
-        .stateIn(scope, SharingStarted.Eagerly, pendingFilesRepository.pending.value?.summary)
-
+    val dropFeedback: StateFlow<Boolean> get() = _dropFeedback
     private val _dropFeedback = MutableStateFlow(false)
-    val dropFeedback: StateFlow<Boolean> = _dropFeedback
 
     // TODO(#194): wire visible = true while any transfer is active on iOS (UIApplication foreground state observer)
+    val showForegroundConstraint: StateFlow<Boolean> get() = _showForegroundConstraint
     private val _showForegroundConstraint = MutableStateFlow(false)
-    val showForegroundConstraint: StateFlow<Boolean> = _showForegroundConstraint
+
+    private val selectedConflictPeer = MutableStateFlow<PeerIdentity?>(null)
+    private val announcementTick = MutableStateFlow(0)
+
+    val pendingBanner: StateFlow<PendingBannerState> = buildPendingBannerFlow()
 
     private var dropFeedbackJob: Job? = null
+
+    init {
+        collectBusyTaps()
+        resetOnPendingCleared()
+    }
 
     fun onCancelPending() {
         pendingFilesRepository.clear()
@@ -46,6 +62,84 @@ class BannersComponent(
             delay(DROP_FEEDBACK_DURATION_MS)
             _dropFeedback.update { false }
         }
+    }
+
+    private fun collectBusyTaps() {
+        conflictRelay
+            ?.busyTaps
+            ?.onEach { peerId ->
+                if (pendingFilesRepository.pending.value != null) {
+                    selectedConflictPeer.value = peerId
+                    announcementTick.update { it + 1 }
+                }
+            }?.launchIn(scope)
+    }
+
+    private fun resetOnPendingCleared() {
+        pendingFilesRepository.pending
+            .onEach { pending -> if (pending == null) selectedConflictPeer.value = null }
+            .launchIn(scope)
+    }
+
+    private fun conflictPeerName(peerId: PeerIdentity): String =
+        peersRepository
+            ?.peers
+            ?.value
+            ?.firstOrNull { it.id == peerId }
+            ?.device
+            ?.name ?: peerId.id
+
+    private fun conflictPeerEngineStateFlow(peerId: PeerIdentity?) =
+        if (peerId != null) {
+            engineRegistry?.engineFor(peerId)?.state ?: flowOf(null)
+        } else {
+            flowOf(null)
+        }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun buildPendingBannerFlow(): StateFlow<PendingBannerState> {
+        val result = MutableStateFlow<PendingBannerState>(PendingBannerState.Hidden)
+
+        val engineStateFlow = selectedConflictPeer.flatMapLatest { conflictPeerEngineStateFlow(it) }
+
+        combine(
+            pendingFilesRepository.pending,
+            selectedConflictPeer,
+            announcementTick,
+            _dropFeedback,
+            engineStateFlow,
+        ) { pending, peerId, tick, dropFeedback, engineState ->
+            if (pending == null) {
+                PendingBannerState.Hidden
+            } else if (peerId == null) {
+                PendingBannerState.Default(pending.summary, dropFeedback)
+            } else {
+                val peerName = conflictPeerName(peerId)
+                when (engineState) {
+                    is PeerTransferState.ActiveOutbound,
+                    is PeerTransferState.ActiveInbound,
+                    is PeerTransferState.Reconnecting,
+                    -> PendingBannerState.BusyPeer(pending.summary, peerName, tick)
+
+                    is PeerTransferState.Sent,
+                    is PeerTransferState.Received,
+                    is PeerTransferState.Error,
+                    is PeerTransferState.Cancelled,
+                    -> PendingBannerState.TerminalDisplay(peerName, tick)
+
+                    is PeerTransferState.Idle -> {
+                        selectedConflictPeer.value = null
+                        PendingBannerState.Default(pending.summary, dropFeedback)
+                    }
+
+                    null -> PendingBannerState.Default(pending.summary, dropFeedback)
+                }
+            }
+        }.onEach { state ->
+            result.value = state
+        }.launchIn(scope)
+
+        return result
     }
 
     private companion object {

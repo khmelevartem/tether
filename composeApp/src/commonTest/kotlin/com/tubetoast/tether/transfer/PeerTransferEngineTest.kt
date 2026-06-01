@@ -8,8 +8,10 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PeerTransferEngineTest {
@@ -407,6 +409,33 @@ class PeerTransferEngineTest {
         assertEquals(1, factoryInvocations)
         val state = engine.state.value as PeerTransferState.Sent
         assertEquals("a.txt", state.perFile.first().name)
+    }
+
+    @Test
+    fun `startOutbound returns true when Idle`() = runTest {
+        val engine = buildEngine(scope = backgroundScope)
+
+        val result = engine.startOutbound(listOf(FakeFileSource("a.txt", 100L)))
+        runCurrent()
+
+        assertTrue(result)
+        assertIs<PeerTransferState.Sent>(engine.state.value)
+    }
+
+    @Test
+    fun `startOutbound returns false when non-Idle`() = runTest {
+        val pauseChannel = Channel<Unit>(0)
+        val engine = buildEngine(pauseChannel = pauseChannel, scope = backgroundScope)
+
+        engine.startOutbound(listOf(FakeFileSource("a.txt", 100L)))
+        runCurrent()
+        assertIs<PeerTransferState.ActiveOutbound>(engine.state.value)
+
+        val result = engine.startOutbound(listOf(FakeFileSource("b.txt", 200L)))
+        runCurrent()
+
+        assertFalse(result)
+        assertIs<PeerTransferState.ActiveOutbound>(engine.state.value)
     }
 
     @Test

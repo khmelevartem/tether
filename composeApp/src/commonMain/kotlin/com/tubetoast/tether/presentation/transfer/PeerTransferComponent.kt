@@ -8,6 +8,7 @@ import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.destroy
 import com.tubetoast.tether.peer.Peer
 import com.tubetoast.tether.transfer.FileSource
+import com.tubetoast.tether.transfer.PeerConflictRelay
 import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PeerTransferEngine
 import com.tubetoast.tether.transfer.PendingFilesRepository
@@ -28,6 +29,7 @@ class PeerTransferComponent(
     private val pendingFilesRepository: PendingFilesRepository? = null,
     // TODO(#192/#193/#194): platform actuals wire real file picker here
     private val onOpenPicker: () -> Unit = {},
+    private val conflictRelay: PeerConflictRelay? = null,
 ) : ComponentContext by componentContext {
     fun destroyContext() {
         lifecycleRegistry.destroy()
@@ -47,11 +49,15 @@ class PeerTransferComponent(
 
     fun onCardClick() {
         val pending = pendingFilesRepository?.pending?.value
-        if (pending != null) {
-            engine.startOutbound(pending.sources)
+        if (pending == null) {
+            onOpenPicker()
+            return
+        }
+        val accepted = engine.startOutbound(pending.sources)
+        if (accepted) {
             pendingFilesRepository.clearIfMatches(pending)
         } else {
-            onOpenPicker()
+            conflictRelay?.reportBusyTap(peer.id)
         }
     }
 
