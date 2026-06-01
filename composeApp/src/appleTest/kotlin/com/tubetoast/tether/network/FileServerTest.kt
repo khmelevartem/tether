@@ -5,6 +5,7 @@ package com.tubetoast.tether.network
 import com.tubetoast.tether.preferences.TempDataStore
 import com.tubetoast.tether.security.DefaultTrustedDeviceStore
 import com.tubetoast.tether.security.DeviceKeyPair
+import com.tubetoast.tether.security.InMemoryKeychainStore
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
@@ -86,7 +87,7 @@ class FileServerTest {
             configuredPort = 0,
             downloadsDir = downloadsDir,
             trustedDeviceStore = DefaultTrustedDeviceStore(temp.dataStore),
-            deviceKeyPair = DeviceKeyPair(configDir),
+            deviceKeyPair = DeviceKeyPair.withStore(configDir, InMemoryKeychainStore()),
         )
     }
 

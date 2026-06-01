@@ -3,85 +3,87 @@
 package com.tubetoast.tether.security
 
 import kotlinx.cinterop.ExperimentalForeignApi
-import kotlinx.cinterop.addressOf
-import kotlinx.cinterop.allocArray
-import kotlinx.cinterop.memScoped
-import kotlinx.cinterop.readBytes
-import kotlinx.cinterop.usePinned
-import platform.Foundation.NSData
+import platform.CoreFoundation.CFRelease
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSUserDomainMask
-import platform.Foundation.dataWithBytes
-import platform.Foundation.dataWithContentsOfFile
-import platform.Foundation.writeToFile
-import platform.Security.SecRandomCopyBytes
-import platform.Security.kSecRandomDefault
-import platform.posix.memcpy
 import ru.pocketbyte.kydra.log.KydraLog
+import ru.pocketbyte.kydra.log.info
 import ru.pocketbyte.kydra.log.warn
 import ru.pocketbyte.kydra.log.wrapper.withTag
 
-// Placeholder until a real EC P-256 keypair lands via Keychain (#9 defers signature verification).
-// Until then the protocol treats these bytes as an opaque per-install identifier.
-private const val PUBLIC_KEY_BYTES = 32
-private const val FILE_PUBLIC = "device_public.key"
+private const val DEFAULT_TAG = "com.tubetoast.tether.devicekey"
+private const val FILE_LEGACY_PLACEHOLDER = "device_public.key"
+private const val RAW_POINT_SIZE = 65
 private val log = KydraLog.withTag(default = "DeviceKeyPair")
 
-actual class DeviceKeyPair(
-    configDir: String? = null,
+actual class DeviceKeyPair private constructor(
+    configDir: String?,
+    keychain: KeychainStore,
 ) {
+    constructor(
+        configDir: String? = null,
+        applicationTag: String = DEFAULT_TAG,
+    ) : this(configDir, KeychainStore.real(applicationTag))
+
     actual val publicKey: ByteArray
 
     init {
         val directory = configDir ?: defaultConfigDir()
-        ensureDirectory(directory)
-        val publicPath = "$directory/$FILE_PUBLIC"
-        publicKey = loadOrGenerate(publicPath)
+        deleteLegacyPlaceholderIfPresent(directory)
+        publicKey = loadOrCreate(keychain)
     }
 
-    private fun loadOrGenerate(publicPath: String): ByteArray {
+    private fun loadOrCreate(keychain: KeychainStore): ByteArray {
+        val privateKey = keychain.findPrivateKey()
+        if (privateKey != null) {
+            val rawPoint = keychain.extractPublicKeyBytes(privateKey)
+            CFRelease(privateKey)
+            if (rawPoint != null && rawPoint.size == RAW_POINT_SIZE) {
+                return wrapInX509Spki(rawPoint)
+            }
+            log.warn { "Keychain entry corrupted, deleting and regenerating" }
+            keychain.deleteEntry()
+        }
+        return generate(keychain)
+    }
+
+    private fun generate(keychain: KeychainStore): ByteArray {
+        val privateKey = keychain.generatePrivateKey()
+        val rawPoint = keychain.extractPublicKeyBytes(privateKey)
+        CFRelease(privateKey)
+        val validPoint = rawPoint?.takeIf { it.size == RAW_POINT_SIZE } ?: run {
+            log.warn { "Failed to extract public key, retrying" }
+            keychain.deleteEntry()
+            val retryKey = keychain.generatePrivateKey()
+            val retryPoint = keychain.extractPublicKeyBytes(retryKey)
+            CFRelease(retryKey)
+            retryPoint?.takeIf { it.size == RAW_POINT_SIZE }
+                ?: throw IllegalStateException("DeviceKeyPair: failed to extract public key after retry")
+        }
+        return wrapInX509Spki(validPoint)
+    }
+
+    private fun deleteLegacyPlaceholderIfPresent(directory: String) {
         val fileManager = NSFileManager.defaultManager
-        if (fileManager.fileExistsAtPath(publicPath)) {
-            val existing = readFile(publicPath)
-            if (existing != null && existing.size == PUBLIC_KEY_BYTES) return existing
-            log.warn { "device key corrupted (size=${existing?.size ?: 0}), regenerating" }
-            fileManager.removeItemAtPath(publicPath, error = null)
+        val legacyPath = "$directory/$FILE_LEGACY_PLACEHOLDER"
+        if (fileManager.fileExistsAtPath(legacyPath)) {
+            fileManager.removeItemAtPath(legacyPath, error = null)
+            log.info { "Migrated: removed legacy placeholder $legacyPath" }
         }
-        val fresh = randomBytes(PUBLIC_KEY_BYTES)
-        if (!writeFile(publicPath, fresh)) {
-            error("DeviceKeyPair: failed to write $publicPath")
-        }
-        return fresh
-    }
-
-    private fun ensureDirectory(directory: String) {
-        val fileManager = NSFileManager.defaultManager
-        if (!fileManager.fileExistsAtPath(directory)) {
-            fileManager.createDirectoryAtPath(
-                path = directory,
-                withIntermediateDirectories = true,
-                attributes = null,
-                error = null,
-            )
+        val defaultLegacyPath = "${defaultConfigDir()}/$FILE_LEGACY_PLACEHOLDER"
+        if (defaultLegacyPath != legacyPath && fileManager.fileExistsAtPath(defaultLegacyPath)) {
+            fileManager.removeItemAtPath(defaultLegacyPath, error = null)
+            log.info { "Migrated: removed legacy placeholder $defaultLegacyPath" }
         }
     }
 
-    private fun readFile(path: String): ByteArray? =
-        NSData.dataWithContentsOfFile(path)?.toByteArray()
-
-    private fun writeFile(path: String, bytes: ByteArray): Boolean {
-        val data = bytes.toNSData() ?: return false
-        return data.writeToFile(path, atomically = true)
+    companion object {
+        /** Creates a [DeviceKeyPair] with an injected store — for use in tests only. */
+        internal fun withStore(configDir: String?, keychain: KeychainStore): DeviceKeyPair =
+            DeviceKeyPair(configDir, keychain)
     }
-}
-
-private fun randomBytes(size: Int): ByteArray = memScoped {
-    val buffer = allocArray<kotlinx.cinterop.UByteVar>(size)
-    val status = SecRandomCopyBytes(kSecRandomDefault, size.toULong(), buffer)
-    if (status != 0) error("DeviceKeyPair: SecRandomCopyBytes failed status=$status")
-    buffer.readBytes(size)
 }
 
 private fun defaultConfigDir(): String {
@@ -92,21 +94,4 @@ private fun defaultConfigDir(): String {
     ).firstOrNull() as? String
         ?: error("DeviceKeyPair: NSDocumentDirectory unavailable")
     return "$documentsDir/Tether/security"
-}
-
-private fun ByteArray.toNSData(): NSData? {
-    if (isEmpty()) return NSData()
-    return usePinned { pinned ->
-        NSData.dataWithBytes(pinned.addressOf(0), size.toULong())
-    }
-}
-
-private fun NSData.toByteArray(): ByteArray {
-    val byteCount = length.toInt()
-    val result = ByteArray(byteCount)
-    if (byteCount == 0) return result
-    result.usePinned { pinned ->
-        memcpy(pinned.addressOf(0), bytes, length)
-    }
-    return result
 }

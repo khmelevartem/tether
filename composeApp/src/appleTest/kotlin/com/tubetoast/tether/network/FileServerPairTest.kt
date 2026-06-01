@@ -7,6 +7,7 @@ import com.tubetoast.tether.protocol.PairRequest
 import com.tubetoast.tether.protocol.PairResponse
 import com.tubetoast.tether.security.DefaultTrustedDeviceStore
 import com.tubetoast.tether.security.DeviceKeyPair
+import com.tubetoast.tether.security.InMemoryKeychainStore
 import com.tubetoast.tether.security.TrustedDeviceStore
 import com.tubetoast.tether.security.deviceIdFromPublicKey
 import io.ktor.client.HttpClient
@@ -48,7 +49,7 @@ class FileServerPairTest {
         configDir = newTempDir()
         val temp = TempDataStore().also { cleanupTempStores += it }
         store = DefaultTrustedDeviceStore(temp.dataStore)
-        keyPair = DeviceKeyPair(configDir)
+        keyPair = DeviceKeyPair.withStore(configDir, InMemoryKeychainStore())
         server = FileServer(
             configuredPort = 0,
             downloadsDir = newTempDir(),
@@ -91,7 +92,12 @@ class FileServerPairTest {
             }
             assertEquals(HttpStatusCode.OK, response.status)
             val body = response.body<PairResponse>()
-            assertTrue(body.publicKey.isNotEmpty(), "server public key must be non-empty")
+            assertTrue(
+                body.publicKey.size == 91 &&
+                    body.publicKey[0].toInt() and 0xff == 0x30 &&
+                    body.publicKey[26].toInt() and 0xff == 0x04,
+                "server public key must be 91-byte X.509 P-256 SPKI",
+            )
             assertTrue(
                 body.publicKey.contentEquals(keyPair.publicKey),
                 "server public key must match the server's key pair",
