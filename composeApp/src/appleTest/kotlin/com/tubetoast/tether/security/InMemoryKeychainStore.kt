@@ -1,24 +1,17 @@
-@file:OptIn(ExperimentalForeignApi::class, kotlinx.cinterop.BetaInteropApi::class)
-@file:Suppress("UNCHECKED_CAST")
+@file:OptIn(ExperimentalForeignApi::class)
 
 package com.tubetoast.tether.security
 
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.alloc
-import kotlinx.cinterop.interpretObjCPointer
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
-import kotlinx.cinterop.rawValue
-import kotlinx.cinterop.value
 import platform.CoreFoundation.CFErrorRefVar
 import platform.CoreFoundation.CFRelease
 import platform.CoreFoundation.CFRetain
 import platform.CoreFoundation.kCFBooleanFalse
 import platform.Foundation.CFBridgingRelease
-import platform.Foundation.CFBridgingRetain
-import platform.Foundation.NSMutableDictionary
 import platform.Foundation.NSNumber
-import platform.Foundation.NSString
 import platform.Security.SecKeyCreateRandomKey
 import platform.Security.SecKeyRef
 import platform.Security.kSecAttrIsPermanent
@@ -39,10 +32,10 @@ internal class InMemoryKeychainStore : KeychainStore {
     override fun findPrivateKey(): SecKeyRef? = stored?.also { CFRetain(it) }
 
     override fun generatePrivateKey(): SecKeyRef {
-        val privateAttrs = buildInMemoryQuery {
+        val privateAttrs = buildQuery {
             put(kSecAttrIsPermanent, kCFBooleanFalse)
         }
-        val attrs = buildInMemoryQuery {
+        val attrs = buildQuery {
             put(kSecAttrKeyType, kSecAttrKeyTypeECSECPrimeRandom)
             put(kSecAttrKeySizeInBits, NSNumber(int = 256))
             put(kSecPrivateKeyAttrs, CFBridgingRelease(privateAttrs))
@@ -124,25 +117,4 @@ internal class UnavailableKeychainStore : KeychainStore {
 
     override fun deleteEntry() =
         throw IllegalStateException("Keychain unavailable")
-}
-
-private fun buildInMemoryQuery(block: InMemoryQueryBuilder.() -> Unit): platform.CoreFoundation.CFDictionaryRef {
-    val dict = NSMutableDictionary()
-    InMemoryQueryBuilder(dict).block()
-    return CFBridgingRetain(dict) as platform.CoreFoundation.CFDictionaryRef
-}
-
-private class InMemoryQueryBuilder(
-    private val dict: NSMutableDictionary,
-) {
-    fun put(key: kotlinx.cinterop.CPointer<*>?, value: Any?) {
-        if (key == null || value == null) return
-        val nsKey = interpretObjCPointer<NSString>(key.rawValue)
-        val nsValue: Any = when (value) {
-            is kotlinx.cinterop.CPointer<*> ->
-                interpretObjCPointer<platform.darwin.NSObject>(value.rawValue)
-            else -> value
-        }
-        dict.setObject(nsValue, forKey = nsKey)
-    }
 }

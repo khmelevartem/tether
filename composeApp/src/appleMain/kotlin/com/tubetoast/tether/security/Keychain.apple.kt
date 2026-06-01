@@ -57,12 +57,9 @@ import platform.Security.kSecReturnRef
 import platform.Security.kSecUseDataProtectionKeychain
 
 /**
- * Seam over the system Keychain for P-256 key storage. Package-internal; injected into
- * [DeviceKeyPair] so tests can supply an in-memory substitute without a real app identity.
- *
- * [findPrivateKey] returns null when no key is stored yet (first-launch happy path).
- * It throws [IllegalStateException] when the Keychain itself is unavailable — e.g. a
- * headless binary without a bundle ID or entitlements.
+ * [findPrivateKey] returns null when no key is stored yet.
+ * Throws [IllegalStateException] when the Keychain is unavailable — e.g. a headless binary
+ * without a bundle ID or entitlements.
  */
 internal interface KeychainStore {
     fun findPrivateKey(): SecKeyRef?
@@ -186,13 +183,13 @@ internal class Keychain(
 }
 
 /** The caller owns the returned ref. */
-private fun buildQuery(block: QueryBuilder.() -> Unit): CFDictionaryRef {
+internal fun buildQuery(block: QueryBuilder.() -> Unit): CFDictionaryRef {
     val dict = NSMutableDictionary()
     QueryBuilder(dict).block()
     return CFBridgingRetain(dict) as CFDictionaryRef
 }
 
-private class QueryBuilder(
+internal class QueryBuilder(
     private val dict: NSMutableDictionary,
 ) {
     fun put(key: kotlinx.cinterop.CPointer<*>?, value: Any?) {
