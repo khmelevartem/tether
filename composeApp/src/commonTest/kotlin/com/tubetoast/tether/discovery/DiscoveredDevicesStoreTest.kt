@@ -126,6 +126,52 @@ class DiscoveredDevicesStoreTest {
     }
 
     @Test
+    fun `removeByName evicts the entry whose current name matches`() {
+        store.upsert(device("Peer", host = "1.0.0.1", fingerprint = "fpPeer"))
+        store.upsert(device("Other", host = "1.0.0.2", fingerprint = "fpOther"))
+        store.removeByName("Peer")
+        assertEquals(
+            listOf(device("Other", host = "1.0.0.2", fingerprint = "fpOther")),
+            store.devices.value,
+        )
+    }
+
+    @Test
+    fun `removeByName on missing name is a no-op`() {
+        store.upsert(device("a"))
+        store.removeByName("nope")
+        assertEquals(1, store.devices.value.size)
+    }
+
+    // The store collapses multi-rename announces to one canonical entry (Rule 1), so a
+    // removeByName for any intermediate (already superseded) name must be a no-op for the
+    // live entry. This is the store-level mirror of BonjourStateTest's regression case.
+    @Test
+    fun `removeByName for a stale rename name does not evict the live canonical entry`() {
+        store.upsert(device("Peer", fingerprint = "fpA"))
+        store.upsert(device("Peer (2)", fingerprint = "fpA"))
+        assertEquals(1, store.devices.value.size)
+        assertEquals(
+            "Peer (2)",
+            store.devices.value
+                .single()
+                .name,
+        )
+
+        store.removeByName("Peer")
+        assertEquals(1, store.devices.value.size, "stale-name lookup must not find a match")
+        assertEquals(
+            "Peer (2)",
+            store.devices.value
+                .single()
+                .name,
+        )
+
+        store.removeByName("Peer (2)")
+        assertTrue(store.devices.value.isEmpty())
+    }
+
+    @Test
     fun `removeByFingerprint is a no-op when no entry matches`() {
         store.upsert(device("A", fingerprint = "fp1"))
         store.removeByFingerprint("fp-unknown")
