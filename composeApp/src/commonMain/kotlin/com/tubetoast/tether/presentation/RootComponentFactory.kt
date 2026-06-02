@@ -4,6 +4,7 @@ import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.essenty.lifecycle.coroutines.withLifecycle
 import com.tubetoast.tether.peer.PeersRepository
 import com.tubetoast.tether.presentation.banners.BannersComponent
+import com.tubetoast.tether.presentation.banners.PeerConflictRelay
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PeerTransferEngineRegistry
@@ -15,6 +16,7 @@ class RootComponentFactory(
     private val peersRepository: PeersRepository,
     private val peerTransferEngineRegistry: PeerTransferEngineRegistry,
     private val pendingFilesRepository: PendingFilesRepository,
+    private val peerConflictRelay: PeerConflictRelay,
     private val onPickerPick: (PeerIdentity) -> Unit = {},
 ) {
     fun create(componentContext: ComponentContext): RootComponent =
@@ -36,9 +38,18 @@ class RootComponentFactory(
                             onShowDetails = onShowDetails,
                             pendingFilesRepository = pendingFilesRepository,
                             onOpenPicker = { onPickerPick(peer.id) },
+                            conflictRelay = peerConflictRelay,
                         )
                     },
-                    bannersComponentFactory = { bannersCtx -> BannersComponent(bannersCtx, pendingFilesRepository) },
+                    bannersComponentFactory = { bannersCtx ->
+                        BannersComponent(
+                            componentContext = bannersCtx,
+                            pendingFilesRepository = pendingFilesRepository,
+                            peersRepository = peersRepository,
+                            engineRegistry = peerTransferEngineRegistry,
+                            conflictRelay = peerConflictRelay,
+                        )
+                    },
                 )
             },
         )

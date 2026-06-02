@@ -13,6 +13,7 @@ Read on demand. Match what you're touching to the corresponding canon:
 - **Vision / product framing** — [`docs/product/`](docs/product/README.md). Source of truth for *what* / *why*.
 - **Engineering architecture** — [`docs/engineering/`](docs/engineering/README.md). Source of truth for *how*. Per-area:
   - Any code → [`dependency-injection.md`](docs/engineering/dependency-injection.md)
+  - Where does this code go? (layer placement / allowed imports) → [`layering.md`](docs/engineering/layering.md)
   - UI → [`presentation-layer.md`](docs/engineering/presentation-layer.md)
   - New module / component → [`modules.md`](docs/engineering/modules.md) + [`architecture-principles.md`](docs/engineering/architecture-principles.md)
   - Tests → [`testing.md`](docs/engineering/testing.md)

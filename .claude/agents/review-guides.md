@@ -19,7 +19,7 @@ Always read `CLAUDE.md`. Then read the engineering doc that maps to the diff:
 | Diff touches | Read |
 |---|---|
 | any code | `docs/engineering/dependency-injection.md` (DI checklist) |
-| new component / module / layer | `architecture-principles.md`, `modules.md` |
+| new component / module / layer | `architecture-principles.md`, `modules.md`, `layering.md` |
 | UI / Compose | `presentation-layer.md` |
 | new tests | `testing.md` |
 | commonMain or expect/actual | `architecture-principles.md` (common-first rule) |
@@ -31,7 +31,7 @@ Always read `CLAUDE.md`. Then read the engineering doc that maps to the diff:
 
 1. **DI checklist** — every new injection point matches the rules in `dependency-injection.md`. Constructor injection, no service locators inside business logic, no static singletons.
 2. **Common-first** — code that could live in `commonMain` lives there. Platform source sets only hold platform-API-bound code. Flag duplicated logic across `androidMain`/`desktopMain` that should be in `jvmMain` or `commonMain`.
-3. **Layering** — presentation does not import data, data does not import presentation, etc. Read `architecture-principles.md` for the actual layer names.
+3. **Layering** — each layer imports only inward; forbidden-import violations are findings. Per-layer ownership and import rules: `docs/engineering/layering.md` (UI / Presentation / Domain / Data).
 4. **Comment style** — comments only where code cannot express intent. Flag any sentence in a comment or KDoc that restates what the immediately adjacent code already shows: the method name, the signature, the operation about to happen on the next line (split, loop, conditional, call). A multi-sentence comment passes if every sentence adds information beyond the code; if the opening sentence narrates what the code is doing and the load-bearing WHY comes only after, cut the opening. KDoc that repeats the signature is noise — delete it.
 5. **Commit naming** — every commit message starts with `#<issue>: `. Run `gh pr view <PR> --json commits --jq '.commits[].messageHeadline'`.
 6. **Idioms** — Kotlin official style is enforced by KtLint (do not flag style); flag non-idiomatic patterns: `!!` where nullable handling is expected, manual loops where `map`/`filter` fits, `runBlocking` anywhere (production: refactor to `suspend`; tests: `runTest` + `TestDispatcher` per `testing.md`).
