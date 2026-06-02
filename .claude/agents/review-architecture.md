@@ -40,7 +40,7 @@ Read upfront and strictly comply when the diff falls into the matching area:
 
 For each meaningful new symbol (class, top-level function, module, source-set entry, interface, expect/actual pair):
 
-- **Layer placement.** Domain rule in UI? Discovery logic in presentation? Platform detail leaking into `commonMain`? Cross-check against the 4 layers in `architecture-principles.md` (Protocol/domain → Network/discovery/platform → Presentation → UI). Dependencies must point *toward* more stable code.
+- **Layer placement.** Domain rule in UI? Discovery logic in presentation? Platform detail leaking into `commonMain`? Cross-check per-layer ownership, allowed imports, and forbidden imports against `docs/engineering/layering.md` (UI → Presentation → Domain → Data). Dependencies must point *toward* more stable code.
 - **Module/source-set placement.** Common-first: anything that could live in `commonMain` is there. Logic duplicated across `androidMain`/`desktopMain` that should live in `jvmMain` is a finding. New `actual` without a real platform-API need is a finding.
 - **Responsibility cohesion.** A class doing two unrelated jobs (e.g. owning state *and* rendering it, or transport *and* policy) is a finding — name the two responsibilities and propose the split.
 

@@ -187,3 +187,4 @@ Patterns:
 - [Decompose: Navigation overview](https://arkivanov.github.io/Decompose/navigation/overview/)
 - [Decompose: State preservation](https://arkivanov.github.io/Decompose/component/state-preservation/)
 - ADR: [adr/adr-presentation-and-navigation.md](adr/adr-presentation-and-navigation.md)
+- Layer placement rules (what Presentation may and must not import): [layering.md](layering.md)

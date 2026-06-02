@@ -8,18 +8,14 @@ import androidx.compose.ui.Modifier
 
 @Composable
 fun BannersSection(component: BannersComponent, modifier: Modifier = Modifier) {
-    val pending by component.pendingSummary.collectAsState()
-    val dropFeedback by component.dropFeedback.collectAsState()
+    val pendingOutboundBannerState by component.pendingBanner.collectAsState()
     val showForeground by component.showForegroundConstraint.collectAsState()
 
     Column(modifier = modifier) {
-        if (pending != null) {
-            PendingOutboundBanner(
-                summary = pending!!,
-                dropFeedback = dropFeedback,
-                onCancel = component::onCancelPending,
-            )
-        }
+        PendingOutboundBanner(
+            state = pendingOutboundBannerState,
+            onCancel = component::onCancelPending,
+        )
 
         ForegroundConstraintBanner(
             visible = showForeground,

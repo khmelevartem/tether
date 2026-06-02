@@ -7,6 +7,7 @@ Product-side docs (vision, audience, features) live in [`docs/product/`](../prod
 ## Sections
 
 - [Architecture Principles](architecture-principles.md) — Clean Architecture as a principle, not dogma. What applies and what is explicitly skipped.
+- [Layering](layering.md) — the four layers (UI / Presentation / Domain / Data): what each owns, may import, must not import, and how they talk to neighbours.
 - [Modules](modules.md) — current monolith, target module split, and the triggers that move a piece of code into its own module.
 - [Dependency Injection](dependency-injection.md) — DI strategy now (manual composition root) and later (Metro). Concrete rules for new code.
 - [Presentation Layer](presentation-layer.md) — Decompose-based components; how to write them, subscribe from Compose, and test.

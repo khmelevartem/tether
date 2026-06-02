@@ -4,12 +4,15 @@ import com.tubetoast.tether.preferences.FakePeerPreferencesStore
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PeerTransferEngineTest {
@@ -27,6 +30,66 @@ class PeerTransferEngineTest {
         scope = scope,
         peerPreferencesStore = FakePeerPreferencesStore(),
     )
+
+    private suspend fun TestScope.engineInActiveInbound(
+        events: MutableSharedFlow<ReceiveEvent> = MutableSharedFlow(extraBufferCapacity = 16),
+    ): PeerTransferEngine {
+        val engine = buildEngine(events = events, scope = backgroundScope)
+        runCurrent()
+        events.emit(ReceiveEvent.Started("file.txt", 1))
+        runCurrent()
+        assertIs<PeerTransferState.ActiveInbound>(engine.state.value)
+        return engine
+    }
+
+    private suspend fun TestScope.engineInReconnecting(
+        events: MutableSharedFlow<ReceiveEvent> = MutableSharedFlow(extraBufferCapacity = 16),
+    ): PeerTransferEngine {
+        val engine = engineInActiveInbound(events)
+        events.emit(ReceiveEvent.ConnectionLost(receivedSoFar = 0))
+        runCurrent()
+        assertIs<PeerTransferState.Reconnecting>(engine.state.value)
+        return engine
+    }
+
+    private suspend fun TestScope.engineInReceived(
+        events: MutableSharedFlow<ReceiveEvent> = MutableSharedFlow(extraBufferCapacity = 16),
+    ): PeerTransferEngine {
+        val engine = engineInActiveInbound(events)
+        events.emit(ReceiveEvent.BatchCompleted(received = 1, total = 1))
+        runCurrent()
+        assertIs<PeerTransferState.Received>(engine.state.value)
+        return engine
+    }
+
+    private suspend fun TestScope.engineInError(
+        events: MutableSharedFlow<ReceiveEvent> = MutableSharedFlow(extraBufferCapacity = 16),
+    ): PeerTransferEngine {
+        val engine = engineInActiveInbound(events)
+        events.emit(ReceiveEvent.ReceiverSuspended)
+        runCurrent()
+        assertIs<PeerTransferState.Error>(engine.state.value)
+        return engine
+    }
+
+    private suspend fun TestScope.engineInCancelled(): PeerTransferEngine {
+        val pauseChannel = Channel<Unit>(0)
+        val engine = buildEngine(pauseChannel = pauseChannel, scope = backgroundScope)
+        engine.startOutbound(listOf(FakeFileSource("a.txt", 100L)))
+        runCurrent()
+        engine.onCancel()
+        runCurrent()
+        assertIs<PeerTransferState.Cancelled>(engine.state.value)
+        return engine
+    }
+
+    private suspend fun TestScope.engineInSent(): PeerTransferEngine {
+        val engine = buildEngine(scope = backgroundScope)
+        engine.startOutbound(listOf(FakeFileSource("a.txt", 100L)))
+        runCurrent()
+        assertIs<PeerTransferState.Sent>(engine.state.value)
+        return engine
+    }
 
     @Test
     fun `startOutbound while Active is no-op`() = runTest {
@@ -108,12 +171,7 @@ class PeerTransferEngineTest {
     @Test
     fun `inbound Started Progress FileCompleted BatchCompleted produces Received`() = runTest {
         val events = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
-        val engine = buildEngine(events = events, scope = backgroundScope)
-        runCurrent()
-
-        events.emit(ReceiveEvent.Started("file.txt", 1))
-        runCurrent()
-        assertIs<PeerTransferState.ActiveInbound>(engine.state.value)
+        val engine = engineInActiveInbound(events)
 
         events.emit(ReceiveEvent.Progress("file.txt", 50L, 100L))
         runCurrent()
@@ -135,13 +193,7 @@ class PeerTransferEngineTest {
     @Test
     fun `ReceiverSuspended event produces Error ReceiverSuspended`() = runTest {
         val events = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
-        val engine = buildEngine(events = events, scope = backgroundScope)
-        runCurrent()
-
-        events.emit(ReceiveEvent.Started("file.txt", 1))
-        runCurrent()
-        events.emit(ReceiveEvent.ReceiverSuspended)
-        runCurrent()
+        val engine = engineInError(events)
 
         val state = engine.state.value
         assertIs<PeerTransferState.Error>(state)
@@ -150,17 +202,7 @@ class PeerTransferEngineTest {
 
     @Test
     fun `onRetryOutbound after ReceiverSuspended does not restart transfer`() = runTest {
-        val events = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
-        val engine = buildEngine(events = events, scope = backgroundScope)
-        runCurrent()
-
-        events.emit(ReceiveEvent.Started("file.txt", 1))
-        runCurrent()
-        events.emit(ReceiveEvent.ReceiverSuspended)
-        runCurrent()
-
-        val errorState = engine.state.value
-        assertIs<PeerTransferState.Error>(errorState)
+        val engine = engineInError()
 
         engine.onRetryOutbound()
         runCurrent()
@@ -174,11 +216,8 @@ class PeerTransferEngineTest {
     @Test
     fun `BatchCompleted with failed CancelledByUser files produces ReceiverCancelled partial reason`() = runTest {
         val events = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
-        val engine = buildEngine(events = events, scope = backgroundScope)
-        runCurrent()
+        val engine = engineInActiveInbound(events)
 
-        events.emit(ReceiveEvent.Started("file.txt", 2))
-        runCurrent()
         events.emit(ReceiveEvent.Failed("skipped.txt", FailureReason.CancelledByUser))
         runCurrent()
         events.emit(ReceiveEvent.BatchCompleted(received = 1, total = 2))
@@ -264,11 +303,8 @@ class PeerTransferEngineTest {
     @Test
     fun `inbound ConnectionLost transitions to Reconnecting Inbound`() = runTest {
         val events = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
-        val engine = buildEngine(events = events, scope = backgroundScope)
-        runCurrent()
+        val engine = engineInActiveInbound(events)
 
-        events.emit(ReceiveEvent.Started("file.txt", 1))
-        runCurrent()
         events.emit(ReceiveEvent.Progress("file.txt", 50L, 100L))
         runCurrent()
         events.emit(ReceiveEvent.ConnectionLost(receivedSoFar = 0))
@@ -410,12 +446,103 @@ class PeerTransferEngineTest {
     }
 
     @Test
-    fun `onDismiss from Sent returns to Idle`() = runTest {
+    fun `startOutbound returns true when Idle`() = runTest {
         val engine = buildEngine(scope = backgroundScope)
+
+        val result = engine.startOutbound(listOf(FakeFileSource("a.txt", 100L)))
+        runCurrent()
+
+        assertTrue(result)
+        assertIs<PeerTransferState.Sent>(engine.state.value)
+    }
+
+    @Test
+    fun `startOutbound returns false when ActiveOutbound`() = runTest {
+        val pauseChannel = Channel<Unit>(0)
+        val engine = buildEngine(pauseChannel = pauseChannel, scope = backgroundScope)
 
         engine.startOutbound(listOf(FakeFileSource("a.txt", 100L)))
         runCurrent()
+        assertIs<PeerTransferState.ActiveOutbound>(engine.state.value)
+
+        val result = engine.startOutbound(listOf(FakeFileSource("b.txt", 200L)))
+        runCurrent()
+
+        assertFalse(result)
+        assertIs<PeerTransferState.ActiveOutbound>(engine.state.value)
+    }
+
+    @Test
+    fun `startOutbound returns false when ActiveInbound`() = runTest {
+        val events = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
+        val engine = engineInActiveInbound(events)
+
+        val result = engine.startOutbound(listOf(FakeFileSource("b.txt", 200L)))
+        runCurrent()
+
+        assertFalse(result)
+        assertIs<PeerTransferState.ActiveInbound>(engine.state.value)
+    }
+
+    @Test
+    fun `startOutbound returns false when Reconnecting`() = runTest {
+        val events = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
+        val engine = engineInReconnecting(events)
+
+        val result = engine.startOutbound(listOf(FakeFileSource("b.txt", 200L)))
+        runCurrent()
+
+        assertFalse(result)
+        assertIs<PeerTransferState.Reconnecting>(engine.state.value)
+    }
+
+    @Test
+    fun `startOutbound returns false when Sent`() = runTest {
+        val engine = engineInSent()
+
+        val result = engine.startOutbound(listOf(FakeFileSource("b.txt", 200L)))
+        runCurrent()
+
+        assertFalse(result)
         assertIs<PeerTransferState.Sent>(engine.state.value)
+    }
+
+    @Test
+    fun `startOutbound returns false when Received`() = runTest {
+        val engine = engineInReceived()
+
+        val result = engine.startOutbound(listOf(FakeFileSource("b.txt", 200L)))
+        runCurrent()
+
+        assertFalse(result)
+        assertIs<PeerTransferState.Received>(engine.state.value)
+    }
+
+    @Test
+    fun `startOutbound returns false when Error`() = runTest {
+        val engine = engineInError()
+
+        val result = engine.startOutbound(listOf(FakeFileSource("b.txt", 200L)))
+        runCurrent()
+
+        assertFalse(result)
+        assertIs<PeerTransferState.Error>(engine.state.value)
+    }
+
+    @Test
+    fun `startOutbound returns false when Cancelled`() = runTest {
+        val engine = engineInCancelled()
+
+        val result = engine.startOutbound(listOf(FakeFileSource("b.txt", 200L)))
+        runCurrent()
+
+        assertFalse(result)
+        assertIs<PeerTransferState.Cancelled>(engine.state.value)
+    }
+
+    @Test
+    fun `onDismiss from Sent returns to Idle`() = runTest {
+        val engine = engineInSent()
 
         engine.onDismiss()
         runCurrent()
