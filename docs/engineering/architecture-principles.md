@@ -53,6 +53,12 @@ When state has a designated owner (store, repository, service), other layers do 
 
 Before introducing a new state property, verify no existing property already answers the same question under a different name or shape; if yes, derive one from the other. This is most critical at the Presentation↔Domain boundary — see [layering.md](layering.md#presentation--domain-boundary-data-ssot-not-code-dry).
 
+## A guarded state transition reports whether it happened
+
+When a method guards a state machine — accepts the request only from certain states, ignores it otherwise — it returns whether the transition occurred (`Boolean`, or a richer result), not `Unit`. A `Unit`-returning guard forces every caller to know the internal guard condition and re-derive it before acting on the outcome; that knowledge crosses the function boundary and rots. The caller then performs follow-up side effects (clearing a buffer, navigating, clearing pending files) on the assumption the transition happened — and when the guard silently refused, the side effect runs anyway against a state that never changed.
+
+Make the acceptance observable at the call site: `fun startOutbound(...): Boolean` returns `false` when the state machine refuses, and the caller branches on it. This converts a class of "fire-and-forget across a guard" bugs into a compile-time obligation to handle the refusal.
+
 ## Every node is both client and server
 
 Every running Tether instance is symmetric on the transport: it hosts an HTTP server and is an HTTP client to its peers. Any device can send to any device; there is no designated host, no asymmetry between a "server" device and a "client" device.

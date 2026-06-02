@@ -28,6 +28,8 @@ Identify:
 
 Before reproducing and before any hypothesis work — `git log --oneline -20 -- <suspected-path>` for each file in the suspected area. Often one of the recent diffs is the cause, or rules out a whole branch of hypotheses by showing the code was untouched. After a rebase / merge main, narrow the range: `git log --oneline <prev-merge-base>..HEAD -- <path>`. The cost is one git command; the upside is short-circuiting hypothesis enumeration.
 
+Before either of those — `git fetch origin main --quiet` and confirm the worktree's base is current main. Reproducing on a stale worktree base means hypotheses are scored against API surfaces that may already have moved upstream; the cause is "confirmed" in code that is no longer the canon, and the orchestrator then resolves merge conflicts that change the very shape the cause described. Fresh main first, then suspect history.
+
 ### 1. Reproduce
 
 Run the user's steps locally. Use `/smoke-test` blocks if the bug is in a smoke-covered path, or the manual scenario otherwise. Decide:
