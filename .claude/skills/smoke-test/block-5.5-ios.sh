@@ -49,8 +49,9 @@ echo "PASS: launch"
 IOS_NAME=""
 for i in $(seq 1 30); do
   set +e
-  IOS_NAME=$( ( dns-sd -B _tether._tcp local. & DNSSD=$!; sleep 2; kill $DNSSD 2>/dev/null ) \
-    | awk -F'\t' '/_tether._tcp/ && NF>1 { print $NF }' \
+  IOS_NAME=$( ( dns-sd -B _tether._tcp . & DNSSD=$!; sleep 2; kill $DNSSD 2>/dev/null ) 2>&1 \
+    | grep '_tether._tcp' \
+    | sed 's/.*_tether\._tcp\.[[:space:]]*//' \
     | grep -E 'iPhone|iPad' | head -1 | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
   set -e
   [ -n "$IOS_NAME" ] && break
