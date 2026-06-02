@@ -570,7 +570,22 @@ def render_locations(loc: dict, locations_data: dict) -> str:
     cards_html = '<div class="locations">'
     for entry, lines in sorted_open:
         ss = _e(entry["source_set"])
-        files = loc.get(entry["source_set"] + "_files", "?")
+        files_raw = loc.get(entry["source_set"] + "_files")
+        if files_raw is None:
+            # Fallback: count files from the filesystem (composeApp/src/<sourceSet>/)
+            project_root = Path(__file__).parent.parent.parent.parent
+            src_path = project_root / "composeApp" / "src" / entry["source_set"]
+            if src_path.exists():
+                try:
+                    files_raw = sum(
+                        1 for p in src_path.rglob("*")
+                        if p.suffix in (".kt", ".swift") and p.is_file()
+                    )
+                except OSError:
+                    files_raw = "?"
+            else:
+                files_raw = "?"
+        files = files_raw
         cards_html += f"""<div class="loc">
   <div class="loc-name">{_e(entry["name"])}</div>
   <div class="loc-ss">{ss}</div>
