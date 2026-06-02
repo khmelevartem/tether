@@ -65,6 +65,44 @@ class BonjourStateTest {
         assertEquals(1, store.devices.value.size)
     }
 
+    // Regression: bug-reproducer confirmed that a BrowseRemove for an intermediate name
+    // would evict the live canonical entry when the discoverer kept a private name→fp map.
+    // The fix is to look up the store (which Rule 1 has already collapsed to the canonical
+    // name) instead of a private map.
+    @Test
+    fun `browse remove for an intermediate rename name does not evict the live canonical entry`() {
+        // One peer announces under "PeerA" (the intermediate name) and is then
+        // canonicalised by mDNSResponder to "PeerA (2)". Both BrowseAdds carry the same fingerprint.
+        state.onBrowseAdd("PeerA", 0)
+        state.onResolved("PeerA", "peera.local", 19999, peerFingerprint = "fpA")
+        state.onAddrInfoFound("PeerA", "10.0.0.5", isAdd = true)
+
+        state.onBrowseAdd("PeerA (2)", 0)
+        state.onResolved("PeerA (2)", "peera.local", 19999, peerFingerprint = "fpA")
+        state.onAddrInfoFound("PeerA (2)", "10.0.0.5", isAdd = true)
+        assertEquals(
+            "PeerA (2)",
+            store.devices.value
+                .single()
+                .name,
+            "Rule 1 collapses to the canonical name",
+        )
+
+        // mDNSResponder retracts the intermediate name.
+        state.onBrowseRemove("PeerA")
+        assertEquals(
+            1,
+            store.devices.value.size,
+            "the live canonical entry must survive an intermediate-name BrowseRemove",
+        )
+        assertEquals(
+            "PeerA (2)",
+            store.devices.value
+                .single()
+                .name,
+        )
+    }
+
     @Test
     fun `browse remove cleans up device, pending state, and active subordinates`() {
         state.onBrowseAdd("PeerA", 0)
