@@ -57,16 +57,7 @@ open class FileClient(
     companion object {
         fun default(
             tracker: TransferActivityTracker = DefaultTransferActivityTracker(),
-        ): FileClient = FileClient(
-            client = HttpClient(CIO) {
-                install(ContentNegotiation) { json() }
-                install(HttpTimeout) {
-                    requestTimeoutMillis = HttpTimeoutConfig.INFINITE_TIMEOUT_MS
-                    socketTimeoutMillis = HttpTimeoutConfig.INFINITE_TIMEOUT_MS
-                }
-            },
-            tracker = tracker,
-        )
+        ): FileClient = FileClient(client = cioClient(), tracker = tracker)
 
         fun withPairing(
             trustedDeviceStore: TrustedDeviceStore,
@@ -75,19 +66,21 @@ open class FileClient(
             pairingHandler: PairingConfirmationHandler?,
             tracker: TransferActivityTracker = DefaultTransferActivityTracker(),
         ): FileClient = FileClient(
-            client = HttpClient(CIO) {
-                install(ContentNegotiation) { json() }
-                install(HttpTimeout) {
-                    requestTimeoutMillis = HttpTimeoutConfig.INFINITE_TIMEOUT_MS
-                    socketTimeoutMillis = HttpTimeoutConfig.INFINITE_TIMEOUT_MS
-                }
-            },
+            client = cioClient(),
             tracker = tracker,
             trustedDeviceStore = trustedDeviceStore,
             ownKeyPair = ownKeyPair,
             ownNameProvider = ownNameProvider,
             pairingHandler = pairingHandler,
         )
+
+        private fun cioClient(): HttpClient = HttpClient(CIO) {
+            install(ContentNegotiation) { json() }
+            install(HttpTimeout) {
+                requestTimeoutMillis = HttpTimeoutConfig.INFINITE_TIMEOUT_MS
+                socketTimeoutMillis = HttpTimeoutConfig.INFINITE_TIMEOUT_MS
+            }
+        }
     }
 
     open suspend fun sendHello(target: Device, ownInfo: PeerAnnouncement): Boolean = try {

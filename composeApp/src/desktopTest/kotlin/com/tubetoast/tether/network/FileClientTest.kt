@@ -310,8 +310,6 @@ class FileClientTest {
         }
     }
 
-    // --- pairing tests ---
-
     private val cleanupPaths = mutableListOf<File>()
     private val cleanupTempStores = mutableListOf<TempDataStore>()
 
