@@ -54,6 +54,8 @@ Run the experiment. Record verdict for each hypothesis:
 - **REJECTED** — experiment contradicts the prediction
 - **INCONCLUSIVE** — couldn't differentiate; describe what blocked you
 
+**Multi-variant probe — when several hypotheses are about the shape of one external API call.** Instead of running N separate build-launch cycles for proof by elimination, write a single diagnostic invocation that exercises all N variants in one program run, logs each variant's outcome as its own line, then halts. One build, one launch; the log unambiguously names the surviving variant. Applies when the call site is identical and only the arguments / configuration differ — a dictionary built two ways, a flag set or not, the same query against different attribute combinations. Cost-effective when N≥3 or when each build-launch cycle is expensive (simulator boot, device flash, container rebuild).
+
 ### 3. If none of the listed hypotheses match
 
 Stop. Report tested hypotheses, what you observed that doesn't fit, and (optionally) a new hypothesis as a **proposal** — not a conclusion. The user decides next step.
