@@ -14,6 +14,7 @@ A test lives in the most general source set across whose targets every reference
 - **One behaviour per test.** The test name describes the behaviour, not the implementation. Multiple asserts are fine when they describe the same behaviour from different angles; multiple behaviours in one test hide which one broke.
 - **Mental inversion.** Before submitting, invert the production code under test in your head — would the test fail? If not, the test is a tautology. A test that passes regardless of production logic is worse than no test: it manufactures false confidence.
 - **Isolation.** No shared mutable static state between tests. Each test sets up its own fixtures and runs independently under CI parallelism.
+- **State-machine units — exercise consecutive operations.** Classes that hold state between public calls (engine, registry, lifecycle-aware store) need at least one test that drives the main flow twice on the same instance. Per-test fresh fixtures cover only first-use; state-leakage bugs — terminal-state stuck, ack flags not reset, cached errors replayed — slip through unless a consecutive-operation test exists.
 
 ## Style
 
