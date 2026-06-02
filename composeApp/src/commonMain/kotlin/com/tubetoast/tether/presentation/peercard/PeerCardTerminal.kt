@@ -206,7 +206,6 @@ private fun TerminalShell(
     onShowDetails: () -> Unit,
     modifier: Modifier = Modifier,
     leadingIcon: ImageVector? = null,
-    helperLabel: String? = null,
 ) {
     val colors = TetherTheme.colors
     val spacing = TetherTheme.spacing
@@ -238,8 +237,6 @@ private fun TerminalShell(
         } else {
             BodyText(text = statusCopy)
         }
-
-        helperLabel?.let { LabelText(text = it) }
 
         if (showDetails) {
             Row(

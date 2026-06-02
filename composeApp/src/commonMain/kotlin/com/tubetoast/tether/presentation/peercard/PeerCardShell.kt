@@ -19,8 +19,8 @@ import com.tubetoast.tether.ui.feature.PeerIdentityAccent
 import com.tubetoast.tether.ui.theme.TetherTheme
 
 /**
- * When [isPaired] is true, a 3dp vertical strip in the peer-identity color appears along the
- * left edge — indicating an established pairing relationship.
+ * When [isPaired] is true, a peer-identity accent marks the card, indicating an established
+ * pairing relationship.
  */
 @Composable
 internal fun PeerCardShell(
