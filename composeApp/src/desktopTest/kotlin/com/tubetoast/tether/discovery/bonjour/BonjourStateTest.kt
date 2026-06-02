@@ -46,7 +46,7 @@ class BonjourStateTest {
     @Test
     fun `resolve with new port replaces existing device`() {
         state.onBrowseAdd("PeerA", 0)
-        state.onResolved("PeerA", "peera.local", 19999, peerFingerprint = null)
+        state.onResolved("PeerA", "peera.local", 19999, peerFingerprint = "fpA")
         state.onAddrInfoFound("PeerA", "10.0.0.5", isAdd = true)
         assertEquals(
             19999,
@@ -55,7 +55,7 @@ class BonjourStateTest {
                 .port,
         )
 
-        state.onResolved("PeerA", "peera.local", 20001, peerFingerprint = null)
+        state.onResolved("PeerA", "peera.local", 20001, peerFingerprint = "fpA")
         assertEquals(
             20001,
             store.devices.value

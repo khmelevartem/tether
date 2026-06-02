@@ -19,7 +19,11 @@ class DiscoveredDevicesStore {
      * 1. Same fingerprint (non-null) → replace in place; latest name/host/port wins.
      * 2. Incoming has fingerprint, existing at same host:port has none → promote (replace).
      * 3. Incoming has no fingerprint and existing entry at same host:port exists → drop incoming.
-     * 4. Fallback: same id replaces; same name with different id evicts stale entry.
+     * 4. Otherwise → append as a new entry.
+     *
+     * The transient `fingerprint == null` window covers only the mDNS TXT-resolution race —
+     * TXT lands in a separate transaction from A-records, so the first `serviceResolved`
+     * callback can carry no `fp` yet. Rule 2 promotes that placeholder once TXT arrives.
      */
     fun upsert(device: Device) {
         _devices.update { prev ->
@@ -28,38 +32,16 @@ class DiscoveredDevicesStore {
                 if (fpIdx >= 0) {
                     return@update prev.toMutableList().also { it[fpIdx] = device }
                 }
-            }
-
-            if (device.fingerprint != null) {
                 val hostPortIdx = prev.indexOfFirst {
-                    it.host == device.host &&
-                        it.port == device.port &&
-                        it.fingerprint == null
+                    it.host == device.host && it.port == device.port && it.fingerprint == null
                 }
                 if (hostPortIdx >= 0) {
                     return@update prev.toMutableList().also { it[hostPortIdx] = device }
                 }
+            } else if (prev.any { it.host == device.host && it.port == device.port }) {
+                return@update prev
             }
-
-            if (device.fingerprint == null) {
-                val hostPortMatch = prev.any { it.host == device.host && it.port == device.port }
-                if (hostPortMatch) return@update prev
-            }
-
-            val result = ArrayList<Device>(prev.size + 1)
-            var replaced = false
-            for (existing in prev) {
-                when {
-                    existing.id == device.id -> {
-                        result += device
-                        replaced = true
-                    }
-                    existing.name == device.name -> Unit
-                    else -> result += existing
-                }
-            }
-            if (!replaced) result += device
-            result
+            prev + device
         }
     }
 

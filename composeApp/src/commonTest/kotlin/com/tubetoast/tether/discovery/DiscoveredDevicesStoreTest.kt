@@ -57,13 +57,25 @@ class DiscoveredDevicesStoreTest {
         assertEquals(listOf(device("B", port = 8081)), store.devices.value)
     }
 
+    // Same peer changing IP under the all-latest assumption: Rule 1 handles it via fingerprint match.
     @Test
-    fun `upsert with same name and new address evicts stale entry`() {
-        val old = device("Peer", host = "1.0.0.1")
-        val fresh = device("Peer", host = "1.0.0.2")
+    fun `same fingerprint at new address replaces in place`() {
+        val old = device("Peer", host = "1.0.0.1", fingerprint = "fp1")
+        val fresh = device("Peer", host = "1.0.0.2", fingerprint = "fp1")
         store.upsert(old)
         store.upsert(fresh)
         assertEquals(listOf(fresh), store.devices.value)
+    }
+
+    // Without fingerprints we can't tell whether two same-named announces are the same peer that
+    // moved or two different peers; default to keeping both. mDNS removal events clean up stale.
+    @Test
+    fun `same name at different host-port without fingerprints coexist`() {
+        val a = device("Peer", host = "1.0.0.1")
+        val b = device("Peer", host = "1.0.0.2")
+        store.upsert(a)
+        store.upsert(b)
+        assertEquals(listOf(a, b), store.devices.value)
     }
 
     @Test
