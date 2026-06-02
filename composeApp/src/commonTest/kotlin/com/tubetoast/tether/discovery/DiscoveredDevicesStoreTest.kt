@@ -187,7 +187,7 @@ class DiscoveredDevicesStoreTest {
         assertEquals(2, store.devices.value.size)
     }
 
-    // Finding 5: distinct fingerprints at same host:port must not collapse.
+    // Distinct fingerprints at the same host:port must not collapse — two real peers may transiently share an address.
     @Test
     fun `two entries with distinct fingerprints at same host-port coexist`() {
         store.upsert(device("A", host = "1.2.3.4", port = 8080, fingerprint = "fp1"))
