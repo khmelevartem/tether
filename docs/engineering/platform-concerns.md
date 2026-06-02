@@ -75,6 +75,4 @@ A clean checklist here does not imply a clean platform pass.
     TalkBack / VoiceOver. Re-announcing the *same* string on a repeat trigger
     needs the platform bypass (`View.announceForAccessibility` on Android,
     `UIAccessibility.post(.announcement,)` on iOS), not a `semantics` property.
-    References:
-    [Compose LiveRegionMode](https://developer.android.com/reference/kotlin/androidx/compose/ui/semantics/LiveRegionMode),
-    [UIAccessibility.post](https://developer.apple.com/documentation/uikit/uiaccessibility/post(notification:argument:)).
+    Reference: [Compose LiveRegionMode](https://developer.android.com/reference/kotlin/androidx/compose/ui/semantics/LiveRegionMode).
