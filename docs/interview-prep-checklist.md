@@ -160,7 +160,7 @@
 ## Блок 5 — Архитектура
 
 ### Паттерны
-- [ ] Clean Architecture — слои, направление зависимостей, зачем UseCase
+- [x] Clean Architecture — слои, направление зависимостей, зачем UseCase
 - [ ] MVVM vs MVI vs UDF — разница, когда что
 - [ ] Repository pattern — зачем, что абстрагирует
 - [ ] `sealed class` для UI State — Loading / Success / Error
