@@ -11,7 +11,7 @@ Work strictly step by step. Each step is a stop point: if something is not done,
 
 ## Step 0 — Pull main
 
-Run `/merge` — it will pull `origin/main` and assess semantic overlap with the current work. If the step reports significant overlap — adjust the work to the new context before starting AC, smoke, review.
+Run `/pull-main` — it will pull `origin/main` and assess semantic overlap with the current work. If the step reports significant overlap — adjust the work to the new context before starting AC, smoke, review.
 
 ---
 
