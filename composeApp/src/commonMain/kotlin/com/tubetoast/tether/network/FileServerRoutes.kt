@@ -7,6 +7,7 @@ import com.tubetoast.tether.protocol.PairRequest
 import com.tubetoast.tether.protocol.PairResponse
 import com.tubetoast.tether.protocol.PeerAnnouncement
 import com.tubetoast.tether.security.TrustedDeviceStore
+import com.tubetoast.tether.security.computePinCode
 import com.tubetoast.tether.security.deviceIdFromPublicKey
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
@@ -23,6 +24,7 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.readAvailable
+import kotlinx.coroutines.withTimeoutOrNull
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.debug
 import ru.pocketbyte.kydra.log.error
@@ -71,6 +73,7 @@ internal fun Application.installFileServerRoutes(
     tracker: TransferActivityTracker = DefaultTransferActivityTracker(),
     deviceIdentityStore: DeviceIdentityStore? = null,
     discoveredDevicesStore: DiscoveredDevicesStore? = null,
+    pairingConfirmationHandler: PairingConfirmationHandler? = null,
 ) {
     install(ContentNegotiation) { json() }
     routing {
@@ -103,8 +106,26 @@ internal fun Application.installFileServerRoutes(
             call.respond(HttpStatusCode.OK, emptyMap<String, String>())
         }
         post("/pair") {
-            val request = call.receive<PairRequest>()
+            val request = try {
+                call.receive<PairRequest>()
+            } catch (_: Exception) {
+                call.respond(HttpStatusCode.BadRequest, mapOf("error" to "invalid_body"))
+                return@post
+            }
             val deviceId = deviceIdFromPublicKey(request.publicKey)
+            if (!trustedDeviceStore.isTrusted(deviceId)) {
+                if (pairingConfirmationHandler != null) {
+                    val pin = computePinCode(serverPublicKey, request.publicKey)
+                    val confirmed = withTimeoutOrNull(30_000L) {
+                        pairingConfirmationHandler.confirmPairing(pin, request.deviceName)
+                    }
+                    if (confirmed != true) {
+                        log.info { "pairing rejected — device=${request.deviceName} confirmed=$confirmed" }
+                        call.respond(HttpStatusCode.Forbidden, mapOf("error" to "pairing_rejected"))
+                        return@post
+                    }
+                }
+            }
             try {
                 trustedDeviceStore.saveTrustedKey(deviceId, request.publicKey)
             } catch (e: Exception) {
@@ -116,6 +137,7 @@ internal fun Application.installFileServerRoutes(
                 )
                 return@post
             }
+            log.info { "paired with ${request.deviceName}" }
             call.respond(HttpStatusCode.OK, PairResponse(publicKey = serverPublicKey))
         }
         post("/upload") {

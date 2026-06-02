@@ -28,6 +28,7 @@ actual class FileServer(
     private val tracker: TransferActivityTracker = DefaultTransferActivityTracker(),
     private val deviceIdentityStore: DeviceIdentityStore? = null,
     private val discoveredDevicesStore: DiscoveredDevicesStore? = null,
+    private val pairingConfirmationHandler: PairingConfirmationHandler? = null,
 ) {
     private val downloadsDir: String = downloadsDir ?: defaultDownloadsDir()
     private var server: EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration>? = null
@@ -51,6 +52,7 @@ actual class FileServer(
                     tracker,
                     deviceIdentityStore,
                     discoveredDevicesStore,
+                    pairingConfirmationHandler,
                 )
             }.start(wait = false)
         } catch (e: Exception) {

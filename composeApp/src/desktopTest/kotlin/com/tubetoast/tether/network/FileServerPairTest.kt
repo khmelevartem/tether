@@ -1,5 +1,6 @@
 package com.tubetoast.tether.network
 
+import com.tubetoast.tether.network.PairingConfirmationHandler
 import com.tubetoast.tether.preferences.TempDataStore
 import com.tubetoast.tether.protocol.PairRequest
 import com.tubetoast.tether.protocol.PairResponse
@@ -55,8 +56,18 @@ class FileServerPairTest {
         return DefaultTrustedDeviceStore(temp.dataStore)
     }
 
-    private fun startServer(store: TrustedDeviceStore, keyPair: DeviceKeyPair): Pair<FileServer, Int> {
-        val server = FileServer(configuredPort = 0, trustedDeviceStore = store, deviceKeyPair = keyPair)
+    private fun startServer(
+        store: TrustedDeviceStore,
+        keyPair: DeviceKeyPair,
+        handler: PairingConfirmationHandler? = PairingConfirmationHandler { _, _ -> true },
+    ): Pair<FileServer, Int> {
+        val server =
+            FileServer(
+                configuredPort = 0,
+                trustedDeviceStore = store,
+                deviceKeyPair = keyPair,
+                pairingConfirmationHandler = handler,
+            )
         startedServer = server
         return server to server.start()
     }
@@ -161,6 +172,44 @@ class FileServerPairTest {
                 setBody("not valid json at all")
             }
             assertEquals(HttpStatusCode.BadRequest, response.status)
+        }
+    }
+
+    @Test
+    fun `pair returns 403 when handler rejects`() {
+        val configDir = newConfigDir()
+        val (_, port) = startServer(
+            newTrustedStore(),
+            DeviceKeyPair(configDir),
+            handler = PairingConfirmationHandler { _, _ -> false },
+        )
+        runBlocking {
+            val response = client.post("http://localhost:$port/pair") {
+                contentType(ContentType.Application.Json)
+                setBody(PairRequest(publicKey = byteArrayOf(1, 2, 3), deviceName = "RejectMe"))
+            }
+            assertEquals(HttpStatusCode.Forbidden, response.status)
+        }
+    }
+
+    @Test
+    fun `pair returns 200 when device is already trusted`() {
+        val configDir = newConfigDir()
+        val store = newTrustedStore()
+        val peerKey = byteArrayOf(5, 6, 7)
+        val deviceId = deviceIdFromPublicKey(peerKey)
+        runBlocking { store.saveTrustedKey(deviceId, peerKey) }
+        val (_, port) = startServer(
+            store,
+            DeviceKeyPair(configDir),
+            handler = PairingConfirmationHandler { _, _ -> false },
+        )
+        runBlocking {
+            val response = client.post("http://localhost:$port/pair") {
+                contentType(ContentType.Application.Json)
+                setBody(PairRequest(publicKey = peerKey, deviceName = "AlreadyPaired"))
+            }
+            assertEquals(HttpStatusCode.OK, response.status)
         }
     }
 
