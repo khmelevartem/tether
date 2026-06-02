@@ -9,6 +9,7 @@ import com.tubetoast.tether.discovery.FakeDeviceDiscovery
 import com.tubetoast.tether.peer.PeersRepository
 import com.tubetoast.tether.preferences.FakePeerPreferencesStore
 import com.tubetoast.tether.presentation.banners.BannersComponent
+import com.tubetoast.tether.presentation.banners.PeerConflictRelay
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.FakeFileSource
@@ -17,6 +18,7 @@ import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.PendingFilesRepository
 import com.tubetoast.tether.transfer.PendingFilesSummary
 import com.tubetoast.tether.transfer.fakeBatchSender
+import com.tubetoast.tether.transfer.fakePeerTransferEngineRegistry
 import com.tubetoast.tether.transfer.toPeerIdentity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -253,12 +255,16 @@ class RootComponentTest {
                             scope = coroutineScope,
                             pendingFilesRepository = pendingFilesRepository,
                             onOpenPicker = onPickerPick,
+                            conflictRelay = PeerConflictRelay(),
                         )
                     },
                     bannersComponentFactory = { bannersCtx ->
                         BannersComponent(
                             componentContext = bannersCtx,
                             pendingFilesRepository = pendingFilesRepository,
+                            peersRepository = peersRepository,
+                            engineRegistry = fakePeerTransferEngineRegistry(coroutineScope),
+                            conflictRelay = PeerConflictRelay(),
                             coroutineScope = coroutineScope,
                         )
                     },
