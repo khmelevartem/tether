@@ -20,10 +20,6 @@ class DiscoveredDevicesStore {
      * 2. Incoming has fingerprint, existing at same host:port has none → promote (replace).
      * 3. Incoming has no fingerprint and existing entry at same host:port exists → drop incoming.
      * 4. Otherwise → append as a new entry.
-     *
-     * The transient `fingerprint == null` window covers only the mDNS TXT-resolution race —
-     * TXT lands in a separate transaction from A-records, so the first `serviceResolved`
-     * callback can carry no `fp` yet. Rule 2 promotes that placeholder once TXT arrives.
      */
     fun upsert(device: Device) {
         _devices.update { prev ->
