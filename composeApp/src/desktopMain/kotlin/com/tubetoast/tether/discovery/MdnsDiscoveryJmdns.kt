@@ -192,8 +192,7 @@ internal class MdnsDiscoveryJmdns(
 
         override fun serviceRemoved(event: ServiceEvent) {
             log.info { "serviceRemoved '${event.name}'" }
-            val fp = nameToFingerprint.remove(event.name)
-            if (fp != null) store.removeByFingerprint(fp) else store.removeByName(event.name)
+            nameToFingerprint.remove(event.name)?.let(store::removeByFingerprint)
         }
 
         override fun serviceResolved(event: ServiceEvent) {
@@ -204,21 +203,21 @@ internal class MdnsDiscoveryJmdns(
                     log.warn { "invalid port ${info.port} for '${event.name}', skipping" }
                     return
                 }
-                // Self-suppression by name first: TXT records (carrying the fingerprint) arrive in a
-                // separate mDNS transaction from A-records, so the early serviceResolved callbacks often
-                // expose a null peer fingerprint while the announce is unambiguously ours.
-                if (event.name == deviceName) return
-                val peerFingerprint = info.getPropertyString("fp")
+                // TXT records (carrying the fingerprint) arrive in a separate mDNS transaction from
+                // A-records, so an early serviceResolved callback can expose a null peer fingerprint.
+                // Defer the upsert until JmDNS re-resolves with TXT — the store never holds anonymous entries.
+                val peerFingerprint = info.getPropertyString("fp") ?: return
                 if (isOwnAnnounce(peerFingerprint)) return
                 val ipv4 = resolveIPv4(info, event.name) ?: return
-                if (peerFingerprint != null) nameToFingerprint[event.name] = peerFingerprint
-                val device = Device(
-                    name = event.name,
-                    host = ipv4,
-                    port = info.port,
-                    fingerprint = peerFingerprint,
+                nameToFingerprint[event.name] = peerFingerprint
+                store.upsert(
+                    Device(
+                        name = event.name,
+                        host = ipv4,
+                        port = info.port,
+                        fingerprint = peerFingerprint,
+                    ),
                 )
-                store.upsert(device)
             } catch (e: Exception) {
                 log.warn { "serviceResolved error for '${event.name}' — ${e.message}" }
             }

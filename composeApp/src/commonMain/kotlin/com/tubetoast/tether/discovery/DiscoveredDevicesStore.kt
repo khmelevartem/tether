@@ -16,10 +16,7 @@ class DiscoveredDevicesStore {
 
     fun upsert(device: Device) {
         _devices.update { prev ->
-            prev.replaceMatchingFingerprint(device)
-                ?: prev.promoteNameOnlyAtSameAddress(device)
-                ?: prev.keepExistingIfAddressCovered(device)
-                ?: (prev + device)
+            prev.replaceMatchingFingerprint(device) ?: (prev + device)
         }
     }
 
@@ -27,21 +24,6 @@ class DiscoveredDevicesStore {
         val fp = device.fingerprint ?: return null
         val idx = indexOfFirst { it.fingerprint == fp }
         return if (idx >= 0) toMutableList().also { it[idx] = device } else null
-    }
-
-    private fun List<Device>.promoteNameOnlyAtSameAddress(device: Device): List<Device>? {
-        if (device.fingerprint == null) return null
-        val idx = indexOfFirst { it.host == device.host && it.port == device.port && it.fingerprint == null }
-        return if (idx >= 0) toMutableList().also { it[idx] = device } else null
-    }
-
-    private fun List<Device>.keepExistingIfAddressCovered(device: Device): List<Device>? {
-        if (device.fingerprint != null) return null
-        return if (any { it.host == device.host && it.port == device.port }) this else null
-    }
-
-    fun removeByName(name: String) {
-        _devices.update { prev -> prev.filter { it.name != name } }
     }
 
     fun removeByFingerprint(fingerprint: String) {

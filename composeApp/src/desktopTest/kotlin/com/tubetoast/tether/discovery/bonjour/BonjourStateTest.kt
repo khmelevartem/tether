@@ -36,11 +36,11 @@ class BonjourStateTest {
         state.onBrowseAdd("PeerA", interfaceIndex = 0)
         assertEquals(0, store.devices.value.size, "no device until resolve+addrinfo")
 
-        state.onResolved("PeerA", "peera.local", port = 19999, peerFingerprint = null)
+        state.onResolved("PeerA", "peera.local", port = 19999, peerFingerprint = "fpA")
         assertEquals(0, store.devices.value.size, "still no device — IP missing")
 
         state.onAddrInfoFound("PeerA", "10.0.0.5", isAdd = true)
-        assertEquals(listOf(Device("PeerA", "10.0.0.5", 19999)), store.devices.value)
+        assertEquals(listOf(Device("PeerA", "10.0.0.5", 19999, fingerprint = "fpA")), store.devices.value)
     }
 
     @Test
@@ -68,7 +68,7 @@ class BonjourStateTest {
     @Test
     fun `browse remove cleans up device, pending state, and active subordinates`() {
         state.onBrowseAdd("PeerA", 0)
-        state.onResolved("PeerA", "peera.local", 19999, peerFingerprint = null)
+        state.onResolved("PeerA", "peera.local", 19999, peerFingerprint = "fpA")
         state.onAddrInfoFound("PeerA", "10.0.0.5", isAdd = true)
         assertEquals(1, store.devices.value.size)
 
@@ -78,7 +78,7 @@ class BonjourStateTest {
         assertTrue(sink.opened.contains("closeAddrInfo" to "PeerA"))
 
         state.onBrowseAdd("PeerA", 0)
-        state.onResolved("PeerA", "peera.local", 22222, peerFingerprint = null)
+        state.onResolved("PeerA", "peera.local", 22222, peerFingerprint = "fpA2")
         state.onAddrInfoFound("PeerA", "10.0.0.6", isAdd = true)
         assertEquals(1, store.devices.value.size)
         assertEquals(
@@ -115,7 +115,7 @@ class BonjourStateTest {
         val state = BonjourState(store, sink, ownFingerprint = "") { host, port -> host == "10.0.0.1" && port == 18000 }
 
         state.onBrowseAdd("Peer", 0)
-        state.onResolved("Peer", "peer.local", 19000, peerFingerprint = null)
+        state.onResolved("Peer", "peer.local", 19000, peerFingerprint = "fpPeer")
         state.onAddrInfoFound("Peer", "10.0.0.1", isAdd = true)
         assertEquals(1, store.devices.value.size, "peer on same host but different port must be kept")
     }

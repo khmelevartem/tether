@@ -180,8 +180,7 @@ actual class MdnsDiscovery(
     private fun onServiceRemoved(service: NSNetService) {
         val serviceName = service.name
         log.info { "service removed $serviceName" }
-        val fp = nameToFingerprint.remove(serviceName)
-        if (fp != null) store.removeByFingerprint(fp) else store.removeByName(serviceName)
+        nameToFingerprint.remove(serviceName)?.let(store::removeByFingerprint)
     }
 
     private fun onServiceResolved(service: NSNetService) {
@@ -201,7 +200,11 @@ actual class MdnsDiscovery(
         }
 
         val peerFingerprint = extractFingerprintFromTxt(service)
-        if (peerFingerprint != null) nameToFingerprint[serviceName] = peerFingerprint
+        if (peerFingerprint == null) {
+            log.debug { "resolved $serviceName without fp TXT, deferring upsert" }
+            return
+        }
+        nameToFingerprint[serviceName] = peerFingerprint
 
         val device = Device(
             name = serviceName,
