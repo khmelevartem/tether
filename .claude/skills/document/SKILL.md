@@ -90,11 +90,12 @@ Mention the relevant documents you found in the briefing to the user (see below)
 **Worktree setup — do this BEFORE dispatching any agent that edits files.** If you are not already in `.claude/worktrees/<branch>/`:
 
 ```bash
-git worktree add .claude/worktrees/docs-<N>-<short-slug> -b docs/<N>-<short-slug> main
+git fetch origin main --quiet
+git worktree add .claude/worktrees/docs-<N>-<short-slug> -b docs/<N>-<short-slug> origin/main
 cd .claude/worktrees/docs-<N>-<short-slug>
 ```
 
-All subsequent agent dispatches happen with this as cwd.
+Branch from `origin/main`, never local `main` — a stale base produces avoidable mid-flight rebase conflicts. All subsequent agent dispatches happen with this as cwd.
 
 ### Briefing back to the user
 
