@@ -8,7 +8,7 @@ import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.tubetoast.tether.presentation.transfer.PeerCardState
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.protocol.Device
-import com.tubetoast.tether.protocol.DevicePlatform
+import com.tubetoast.tether.protocol.DeviceType
 import com.tubetoast.tether.transfer.PeerTransferState
 
 @Composable
@@ -18,7 +18,7 @@ fun PeerCard(
 ) {
     val state by component.state.subscribeAsState()
     val isAutoSendEnabled by component.observeAutoSend().collectAsState(initial = false)
-    val devicePlatform = component.devicePlatform
+    val deviceType = component.deviceType
     val callbacks = PeerCardCallbacks(
         onToggleExpand = component::toggleExpanded,
         onToggleAutoSend = component::setAutoSend,
@@ -42,7 +42,7 @@ fun PeerCard(
         isAutoSendEnabled = isAutoSendEnabled,
         // TODO(#10): wire isPaired from PeerTransferComponent once observeIsPaired() is available
         isPaired = false,
-        devicePlatform = devicePlatform,
+        deviceType = deviceType,
     )
 }
 
@@ -55,7 +55,7 @@ internal fun PeerCardContent(
     modifier: Modifier = Modifier,
     isAutoSendEnabled: Boolean = false,
     isPaired: Boolean = false,
-    devicePlatform: DevicePlatform? = null,
+    deviceType: DeviceType? = null,
 ) {
     when (val transfer = state.transfer) {
         is PeerTransferState.Idle -> PeerCardIdle(
@@ -67,7 +67,7 @@ internal fun PeerCardContent(
             callbacks = callbacks,
             modifier = modifier,
             isPaired = isPaired,
-            devicePlatform = devicePlatform,
+            deviceType = deviceType,
         )
         is PeerTransferState.ActiveOutbound -> PeerCardActiveOutbound(
             state = transfer,

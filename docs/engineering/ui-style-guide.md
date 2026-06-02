@@ -52,7 +52,7 @@ All text-on-surface pairings pass AA (4.5:1 normal text / 3:1 large text). `peer
 | `numeric` | 600 | 13sp | 20sp | 0 | yes (`tnum`) |
 | `pinDisplay` | 600 | 48sp | 56sp | 8sp | yes (`tnum`) |
 
-Use `numeric` for all file sizes, ETA values, and progress percentages. Use `pinDisplay` for large verification-code displays (pairing PIN, confirmation codes). The `tnum` OpenType feature prevents digits from shifting width as values change, keeping progress rows stable during updates.
+Use `numeric` for all file sizes, ETA values, and progress percentages. The `tnum` OpenType feature prevents digits from shifting width as values change, keeping progress rows stable during updates.
 
 Every text style sets `LineHeightStyle` alignment to Center and trim to None. This keeps vertical metrics consistent between iOS and Android renderers.
 

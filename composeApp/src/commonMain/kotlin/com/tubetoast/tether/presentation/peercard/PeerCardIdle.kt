@@ -20,7 +20,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
 import com.tubetoast.tether.protocol.Device
-import com.tubetoast.tether.protocol.DevicePlatform
+import com.tubetoast.tether.protocol.DeviceType
 import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.ui.designsystem.BodyText
 import com.tubetoast.tether.ui.designsystem.ChevronToggleIcon
@@ -42,7 +42,7 @@ internal fun PeerCardIdle(
     callbacks: PeerCardCallbacks,
     modifier: Modifier = Modifier,
     isPaired: Boolean = false,
-    devicePlatform: DevicePlatform? = null,
+    deviceType: DeviceType? = null,
 ) {
     val spacing = TetherTheme.spacing
     val colors = TetherTheme.colors
@@ -63,9 +63,9 @@ internal fun PeerCardIdle(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            devicePlatform?.let { platform ->
+            deviceType?.let { type ->
                 Image(
-                    painter = rememberVectorPainter(platform.toTablerIcon()),
+                    painter = rememberVectorPainter(type.toTablerIcon()),
                     contentDescription = null,
                     colorFilter = ColorFilter.tint(colors.textMuted),
                     modifier = Modifier.size(20.dp),
@@ -112,7 +112,7 @@ private fun PreviewIdleCollapsedOnline(@PreviewParameter(Themes::class) dark: Bo
             isOnline = true,
             isAutoSendEnabled = false,
             callbacks = previewCallbacks(),
-            devicePlatform = DevicePlatform.Laptop,
+            deviceType = null,
         )
     }
 
@@ -128,7 +128,7 @@ private fun PreviewIdleCollapsedOffline(@PreviewParameter(Themes::class) dark: B
             isAutoSendEnabled = false,
             callbacks = previewCallbacks(),
             isPaired = true,
-            devicePlatform = DevicePlatform.Laptop,
+            deviceType = null,
         )
     }
 
@@ -143,7 +143,7 @@ private fun PreviewIdleExpandedAutoSendOff(@PreviewParameter(Themes::class) dark
             isOnline = true,
             isAutoSendEnabled = false,
             callbacks = previewCallbacks(),
-            devicePlatform = DevicePlatform.Smartphone,
+            deviceType = null,
         )
     }
 
@@ -159,7 +159,7 @@ private fun PreviewIdleExpandedAutoSendOn(@PreviewParameter(Themes::class) dark:
             isAutoSendEnabled = true,
             callbacks = previewCallbacks(),
             isPaired = true,
-            devicePlatform = DevicePlatform.Smartphone,
+            deviceType = null,
         )
     }
 
