@@ -46,4 +46,5 @@ Engineering concepts. The vocabulary [`architect`](../.claude/agents/architect.m
 - **Path sanitization** — the two-layer boundary that maps an untrusted `name` parameter to a safe on-disk destination: Layer 1 is the lexical sanitizer in the route handler, Layer 2 is the canonical-realisation check in UploadStorage. (see [file-transfer-wire.md](engineering/file-transfer-wire.md))
 - **Abort** — UploadStorage's failure-path cleanup: deletes the partial destination file and removes only the empty parent directories this upload created, leaving directories shared with other in-flight uploads alone. _Avoid:_ cancel, rollback.
 - **Downloads root** — the per-device root directory into which incoming files are landed; the security boundary every received file must stay inside. _Avoid:_ destination root, downloads folder when the security property matters.
+- **Keychain** — the platform-managed secure store for cryptographic keys; on Apple platforms, accessed via Security framework APIs. _Avoid:_ keystore (Android term), secure enclave (a sub-component of the Keychain stack, not the Keychain itself).
 

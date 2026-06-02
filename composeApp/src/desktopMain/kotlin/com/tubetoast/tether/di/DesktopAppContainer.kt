@@ -13,7 +13,7 @@ import com.tubetoast.tether.protocol.DeviceType
 import okio.Path.Companion.toPath
 import java.io.File
 
-class DesktopAppContainer(
+open class DesktopAppContainer(
     config: DesktopAppConfig,
     override val ownDeviceType: DeviceType = DeviceType.Desktop,
 ) : JvmAppContainer(config) {

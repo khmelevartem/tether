@@ -6,29 +6,59 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
 import com.tubetoast.tether.config.DeviceNameStore
 import com.tubetoast.tether.config.EphemeralDeviceNamePersistence
+import com.tubetoast.tether.di.CliAppContainer
 import com.tubetoast.tether.di.DefaultDesktopAppConfig
-import com.tubetoast.tether.di.DesktopAppContainer
+import com.tubetoast.tether.discovery.DiscoveredDevicesStore
 import com.tubetoast.tether.logging.initTetherLogging
 import com.tubetoast.tether.logging.isDebugEnabled
 import com.tubetoast.tether.network.FileClient
-import com.tubetoast.tether.network.send
 import com.tubetoast.tether.protocol.Device
-import com.tubetoast.tether.protocol.DeviceType
 import com.tubetoast.tether.protocol.SendResult
-import com.tubetoast.tether.transfer.ByteFormatting
+import com.tubetoast.tether.transfer.BatchSender
+import com.tubetoast.tether.transfer.ConnectionMonitor
+import com.tubetoast.tether.transfer.JvmPathFileSource
+import com.tubetoast.tether.transfer.PeerIdentity
+import com.tubetoast.tether.transfer.PeerTransferEngine
+import com.tubetoast.tether.transfer.PeerTransferEngineRegistry
+import com.tubetoast.tether.transfer.PeerTransferState
+import com.tubetoast.tether.transfer.PeerUnreachableException
+import com.tubetoast.tether.transfer.toPeerIdentity
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.io.path.exists
-import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.TimeSource
+import kotlin.time.Duration.Companion.seconds
 
-private const val ESC = ""
+sealed class CliBatchResult {
+    data object AllSent : CliBatchResult()
+
+    data object Partial : CliBatchResult()
+
+    data object Failed : CliBatchResult()
+
+    data object Cancelled : CliBatchResult()
+}
+
+fun CliBatchResult.toExitCode(): Int = when (this) {
+    CliBatchResult.AllSent -> 0
+    CliBatchResult.Partial -> 1
+    CliBatchResult.Failed -> 2
+    CliBatchResult.Cancelled -> 130
+}
+
+private fun PeerTransferState.isTerminal(): Boolean = this is PeerTransferState.Sent ||
+    this is PeerTransferState.Error ||
+    this is PeerTransferState.Cancelled
 
 class TetherCommand :
     CliktCommand(
@@ -47,9 +77,11 @@ class TetherCommand :
 
     override fun run() = runBlocking {
         initTetherLogging(debugEnabled = isDebugEnabled())
-        val container = DesktopAppContainer(
+
+        val activeEngineRef = AtomicReference<PeerTransferEngine?>(null)
+
+        val container = CliAppContainer(
             DefaultDesktopAppConfig(port = port ?: 0, namePersistenceOverride = EphemeralDeviceNamePersistence()),
-            ownDeviceType = DeviceType.Cli,
         )
 
         container.nameStore.init()
@@ -78,29 +110,24 @@ class TetherCommand :
         echo("FileServer started  →  http://localhost:${handle.port}/health")
         echo("mDNS started → advertising '$deviceName' on port ${handle.port}\n")
 
-        registerShutdownHook(handle)
+        registerShutdownHook(handle) {
+            activeEngineRef.get()?.onCancel()
+        }
 
         val discovery = container.mdnsDiscovery
-        var peersLinePrinted = false
         launch {
             discovery.discoveredDevices.collect { peers ->
                 val ids = if (peers.isEmpty()) "none" else peers.joinToString(", ") { it.id }
-                if (peersLinePrinted) {
-                    print("$ESC[1A\r$ESC[K[peers] $ids\n")
-                } else {
-                    print("[peers] $ids\n")
-                    peersLinePrinted = true
-                }
-                System.out.flush()
+                echo("[peers] $ids")
             }
         }
 
-        val fileClient = container.fileClient
         val cliScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-        echo("Commands: send <peer-name> <path>, list, name <new-name>, quit")
+        echo("Commands: send <peer-name> <path> [path2 ...], retry <peer-name>, list, name <new-name>, quit")
         echo("  Tip: use quotes for names/paths with spaces — send \"My Peer\" \"/my path/file.txt\"")
 
+        var lastExit = 0
         var running = true
         while (running) {
             val line = try {
@@ -125,22 +152,243 @@ class TetherCommand :
                 }
                 "send" -> {
                     if (tokens.size < 3) {
-                        echo("usage: send <peer-name> <path>")
+                        echo("usage: send <peer-name> <path> [path2 ...]")
                         continue
                     }
-                    handleSend(
-                        client = fileClient,
+                    val result = handleSend(
+                        engineRegistry = container.peerTransferEngineRegistry,
                         peers = discovery.discoveredDevices.value,
                         peerName = tokens[1],
-                        file = Path.of(tokens[2]),
+                        paths = tokens.drop(2).map { Path.of(it) },
+                        onActiveEngine = { activeEngineRef.set(it) },
                     )
+                    lastExit = result.toExitCode()
+                }
+                "retry" -> {
+                    if (tokens.size < 2) {
+                        echo("usage: retry <peer-name>")
+                        continue
+                    }
+                    val result = handleRetry(
+                        engineRegistry = container.peerTransferEngineRegistry,
+                        peers = discovery.discoveredDevices.value,
+                        peerName = tokens[1],
+                        onActiveEngine = { activeEngineRef.set(it) },
+                    )
+                    lastExit = result.toExitCode()
                 }
                 "quit" -> running = false
-                else -> echo("unknown command: '${tokens[0]}'. Available: send, list, name, quit.")
+                else -> echo("unknown command: '${tokens[0]}'. Available: send, retry, list, name, quit.")
             }
         }
-        System.exit(0)
+        throw ProgramResult(lastExit)
     }
+}
+
+internal fun buildCliBatchSender(
+    peer: PeerIdentity,
+    fileClient: FileClient,
+    connectionMonitor: ConnectionMonitor,
+    discoveredDevicesStore: DiscoveredDevicesStore,
+): BatchSender = BatchSender(
+    sendOne = { source, onProgress ->
+        val device = discoveredDevicesStore.devices.value
+            .firstOrNull { it.toPeerIdentity() == peer }
+            ?: throw PeerUnreachableException()
+        try {
+            // FileClient.send swallows all exceptions into SendResult.Failure — map to typed exceptions.
+            when (
+                val result = fileClient.send(
+                    device,
+                    source.openReadChannel(),
+                    source.name,
+                    source.sizeBytes,
+                    onProgress,
+                )
+            ) {
+                is SendResult.Success -> Unit
+                is SendResult.Failure -> throw PeerUnreachableException(RuntimeException(result.reason))
+            }
+        } finally {
+            source.close()
+        }
+    },
+    connectionMonitor = connectionMonitor,
+)
+
+suspend fun handleSend(
+    engineRegistry: PeerTransferEngineRegistry,
+    peers: List<Device>,
+    peerName: String,
+    paths: List<Path>,
+    output: (String) -> Unit = ::println,
+    errorOutput: (String) -> Unit = System.err::println,
+    onActiveEngine: (PeerTransferEngine?) -> Unit = {},
+): CliBatchResult {
+    val matching = peers.filter { it.name == peerName }
+    if (matching.isEmpty()) {
+        output("[send] ERROR: peer '$peerName' not found. Use 'list' to see known peers.")
+        return CliBatchResult.Failed
+    }
+    if (matching.size > 1) {
+        errorOutput("WARN: multiple peers named '$peerName', using first")
+    }
+    val peer = matching.first()
+
+    val missing = paths.filter { !it.exists() }
+    if (missing.isNotEmpty()) {
+        missing.forEach { output("[send] ERROR: file not found: $it") }
+        return CliBatchResult.Failed
+    }
+
+    val sources = paths.map { JvmPathFileSource(it) }
+    val engine = engineRegistry.engineFor(peer.toPeerIdentity())
+    // A fresh `send` discards any prior terminal state; without this the engine sits in
+    // Sent/Error/Cancelled and startOutbound silently no-ops. `retry` reads the terminal
+    // *before* this path runs and so is unaffected.
+    if (engine.state.value.isTerminal()) engine.onDismiss()
+    onActiveEngine(engine)
+    return try {
+        runEngineAndRender(engine, sources, output, errorOutput) { engine.startOutbound(it) }
+    } finally {
+        onActiveEngine(null)
+    }
+}
+
+suspend fun handleRetry(
+    engineRegistry: PeerTransferEngineRegistry,
+    peers: List<Device>,
+    peerName: String,
+    output: (String) -> Unit = ::println,
+    errorOutput: (String) -> Unit = System.err::println,
+    onActiveEngine: (PeerTransferEngine?) -> Unit = {},
+): CliBatchResult {
+    val matching = peers.filter { it.name == peerName }
+    if (matching.isEmpty()) {
+        output("[retry] ERROR: peer '$peerName' not found. Use 'list' to see known peers.")
+        return CliBatchResult.Failed
+    }
+    if (matching.size > 1) {
+        errorOutput("WARN: multiple peers named '$peerName', using first")
+    }
+    val peer = matching.first()
+    val engine = engineRegistry.engineFor(peer.toPeerIdentity())
+
+    val stateBefore = engine.state.value
+    if (!stateBefore.isTerminal()) {
+        output("[retry] '$peerName' has no terminal state to retry from")
+        return CliBatchResult.AllSent
+    }
+
+    // Subscribe before triggering the retry so no transition is missed between the call and the collect.
+    val next = coroutineScope {
+        val observer = async { engine.state.first { it !== stateBefore } }
+        engine.onRetryOutbound()
+        withTimeoutOrNull(2.seconds) { observer.await() }.also { observer.cancel() }
+    }
+    if (next == null || next.isTerminal()) {
+        output("[retry] nothing to retry on '$peerName'")
+        return CliBatchResult.AllSent
+    }
+
+    onActiveEngine(engine)
+    return try {
+        awaitAndRenderTerminal(engine, output, errorOutput)
+    } finally {
+        onActiveEngine(null)
+    }
+}
+
+private suspend fun runEngineAndRender(
+    engine: PeerTransferEngine,
+    sources: List<com.tubetoast.tether.transfer.FileSource>,
+    output: (String) -> Unit,
+    errorOutput: (String) -> Unit,
+    startFn: (List<com.tubetoast.tether.transfer.FileSource>) -> Unit,
+): CliBatchResult {
+    startFn(sources)
+    return collectUntilTerminal(engine, output, errorOutput)
+}
+
+private suspend fun awaitAndRenderTerminal(
+    engine: PeerTransferEngine,
+    output: (String) -> Unit,
+    errorOutput: (String) -> Unit,
+): CliBatchResult = collectUntilTerminal(engine, output, errorOutput)
+
+// `state.first { terminal }` returning before the separate renderer observed the terminal would
+// drop the final "done/error/cancelled" line — this collapses both into one collector.
+private suspend fun collectUntilTerminal(
+    engine: PeerTransferEngine,
+    output: (String) -> Unit,
+    errorOutput: (String) -> Unit,
+): CliBatchResult = coroutineScope {
+    val terminalSeen = CompletableDeferred<PeerTransferState>()
+    val rendererJob = launch {
+        var lastState: PeerTransferState? = null
+        engine.state.collect { state ->
+            renderStateTransition(lastState, state, output, errorOutput)
+            lastState = state
+            if (state.isTerminal()) terminalSeen.complete(state)
+        }
+    }
+    val terminal = terminalSeen.await()
+    rendererJob.cancel()
+    terminalToResult(terminal)
+}
+
+private fun renderStateTransition(
+    prev: PeerTransferState?,
+    current: PeerTransferState,
+    output: (String) -> Unit,
+    @Suppress("UNUSED_PARAMETER") errorOutput: (String) -> Unit,
+) {
+    when (current) {
+        is PeerTransferState.Reconnecting -> {
+            output("[send] reconnecting… ${current.remainingSeconds}s remaining")
+        }
+        is PeerTransferState.ActiveOutbound.Sending -> {
+            val prevPerFile = (prev as? PeerTransferState.ActiveOutbound)?.perFile ?: emptyList()
+            current.perFile.forEachIndexed { i, status ->
+                val prevStatus = prevPerFile.getOrNull(i)
+                if (prevStatus == null || prevStatus::class != status::class) {
+                    output("[send] ${status.name}  ${status.label()}")
+                }
+            }
+        }
+        is PeerTransferState.Sent -> {
+            if (current.partialReason != null) {
+                output("[send] partial — ${current.sent}/${current.total} sent")
+            } else {
+                output("[send] done — ${current.sent}/${current.total} sent")
+            }
+        }
+        is PeerTransferState.Error -> {
+            output("[send] error — ${current.reason}")
+        }
+        is PeerTransferState.Cancelled -> {
+            output("[send] cancelled — ${current.sent} sent")
+        }
+        else -> Unit
+    }
+}
+
+private fun com.tubetoast.tether.transfer.PerFileStatus.label(): String = when (this) {
+    is com.tubetoast.tether.transfer.PerFileStatus.Queued -> "queued"
+    is com.tubetoast.tether.transfer.PerFileStatus.InProgress -> "in progress"
+    is com.tubetoast.tether.transfer.PerFileStatus.Done -> "done"
+    is com.tubetoast.tether.transfer.PerFileStatus.Failed -> "failed: $reason"
+}
+
+private fun terminalToResult(state: PeerTransferState): CliBatchResult = when (state) {
+    is PeerTransferState.Sent -> if (state.partialReason == null && state.sent == state.total) {
+        CliBatchResult.AllSent
+    } else {
+        CliBatchResult.Partial
+    }
+    is PeerTransferState.Error -> CliBatchResult.Failed
+    is PeerTransferState.Cancelled -> CliBatchResult.Cancelled
+    else -> CliBatchResult.Failed
 }
 
 suspend fun handleName(
@@ -152,61 +400,6 @@ suspend fun handleName(
         onSuccess = { name -> output("OK name=$name") },
         onFailure = { output("ERR ${it.message}") },
     )
-}
-
-suspend fun handleSend(
-    client: FileClient,
-    peers: List<Device>,
-    peerName: String,
-    file: Path,
-    output: (String) -> Unit = ::println,
-    errorOutput: (String) -> Unit = System.err::println,
-    progressOutput: (String) -> Unit = { text ->
-        print(text)
-        System.out.flush()
-    },
-) {
-    if (!file.exists()) {
-        output("[send] ERROR: file not found: $file")
-        return
-    }
-
-    val matching = peers.filter { it.name == peerName }
-    if (matching.isEmpty()) {
-        output("[send] ERROR: peer '$peerName' not found. Use 'list' to see known peers.")
-        return
-    }
-    if (matching.size > 1) {
-        errorOutput("WARN: multiple peers named '$peerName', using first")
-    }
-    val peer = matching.first()
-
-    val started = TimeSource.Monotonic.markNow()
-    var lastPrint = started
-    var lastBytes = 0L
-
-    val result = client.send(peer, file) { transferred, total ->
-        val now = TimeSource.Monotonic.markNow()
-        if ((now - lastPrint) >= 500.milliseconds) {
-            val intervalSec = (now - lastPrint).inWholeMilliseconds / 1000.0
-            val speed = if (intervalSec > 0) (transferred - lastBytes) / intervalSec else 0.0
-            val formattedTotal = total?.let { " / ${ByteFormatting.formatSize(it)}" } ?: ""
-            progressOutput(
-                "\r[send] ${ByteFormatting.formatSize(
-                    transferred,
-                )}$formattedTotal  (${ByteFormatting.formatSize(speed.toLong())}/s)   ",
-            )
-            lastPrint = now
-            lastBytes = transferred
-        }
-    }
-
-    progressOutput("\n")
-    val elapsed = started.elapsedNow()
-    when (result) {
-        is SendResult.Success -> output("[send] OK — ${elapsed.inWholeMilliseconds} ms  →  ${result.savedPath}")
-        is SendResult.Failure -> output("[send] FAIL: ${result.reason}")
-    }
 }
 
 fun parseTokens(line: String): List<String> {

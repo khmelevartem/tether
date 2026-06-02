@@ -24,6 +24,10 @@ Identify:
 
 ## Procedure
 
+### 0. Read recent history of the suspected area first
+
+Before reproducing and before any hypothesis work — `git log --oneline -20 -- <suspected-path>` for each file in the suspected area. Often one of the recent diffs is the cause, or rules out a whole branch of hypotheses by showing the code was untouched. After a rebase / merge main, narrow the range: `git log --oneline <prev-merge-base>..HEAD -- <path>`. The cost is one git command; the upside is short-circuiting hypothesis enumeration.
+
 ### 1. Reproduce
 
 Run the user's steps locally. Use `/smoke-test` blocks if the bug is in a smoke-covered path, or the manual scenario otherwise. Decide:
@@ -49,6 +53,8 @@ Run the experiment. Record verdict for each hypothesis:
 - **CONFIRMED** — experiment matches the hypothesis's prediction
 - **REJECTED** — experiment contradicts the prediction
 - **INCONCLUSIVE** — couldn't differentiate; describe what blocked you
+
+**Multi-variant probe — when several hypotheses are about the shape of one external API call.** Instead of running N separate build-launch cycles for proof by elimination, write a single diagnostic invocation that exercises all N variants in one program run, logs each variant's outcome as its own line, then halts. One build, one launch; the log unambiguously names the surviving variant. Applies when the call site is identical and only the arguments / configuration differ — a dictionary built two ways, a flag set or not, the same query against different attribute combinations. Cost-effective when N≥3 or when each build-launch cycle is expensive (simulator boot, device flash, container rebuild).
 
 ### 3. If none of the listed hypotheses match
 

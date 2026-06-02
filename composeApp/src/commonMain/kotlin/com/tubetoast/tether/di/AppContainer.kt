@@ -28,6 +28,7 @@ import com.tubetoast.tether.transfer.AutoSendDispatcher
 import com.tubetoast.tether.transfer.BatchSender
 import com.tubetoast.tether.transfer.ConnectionMonitor
 import com.tubetoast.tether.transfer.NoOpConnectionMonitor
+import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PeerTransferEngine
 import com.tubetoast.tether.transfer.PeerTransferEngineRegistry
 import com.tubetoast.tether.transfer.PeerUnreachableException
@@ -67,8 +68,8 @@ abstract class AppContainer {
     open val connectionMonitor: ConnectionMonitor = NoOpConnectionMonitor
 
     // Factory: BatchSender holds per-transfer state — one instance per concurrent peer transfer.
-    open val batchSenderFactory: () -> BatchSender by lazy {
-        {
+    open val batchSenderFactory: (PeerIdentity) -> BatchSender by lazy {
+        { _ ->
             BatchSender(
                 sendOne = { _, _ -> throw PeerUnreachableException() },
                 connectionMonitor = connectionMonitor,
@@ -94,7 +95,7 @@ abstract class AppContainer {
             engineFactory = { peer, engineScope ->
                 PeerTransferEngine(
                     peer = peer,
-                    batchSenderFactory = batchSenderFactory,
+                    batchSenderFactory = { batchSenderFactory(peer) },
                     // TODO(#195): wire real ReceiveEvent source when Receiver UI lands
                     reconnectionTimeout = ReconnectionTimeout.DEFAULT,
                     scope = engineScope,
