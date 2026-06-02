@@ -32,8 +32,6 @@ Read the diff top to bottom. For each meaningful platform-touching change, write
 
 Output 2–4 such assumptions per significant change. Lean toward writing more rather than fewer — a missed assumption costs a review round.
 
-Use Phase 1 to drive grep / read decisions. If an assumption is "this Apple SDK dict has the right keys in the right slots", read Apple's SDK reference (or local knowledge notes) and verify each key's placement against the specific call site — not by inference from neighbouring code.
-
 ## Phase 2 — Concrete checklist
 
 Walk [`docs/engineering/platform-concerns.md`](../../docs/engineering/platform-concerns.md). For each item that touches the diff, verify it. Items that don't touch the diff do not need an entry in the output.
