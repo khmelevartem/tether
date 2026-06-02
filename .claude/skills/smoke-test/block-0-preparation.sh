@@ -11,7 +11,7 @@ cd "$(git rev-parse --show-toplevel)"
 
 ./gradlew :composeApp:cliJar -q
 
-JAR=$(ls composeApp/build/libs/tether-cli-*.jar composeApp/build/libs/tether-cli.jar 2>/dev/null | head -1)
+JAR=$(ls composeApp/build/libs/tether-cli-*.jar composeApp/build/libs/tether-cli.jar 2>/dev/null | head -1 || true)
 [ -z "$JAR" ] && { echo "FAIL: cli jar not found after build"; exit 1; }
 
 echo "JAR=$JAR"

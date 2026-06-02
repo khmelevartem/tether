@@ -8,7 +8,7 @@ LOG_A="${LOG_A:-/tmp/smoke-cliA.log}"
 LOG_B="${LOG_B:-/tmp/smoke-cliB.log}"
 DOWNLOADS_B="${DOWNLOADS_B:-$HOME/Downloads/Tether}"
 JAR="${JAR:-$(ls "$(git rev-parse --show-toplevel)"/composeApp/build/libs/tether-cli-*.jar \
-  "$(git rev-parse --show-toplevel)"/composeApp/build/libs/tether-cli.jar 2>/dev/null | head -1)}"
+  "$(git rev-parse --show-toplevel)"/composeApp/build/libs/tether-cli.jar 2>/dev/null | head -1 || true)}"
 
 # Stop B and immediately send — A's registry still holds the stale peer entry, so the
 # engine begins a transfer that fails mid-flight (connection refused) instead of erroring
