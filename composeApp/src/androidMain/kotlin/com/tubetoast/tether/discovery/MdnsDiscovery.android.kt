@@ -37,7 +37,6 @@ actual class MdnsDiscovery(
     @Volatile private var currentPort: Int = 0
     private val resolving = AtomicBoolean(false)
     private val resolveQueue = ConcurrentLinkedQueue<NsdServiceInfo>()
-    private val nameToFingerprint = mutableMapOf<String, String>()
 
     @Volatile private var registrationListener: NsdManager.RegistrationListener? = null
 
@@ -98,7 +97,13 @@ actual class MdnsDiscovery(
         override fun onServiceLost(serviceInfo: NsdServiceInfo) {
             if (nsdManager == null) return
             log.debug { "NSD service lost: ${serviceInfo.serviceName}" }
-            nameToFingerprint.remove(serviceInfo.serviceName)?.let(store::removeByFingerprint)
+            // Look up the store, not a local map — a multi-rename storm produces multiple
+            // BrowseAdd events for one fingerprint, but the store retains only the latest name
+            // (Rule 1). A removal under a stale intermediate name must not evict the live entry.
+            store.devices.value
+                .firstOrNull { it.name == serviceInfo.serviceName }
+                ?.fingerprint
+                ?.let(store::removeByFingerprint)
         }
     }
 
@@ -137,7 +142,6 @@ actual class MdnsDiscovery(
                 onResolveComplete()
                 return
             }
-            nameToFingerprint[serviceInfo.serviceName] = peerFingerprint
             val device = Device(
                 name = serviceInfo.serviceName,
                 host = host,
@@ -245,7 +249,6 @@ actual class MdnsDiscovery(
             currentPort = 0
             resolveQueue.clear()
             resolving.set(false)
-            nameToFingerprint.clear()
             store.clear()
         }
     }

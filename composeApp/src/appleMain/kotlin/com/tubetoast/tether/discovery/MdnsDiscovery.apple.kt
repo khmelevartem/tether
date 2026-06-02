@@ -51,7 +51,6 @@ actual class MdnsDiscovery(
     private var serviceDelegate: ServiceDelegate? = null
     private var browserDelegate: BrowserDelegate? = null
     private val resolutionDelegates = mutableListOf<ResolutionDelegate>()
-    private val nameToFingerprint = mutableMapOf<String, String>()
 
     actual override suspend fun start(deviceName: String, port: Int) {
         val fingerprint = deviceIdentityStore.getOrCreate()
@@ -113,7 +112,6 @@ actual class MdnsDiscovery(
             serviceDelegate = null
             browserDelegate = null
             resolutionDelegates.clear()
-            nameToFingerprint.clear()
             store.clear()
 
             log.info { "stopped" }
@@ -180,7 +178,14 @@ actual class MdnsDiscovery(
     private fun onServiceRemoved(service: NSNetService) {
         val serviceName = service.name
         log.info { "service removed $serviceName" }
-        nameToFingerprint.remove(serviceName)?.let(store::removeByFingerprint)
+        // Look up the store, not a local map — a multi-rename storm produces multiple
+        // BrowseAdd events for one fingerprint, but the store retains only the latest
+        // name (Rule 1). A removal under a stale intermediate name must not evict the
+        // live canonical entry.
+        store.devices.value
+            .firstOrNull { it.name == serviceName }
+            ?.fingerprint
+            ?.let(store::removeByFingerprint)
     }
 
     private fun onServiceResolved(service: NSNetService) {
@@ -204,7 +209,6 @@ actual class MdnsDiscovery(
             log.debug { "resolved $serviceName without fp TXT, deferring upsert" }
             return
         }
-        nameToFingerprint[serviceName] = peerFingerprint
 
         val device = Device(
             name = serviceName,

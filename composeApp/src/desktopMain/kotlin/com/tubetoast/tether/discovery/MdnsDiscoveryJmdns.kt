@@ -131,7 +131,6 @@ internal class MdnsDiscoveryJmdns(
                 tearDown(key, jmdns)
             }
             instances.clear()
-            nameToFingerprint.clear()
             ownPort = -1
             store.clear()
         }
@@ -183,8 +182,6 @@ internal class MdnsDiscoveryJmdns(
         }
     }
 
-    private val nameToFingerprint = mutableMapOf<String, String>()
-
     private fun makeListener(owningJmdns: JmDNS): ServiceListener = object : ServiceListener {
         override fun serviceAdded(event: ServiceEvent) {
             owningJmdns.requestServiceInfo(event.type, event.name)
@@ -192,7 +189,14 @@ internal class MdnsDiscoveryJmdns(
 
         override fun serviceRemoved(event: ServiceEvent) {
             log.info { "serviceRemoved '${event.name}'" }
-            nameToFingerprint.remove(event.name)?.let(store::removeByFingerprint)
+            // Look up the store, not a local map — a multi-rename storm produces multiple
+            // BrowseAdd events for one fingerprint, but the store retains only the latest
+            // name (Rule 1). A removal under a stale intermediate name must not evict the
+            // live canonical entry.
+            store.devices.value
+                .firstOrNull { it.name == event.name }
+                ?.fingerprint
+                ?.let(store::removeByFingerprint)
         }
 
         override fun serviceResolved(event: ServiceEvent) {
@@ -209,7 +213,6 @@ internal class MdnsDiscoveryJmdns(
                 val peerFingerprint = info.getPropertyString("fp") ?: return
                 if (isOwnAnnounce(peerFingerprint)) return
                 val ipv4 = resolveIPv4(info, event.name) ?: return
-                nameToFingerprint[event.name] = peerFingerprint
                 store.upsert(
                     Device(
                         name = event.name,
