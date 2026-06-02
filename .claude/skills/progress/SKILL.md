@@ -29,7 +29,7 @@ Write all outputs to `/tmp/tether-progress-raw/` (create the dir first).
 
 3. **Issue dependencies.** For each issue where `issue_dependencies_summary.total_blocked_by > 0`, call `gh api 'repos/<owner>/<repo>/issues/<N>/dependencies/blocked_by'`. Collect results as `{ "<N>": [blocker_numbers] }`. Write to `blocked_by.json` (empty `{}` when none). The `addIssueDependency` GraphQL mutation does not exist in GitHub — use REST only.
 
-4. **LOC by source set.** For each source set in `assets/locations.json`, count lines in `.kt`/`.swift` files under `composeApp/src/<sourceSet>/`. Write to `loc.json` as `{ "<sourceSet>": <int> }`.
+4. **LOC by source set.** For each source set in `assets/locations.json`, count lines and files in `.kt`/`.swift` files under `composeApp/src/<sourceSet>/`. Write to `loc.json` as `{ "<sourceSet>": <int>, "<sourceSet>_files": <int> }` — both keys for every source set (0 when the directory does not exist).
 
 5. **Sprint cutoff.** `git log --diff-filter=A --follow --format='%aI' -- docs/sprints/sprint-01.md | tail -1`. Write the ISO date to `sprint_cutoff.txt`.
 
