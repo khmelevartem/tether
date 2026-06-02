@@ -1,14 +1,21 @@
 package com.tubetoast.tether.presentation.peercard
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
@@ -18,6 +25,8 @@ import com.tubetoast.tether.ui.designsystem.BodyText
 import com.tubetoast.tether.ui.designsystem.ChevronToggleIcon
 import com.tubetoast.tether.ui.designsystem.TitleText
 import com.tubetoast.tether.ui.feature.AutoSendToggle
+import com.tubetoast.tether.ui.feature.DevicePlatform
+import com.tubetoast.tether.ui.feature.toTablerIcon
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
 import com.tubetoast.tether.ui.preview.TransferPreviewFixtures
@@ -32,13 +41,18 @@ internal fun PeerCardIdle(
     isAutoSendEnabled: Boolean,
     callbacks: PeerCardCallbacks,
     modifier: Modifier = Modifier,
+    isPaired: Boolean = false,
+    devicePlatform: DevicePlatform? = null,
 ) {
     val spacing = TetherTheme.spacing
     val colors = TetherTheme.colors
     val peerName = device.name
 
+    val shellModifier = if (isPaired && !isOnline) modifier.alpha(0.45f) else modifier
+
     PeerCardShell(
-        modifier = modifier,
+        modifier = shellModifier,
+        isPaired = isPaired,
         contentPadding = PaddingValues(0.dp),
         verticalArrangement = Arrangement.Top,
     ) {
@@ -49,6 +63,15 @@ internal fun PeerCardIdle(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
+            devicePlatform?.let { platform ->
+                Image(
+                    painter = rememberVectorPainter(platform.toTablerIcon()),
+                    contentDescription = null,
+                    colorFilter = ColorFilter.tint(colors.textMuted),
+                    modifier = Modifier.size(20.dp),
+                )
+                Spacer(Modifier.width(spacing.sm))
+            }
             Column(modifier = Modifier.weight(1f)) {
                 TitleText(text = peerName)
                 BodyText(
@@ -89,10 +112,11 @@ private fun PreviewIdleCollapsedOnline(@PreviewParameter(Themes::class) dark: Bo
             isOnline = true,
             isAutoSendEnabled = false,
             callbacks = previewCallbacks(),
+            devicePlatform = DevicePlatform.Laptop,
         )
     }
 
-@Preview(name = "PeerCardIdle — collapsed offline")
+@Preview(name = "PeerCardIdle — collapsed offline paired")
 @Composable
 private fun PreviewIdleCollapsedOffline(@PreviewParameter(Themes::class) dark: Boolean) =
     PreviewSurface(darkTheme = dark) {
@@ -103,6 +127,8 @@ private fun PreviewIdleCollapsedOffline(@PreviewParameter(Themes::class) dark: B
             isOnline = false,
             isAutoSendEnabled = false,
             callbacks = previewCallbacks(),
+            isPaired = true,
+            devicePlatform = DevicePlatform.Laptop,
         )
     }
 
@@ -117,6 +143,7 @@ private fun PreviewIdleExpandedAutoSendOff(@PreviewParameter(Themes::class) dark
             isOnline = true,
             isAutoSendEnabled = false,
             callbacks = previewCallbacks(),
+            devicePlatform = DevicePlatform.Smartphone,
         )
     }
 
@@ -131,6 +158,8 @@ private fun PreviewIdleExpandedAutoSendOn(@PreviewParameter(Themes::class) dark:
             isOnline = true,
             isAutoSendEnabled = true,
             callbacks = previewCallbacks(),
+            isPaired = true,
+            devicePlatform = DevicePlatform.Smartphone,
         )
     }
 

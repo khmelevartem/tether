@@ -3,12 +3,15 @@ package com.tubetoast.tether.presentation.peercard
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.tubetoast.tether.presentation.transfer.PeerCardState
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.PeerTransferState
+import com.tubetoast.tether.ui.feature.DevicePlatform
+import com.tubetoast.tether.ui.feature.inferDevicePlatform
 
 @Composable
 fun PeerCard(
@@ -17,6 +20,9 @@ fun PeerCard(
 ) {
     val state by component.state.subscribeAsState()
     val isAutoSendEnabled by component.observeAutoSend().collectAsState(initial = false)
+    val devicePlatform = remember(component.peer.device.name) {
+        inferDevicePlatform(component.peer.device.name)
+    }
     val callbacks = PeerCardCallbacks(
         onToggleExpand = component::toggleExpanded,
         onToggleAutoSend = component::setAutoSend,
@@ -38,6 +44,9 @@ fun PeerCard(
         callbacks = callbacks,
         modifier = modifier,
         isAutoSendEnabled = isAutoSendEnabled,
+        // TODO(#10): wire isPaired from PeerTransferComponent once observeIsPaired() is available
+        isPaired = false,
+        devicePlatform = devicePlatform,
     )
 }
 
@@ -49,6 +58,8 @@ internal fun PeerCardContent(
     callbacks: PeerCardCallbacks,
     modifier: Modifier = Modifier,
     isAutoSendEnabled: Boolean = false,
+    isPaired: Boolean = false,
+    devicePlatform: DevicePlatform? = null,
 ) {
     when (val transfer = state.transfer) {
         is PeerTransferState.Idle -> PeerCardIdle(
@@ -59,6 +70,8 @@ internal fun PeerCardContent(
             isAutoSendEnabled = isAutoSendEnabled,
             callbacks = callbacks,
             modifier = modifier,
+            isPaired = isPaired,
+            devicePlatform = devicePlatform,
         )
         is PeerTransferState.ActiveOutbound -> PeerCardActiveOutbound(
             state = transfer,
