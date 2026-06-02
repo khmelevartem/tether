@@ -31,4 +31,13 @@ class DevicePlatformTest {
 
     @Test
     fun unknownDeviceIsNull() = assertNull(inferDevicePlatform("Unknown Device"))
+
+    @Test
+    fun windowsLaptopIsLaptop() = assertEquals(DevicePlatform.Laptop, inferDevicePlatform("Windows Laptop"))
+
+    @Test
+    fun samsungTabletIsTablet() = assertEquals(DevicePlatform.Tablet, inferDevicePlatform("Samsung Galaxy Tablet"))
+
+    @Test
+    fun windowsDesktopIsDesktop() = assertEquals(DevicePlatform.Desktop, inferDevicePlatform("Windows Desktop"))
 }

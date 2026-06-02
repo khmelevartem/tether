@@ -42,6 +42,7 @@ import compose.icons.tablericons.AlertCircle
 import compose.icons.tablericons.Check
 import compose.icons.tablericons.Clock
 
+private val PeerIdentityStripWidth = 3.dp
 private val StatusIconSize = 20.dp
 private val TrailingSlotSize = 28.dp
 private val ProgressBarHeight = 3.dp
@@ -93,7 +94,7 @@ fun PerFileRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (identityColor != Color.Unspecified) {
-            PeerIdentityAccent(identityColor = identityColor, width = 3.dp)
+            PeerIdentityAccent(identityColor = identityColor, width = PeerIdentityStripWidth)
         }
         Row(
             modifier = Modifier

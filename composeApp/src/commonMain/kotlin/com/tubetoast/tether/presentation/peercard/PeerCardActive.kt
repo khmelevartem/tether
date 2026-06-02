@@ -40,6 +40,7 @@ internal fun PeerCardActiveOutbound(
     device: Device,
     callbacks: PeerCardCallbacks,
     modifier: Modifier = Modifier,
+    isPaired: Boolean = false,
 ) {
     val peerName = device.name
     val sending = state as? PeerTransferState.ActiveOutbound.Sending
@@ -58,6 +59,7 @@ internal fun PeerCardActiveOutbound(
         totalBytes = state.totalBytes,
         bytesPerSec = sending?.bytesPerSec,
         isInbound = false,
+        isPaired = isPaired,
         trailingContent = {
             val skipped = sending?.skippedCount ?: 0
             if (skipped > 0) {
@@ -78,6 +80,7 @@ internal fun PeerCardActiveInbound(
     device: Device,
     callbacks: PeerCardCallbacks,
     modifier: Modifier = Modifier,
+    isPaired: Boolean = false,
 ) {
     val peerName = device.name
     val progress = if (state.totalBytes != null && state.totalBytes > 0) {
@@ -95,6 +98,7 @@ internal fun PeerCardActiveInbound(
         totalBytes = state.totalBytes,
         bytesPerSec = state.bytesPerSec,
         isInbound = true,
+        isPaired = isPaired,
         trailingContent = {},
         cancelDescription = "Cancel incoming transfer from $peerName",
         onCancel = callbacks.onCancel,
@@ -114,6 +118,7 @@ private fun ActiveCardShell(
     totalBytes: Long?,
     bytesPerSec: Long?,
     isInbound: Boolean,
+    isPaired: Boolean,
     trailingContent: @Composable () -> Unit,
     cancelDescription: String,
     onCancel: () -> Unit,
@@ -132,7 +137,7 @@ private fun ActiveCardShell(
 
     PeerCardShell(
         modifier = modifier.semantics { liveRegion = LiveRegionMode.Polite },
-        isPaired = true,
+        isPaired = isPaired,
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

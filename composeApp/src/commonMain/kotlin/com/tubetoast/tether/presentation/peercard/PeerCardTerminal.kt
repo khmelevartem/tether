@@ -36,12 +36,15 @@ import com.tubetoast.tether.ui.theme.TetherTheme
 import compose.icons.TablerIcons
 import compose.icons.tablericons.CircleCheck
 
+private val LeadingIconSize = 18.dp
+
 @Composable
 internal fun PeerCardSent(
     state: PeerTransferState.Sent,
     device: Device,
     callbacks: PeerCardCallbacks,
     modifier: Modifier = Modifier,
+    isPaired: Boolean = false,
 ) {
     val peerName = device.name
     TerminalShell(
@@ -52,6 +55,7 @@ internal fun PeerCardSent(
         onDismiss = callbacks.onDismiss,
         onShowDetails = callbacks.onShowDetails,
         leadingIcon = TablerIcons.CircleCheck,
+        isPaired = isPaired,
         modifier = modifier,
     )
 }
@@ -70,12 +74,13 @@ internal fun PeerCardReceived(
     device: Device,
     callbacks: PeerCardCallbacks,
     modifier: Modifier = Modifier,
+    isPaired: Boolean = false,
     deepLinkHint: String = "Open file manager → Downloads → Tether",
     showDeepLinkHint: Boolean = false,
 ) {
     val peerName = device.name
 
-    PeerCardShell(modifier = modifier, isPaired = true) {
+    PeerCardShell(modifier = modifier, isPaired = isPaired) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -125,6 +130,7 @@ internal fun PeerCardCancelled(
     device: Device,
     callbacks: PeerCardCallbacks,
     modifier: Modifier = Modifier,
+    isPaired: Boolean = false,
 ) {
     val peerName = device.name
     TerminalShell(
@@ -134,6 +140,7 @@ internal fun PeerCardCancelled(
         dismissDescription = "Dismiss cancelled transfer for $peerName",
         onDismiss = callbacks.onDismiss,
         onShowDetails = callbacks.onShowDetails,
+        isPaired = isPaired,
         modifier = modifier,
     )
 }
@@ -145,6 +152,7 @@ internal fun PeerCardError(
     isOnline: Boolean,
     callbacks: PeerCardCallbacks,
     modifier: Modifier = Modifier,
+    isPaired: Boolean = false,
 ) {
     val colors = TetherTheme.colors
     val peerName = device.name
@@ -155,7 +163,7 @@ internal fun PeerCardError(
         "Retry not available — $peerName is offline"
     }
 
-    PeerCardShell(modifier = modifier, isPaired = true) {
+    PeerCardShell(modifier = modifier, isPaired = isPaired) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -206,11 +214,12 @@ private fun TerminalShell(
     onShowDetails: () -> Unit,
     modifier: Modifier = Modifier,
     leadingIcon: ImageVector? = null,
+    isPaired: Boolean = false,
 ) {
     val colors = TetherTheme.colors
     val spacing = TetherTheme.spacing
 
-    PeerCardShell(modifier = modifier, isPaired = true) {
+    PeerCardShell(modifier = modifier, isPaired = isPaired) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -229,7 +238,7 @@ private fun TerminalShell(
                     painter = rememberVectorPainter(leadingIcon),
                     contentDescription = null,
                     colorFilter = ColorFilter.tint(colors.accent),
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(LeadingIconSize),
                 )
                 Spacer(Modifier.width(spacing.sm))
                 TitleText(text = statusCopy, modifier = Modifier.weight(1f))

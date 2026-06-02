@@ -18,6 +18,8 @@ import androidx.compose.ui.unit.dp
 import com.tubetoast.tether.ui.feature.PeerIdentityAccent
 import com.tubetoast.tether.ui.theme.TetherTheme
 
+private val PeerIdentityStripWidth = 3.dp
+
 /**
  * When [isPaired] is true, a peer-identity accent marks the card, indicating an established
  * pairing relationship.
@@ -35,8 +37,9 @@ internal fun PeerCardShell(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = TetherTheme.colors
+    val spacing = TetherTheme.spacing
     val borderColor = colors.border
-    val strokeWidth = with(LocalDensity.current) { 1.dp.toPx() }
+    val borderWidthPx = with(LocalDensity.current) { spacing.borderWidth.toPx() }
 
     Row(
         modifier = modifier
@@ -47,12 +50,12 @@ internal fun PeerCardShell(
                     color = borderColor,
                     start = Offset(0f, size.height),
                     end = Offset(size.width, size.height),
-                    strokeWidth = strokeWidth,
+                    strokeWidth = borderWidthPx,
                 )
             },
     ) {
         if (isPaired) {
-            PeerIdentityAccent(identityColor = colors.peerIdentity, width = 3.dp)
+            PeerIdentityAccent(identityColor = colors.peerIdentity, width = PeerIdentityStripWidth)
         }
         Column(
             modifier = Modifier

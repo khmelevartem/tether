@@ -25,6 +25,7 @@ internal fun PeerCardReconnecting(
     state: PeerTransferState.Reconnecting,
     device: Device,
     modifier: Modifier = Modifier,
+    isPaired: Boolean = false,
 ) {
     val spacing = TetherTheme.spacing
     val peerName = device.name
@@ -35,6 +36,7 @@ internal fun PeerCardReconnecting(
             liveRegion = LiveRegionMode.Assertive
             contentDescription = announcement
         },
+        isPaired = isPaired,
         verticalArrangement = Arrangement.spacedBy(spacing.md),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {

@@ -73,35 +73,47 @@ internal fun PeerCardContent(
             state = transfer,
             device = device,
             callbacks = callbacks,
+            // TODO(#10): wire isPaired from PeerTransferComponent once observeIsPaired() is available
+            isPaired = isPaired,
             modifier = modifier,
         )
         is PeerTransferState.ActiveInbound -> PeerCardActiveInbound(
             state = transfer,
             device = device,
             callbacks = callbacks,
+            // TODO(#10): wire isPaired from PeerTransferComponent once observeIsPaired() is available
+            isPaired = isPaired,
             modifier = modifier,
         )
         is PeerTransferState.Reconnecting -> PeerCardReconnecting(
             state = transfer,
             device = device,
+            // TODO(#10): wire isPaired from PeerTransferComponent once observeIsPaired() is available
+            isPaired = isPaired,
             modifier = modifier,
         )
         is PeerTransferState.Sent -> PeerCardSent(
             state = transfer,
             device = device,
             callbacks = callbacks,
+            // TODO(#10): wire isPaired from PeerTransferComponent once observeIsPaired() is available
+            isPaired = isPaired,
             modifier = modifier,
         )
         is PeerTransferState.Received -> PeerCardReceived(
             state = transfer,
             device = device,
             callbacks = callbacks,
+            // TODO(#10): wire isPaired from PeerTransferComponent once observeIsPaired() is available
+            isPaired = isPaired,
             modifier = modifier,
         )
         is PeerTransferState.Cancelled -> PeerCardCancelled(
             state = transfer,
             device = device,
             callbacks = callbacks,
+            // TODO(#10): wire isPaired from PeerTransferComponent once observeIsPaired() is available
+            isPaired = isPaired,
             modifier = modifier,
         )
         is PeerTransferState.Error -> PeerCardError(
@@ -109,6 +121,8 @@ internal fun PeerCardContent(
             device = device,
             isOnline = isOnline,
             callbacks = callbacks,
+            // TODO(#10): wire isPaired from PeerTransferComponent once observeIsPaired() is available
+            isPaired = isPaired,
             modifier = modifier,
         )
     }
