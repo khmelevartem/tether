@@ -50,4 +50,4 @@ Apply these now, before any split:
 - **No upward imports.** UI does not import network internals directly — it goes through a discovery/transfer interface.
 - **`actual` implementations don't leak into `commonMain`.** Platform behaviour is modelled as `expect`/`actual`, not as runtime platform checks.
 - **JVM-only code stays in `jvmMain`.** It never moves into `commonMain` to avoid a perceived duplicate.
-- **One layer per package.** `protocol/`, `discovery/`, `network/`, `ui/` — package boundaries mark the layers even inside a single module.
+- **One layer per package.** Package boundaries mark the canonical layers even inside a single module. Current packages map to the four layers: `protocol/` → Domain; `discovery/` and `network/` → Data; Presentation components live under `presentation/`; composables under `ui/`. Per-layer ownership and import rules: [layering.md](layering.md).
