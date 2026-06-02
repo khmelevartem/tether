@@ -49,8 +49,9 @@ echo "PASS: launch"
 IOS_NAME=""
 for i in $(seq 1 30); do
   set +e
-  IOS_NAME=$( ( dns-sd -B _tether._tcp local. & DNSSD=$!; sleep 2; kill $DNSSD 2>/dev/null ) \
-    | awk -F'\t' '/_tether._tcp/ && NF>1 { print $NF }' \
+  IOS_NAME=$( ( dns-sd -B _tether._tcp . & DNSSD=$!; sleep 2; kill $DNSSD 2>/dev/null ) 2>&1 \
+    | grep '_tether._tcp' \
+    | sed 's/.*_tether\._tcp\.[[:space:]]*//' \
     | grep -E 'iPhone|iPad' | head -1 | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
   set -e
   [ -n "$IOS_NAME" ] && break
@@ -58,11 +59,11 @@ for i in $(seq 1 30); do
 done
 [ -n "$IOS_NAME" ] && echo "PASS: mDNS publish — $IOS_NAME" || echo "FAIL: mDNS publish — no iOS service seen (check Local Network Privacy prompt)"
 
-# TXT record
+# TXT record — expects #fp=<fingerprint> (23 66 70 3D prefix, 36 bytes)
 set +e
-TXT_OK=$( ( dns-sd -q "${IOS_NAME}._tether._tcp.local." TXT & DNSSD=$!; sleep 3; kill $DNSSD 2>/dev/null ) 2>&1 | grep -c '03 76 3D 31' || echo 0)
+TXT_LINE=$( ( dns-sd -q "${IOS_NAME}._tether._tcp.local." TXT & DNSSD=$!; sleep 3; kill $DNSSD 2>/dev/null ) 2>&1 | grep 'TXT.*IN.*36 bytes.*23 66 70 3D' | head -1)
 set -e
-[ "$TXT_OK" -gt 0 ] && echo "PASS: TXT publish — v=1 record present" || echo "FAIL: TXT publish — 03 76 3D 31 not seen"
+[ -n "$TXT_LINE" ] && echo "PASS: TXT publish — #fp fingerprint record present" || echo "FAIL: TXT publish — #fp record not seen"
 
 # Cross-discovery
 for i in $(seq 1 30); do

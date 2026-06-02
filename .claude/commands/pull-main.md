@@ -11,15 +11,11 @@ Empty — main already included, stop.
 
 ## 2. Merge
 
-Default — `merge` (preserves branch history, no force-push needed):
+Default — `merge` (preserves branch history, no force-push needed). Use `rebase` only when explicitly asked or when linear history is required before a squash-merge.
 
-```bash
-git merge origin/main
-```
-
-If the branch was already pushed, a plain `git push` is enough after step 3 passes. Use `rebase` instead only when explicitly asked or when a linear history is required (e.g. the branch is solo-authored and you want to keep it tidy before squash-merge).
-
-Resolve conflicts before step 3.
+1. **Uncommitted WIP present** — stash it first so the merge applies to a clean tree: `git stash push -u`.
+2. **Merge** — `git merge origin/main`; resolve any conflicts in committed files by hand before step 3.
+3. **Stashed in step 1** — restore: `git stash pop`. If the pop surfaces conflict markers, do not resolve by hand: copy the WIP files outside the worktree, run `git checkout HEAD -- . && git clean -fd && git stash drop`, then re-dispatch the implementing agent against fresh upstream with the saved files as reference.
 
 ## 3. Assess semantic overlap
 

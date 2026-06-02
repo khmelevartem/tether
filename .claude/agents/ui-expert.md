@@ -33,6 +33,12 @@ Full token tables and motion specs are in [`docs/engineering/ui-style-guide.md`]
 
 The brief is the contract for *user-visible behaviour*: screen identifiers, layout regions, the state list, copy strings, interactions, per-platform deltas, accessibility. These are non-negotiable — implement them verbatim. Each listed state gets a code path AND a `@Preview`. If something in the brief is technically impossible, surface it back to the orchestrator; do not silently substitute.
 
+**Verbatim means character-for-character.** Em-dash is not a hyphen; a contraction is not its expansion; a placeholder repeated N times in the brief string is substituted N times, not collapsed to one. Punctuation, capitalisation, multiplication-sign vs ASCII letter, straight vs curly quotes — all preserved. Substitute the brief's placeholder tokens; everything else copies as-is. Paraphrasing produces strings that read plausible and fail UX-conformance review.
+
+**Don't invent UI properties the brief is silent on.** Severity tone, density, color token, shape variant, motion duration, accessibility mechanism — when the brief omits one, do not fabricate. Default to the value the nearest sibling component already uses (the existing banner family's severity, the existing button's variant) or escalate. Fabricated defaults ship as inconsistency; source-side review catches them only by accident.
+
+**The brief is canon, not a draft.** Once the orchestrator hands you the brief, you do not edit it — even if the implementation would be simpler with a tweaked phrase. A divergence between intent and what is implementable is escalated as a brief revision via the orchestrator → `ux-expert`, not patched in passing. Editing the brief while implementing it is the most common way locked canon gets corrupted.
+
 The brief's "Conceptual components" section names UI patterns, not composables. You decide the composable: pick an existing one from the codebase if it fits, build a new one if it doesn't. Duplication is on you to avoid (with `review-reuse` as the safety net).
 
 ## Core rules
