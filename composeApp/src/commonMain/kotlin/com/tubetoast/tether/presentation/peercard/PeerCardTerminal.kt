@@ -52,7 +52,6 @@ internal fun PeerCardSent(
         onDismiss = callbacks.onDismiss,
         onShowDetails = callbacks.onShowDetails,
         leadingIcon = TablerIcons.CircleCheck,
-        helperLabel = if (state.partialReason == null) "Tap to open in file manager" else null,
         modifier = modifier,
     )
 }

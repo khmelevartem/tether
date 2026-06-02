@@ -7,6 +7,8 @@ import com.arkivanov.decompose.value.update
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.destroy
 import com.tubetoast.tether.peer.Peer
+import com.tubetoast.tether.protocol.DevicePlatform
+import com.tubetoast.tether.protocol.inferDevicePlatform
 import com.tubetoast.tether.transfer.FileSource
 import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PeerTransferEngine
@@ -29,6 +31,8 @@ class PeerTransferComponent(
     // TODO(#192/#193/#194): platform actuals wire real file picker here
     private val onOpenPicker: () -> Unit = {},
 ) : ComponentContext by componentContext {
+    val devicePlatform: DevicePlatform? = inferDevicePlatform(peer.device.name)
+
     fun destroyContext() {
         lifecycleRegistry.destroy()
     }

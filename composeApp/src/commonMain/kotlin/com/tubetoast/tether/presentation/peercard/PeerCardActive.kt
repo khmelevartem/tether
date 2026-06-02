@@ -185,9 +185,14 @@ private fun ActiveCardShell(
                     color = colors.textMuted,
                     modifier = Modifier.weight(1f),
                 )
-                bytesPerSec?.let { speed ->
+                if (bytesPerSec != null) {
                     NumericText(
-                        text = "${ByteFormatting.formatSize(speed)}/s",
+                        text = "${ByteFormatting.formatSize(bytesPerSec)}/s",
+                        color = colors.textMuted,
+                    )
+                } else {
+                    NumericText(
+                        text = "Calculating…",
                         color = colors.textMuted,
                     )
                 }

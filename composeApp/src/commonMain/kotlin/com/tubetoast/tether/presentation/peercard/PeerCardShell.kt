@@ -19,8 +19,6 @@ import com.tubetoast.tether.ui.feature.PeerIdentityAccent
 import com.tubetoast.tether.ui.theme.TetherTheme
 
 /**
- * Shared row decoration for all PeerCard variants: flat surface background, bottom divider.
- *
  * When [isPaired] is true, a 3dp vertical strip in the peer-identity color appears along the
  * left edge — indicating an established pairing relationship.
  */

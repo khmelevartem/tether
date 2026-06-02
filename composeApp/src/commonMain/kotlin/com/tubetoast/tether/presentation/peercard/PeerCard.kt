@@ -3,15 +3,13 @@ package com.tubetoast.tether.presentation.peercard
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.tubetoast.tether.presentation.transfer.PeerCardState
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.protocol.Device
+import com.tubetoast.tether.protocol.DevicePlatform
 import com.tubetoast.tether.transfer.PeerTransferState
-import com.tubetoast.tether.ui.feature.DevicePlatform
-import com.tubetoast.tether.ui.feature.inferDevicePlatform
 
 @Composable
 fun PeerCard(
@@ -20,9 +18,7 @@ fun PeerCard(
 ) {
     val state by component.state.subscribeAsState()
     val isAutoSendEnabled by component.observeAutoSend().collectAsState(initial = false)
-    val devicePlatform = remember(component.peer.device.name) {
-        inferDevicePlatform(component.peer.device.name)
-    }
+    val devicePlatform = component.devicePlatform
     val callbacks = PeerCardCallbacks(
         onToggleExpand = component::toggleExpanded,
         onToggleAutoSend = component::setAutoSend,
