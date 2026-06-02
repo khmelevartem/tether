@@ -69,10 +69,3 @@ A clean checklist here does not imply a clean platform pass.
 10. **Platform parity / regression risk.** Feature lands on one platform → open
     issue or stub for the others. Change must not break the build for any
     target (`applyHierarchyTemplate` consequences).
-
-11. **Assertive live region re-announcement.** A live region announces only when
-    the node's text content changes; identical copy rendered again is silent to
-    TalkBack / VoiceOver. Re-announcing the *same* string on a repeat trigger
-    needs the platform bypass (`View.announceForAccessibility` on Android,
-    `UIAccessibility.post(.announcement,)` on iOS), not a `semantics` property.
-    Reference: [Compose LiveRegionMode](https://developer.android.com/reference/kotlin/androidx/compose/ui/semantics/LiveRegionMode).
