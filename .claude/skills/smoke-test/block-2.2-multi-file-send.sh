@@ -12,14 +12,14 @@ M1="/tmp/smoke-multi-${TS}-1.txt"; echo "m1-$TS" > "$M1"
 M2="/tmp/smoke-multi-${TS}-2.txt"; echo "m2-$TS" > "$M2"
 M3="/tmp/smoke-multi-${TS}-3.txt"; echo "m3-$TS" > "$M3"
 
-set +e
-PREV_DONE=$(grep -cE "^\[send\] done" "$LOG_A" 2>/dev/null || echo 0)
-set -e
+PREV_DONE=$(grep -cE "^\[send\] done" "$LOG_A" 2>/dev/null || true)
+PREV_DONE=${PREV_DONE:-0}
 
 echo "send SmokeMacB $M1 $M2 $M3" > /tmp/smoke-cliA-in &
 
 for i in $(seq 1 20); do
-  set +e; NOW_DONE=$(grep -cE "^\[send\] done" "$LOG_A" 2>/dev/null || echo 0); set -e
+  NOW_DONE=$(grep -cE "^\[send\] done" "$LOG_A" 2>/dev/null || true)
+  NOW_DONE=${NOW_DONE:-0}
   [ "$NOW_DONE" -gt "$PREV_DONE" ] && break
   sleep 1
 done
