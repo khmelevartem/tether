@@ -14,31 +14,30 @@ class DiscoveredDevicesStore {
     private val _devices = MutableStateFlow<List<Device>>(emptyList())
     val devices: StateFlow<List<Device>> = _devices.asStateFlow()
 
-    /**
-     * Inserts or replaces using fingerprint-first deduplication:
-     * 1. Same fingerprint (non-null) → replace in place; latest name/host/port wins.
-     * 2. Incoming has fingerprint, existing at same host:port has none → promote (replace).
-     * 3. Incoming has no fingerprint and existing entry at same host:port exists → drop incoming.
-     * 4. Otherwise → append as a new entry.
-     */
     fun upsert(device: Device) {
         _devices.update { prev ->
-            if (device.fingerprint != null) {
-                val fpIdx = prev.indexOfFirst { it.fingerprint == device.fingerprint }
-                if (fpIdx >= 0) {
-                    return@update prev.toMutableList().also { it[fpIdx] = device }
-                }
-                val hostPortIdx = prev.indexOfFirst {
-                    it.host == device.host && it.port == device.port && it.fingerprint == null
-                }
-                if (hostPortIdx >= 0) {
-                    return@update prev.toMutableList().also { it[hostPortIdx] = device }
-                }
-            } else if (prev.any { it.host == device.host && it.port == device.port }) {
-                return@update prev
-            }
-            prev + device
+            prev.replaceMatchingFingerprint(device)
+                ?: prev.promoteNameOnlyAtSameAddress(device)
+                ?: prev.keepExistingIfAddressCovered(device)
+                ?: (prev + device)
         }
+    }
+
+    private fun List<Device>.replaceMatchingFingerprint(device: Device): List<Device>? {
+        val fp = device.fingerprint ?: return null
+        val idx = indexOfFirst { it.fingerprint == fp }
+        return if (idx >= 0) toMutableList().also { it[idx] = device } else null
+    }
+
+    private fun List<Device>.promoteNameOnlyAtSameAddress(device: Device): List<Device>? {
+        if (device.fingerprint == null) return null
+        val idx = indexOfFirst { it.host == device.host && it.port == device.port && it.fingerprint == null }
+        return if (idx >= 0) toMutableList().also { it[idx] = device } else null
+    }
+
+    private fun List<Device>.keepExistingIfAddressCovered(device: Device): List<Device>? {
+        if (device.fingerprint != null) return null
+        return if (any { it.host == device.host && it.port == device.port }) this else null
     }
 
     fun removeByName(name: String) {
