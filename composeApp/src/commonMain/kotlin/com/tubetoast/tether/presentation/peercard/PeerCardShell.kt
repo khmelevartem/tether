@@ -4,9 +4,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -44,12 +46,14 @@ internal fun PeerCardShell(
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .height(IntrinsicSize.Min)
             .background(colors.surface)
             .drawBehind {
+                val y = size.height - borderWidthPx / 2f
                 drawLine(
                     color = borderColor,
-                    start = Offset(0f, size.height),
-                    end = Offset(size.width, size.height),
+                    start = Offset(0f, y),
+                    end = Offset(size.width, y),
                     strokeWidth = borderWidthPx,
                 )
             },
