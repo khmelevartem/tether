@@ -65,10 +65,9 @@ class BonjourStateTest {
         assertEquals(1, store.devices.value.size)
     }
 
-    // Regression: bug-reproducer confirmed that a BrowseRemove for an intermediate name
-    // would evict the live canonical entry when the discoverer kept a private name→fp map.
-    // The fix is to look up the store (which Rule 1 has already collapsed to the canonical
-    // name) instead of a private map.
+    // The store collapses multi-rename announces to one canonical entry (Rule 1), so a
+    // BrowseRemove for any intermediate (already superseded) name must be a no-op for the
+    // live entry.
     @Test
     fun `browse remove for an intermediate rename name does not evict the live canonical entry`() {
         // One peer announces under "PeerA" (the intermediate name) and is then
@@ -130,9 +129,10 @@ class BonjourStateTest {
     @Test
     fun `addrInfo with isAdd=false drops pending IP without removing device`() {
         state.onBrowseAdd("PeerA", 0)
-        state.onResolved("PeerA", "peera.local", 19999, peerFingerprint = null)
+        state.onResolved("PeerA", "peera.local", 19999, peerFingerprint = "fpA")
         state.onAddrInfoFound("PeerA", "10.0.0.5", isAdd = true)
         val snapshotBefore = store.devices.value
+        assertEquals(1, snapshotBefore.size, "device must be in the store before isAdd=false arrives")
 
         state.onAddrInfoFound("PeerA", "10.0.0.5", isAdd = false)
         assertEquals(snapshotBefore, store.devices.value)
@@ -143,7 +143,7 @@ class BonjourStateTest {
         val state = BonjourState(store, sink, ownFingerprint = "") { host, port -> host == "10.0.0.1" && port == 18000 }
 
         state.onBrowseAdd("Self", 0)
-        state.onResolved("Self", "self.local", 18000, peerFingerprint = null)
+        state.onResolved("Self", "self.local", 18000, peerFingerprint = "fpSelf")
         state.onAddrInfoFound("Self", "10.0.0.1", isAdd = true)
         assertEquals(0, store.devices.value.size, "own service must never appear in devices list")
     }
@@ -163,21 +163,34 @@ class BonjourStateTest {
         val state = BonjourState(store, sink, ownFingerprint = "") { host, port -> host == "10.0.0.1" && port == 18000 }
 
         state.onBrowseAdd("Self (2)", 0)
-        state.onResolved("Self (2)", "self.local", 18000, peerFingerprint = null)
+        state.onResolved("Self (2)", "self.local", 18000, peerFingerprint = "fpSelfRenamed")
         state.onAddrInfoFound("Self (2)", "10.0.0.1", isAdd = true)
         assertEquals(0, store.devices.value.size, "renamed self must still be excluded")
+    }
+
+    // Self-suppression by fingerprint stays independent of (host, port) — the only test that
+    // exercises BonjourState.emitIfReady's `peerFingerprint == ownFingerprint` gate.
+    @Test
+    fun `self filter by fingerprint — own fingerprint never enters the store`() {
+        val state = BonjourState(store, sink, ownFingerprint = "fpSelf") { _, _ -> false }
+
+        state.onBrowseAdd("Self", 0)
+        state.onResolved("Self", "self.local", 18000, peerFingerprint = "fpSelf")
+        state.onAddrInfoFound("Self", "10.0.0.1", isAdd = true)
+        assertEquals(0, store.devices.value.size, "own fingerprint must never enter the store")
     }
 
     @Test
     fun `late Resolved arriving after BrowseRemove is dropped`() {
         state.onBrowseAdd("PeerA", 0)
-        state.onResolved("PeerA", "peera.local", 19999, peerFingerprint = null)
+        state.onResolved("PeerA", "peera.local", 19999, peerFingerprint = "fpA")
         state.onAddrInfoFound("PeerA", "10.0.0.5", isAdd = true)
+        assertEquals(1, store.devices.value.size)
         state.onBrowseRemove("PeerA")
         assertTrue(store.devices.value.isEmpty(), "device removed by BrowseRemove")
 
         val openedBefore = sink.opened.size
-        state.onResolved("PeerA", "peera.local", 20000, peerFingerprint = null)
+        state.onResolved("PeerA", "peera.local", 20000, peerFingerprint = "fpA")
         assertTrue(store.devices.value.isEmpty(), "stale Resolved must not resurrect peer")
         assertEquals(openedBefore, sink.opened.size, "stale Resolved must not open new subordinates")
     }
@@ -185,8 +198,9 @@ class BonjourStateTest {
     @Test
     fun `late AddrInfoFound arriving after BrowseRemove is dropped`() {
         state.onBrowseAdd("PeerA", 0)
-        state.onResolved("PeerA", "peera.local", 19999, peerFingerprint = null)
+        state.onResolved("PeerA", "peera.local", 19999, peerFingerprint = "fpA")
         state.onAddrInfoFound("PeerA", "10.0.0.5", isAdd = true)
+        assertEquals(1, store.devices.value.size)
         state.onBrowseRemove("PeerA")
 
         state.onAddrInfoFound("PeerA", "10.0.0.6", isAdd = true)

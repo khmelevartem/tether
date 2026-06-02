@@ -53,13 +53,7 @@ internal class BonjourState(
         pendingPorts.remove(name)
         pendingIps.remove(name)
         pendingFingerprints.remove(name)
-        // Look up the store, not the pending map — a multi-rename storm produces multiple
-        // BrowseAdd events for one fingerprint, but the store retains only the latest name
-        // (Rule 1). A removal under a stale intermediate name must not evict the live entry.
-        store.devices.value
-            .firstOrNull { it.name == name }
-            ?.fingerprint
-            ?.let(store::removeByFingerprint)
+        store.removeByName(name)
     }
 
     private fun emitIfReady(name: String) {

@@ -97,13 +97,7 @@ actual class MdnsDiscovery(
         override fun onServiceLost(serviceInfo: NsdServiceInfo) {
             if (nsdManager == null) return
             log.debug { "NSD service lost: ${serviceInfo.serviceName}" }
-            // Look up the store, not a local map — a multi-rename storm produces multiple
-            // BrowseAdd events for one fingerprint, but the store retains only the latest name
-            // (Rule 1). A removal under a stale intermediate name must not evict the live entry.
-            store.devices.value
-                .firstOrNull { it.name == serviceInfo.serviceName }
-                ?.fingerprint
-                ?.let(store::removeByFingerprint)
+            store.removeByName(serviceInfo.serviceName)
         }
     }
 

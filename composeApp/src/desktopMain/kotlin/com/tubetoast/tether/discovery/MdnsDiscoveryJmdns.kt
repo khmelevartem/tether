@@ -189,14 +189,7 @@ internal class MdnsDiscoveryJmdns(
 
         override fun serviceRemoved(event: ServiceEvent) {
             log.info { "serviceRemoved '${event.name}'" }
-            // Look up the store, not a local map — a multi-rename storm produces multiple
-            // BrowseAdd events for one fingerprint, but the store retains only the latest
-            // name (Rule 1). A removal under a stale intermediate name must not evict the
-            // live canonical entry.
-            store.devices.value
-                .firstOrNull { it.name == event.name }
-                ?.fingerprint
-                ?.let(store::removeByFingerprint)
+            store.removeByName(event.name)
         }
 
         override fun serviceResolved(event: ServiceEvent) {

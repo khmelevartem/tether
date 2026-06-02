@@ -178,14 +178,7 @@ actual class MdnsDiscovery(
     private fun onServiceRemoved(service: NSNetService) {
         val serviceName = service.name
         log.info { "service removed $serviceName" }
-        // Look up the store, not a local map — a multi-rename storm produces multiple
-        // BrowseAdd events for one fingerprint, but the store retains only the latest
-        // name (Rule 1). A removal under a stale intermediate name must not evict the
-        // live canonical entry.
-        store.devices.value
-            .firstOrNull { it.name == serviceName }
-            ?.fingerprint
-            ?.let(store::removeByFingerprint)
+        store.removeByName(serviceName)
     }
 
     private fun onServiceResolved(service: NSNetService) {

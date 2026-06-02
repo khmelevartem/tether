@@ -30,6 +30,18 @@ class DiscoveredDevicesStore {
         _devices.update { prev -> prev.filter { it.fingerprint != fingerprint } }
     }
 
+    /**
+     * Looks up the entry whose current name matches [name] and removes it by fingerprint —
+     * one atomic CAS step. A removal under a stale intermediate rename name (already
+     * superseded by Rule 1) finds no match and is a no-op; the live canonical entry survives.
+     */
+    fun removeByName(name: String) {
+        _devices.update { prev ->
+            val fp = prev.firstOrNull { it.name == name }?.fingerprint
+            if (fp == null) prev else prev.filter { it.fingerprint != fp }
+        }
+    }
+
     fun clear() {
         _devices.update { emptyList() }
     }
