@@ -130,11 +130,12 @@ Mention the relevant documents you found in the briefing to the user (see below)
 **Worktree setup — do this BEFORE dispatching any agent that edits files.** If you are not already in `.claude/worktrees/<branch>/`:
 
 ```bash
-git worktree add .claude/worktrees/feature-<N>-<short-slug> -b feature/<N>-<short-slug> main
+git fetch origin main --quiet
+git worktree add .claude/worktrees/feature-<N>-<short-slug> -b feature/<N>-<short-slug> origin/main
 cd .claude/worktrees/feature-<N>-<short-slug>
 ```
 
-All subsequent agent dispatches happen with this as cwd. Skipping this step means `spec-writer` would edit main checkout.
+Branch from `origin/main`, never local `main` — a stale base produces avoidable mid-flight rebase conflicts. All subsequent agent dispatches happen with this as cwd. Skipping this step means `spec-writer` would edit main checkout.
 
 ### Briefing back to the user
 
