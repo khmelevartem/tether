@@ -33,7 +33,7 @@ All issue titles, issue bodies, and PR descriptions must be written in English. 
 
 Before committing, make sure the issue exists. If it does not — ask the user to create it.
 
-To pull main into the branch — `/merge` (merges fresh main and shows what came in). It runs from both `/close-issue` and mid-flight.
+To pull main into the branch — `/pull-main` (merges fresh main and shows what came in). It runs from both `/close-issue` and mid-flight.
 
 ## Common commands
 
