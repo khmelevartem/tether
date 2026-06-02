@@ -25,6 +25,7 @@ import platform.Foundation.NSFileManager
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSUserDomainMask
 
+// TODO(#11): wire PairingConfirmationHandler for Apple pairing UI
 open class AppleAppContainer(
     private val config: AppleAppConfig,
 ) : AppContainer() {

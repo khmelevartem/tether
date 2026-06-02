@@ -27,7 +27,8 @@ actual class FileServer(
     private val tracker: TransferActivityTracker = DefaultTransferActivityTracker(),
     private val deviceIdentityStore: DeviceIdentityStore? = null,
     private val discoveredDevicesStore: DiscoveredDevicesStore? = null,
-    val pairingConfirmationHandler: PairingConfirmationHandler? = null,
+    private val pairingConfirmationHandler: PairingConfirmationHandler? = null,
+    private val pairingTimeoutMillis: Long = 30_000L,
 ) {
     private var server: EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration>? = null
 
@@ -51,6 +52,7 @@ actual class FileServer(
                     deviceIdentityStore,
                     discoveredDevicesStore,
                     pairingConfirmationHandler,
+                    pairingTimeoutMillis,
                 )
             }.start(wait = false)
         } catch (e: Exception) {

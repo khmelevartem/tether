@@ -74,6 +74,7 @@ internal fun Application.installFileServerRoutes(
     deviceIdentityStore: DeviceIdentityStore? = null,
     discoveredDevicesStore: DiscoveredDevicesStore? = null,
     pairingConfirmationHandler: PairingConfirmationHandler? = null,
+    pairingTimeoutMillis: Long = 30_000L,
 ) {
     install(ContentNegotiation) { json() }
     routing {
@@ -116,7 +117,7 @@ internal fun Application.installFileServerRoutes(
             if (!trustedDeviceStore.isTrusted(deviceId)) {
                 if (pairingConfirmationHandler != null) {
                     val pin = computePinCode(serverPublicKey, request.publicKey)
-                    val confirmed = withTimeoutOrNull(30_000L) {
+                    val confirmed = withTimeoutOrNull(pairingTimeoutMillis) {
                         pairingConfirmationHandler.confirmPairing(pin, request.deviceName)
                     }
                     if (confirmed != true) {
@@ -126,6 +127,9 @@ internal fun Application.installFileServerRoutes(
                     }
                 }
             }
+            // TODO(#10): server persists the peer key before the client user confirms — if the client
+            // user later rejects (MITM detected), the server remains trusting. A two-phase commit
+            // protocol (server defers save until client sends a follow-up commit) would fix this.
             try {
                 trustedDeviceStore.saveTrustedKey(deviceId, request.publicKey)
             } catch (e: Exception) {

@@ -1,7 +1,13 @@
 package com.tubetoast.tether.network
 
+import com.tubetoast.tether.preferences.TempDataStore
 import com.tubetoast.tether.protocol.Device
+import com.tubetoast.tether.protocol.PairResponse
 import com.tubetoast.tether.protocol.SendResult
+import com.tubetoast.tether.security.DefaultTrustedDeviceStore
+import com.tubetoast.tether.security.DeviceKeyPair
+import com.tubetoast.tether.security.TrustedDeviceStore
+import com.tubetoast.tether.security.deviceIdFromPublicKey
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.MockRequestHandleScope
@@ -9,6 +15,7 @@ import io.ktor.client.engine.mock.respond
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.HttpRequestData
 import io.ktor.client.request.HttpResponseData
+import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.OutgoingContent
@@ -24,13 +31,18 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.nio.file.Files
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.io.path.writeBytes
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -295,6 +307,211 @@ class FileClientTest {
         } finally {
             source.cancel(null)
             client.close()
+        }
+    }
+
+    // --- pairing tests ---
+
+    private val cleanupPaths = mutableListOf<File>()
+    private val cleanupTempStores = mutableListOf<TempDataStore>()
+
+    private fun newConfigDir(): File =
+        Files.createTempDirectory("tether-client-pair-test").toFile().also(cleanupPaths::add)
+
+    private fun newTrustedStore(): TrustedDeviceStore {
+        val temp = TempDataStore()
+        cleanupTempStores += temp
+        return DefaultTrustedDeviceStore(temp.dataStore)
+    }
+
+    private fun tearDownPairingFixtures() {
+        cleanupPaths.forEach { it.deleteRecursively() }
+        cleanupPaths.clear()
+        cleanupTempStores.forEach { it.tearDown() }
+        cleanupTempStores.clear()
+    }
+
+    private fun TestScope.httpFor(
+        handler: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData,
+    ): HttpClient = HttpClient(MockEngine) {
+        install(ContentNegotiation) { json() }
+        engine {
+            dispatcher = StandardTestDispatcher(testScheduler)
+            addHandler(handler)
+        }
+    }
+
+    private fun TestScope.pairingClient(
+        pairHandler: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData,
+        uploadHandler: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData,
+        trustedDeviceStore: TrustedDeviceStore = newTrustedStore(),
+        keyPair: DeviceKeyPair = DeviceKeyPair(newConfigDir()),
+        confirmationHandler: PairingConfirmationHandler = PairingConfirmationHandler { _, _ -> true },
+    ): FileClient = FileClient(
+        client = httpFor { request ->
+            when {
+                request.url.segments.last() == "pair" -> pairHandler(request)
+                else -> uploadHandler(request)
+            }
+        },
+        trustedDeviceStore = trustedDeviceStore,
+        ownKeyPair = keyPair,
+        ownNameProvider = { "TestDevice" },
+        pairingHandler = confirmationHandler,
+    )
+
+    @Test
+    fun `send skips ensurePaired when pairing not configured`() = runTest {
+        val client = mockClient { request ->
+            respond(
+                content = okResponse("/saved/file.txt"),
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+        val file = Files.createTempFile("pair-skip-test", ".txt")
+        file.writeBytes("data".toByteArray())
+        try {
+            val result = client.send(device, file)
+            assertIs<SendResult.Success>(result)
+        } finally {
+            client.close()
+            Files.deleteIfExists(file)
+        }
+    }
+
+    @Test
+    fun `send calls pair endpoint before upload`() = runTest {
+        val serverKey = byteArrayOf(7, 8, 9)
+        val uploadCalled = AtomicBoolean(false)
+        val client = pairingClient(
+            pairHandler = {
+                respond(
+                    content = Json.encodeToString(PairResponse(serverKey)),
+                    status = HttpStatusCode.OK,
+                    headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                )
+            },
+            uploadHandler = {
+                uploadCalled.set(true)
+                respond(
+                    content = okResponse("/saved/file.txt"),
+                    status = HttpStatusCode.OK,
+                    headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                )
+            },
+        )
+        val file = Files.createTempFile("pair-before-upload", ".txt")
+        file.writeBytes("data".toByteArray())
+        try {
+            val result = client.send(device, file)
+            assertIs<SendResult.Success>(result)
+            assertTrue(uploadCalled.get(), "upload must be called after successful pairing")
+        } finally {
+            client.close()
+            Files.deleteIfExists(file)
+            tearDownPairingFixtures()
+        }
+    }
+
+    @Test
+    fun `send returns Failure when pair returns 403`() = runTest {
+        val uploadCalled = AtomicBoolean(false)
+        val client = pairingClient(
+            pairHandler = {
+                respond(
+                    content = """{"error":"pairing_rejected"}""",
+                    status = HttpStatusCode.Forbidden,
+                    headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                )
+            },
+            uploadHandler = {
+                uploadCalled.set(true)
+                respond(content = "", status = HttpStatusCode.OK)
+            },
+        )
+        val file = Files.createTempFile("pair-403-test", ".txt")
+        file.writeBytes("data".toByteArray())
+        try {
+            val result = client.send(device, file)
+            assertIs<SendResult.Failure>(result)
+            assertFalse(uploadCalled.get(), "upload must not be called when pairing rejected")
+        } finally {
+            client.close()
+            Files.deleteIfExists(file)
+            tearDownPairingFixtures()
+        }
+    }
+
+    @Test
+    fun `send returns Failure when user declines pairing`() = runTest {
+        val serverKey = byteArrayOf(7, 8, 9)
+        val uploadCalled = AtomicBoolean(false)
+        val client = pairingClient(
+            pairHandler = {
+                respond(
+                    content = Json.encodeToString(PairResponse(serverKey)),
+                    status = HttpStatusCode.OK,
+                    headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                )
+            },
+            uploadHandler = {
+                uploadCalled.set(true)
+                respond(content = "", status = HttpStatusCode.OK)
+            },
+            confirmationHandler = PairingConfirmationHandler { _, _ -> false },
+        )
+        val file = Files.createTempFile("user-decline-test", ".txt")
+        file.writeBytes("data".toByteArray())
+        try {
+            val result = client.send(device, file)
+            assertIs<SendResult.Failure>(result)
+            assertFalse(uploadCalled.get(), "upload must not be called when user declines")
+        } finally {
+            client.close()
+            Files.deleteIfExists(file)
+            tearDownPairingFixtures()
+        }
+    }
+
+    @Test
+    fun `send skips pair prompt for already-trusted device`() = runTest {
+        val serverKey = byteArrayOf(7, 8, 9)
+        val serverDeviceId = deviceIdFromPublicKey(serverKey)
+        val store = newTrustedStore()
+        store.saveTrustedKey(serverDeviceId, serverKey)
+        val confirmationCalled = AtomicBoolean(false)
+        val client = pairingClient(
+            pairHandler = {
+                respond(
+                    content = Json.encodeToString(PairResponse(serverKey)),
+                    status = HttpStatusCode.OK,
+                    headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                )
+            },
+            uploadHandler = {
+                respond(
+                    content = okResponse("/saved/file.txt"),
+                    status = HttpStatusCode.OK,
+                    headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                )
+            },
+            trustedDeviceStore = store,
+            confirmationHandler = PairingConfirmationHandler { _, _ ->
+                confirmationCalled.set(true)
+                true
+            },
+        )
+        val file = Files.createTempFile("already-trusted-test", ".txt")
+        file.writeBytes("data".toByteArray())
+        try {
+            val result = client.send(device, file)
+            assertIs<SendResult.Success>(result)
+            assertFalse(confirmationCalled.get(), "confirmation must not be shown for already-trusted device")
+        } finally {
+            client.close()
+            Files.deleteIfExists(file)
+            tearDownPairingFixtures()
         }
     }
 }

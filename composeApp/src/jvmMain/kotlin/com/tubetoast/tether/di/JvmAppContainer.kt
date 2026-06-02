@@ -3,12 +3,6 @@ package com.tubetoast.tether.di
 import com.tubetoast.tether.network.FileClient
 import com.tubetoast.tether.network.FileServer
 import com.tubetoast.tether.network.PairingConfirmationHandler
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.cio.CIO
-import io.ktor.client.plugins.HttpTimeout
-import io.ktor.client.plugins.HttpTimeoutConfig
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.flow.first
 import java.io.File
 
@@ -33,19 +27,12 @@ abstract class JvmAppContainer(
     }
 
     override val fileClient: FileClient by lazy {
-        FileClient(
-            client = HttpClient(CIO) {
-                install(ContentNegotiation) { json() }
-                install(HttpTimeout) {
-                    requestTimeoutMillis = HttpTimeoutConfig.INFINITE_TIMEOUT_MS
-                    socketTimeoutMillis = HttpTimeoutConfig.INFINITE_TIMEOUT_MS
-                }
-            },
-            tracker = transferActivityTracker,
+        FileClient.withPairing(
             trustedDeviceStore = trustedDeviceStore,
             ownKeyPair = config.deviceKeyPair,
             ownNameProvider = { nameStore.name.first() },
             pairingHandler = pairingConfirmationHandler,
+            tracker = transferActivityTracker,
         )
     }
 }

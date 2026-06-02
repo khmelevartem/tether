@@ -67,6 +67,27 @@ open class FileClient(
             },
             tracker = tracker,
         )
+
+        fun withPairing(
+            trustedDeviceStore: TrustedDeviceStore,
+            ownKeyPair: DeviceKeyPair,
+            ownNameProvider: suspend () -> String,
+            pairingHandler: PairingConfirmationHandler?,
+            tracker: TransferActivityTracker = DefaultTransferActivityTracker(),
+        ): FileClient = FileClient(
+            client = HttpClient(CIO) {
+                install(ContentNegotiation) { json() }
+                install(HttpTimeout) {
+                    requestTimeoutMillis = HttpTimeoutConfig.INFINITE_TIMEOUT_MS
+                    socketTimeoutMillis = HttpTimeoutConfig.INFINITE_TIMEOUT_MS
+                }
+            },
+            tracker = tracker,
+            trustedDeviceStore = trustedDeviceStore,
+            ownKeyPair = ownKeyPair,
+            ownNameProvider = ownNameProvider,
+            pairingHandler = pairingHandler,
+        )
     }
 
     open suspend fun sendHello(target: Device, ownInfo: PeerAnnouncement): Boolean = try {

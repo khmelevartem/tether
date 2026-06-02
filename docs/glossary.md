@@ -10,6 +10,7 @@ User-facing concepts. The vocabulary [`spec-writer`](../.claude/agents/spec-writ
 
 - **Transfer** — one user-initiated send of one or more files from one device to another.
 - **Pairing** — the one-time consent step where two devices agree to recognise each other for future transfers without re-prompting. _Avoid:_ handshake, trust establishment.
+- **PIN code** — the 4-digit numeric code shown to users on both devices during the first encounter. Both sides compute the same code from the two devices' public keys; the user compares them visually to detect a man-in-the-middle. _Avoid:_ pairing code (UI copy may use it but the canonical term is PIN code). (see [pairing spec](product/features/pairing/spec.md))
 - **Trusted device** — a device that completed pairing and may initiate or accept transfers without re-confirmation. _Avoid:_ known device, friend, contact.
 - **Device list** — the user-visible list of trusted devices on a given device.
 - **Device name** — the user-chosen display label for a device, shown to peers (see [device-name-bootstrapping](product/features/device-name-bootstrapping/)).

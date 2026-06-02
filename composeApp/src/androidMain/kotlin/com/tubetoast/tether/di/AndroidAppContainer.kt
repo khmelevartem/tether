@@ -16,6 +16,7 @@ import com.tubetoast.tether.preferences.FileTransferPreferences
 import com.tubetoast.tether.protocol.DeviceType
 import okio.Path.Companion.toOkioPath
 
+// TODO(#11): wire PairingConfirmationHandler for Android pairing UI
 class AndroidAppContainer(
     config: AndroidAppConfig,
 ) : JvmAppContainer(config) {

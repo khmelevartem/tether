@@ -19,10 +19,9 @@ class PinCodeGeneratorTest {
     }
 
     @Test
-    fun `deterministic — same keys always produce same code`() {
-        val keyA = byteArrayOf(1, 2, 3)
-        val keyB = byteArrayOf(4, 5, 6)
-        assertEquals(computePinCode(keyA, keyB), computePinCode(keyA, keyB))
+    fun `deterministic — known input produces stable code`() {
+        // SHA-256([5,7,5]) first 2 bytes: 0x67, 0x27 → (103*256+39) % 10000 = 6407
+        assertEquals(6407, computePinCode(byteArrayOf(1, 2, 3), byteArrayOf(4, 5, 6)))
     }
 
     @Test

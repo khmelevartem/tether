@@ -18,7 +18,9 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import java.io.File
 import java.nio.file.Files
 import kotlin.test.AfterTest
@@ -60,6 +62,7 @@ class FileServerPairTest {
         store: TrustedDeviceStore,
         keyPair: DeviceKeyPair,
         handler: PairingConfirmationHandler? = PairingConfirmationHandler { _, _ -> true },
+        pairingTimeoutMillis: Long = 30_000L,
     ): Pair<FileServer, Int> {
         val server =
             FileServer(
@@ -67,6 +70,7 @@ class FileServerPairTest {
                 trustedDeviceStore = store,
                 deviceKeyPair = keyPair,
                 pairingConfirmationHandler = handler,
+                pairingTimeoutMillis = pairingTimeoutMillis,
             )
         startedServer = server
         return server to server.start()
@@ -210,6 +214,30 @@ class FileServerPairTest {
                 setBody(PairRequest(publicKey = peerKey, deviceName = "AlreadyPaired"))
             }
             assertEquals(HttpStatusCode.OK, response.status)
+        }
+    }
+
+    @Test
+    fun `pair returns 403 on timeout`() {
+        val configDir = newConfigDir()
+        val (_, port) = startServer(
+            newTrustedStore(),
+            DeviceKeyPair(configDir),
+            handler = PairingConfirmationHandler { _, _ ->
+                delay(Long.MAX_VALUE)
+                false
+            },
+            pairingTimeoutMillis = 200L,
+        )
+        runBlocking {
+            // real CIO server with real-time delay — withTimeout guards against a broken timeout implementation
+            val response = withTimeout(2_000L) {
+                client.post("http://localhost:$port/pair") {
+                    contentType(ContentType.Application.Json)
+                    setBody(PairRequest(publicKey = byteArrayOf(42), deviceName = "Slow"))
+                }
+            }
+            assertEquals(HttpStatusCode.Forbidden, response.status)
         }
     }
 
