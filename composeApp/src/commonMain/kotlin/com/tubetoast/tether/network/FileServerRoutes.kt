@@ -97,6 +97,7 @@ internal fun Application.installFileServerRoutes(
                 name = body.alias,
                 host = remoteHost,
                 port = body.port,
+                fingerprint = body.fingerprint,
             )
             discoveredDevicesStore?.upsert(device)
             log.info { "hello from ${body.alias}@$remoteHost:${body.port}" }

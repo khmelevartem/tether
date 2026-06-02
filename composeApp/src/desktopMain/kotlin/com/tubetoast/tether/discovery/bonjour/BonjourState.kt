@@ -62,7 +62,7 @@ internal class BonjourState(
         val peerFingerprint = pendingFingerprints[name]
         if (peerFingerprint != null && peerFingerprint == ownFingerprint) return
         if (isSelf(ip, port)) return
-        val device = Device(name = name, host = ip, port = port)
+        val device = Device(name = name, host = ip, port = port, fingerprint = peerFingerprint)
         store.upsert(device)
     }
 

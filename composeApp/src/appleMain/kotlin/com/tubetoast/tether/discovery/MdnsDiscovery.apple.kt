@@ -5,8 +5,11 @@ package com.tubetoast.tether.discovery
 import com.tubetoast.tether.identity.DeviceIdentityStore
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.util.toNSData
+import kotlinx.cinterop.ByteVar
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.ObjCSignatureOverride
+import kotlinx.cinterop.interpretCPointer
+import kotlinx.cinterop.readBytes
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -194,14 +197,28 @@ actual class MdnsDiscovery(
             return
         }
 
+        val peerFingerprint = extractFingerprintFromTxt(service)
+
         val device = Device(
             name = serviceName,
             host = host,
             port = port,
+            fingerprint = peerFingerprint,
         )
 
         log.info { "peer discovered: ${device.name}@${device.host}:${device.port}" }
         store.upsert(device)
+    }
+
+    private fun extractFingerprintFromTxt(service: NSNetService): String? {
+        val txtData = service.TXTRecordData() ?: return null
+        val dict = NSNetService.dictionaryFromTXTRecordData(txtData)
+        val valueData = dict["fp"] as? NSData ?: return null
+        val length = valueData.length.toInt()
+        if (length == 0) return null
+        val rawPtr = valueData.bytes ?: return null
+        val bytesPtr = interpretCPointer<ByteVar>(rawPtr.rawValue) ?: return null
+        return bytesPtr.readBytes(length).decodeToString()
     }
 
     private fun onServiceResolutionFailed(serviceName: String) {

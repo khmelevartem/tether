@@ -12,8 +12,8 @@ import kotlin.test.assertTrue
 class DiscoveredDevicesStoreTest {
     private val store = DiscoveredDevicesStore()
 
-    private fun device(name: String, host: String = "1.2.3.4", port: Int = 8080) =
-        Device(name = name, host = host, port = port)
+    private fun device(name: String, host: String = "1.2.3.4", port: Int = 8080, fingerprint: String? = null) =
+        Device(name = name, host = host, port = port, fingerprint = fingerprint)
 
     @Test
     fun `upsert with same device is idempotent`() {
@@ -49,12 +49,12 @@ class DiscoveredDevicesStoreTest {
     @Test
     fun `devices StateFlow value reflects each mutation`() = runTest {
         assertEquals(emptyList(), store.devices.value)
-        store.upsert(device("A"))
+        store.upsert(device("A", port = 8080))
         assertEquals(1, store.devices.value.size)
-        store.upsert(device("B"))
+        store.upsert(device("B", port = 8081))
         assertEquals(2, store.devices.value.size)
         store.removeByName("A")
-        assertEquals(listOf(device("B")), store.devices.value)
+        assertEquals(listOf(device("B", port = 8081)), store.devices.value)
     }
 
     @Test
@@ -101,5 +101,89 @@ class DiscoveredDevicesStoreTest {
                 .map { it.id }
                 .toSet(),
         )
+    }
+
+    // Rule 1: same fingerprint, different name/host/port — one entry, latest wins.
+    @Test
+    fun `same fingerprint different name collapses to one entry with latest name`() {
+        store.upsert(device("Peer", fingerprint = "fp1"))
+        store.upsert(device("Peer (2)", fingerprint = "fp1"))
+        assertEquals(1, store.devices.value.size)
+        assertEquals(
+            "Peer (2)",
+            store.devices.value
+                .first()
+                .name,
+        )
+    }
+
+    // Rule 1: same fingerprint, different host/port — replaces in place.
+    @Test
+    fun `same fingerprint different host replaces in place`() {
+        store.upsert(device("Peer", host = "1.0.0.1", fingerprint = "fp1"))
+        store.upsert(device("Peer", host = "1.0.0.2", fingerprint = "fp1"))
+        assertEquals(1, store.devices.value.size)
+        assertEquals(
+            "1.0.0.2",
+            store.devices.value
+                .first()
+                .host,
+        )
+    }
+
+    // Rule 2: name-only entry first, then fingerprint-bearing at same host:port — promotes.
+    @Test
+    fun `fingerprint-bearing entry at same host-port promotes name-only entry`() {
+        store.upsert(device("Peer"))
+        store.upsert(device("Peer", fingerprint = "fp1"))
+        assertEquals(1, store.devices.value.size)
+        assertEquals(
+            "fp1",
+            store.devices.value
+                .first()
+                .fingerprint,
+        )
+    }
+
+    // Rule 3: fingerprint-bearing first, then name-only at same host:port — drops incoming.
+    @Test
+    fun `name-only entry at same host-port is dropped when fingerprint-bearing entry exists`() {
+        store.upsert(device("Peer", fingerprint = "fp1"))
+        store.upsert(device("Peer (2)"))
+        assertEquals(1, store.devices.value.size)
+        assertEquals(
+            "fp1",
+            store.devices.value
+                .first()
+                .fingerprint,
+        )
+        assertEquals(
+            "Peer",
+            store.devices.value
+                .first()
+                .name,
+        )
+    }
+
+    // Rule 3: name-only incoming, name-only existing at same host:port — drops incoming.
+    @Test
+    fun `name-only entry at same host-port is dropped when another name-only entry exists`() {
+        store.upsert(device("Peer"))
+        store.upsert(device("Peer (2)"))
+        assertEquals(1, store.devices.value.size)
+        assertEquals(
+            "Peer",
+            store.devices.value
+                .first()
+                .name,
+        )
+    }
+
+    // Distinct fingerprints → two entries.
+    @Test
+    fun `distinct fingerprints produce two entries`() {
+        store.upsert(device("A", fingerprint = "fp1"))
+        store.upsert(device("B", port = 81, fingerprint = "fp2"))
+        assertEquals(2, store.devices.value.size)
     }
 }

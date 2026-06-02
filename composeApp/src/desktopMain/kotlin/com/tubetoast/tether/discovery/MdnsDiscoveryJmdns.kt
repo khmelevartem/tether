@@ -211,6 +211,7 @@ internal class MdnsDiscoveryJmdns(
                     name = event.name,
                     host = ipv4,
                     port = info.port,
+                    fingerprint = peerFingerprint,
                 )
                 store.upsert(device)
             } catch (e: Exception) {

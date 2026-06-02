@@ -131,10 +131,12 @@ actual class MdnsDiscovery(
                 onResolveComplete()
                 return
             }
+            val peerFingerprint = serviceInfo.attributes["fp"]?.decodeToString()
             val device = Device(
                 name = serviceInfo.serviceName,
                 host = host,
                 port = port,
+                fingerprint = peerFingerprint,
             )
             log.debug { "NSD peer discovered: $device" }
             store.upsert(device)
