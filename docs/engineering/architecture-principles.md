@@ -55,9 +55,9 @@ Before introducing a new state property, verify no existing property already ans
 
 ## A guarded state transition reports whether it happened
 
-When a method guards a state machine — accepts the request only from certain states, ignores it otherwise — it returns whether the transition occurred (`Boolean`, or a richer result), not `Unit`. A `Unit`-returning guard forces every caller to know the internal guard condition and re-derive it before acting on the outcome; that knowledge crosses the function boundary and rots. The caller then performs follow-up side effects (clearing a buffer, navigating, clearing pending files) on the assumption the transition happened — and when the guard silently refused, the side effect runs anyway against a state that never changed.
+When a method guards a state machine — accepts the request only from certain states, ignores it otherwise — it reports whether the transition occurred, rather than returning nothing. A guard that returns nothing forces every caller to know the internal guard condition and re-derive it before acting on the outcome; that knowledge crosses the function boundary and rots. The caller then performs follow-up side effects (clearing a staging buffer, navigating away, releasing a held resource) on the assumption the transition happened — and when the guard silently refused, the side effect runs anyway against a state that never changed.
 
-Make the acceptance observable at the call site: `fun startOutbound(...): Boolean` returns `false` when the state machine refuses, and the caller branches on it. This converts a class of "fire-and-forget across a guard" bugs into a compile-time obligation to handle the refusal.
+Make the acceptance observable at the call site: the guard signals refusal in its return, and the caller branches on it. This converts a class of "fire-and-forget across a guard" bugs into a compile-time obligation to handle the refusal.
 
 ## Every node is both client and server
 

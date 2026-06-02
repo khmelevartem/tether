@@ -21,7 +21,7 @@ If the branch was already pushed, a plain `git push` is enough after step 3 pass
 
 Resolve conflicts before step 3.
 
-**Mid-flight WIP (uncommitted work present).** When `/pull-main` runs while the inner loop has uncommitted changes — typical of a `/implement` re-entry where the previous run left a half-built coder pass — `git stash push -u` + `merge` + `git stash pop` is the natural sequence, and `stash pop` will frequently produce conflict markers in working-tree files when upstream changed the same regions. Conflict markers in the working tree are not productive: the next coder dispatch reads them as source, gets confused, and the orchestrator spends context resolving them by hand. Preferred recovery: save the WIP files outside the worktree (e.g. `cp <file> /tmp/<N>-wip/`), `git checkout HEAD -- .` + `git clean -fd` to reset clean, `git stash drop` to discard the stash, then re-dispatch the coder against the fresh upstream API — passing the saved /tmp files as reference rather than as a base to patch over. Cheap context-wise compared to manual conflict resolution, and produces a clean diff at the end.
+**Mid-flight WIP with stash-pop conflicts.** If the merge leaves conflict markers in stashed working-tree changes, do not resolve them by hand: copy the WIP files outside the worktree, `git checkout HEAD -- . && git clean -fd && git stash drop`, then re-dispatch the implementing agent against fresh upstream with the saved files as reference.
 
 ## 3. Assess semantic overlap
 

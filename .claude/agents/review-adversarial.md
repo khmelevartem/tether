@@ -32,7 +32,6 @@ For every PR there exists a category of bug the structured reviewers naturally m
 - **Compatibility with installed-on-user-device older app version** for serialized formats.
 - **What happens if user does X right at moment Y** — interaction with system events: backgrounding, network drop, low memory.
 - **Facts inherited from inputs.** Claims from the issue body, sibling specs, and prior findings tend to propagate without verification. Structured reviewers check internal consistency, not external truth — the load-bearing ones deserve a cross-check against authoritative public docs.
-- **Platform-behaviour claims that prior reviewers APPROVED.** A change that names a platform mechanism (`LiveRegionMode.Assertive`, `stateDescription`, `announceForAccessibility`, `UIAccessibility.post`, `WindowInsets`, `KeepScreenOn`, deep-link intent flags) carries a claim about what the OS / accessibility framework / window manager will do. Source-side reviewers approve "the modifier is present" — that is necessary, not sufficient. When the prior wave approved such a change without citing the platform spec or a Robolectric / instrumentation test that observes the behaviour, force a hypothesis: "what does the platform actually do here?" — and verify against authoritative docs or source.
 
 ## Procedure
 

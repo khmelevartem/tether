@@ -135,9 +135,7 @@ git worktree add .claude/worktrees/feature-<N>-<short-slug> -b feature/<N>-<shor
 cd .claude/worktrees/feature-<N>-<short-slug>
 ```
 
-`origin/main`, not local `main` — local can be stale by hours or days, and a worktree based on a stale tip produces conflicts later when the inner loop pulls fresh main mid-flight (`git stash pop` after rebase has to resolve overlap that didn't exist at branch-creation time, sometimes by hand). The fetch is one round-trip; the saved iteration is one full review wave.
-
-All subsequent agent dispatches happen with this as cwd. Skipping this step means `spec-writer` would edit main checkout.
+Branch from `origin/main`, never local `main` — a stale base produces avoidable mid-flight rebase conflicts. All subsequent agent dispatches happen with this as cwd. Skipping this step means `spec-writer` would edit main checkout.
 
 ### Briefing back to the user
 

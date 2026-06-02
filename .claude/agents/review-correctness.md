@@ -50,20 +50,7 @@ Specific common patterns to flag:
 - Untrusted JSON / serialized data → deserialization bombs
 - Deeply nested errors from network → log spam / DoS
 
-### 5. Accessibility claims pass through to platform behaviour
-
-A change that adds `Modifier.semantics { liveRegion = ... }`, `stateDescription`, `contentDescription`, or calls `announceForAccessibility` / `UIAccessibility.post` makes a claim about what assistive technology (TalkBack / VoiceOver) will speak. The composable's source code does not directly establish that claim — the platform's accessibility framework does. Source-side approval is necessary but not sufficient.
-
-For each such change, locate the stated intent (PR body, KDoc, brief reference) and verify it against platform semantics:
-
-- `LiveRegionMode.Assertive` on Android maps to `AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED` / `TYPE_WINDOW_CONTENT_CHANGED`, which fires only when the live-region node's *content* changes. Identical text on recomposition does not re-announce.
-- `stateDescription` is read aloud as the *state* of the node; TalkBack speaks the state-description value on `CONTENT_CHANGE_TYPE_STATE_DESCRIPTION` events, not the body text. Putting a counter or token into `stateDescription` makes TalkBack speak the counter, not the body.
-- `contentDescription` overrides the node's spoken text entirely; if set on a container, child text becomes invisible to TalkBack.
-- Platform bypass for forced announcement is `View.announceForAccessibility(text)` on Android and `UIAccessibility.post(.announcement, ...)` on iOS — neither is reachable from commonMain Compose without `expect/actual`.
-
-When the implementation cannot be verified against the stated intent from the source alone — flag as `[REQUIRED] verify against platform semantics` and cite the specific Android / iOS doc or Compose source. Approving an accessibility claim "because the modifier is present" is the failure mode this rubric catches.
-
-### 6. BUGFIX-specific
+### 5. BUGFIX-specific
 
 If PR_TYPE is BUGFIX: does the fix address the **root cause** or only the symptom? Could the same root cause manifest elsewhere? Grep for sibling code paths with the same anti-pattern.
 
