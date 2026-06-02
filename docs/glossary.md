@@ -34,7 +34,7 @@ Engineering concepts. The vocabulary [`architect`](../.claude/agents/architect.m
 - **UI layer** — the Compose composable layer; renders a state object and fires events upward. Holds no business logic. (see [layering.md](engineering/layering.md))
 - **Presentation layer** — the Decompose Components; maps domain state to its screen representation and relays user actions inward. _Avoid:_ view layer, ViewModel layer. (see [layering.md](engineering/layering.md))
 - **Domain layer** — pure Kotlin owning the invariants, rules, and state machines; no platform or framework dependencies. The most stable ring. _Avoid:_ protocol layer. (see [layering.md](engineering/layering.md))
-- **Data layer** — repositories, engines, transport, persistence, discovery, and platform adapters; the outermost stable ring. _Avoid:_ infrastructure layer, network layer when the whole ring is meant. (see [layering.md](engineering/layering.md))
+- **Data layer** — repository implementations, engines, transport, persistence, discovery, and platform adapters; the most volatile ring, depending inward on Domain by implementing its interfaces. _Avoid:_ infrastructure layer, network layer when the whole ring is meant. (see [layering.md](engineering/layering.md))
 - **Composition root** — the platform entry point that constructs the DI container; by extension, the `AppContainer` instance it constructs. (see [dependency-injection.md](engineering/dependency-injection.md))
 - **Container** — the DI container that holds singletons for one process lifetime; the construct that lives at the composition root.
 - **Session** — the post-rendezvous logical connection between two peers, lasting from `/hello` until either side closes it.

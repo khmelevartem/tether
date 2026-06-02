@@ -8,16 +8,16 @@ This document fixes our position so it doesn't drift over time.
 
 **Stable abstractions inward, volatile details outward.** This is the only Clean Architecture rule we treat as load-bearing.
 
-Concretely, this gives us a layering — from most stable to most volatile:
+Concretely, this gives us a layering around a stable Domain core. Domain is the innermost ring; Presentation and Data both depend inward on it, and UI depends inward on Presentation:
 
-1. **Domain.** Pure Kotlin types and rules — what gets exchanged between devices and what's true about them. No platform, no framework. Changes when the core domain rules change.
-2. **Data.** Repositories, engines, transport, peer discovery, persistence, and platform adapters. Depends on (1). Changes when we swap an underlying mechanism or add a target.
-3. **Presentation.** Components (Decompose) and the navigation graph. Depends on (2) via constructor injection. Owns UI state shape but not visual rendering.
-4. **UI.** Compose composables. The thinnest layer — renders state, fires events. Treated as replaceable.
+1. **Domain.** Pure Kotlin types, rules, and the repository / collaborator interfaces — what gets exchanged between devices, what's true about them, and the contracts through which effects are requested. No platform, no framework. The most stable ring; changes when the core domain rules change.
+2. **Presentation.** Components (Decompose) and the navigation graph. Depends on Domain only — domain types and the interfaces it owns. Owns UI state shape but not visual rendering. Changes when a screen changes.
+3. **UI.** Compose composables. The thinnest layer — renders state, fires events. Treated as replaceable.
+4. **Data.** Repository implementations, engines, transport, peer discovery, persistence, and platform adapters. Depends on Domain, implementing its interfaces. The most volatile ring; changes when we swap an underlying mechanism or add a target.
 
 Per-layer ownership, allowed imports, and the data-flow direction between neighbours are spelled out in [layering.md](layering.md).
 
-**Dependencies always point toward more stable code.** UI imports only from the Presentation layer; Presentation imports from the Data layer; Data imports from Domain. Domain depends on nothing in this project except kotlinx.serialization. Per-layer import rules: [layering.md](layering.md).
+**Dependencies always point inward, toward Domain.** UI imports only from Presentation; Presentation imports only from Domain — domain types and the interfaces Domain owns, never a data-layer type. Data imports from Domain, implementing those interfaces. Domain depends on nothing in this project except kotlinx.serialization. Presentation and Data never name each other; the concrete implementation behind each interface is supplied at the composition root by constructor injection. Per-layer import rules: [layering.md](layering.md).
 
 **Platform-specific code stays at the edges.** `actual` implementations live in `androidMain` / `iosMain` / `appleMain` / `jvmMain` source sets. They are not referenced by name from `commonMain`.
 
