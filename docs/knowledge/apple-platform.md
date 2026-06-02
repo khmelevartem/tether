@@ -84,3 +84,35 @@ private fun awaitCondition(timeoutSec: Double = 10.0, condition: () -> Boolean):
 - `@OptIn(ExperimentalForeignApi::class)` required for `CFRunLoopRunInMode`.
 
 **Reference:** `MdnsDiscoveryTest.kt` — `awaitCondition()` and all integration tests.
+
+---
+
+## Keychain query dicts must be built via CFMutableDictionary
+
+**Symptom:** `SecItemCopyMatching` returns `errSecParam` (`OSStatus=-50`) on a syntactically correct query — first launch where the key doesn't exist yet should return `errSecItemNotFound` (`-25300`), but instead Apple rejects the query outright.
+
+**Root cause:** the query dictionary was built via `NSMutableDictionary` and bridged with `CFBridgingRetain(dict) as CFDictionaryRef`. Even though `NSMutableDictionary` is toll-free with `CFDictionary`, `SecItemCopyMatching` rejects the bridged form whenever `kSecReturnRef` is among the keys. Verified by isolated probe on simulator: every variant of the same query swapped only the dict construction — NS-backed yielded `-50`, raw CF yielded `-25300`. The boolean bridge (`kCFBooleanTrue` vs `NSNumber(bool=true)`) and the tag format are not the trigger; only the dict backing.
+
+`SecKeyCreateRandomKey` is tolerant and accepts NS-backed dicts. The failure surfaces only via `SecItemCopyMatching` (and likely the rest of `SecItem*`).
+
+**Fix:** build queries with `CFDictionaryCreateMutable` + `CFDictionarySetValue` directly. For toll-free-bridged values like `NSData`/`NSNumber`, call `CFBridgingRetain(value)` (+1), `CFDictionarySetValue` (dict retains its own), then `CFRelease` your +1.
+
+```kotlin
+val dict = CFDictionaryCreateMutable(
+    null, 0,
+    kCFTypeDictionaryKeyCallBacks.ptr,
+    kCFTypeDictionaryValueCallBacks.ptr,
+)!!
+CFDictionarySetValue(dict, kSecClass, kSecClassKey)
+val tag = CFBridgingRetain(applicationTag.encodeToByteArray().toNSData())
+CFDictionarySetValue(dict, kSecAttrApplicationTag, tag)
+CFRelease(tag)
+CFDictionarySetValue(dict, kSecReturnRef, kCFBooleanTrue)
+// ...
+val status = SecItemCopyMatching(dict, resultRef.ptr)
+CFRelease(dict)
+```
+
+**Detectability:** unit tests using `simctl spawn` (no app bundle) hit `errSecNotAvailable` regardless of dict backing, so they can't catch this regression. The bug surfaces only in a real signed app bundle. Smoke on a launched iOS simulator app is the only gate; treat it as the load-bearing test for `SecItem*` paths.
+
+**Reference:** `Keychain.apple.kt` — `buildQuery`, `QueryBuilder`.

@@ -29,6 +29,7 @@ Clean Architecture and adjacent patterns are full of ceremony that doesn't pay r
 - **Repositories layered over a single data source.** If there is one data source and one consumer, do not introduce a repository interface to "abstract" it. The interface comes when there's a second implementation (real / fake), or a real boundary worth defending.
 - **Triple-layer DTO ↔ domain ↔ presentation mapping when there's no real divergence yet.** This one is nuanced: as the project matures, layers *do* legitimately need different shapes (DTO has serialization quirks, domain has invariants, presentation has display fields). The rule is not "never map" — it's "don't force three types up front." Start with one. Split when the second shape *actually* diverges (e.g. a UI list state with `selected`, `lastSeen`, `signal` is genuinely not the same as a network `Device`). Don't fight that growth in the name of brevity, and don't pre-empt it in the name of layering.
 - **Interfaces for things with one implementation.** An interface earns its place when there are at least two implementations, or it's a seam for testing. Otherwise the concrete class is the contract.
+- **Migration scaffolding before there is anything to migrate from.** Format converters, schema-upgrade paths, deprecated-flag fallbacks, version-skew shims all wait until the first shipped version creates real legacy. Pre-MVP, format changes propagate by wipe-and-reinstall on debug devices — that's the explicit cost of not yet having users.
 
 ## Common-first across KMP targets
 

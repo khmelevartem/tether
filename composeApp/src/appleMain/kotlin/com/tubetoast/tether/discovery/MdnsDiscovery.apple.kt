@@ -4,10 +4,9 @@ package com.tubetoast.tether.discovery
 
 import com.tubetoast.tether.identity.DeviceIdentityStore
 import com.tubetoast.tether.protocol.Device
+import com.tubetoast.tether.util.toNSData
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.ObjCSignatureOverride
-import kotlinx.cinterop.addressOf
-import kotlinx.cinterop.usePinned
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -16,7 +15,6 @@ import platform.Foundation.NSNetService
 import platform.Foundation.NSNetServiceBrowser
 import platform.Foundation.NSNetServiceBrowserDelegateProtocol
 import platform.Foundation.NSNetServiceDelegateProtocol
-import platform.Foundation.dataWithBytes
 import platform.darwin.NSObject
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.debug
@@ -152,11 +150,7 @@ actual class MdnsDiscovery(
 
     private fun txtRecordData(): NSData? {
         val dict: Map<String, NSData> = txtProps(fingerprint).entries.associate { (k, v) ->
-            val bytes = v.encodeToByteArray()
-            val nsData: NSData = bytes.usePinned { pinned ->
-                NSData.dataWithBytes(pinned.addressOf(0), bytes.size.toULong())
-            }
-            k to nsData
+            k to (v.encodeToByteArray().toNSData() ?: NSData())
         }
         // Safe: Kotlin/Native ObjC bridge maps NSDictionary* parameters to Map<Any?, *>;
         // our keys (String) and values (NSData) are accepted by the bridge at runtime.
