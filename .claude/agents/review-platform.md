@@ -15,7 +15,7 @@ Only if the diff touches: `androidMain/`, `iosMain/`, `jvmMain/`, `desktopMain/`
 
 ## Required reading
 
-- `docs/engineering/architecture-principles.md` — common-first rule, what we skip pre-MVP
+- `docs/engineering/architecture-principles.md` — common-first rule
 - `docs/engineering/modules.md` — module / source-set boundaries
 - `docs/knowledge/apple-platform.md` — full file (delegate GC, Local Network Privacy, NSRunLoop in tests, Keychain query dicts)
 - `docs/knowledge/android-fgs.md` if the diff touches a foreground service
