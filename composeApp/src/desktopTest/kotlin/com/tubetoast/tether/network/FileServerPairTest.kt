@@ -1,10 +1,9 @@
 package com.tubetoast.tether.network
 
+import com.tubetoast.tether.PairingTestFixtures
 import com.tubetoast.tether.network.PairingConfirmationHandler
-import com.tubetoast.tether.preferences.TempDataStore
 import com.tubetoast.tether.protocol.PairRequest
 import com.tubetoast.tether.protocol.PairResponse
-import com.tubetoast.tether.security.DefaultTrustedDeviceStore
 import com.tubetoast.tether.security.DeviceKeyPair
 import com.tubetoast.tether.security.TrustedDeviceStore
 import com.tubetoast.tether.security.deviceIdFromPublicKey
@@ -21,8 +20,6 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
-import java.io.File
-import java.nio.file.Files
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -33,8 +30,7 @@ import kotlin.test.assertTrue
 // real CIO server — CIOApplicationEngine hardcodes real-thread dispatchers
 @Suppress("ktlint:tether:no-run-blocking-in-tests")
 class FileServerPairTest {
-    private val cleanupPaths = mutableListOf<File>()
-    private val cleanupTempStores = mutableListOf<TempDataStore>()
+    private val fixtures = PairingTestFixtures()
     private var startedServer: FileServer? = null
     private val client: HttpClient = HttpClient(CIO) { install(ContentNegotiation) { json() } }
 
@@ -43,19 +39,7 @@ class FileServerPairTest {
         client.close()
         startedServer?.stop()
         startedServer = null
-        cleanupPaths.forEach { it.deleteRecursively() }
-        cleanupPaths.clear()
-        cleanupTempStores.forEach { it.tearDown() }
-        cleanupTempStores.clear()
-    }
-
-    private fun newConfigDir(): File =
-        Files.createTempDirectory("tether-pair-test").toFile().also(cleanupPaths::add)
-
-    private fun newTrustedStore(): TrustedDeviceStore {
-        val temp = TempDataStore()
-        cleanupTempStores += temp
-        return DefaultTrustedDeviceStore(temp.dataStore)
+        fixtures.tearDown()
     }
 
     private fun startServer(
@@ -78,9 +62,8 @@ class FileServerPairTest {
 
     @Test
     fun `pair endpoint returns 200 with server public key`() {
-        val configDir = newConfigDir()
-        val keyPair = DeviceKeyPair(configDir)
-        val (_, port) = startServer(newTrustedStore(), keyPair)
+        val keyPair = DeviceKeyPair(fixtures.newConfigDir())
+        val (_, port) = startServer(fixtures.newTrustedStore(), keyPair)
         runBlocking {
             val response = client.post("http://localhost:$port/pair") {
                 contentType(ContentType.Application.Json)
@@ -98,9 +81,8 @@ class FileServerPairTest {
 
     @Test
     fun `pair saves initiator public key under publicKey-derived deviceId`() {
-        val configDir = newConfigDir()
-        val store = newTrustedStore()
-        val (_, port) = startServer(store, DeviceKeyPair(configDir))
+        val store = fixtures.newTrustedStore()
+        val (_, port) = startServer(store, DeviceKeyPair(fixtures.newConfigDir()))
         val peerKey = byteArrayOf(10, 20, 30)
         val expectedDeviceId = deviceIdFromPublicKey(peerKey)
         runBlocking {
@@ -121,9 +103,8 @@ class FileServerPairTest {
 
     @Test
     fun `name collision with different keys produces distinct trust entries`() {
-        val configDir = newConfigDir()
-        val store = newTrustedStore()
-        val (_, port) = startServer(store, DeviceKeyPair(configDir))
+        val store = fixtures.newTrustedStore()
+        val (_, port) = startServer(store, DeviceKeyPair(fixtures.newConfigDir()))
         val keyAlice = byteArrayOf(1, 1, 1)
         val keyMallory = byteArrayOf(2, 2, 2)
         runBlocking {
@@ -149,9 +130,8 @@ class FileServerPairTest {
 
     @Test
     fun `pair with empty publicKey is accepted and stored under SHA-256 of empty input`() {
-        val configDir = newConfigDir()
-        val store = newTrustedStore()
-        val (_, port) = startServer(store, DeviceKeyPair(configDir))
+        val store = fixtures.newTrustedStore()
+        val (_, port) = startServer(store, DeviceKeyPair(fixtures.newConfigDir()))
         val emptyKey = byteArrayOf()
         val deviceId = deviceIdFromPublicKey(emptyKey)
         runBlocking {
@@ -168,8 +148,7 @@ class FileServerPairTest {
 
     @Test
     fun `pair with invalid body returns 400`() {
-        val configDir = newConfigDir()
-        val (_, port) = startServer(newTrustedStore(), DeviceKeyPair(configDir))
+        val (_, port) = startServer(fixtures.newTrustedStore(), DeviceKeyPair(fixtures.newConfigDir()))
         runBlocking {
             val response = client.post("http://localhost:$port/pair") {
                 contentType(ContentType.Application.Json)
@@ -181,10 +160,9 @@ class FileServerPairTest {
 
     @Test
     fun `pair returns 403 when handler rejects`() {
-        val configDir = newConfigDir()
         val (_, port) = startServer(
-            newTrustedStore(),
-            DeviceKeyPair(configDir),
+            fixtures.newTrustedStore(),
+            DeviceKeyPair(fixtures.newConfigDir()),
             handler = PairingConfirmationHandler { _, _ -> false },
         )
         runBlocking {
@@ -198,14 +176,13 @@ class FileServerPairTest {
 
     @Test
     fun `pair returns 200 when device is already trusted`() {
-        val configDir = newConfigDir()
-        val store = newTrustedStore()
+        val store = fixtures.newTrustedStore()
         val peerKey = byteArrayOf(5, 6, 7)
         val deviceId = deviceIdFromPublicKey(peerKey)
         runBlocking { store.saveTrustedKey(deviceId, peerKey) }
         val (_, port) = startServer(
             store,
-            DeviceKeyPair(configDir),
+            DeviceKeyPair(fixtures.newConfigDir()),
             handler = PairingConfirmationHandler { _, _ -> false },
         )
         runBlocking {
@@ -219,10 +196,9 @@ class FileServerPairTest {
 
     @Test
     fun `pair returns 403 on timeout`() {
-        val configDir = newConfigDir()
         val (_, port) = startServer(
-            newTrustedStore(),
-            DeviceKeyPair(configDir),
+            fixtures.newTrustedStore(),
+            DeviceKeyPair(fixtures.newConfigDir()),
             handler = PairingConfirmationHandler { _, _ ->
                 delay(Long.MAX_VALUE)
                 false
@@ -243,7 +219,6 @@ class FileServerPairTest {
 
     @Test
     fun `pair returns 500 when store fails to persist`() {
-        val configDir = newConfigDir()
         val throwingStore = object : TrustedDeviceStore {
             override suspend fun isTrusted(deviceId: String) = false
 
@@ -252,7 +227,7 @@ class FileServerPairTest {
 
             override suspend fun getPublicKey(deviceId: String): ByteArray? = null
         }
-        val (_, port) = startServer(throwingStore, DeviceKeyPair(configDir))
+        val (_, port) = startServer(throwingStore, DeviceKeyPair(fixtures.newConfigDir()))
         runBlocking {
             val response = client.post("http://localhost:$port/pair") {
                 contentType(ContentType.Application.Json)

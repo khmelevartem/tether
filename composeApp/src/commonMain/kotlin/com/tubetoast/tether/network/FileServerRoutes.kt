@@ -127,7 +127,7 @@ internal fun Application.installFileServerRoutes(
                     }
                 }
             }
-            // TODO(#10): server persists the peer key before the client user confirms — if the client
+            // TODO(#361): server persists the peer key before the client user confirms — if the client
             // user later rejects (MITM detected), the server remains trusting. A two-phase commit
             // protocol (server defers save until client sends a follow-up commit) would fix this.
             try {

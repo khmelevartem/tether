@@ -1,10 +1,9 @@
 package com.tubetoast.tether.network
 
-import com.tubetoast.tether.preferences.TempDataStore
+import com.tubetoast.tether.PairingTestFixtures
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.protocol.PairResponse
 import com.tubetoast.tether.protocol.SendResult
-import com.tubetoast.tether.security.DefaultTrustedDeviceStore
 import com.tubetoast.tether.security.DeviceKeyPair
 import com.tubetoast.tether.security.TrustedDeviceStore
 import com.tubetoast.tether.security.deviceIdFromPublicKey
@@ -22,6 +21,7 @@ import io.ktor.http.content.OutgoingContent
 import io.ktor.http.headersOf
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.utils.io.ByteChannel
+import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.readAvailable
 import io.ktor.utils.io.writeFully
 import kotlinx.coroutines.delay
@@ -33,7 +33,6 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.nio.file.Files
@@ -41,6 +40,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.io.path.writeBytes
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
@@ -51,6 +51,7 @@ import kotlin.time.Duration.Companion.seconds
 
 class FileClientTest {
     private val device = Device(name = "test", host = "127.0.0.1", port = 8080)
+    private val fixtures = PairingTestFixtures()
 
     private fun TestScope.mockClient(
         noProgressTimeout: kotlin.time.Duration = 60.seconds,
@@ -310,25 +311,6 @@ class FileClientTest {
         }
     }
 
-    private val cleanupPaths = mutableListOf<File>()
-    private val cleanupTempStores = mutableListOf<TempDataStore>()
-
-    private fun newConfigDir(): File =
-        Files.createTempDirectory("tether-client-pair-test").toFile().also(cleanupPaths::add)
-
-    private fun newTrustedStore(): TrustedDeviceStore {
-        val temp = TempDataStore()
-        cleanupTempStores += temp
-        return DefaultTrustedDeviceStore(temp.dataStore)
-    }
-
-    private fun tearDownPairingFixtures() {
-        cleanupPaths.forEach { it.deleteRecursively() }
-        cleanupPaths.clear()
-        cleanupTempStores.forEach { it.tearDown() }
-        cleanupTempStores.clear()
-    }
-
     private fun TestScope.httpFor(
         handler: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData,
     ): HttpClient = HttpClient(MockEngine) {
@@ -342,8 +324,8 @@ class FileClientTest {
     private fun TestScope.pairingClient(
         pairHandler: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData,
         uploadHandler: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData,
-        trustedDeviceStore: TrustedDeviceStore = newTrustedStore(),
-        keyPair: DeviceKeyPair = DeviceKeyPair(newConfigDir()),
+        trustedDeviceStore: TrustedDeviceStore = fixtures.newTrustedStore(),
+        keyPair: DeviceKeyPair = DeviceKeyPair(fixtures.newConfigDir()),
         confirmationHandler: PairingConfirmationHandler = PairingConfirmationHandler { _, _ -> true },
     ): FileClient = FileClient(
         client = httpFor { request ->
@@ -381,6 +363,7 @@ class FileClientTest {
     @Test
     fun `send calls pair endpoint before upload`() = runTest {
         val serverKey = byteArrayOf(7, 8, 9)
+        val store = fixtures.newTrustedStore()
         val uploadCalled = AtomicBoolean(false)
         val client = pairingClient(
             pairHandler = {
@@ -398,6 +381,7 @@ class FileClientTest {
                     headers = headersOf(HttpHeaders.ContentType, "application/json"),
                 )
             },
+            trustedDeviceStore = store,
         )
         val file = Files.createTempFile("pair-before-upload", ".txt")
         file.writeBytes("data".toByteArray())
@@ -405,10 +389,12 @@ class FileClientTest {
             val result = client.send(device, file)
             assertIs<SendResult.Success>(result)
             assertTrue(uploadCalled.get(), "upload must be called after successful pairing")
+            val deviceId = deviceIdFromPublicKey(serverKey)
+            assertTrue(store.isTrusted(deviceId), "peer key must be saved to trust store after successful pairing")
         } finally {
             client.close()
             Files.deleteIfExists(file)
-            tearDownPairingFixtures()
+            fixtures.tearDown()
         }
     }
 
@@ -437,7 +423,7 @@ class FileClientTest {
         } finally {
             client.close()
             Files.deleteIfExists(file)
-            tearDownPairingFixtures()
+            fixtures.tearDown()
         }
     }
 
@@ -468,7 +454,7 @@ class FileClientTest {
         } finally {
             client.close()
             Files.deleteIfExists(file)
-            tearDownPairingFixtures()
+            fixtures.tearDown()
         }
     }
 
@@ -476,7 +462,7 @@ class FileClientTest {
     fun `send skips pair prompt for already-trusted device`() = runTest {
         val serverKey = byteArrayOf(7, 8, 9)
         val serverDeviceId = deviceIdFromPublicKey(serverKey)
-        val store = newTrustedStore()
+        val store = fixtures.newTrustedStore()
         store.saveTrustedKey(serverDeviceId, serverKey)
         val confirmationCalled = AtomicBoolean(false)
         val client = pairingClient(
@@ -509,7 +495,47 @@ class FileClientTest {
         } finally {
             client.close()
             Files.deleteIfExists(file)
-            tearDownPairingFixtures()
+            fixtures.tearDown()
+        }
+    }
+
+    @Test
+    fun `second send skips pairing confirmation after successful first pairing`() = runTest {
+        val store = fixtures.newTrustedStore()
+        var confirmationCallCount = 0
+        val client = pairingClient(
+            pairHandler = { respondJson(PairResponse(byteArrayOf(7, 8, 9))) },
+            uploadHandler = { respondJson(mapOf("savedPath" to "/test/file.txt")) },
+            trustedDeviceStore = store,
+            confirmationHandler = PairingConfirmationHandler { _, _ ->
+                confirmationCallCount++
+                true
+            },
+        )
+        val file = Files.createTempFile("consecutive-send-test", ".txt")
+        file.writeBytes("hello".toByteArray())
+        try {
+            client.send(device, file)
+            assertEquals(1, confirmationCallCount, "first send must trigger confirmation")
+
+            client.send(device, ByteReadChannel("hello".toByteArray()), "test.txt", 5L)
+            assertEquals(1, confirmationCallCount, "second send must not trigger confirmation again")
+        } finally {
+            client.close()
+            Files.deleteIfExists(file)
+            fixtures.tearDown()
         }
     }
 }
+
+private fun MockRequestHandleScope.respondJson(value: PairResponse): HttpResponseData = respond(
+    content = Json.encodeToString(value),
+    status = HttpStatusCode.OK,
+    headers = headersOf(HttpHeaders.ContentType, "application/json"),
+)
+
+private fun MockRequestHandleScope.respondJson(value: Map<String, String>): HttpResponseData = respond(
+    content = Json.encodeToString(value),
+    status = HttpStatusCode.OK,
+    headers = headersOf(HttpHeaders.ContentType, "application/json"),
+)
