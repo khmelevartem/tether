@@ -1,7 +1,6 @@
 package com.tubetoast.tether.discovery.bonjour
 
 import com.tubetoast.tether.discovery.DiscoveredDevicesStore
-import com.tubetoast.tether.identity.isOwnAnnounce
 import com.tubetoast.tether.protocol.Device
 
 /** State machine over the Browse → Resolve → GetAddrInfo callback chain. */
@@ -61,7 +60,7 @@ internal class BonjourState(
         val ip = pendingIps[name] ?: return
         val port = pendingPorts[name] ?: return
         val peerFingerprint = pendingFingerprints[name]
-        if (isOwnAnnounce(peerFingerprint, ownFingerprint)) return
+        if (peerFingerprint != null && peerFingerprint == ownFingerprint) return
         if (isSelf(ip, port)) return
         val device = Device(name = name, host = ip, port = port)
         store.upsert(device)

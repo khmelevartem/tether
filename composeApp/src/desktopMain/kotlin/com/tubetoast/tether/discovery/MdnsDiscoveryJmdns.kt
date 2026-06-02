@@ -1,7 +1,6 @@
 package com.tubetoast.tether.discovery
 
 import com.tubetoast.tether.identity.DeviceIdentityStore
-import com.tubetoast.tether.identity.isOwnAnnounce
 import com.tubetoast.tether.protocol.Device
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -221,7 +220,7 @@ internal class MdnsDiscoveryJmdns(
     }
 
     internal fun isOwnAnnounce(peerFingerprint: String?): Boolean =
-        isOwnAnnounce(peerFingerprint, fingerprint)
+        peerFingerprint != null && peerFingerprint == fingerprint
 
     /** JmDNS resolves A/AAAA in stages; first callback may carry only IPv6. Returns `null` to wait for next event. */
     private fun resolveIPv4(info: ServiceInfo, serviceName: String): String? {
