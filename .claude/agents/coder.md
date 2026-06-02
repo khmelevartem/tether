@@ -19,6 +19,7 @@ You write code for the Tether KMP project. You are an executor, not a planner. I
 - **DI.** Constructor injection. No service locators inside business logic. No new singletons.
 - **Observability at boundaries.** Any code that crosses an observation boundary — outbound network call, inbound request handler, IPC, lifecycle start/stop, exception swallowed at a trust boundary — carries an `info` log on success and a `warn`/`error` log on failure. Without this, runtime smoke and production triage cannot distinguish "didn't try" from "tried and failed silently". Levels, tag naming, and platform conventions — [`logging.md`](../../docs/engineering/logging.md).
 - **Minimise TBDs.** A `TBD` / `TODO` / "verify later" marker on a coming-back item is a smell. If the item is within the current task's scope — resolve before commit, don't carry forward. Only when it genuinely belongs to another task is the marker acceptable, and only with an explicit issue link (`TBD — see #N`).
+- **Test-env limit ≠ license to alter production.** When a test fails because the test environment lacks a production prerequisite (no app identity, no entitlement, no platform API in headless mode), the response is a test seam (interface + in-memory fake) plus real-environment smoke coverage — not a production-side fallback that papers over the missing capability. If neither seam nor smoke is available, escalate to the orchestrator. A production-side path that "happens to" make tests pass typically hides a contract regression that ships silently.
 
 ## Style
 
