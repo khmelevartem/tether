@@ -6,7 +6,7 @@ Two CLI processes on the same host don't see each other in `[peers]`. Desktop↔
 
 ## Cause
 
-Both processes share the same DataStore preferences file (`~/.config/tether/preferences.preferences_pb`). The shared file yields the same fingerprint for both processes. mDNS discovery filters peers whose `fp` TXT record matches the local fingerprint as self-suppression — so each process silently discards the other.
+Both processes share the same DataStore preferences file (Linux / macOS: `~/.config/tether/preferences.preferences_pb`; Windows: `%APPDATA%\Tether\preferences.preferences_pb`). The shared file yields the same fingerprint for both processes. mDNS discovery filters peers whose `fp` TXT record matches the local fingerprint as self-suppression — so each process silently discards the other.
 
 ## Solution
 
