@@ -226,6 +226,10 @@ When a test needs a fake container instead of the real one, define a `TestApplic
 
 The platform entry point builds the **root Component** (Decompose), passing `AppContainer` to it. The root creates its children with the dependencies they need. On Android we use Decompose's `retainedComponent { ... }`, which stores the Component in the Activity's `ViewModelStore` for config-change retention only — not as a DI scope. See [presentation-layer.md](presentation-layer.md).
 
+## See also
+
+Per-layer ownership and import rules (which layer may accept which dependencies): [layering.md](layering.md).
+
 ## Open questions
 
 - iOS receive-side: when a non-Ktor `FileServer` implementation lands, the container branches per-platform more aggressively. May be the moment to flip to Metro.

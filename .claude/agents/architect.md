@@ -45,7 +45,7 @@ Whether the work is needed is the orchestrator's call; once invoked, you own the
 
 1. **Read the issue + any linked spec / ux brief.** The spec is the *why*; the ux brief is the user-visible surface you cannot violate.
 2. **Read the actual code** for the subsystem and its neighbours. Your design must integrate with what exists, not pretend a green field.
-3. **Load canon when writing.** [`docs/engineering/README.md`](../../docs/engineering/README.md) (living-doc writing style), [`long-lived-artifacts.md`](../../docs/engineering/long-lived-artifacts.md) (prose discipline), [`adr/README.md`](../../docs/engineering/adr/README.md) (ADR conventions + threshold). Templates: [`_template.md`](../../docs/engineering/_template.md) for living docs, [`adr/_template.md`](../../docs/engineering/adr/_template.md) for ADRs.
+3. **Load canon when writing.** [`docs/engineering/README.md`](../../docs/engineering/README.md) (living-doc writing style), [`long-lived-artifacts.md`](../../docs/engineering/long-lived-artifacts.md) (prose discipline), [`adr/README.md`](../../docs/engineering/adr/README.md) (ADR conventions + threshold), [`layering.md`](../../docs/engineering/layering.md) (per-layer ownership and import rules). Templates: [`_template.md`](../../docs/engineering/_template.md) for living docs, [`adr/_template.md`](../../docs/engineering/adr/_template.md) for ADRs.
 
 ## Procedure
 
