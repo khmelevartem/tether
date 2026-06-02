@@ -8,12 +8,12 @@ import androidx.compose.ui.Modifier
 
 @Composable
 fun BannersSection(component: BannersComponent, modifier: Modifier = Modifier) {
-    val bannerState by component.pendingBanner.collectAsState()
+    val pendingOutboundBannerState by component.pendingBanner.collectAsState()
     val showForeground by component.showForegroundConstraint.collectAsState()
 
     Column(modifier = modifier) {
         PendingOutboundBanner(
-            state = bannerState,
+            state = pendingOutboundBannerState,
             onCancel = component::onCancelPending,
         )
 

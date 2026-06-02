@@ -423,7 +423,7 @@ class PeerTransferEngineTest {
     }
 
     @Test
-    fun `startOutbound returns false when non-Idle`() = runTest {
+    fun `startOutbound returns false when ActiveOutbound`() = runTest {
         val pauseChannel = Channel<Unit>(0)
         val engine = buildEngine(pauseChannel = pauseChannel, scope = backgroundScope)
 
@@ -436,6 +436,113 @@ class PeerTransferEngineTest {
 
         assertFalse(result)
         assertIs<PeerTransferState.ActiveOutbound>(engine.state.value)
+    }
+
+    @Test
+    fun `startOutbound returns false when ActiveInbound`() = runTest {
+        val events = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
+        val engine = buildEngine(events = events, scope = backgroundScope)
+        runCurrent()
+
+        events.emit(ReceiveEvent.Started("file.txt", 1))
+        runCurrent()
+        assertIs<PeerTransferState.ActiveInbound>(engine.state.value)
+
+        val result = engine.startOutbound(listOf(FakeFileSource("b.txt", 200L)))
+        runCurrent()
+
+        assertFalse(result)
+        assertIs<PeerTransferState.ActiveInbound>(engine.state.value)
+    }
+
+    @Test
+    fun `startOutbound returns false when Reconnecting`() = runTest {
+        val events = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
+        val engine = buildEngine(events = events, scope = backgroundScope)
+        runCurrent()
+
+        events.emit(ReceiveEvent.Started("file.txt", 1))
+        runCurrent()
+        events.emit(ReceiveEvent.ConnectionLost(receivedSoFar = 0))
+        runCurrent()
+        assertIs<PeerTransferState.Reconnecting>(engine.state.value)
+
+        val result = engine.startOutbound(listOf(FakeFileSource("b.txt", 200L)))
+        runCurrent()
+
+        assertFalse(result)
+        assertIs<PeerTransferState.Reconnecting>(engine.state.value)
+    }
+
+    @Test
+    fun `startOutbound returns false when Sent`() = runTest {
+        val engine = buildEngine(scope = backgroundScope)
+
+        engine.startOutbound(listOf(FakeFileSource("a.txt", 100L)))
+        runCurrent()
+        assertIs<PeerTransferState.Sent>(engine.state.value)
+
+        val result = engine.startOutbound(listOf(FakeFileSource("b.txt", 200L)))
+        runCurrent()
+
+        assertFalse(result)
+        assertIs<PeerTransferState.Sent>(engine.state.value)
+    }
+
+    @Test
+    fun `startOutbound returns false when Received`() = runTest {
+        val events = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
+        val engine = buildEngine(events = events, scope = backgroundScope)
+        runCurrent()
+
+        events.emit(ReceiveEvent.Started("file.txt", 1))
+        runCurrent()
+        events.emit(ReceiveEvent.BatchCompleted(received = 1, total = 1))
+        runCurrent()
+        assertIs<PeerTransferState.Received>(engine.state.value)
+
+        val result = engine.startOutbound(listOf(FakeFileSource("b.txt", 200L)))
+        runCurrent()
+
+        assertFalse(result)
+        assertIs<PeerTransferState.Received>(engine.state.value)
+    }
+
+    @Test
+    fun `startOutbound returns false when Error`() = runTest {
+        val events = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
+        val engine = buildEngine(events = events, scope = backgroundScope)
+        runCurrent()
+
+        events.emit(ReceiveEvent.Started("file.txt", 1))
+        runCurrent()
+        events.emit(ReceiveEvent.ReceiverSuspended)
+        runCurrent()
+        assertIs<PeerTransferState.Error>(engine.state.value)
+
+        val result = engine.startOutbound(listOf(FakeFileSource("b.txt", 200L)))
+        runCurrent()
+
+        assertFalse(result)
+        assertIs<PeerTransferState.Error>(engine.state.value)
+    }
+
+    @Test
+    fun `startOutbound returns false when Cancelled`() = runTest {
+        val pauseChannel = Channel<Unit>(0)
+        val engine = buildEngine(pauseChannel = pauseChannel, scope = backgroundScope)
+
+        engine.startOutbound(listOf(FakeFileSource("a.txt", 100L)))
+        runCurrent()
+        engine.onCancel()
+        runCurrent()
+        assertIs<PeerTransferState.Cancelled>(engine.state.value)
+
+        val result = engine.startOutbound(listOf(FakeFileSource("b.txt", 200L)))
+        runCurrent()
+
+        assertFalse(result)
+        assertIs<PeerTransferState.Cancelled>(engine.state.value)
     }
 
     @Test

@@ -41,9 +41,8 @@ class BannersComponent(
     private val _showForegroundConstraint = MutableStateFlow(false)
 
     private val selectedConflictPeer = MutableStateFlow<PeerIdentity?>(null)
-    private val announcementTick = MutableStateFlow(0)
 
-    val pendingBanner: StateFlow<PendingBannerState> = buildPendingBannerFlow()
+    val pendingBanner: StateFlow<PendingOutboundBannerState> = buildPendingBannerFlow()
 
     private var dropFeedbackJob: Job? = null
 
@@ -72,7 +71,6 @@ class BannersComponent(
             .onEach { peerId ->
                 if (pendingFilesRepository.pending.value != null) {
                     selectedConflictPeer.update { peerId }
-                    announcementTick.update { it + 1 }
                 }
             }.launchIn(scope)
     }
@@ -107,39 +105,38 @@ class BannersComponent(
         }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    private fun buildPendingBannerFlow(): StateFlow<PendingBannerState> {
+    private fun buildPendingBannerFlow(): StateFlow<PendingOutboundBannerState> {
         val engineStateFlow = selectedConflictPeer.flatMapLatest { conflictPeerEngineStateFlow(it) }
         return combine(
             pendingFilesRepository.pending,
             selectedConflictPeer,
-            announcementTick,
             _dropFeedback,
             engineStateFlow,
-        ) { pending, peerId, tick, dropFeedback, engineState ->
+        ) { pending, peerId, dropFeedback, engineState ->
             if (pending == null) {
-                PendingBannerState.Hidden
+                PendingOutboundBannerState.Hidden
             } else if (peerId == null) {
-                PendingBannerState.Default(pending.summary, dropFeedback)
+                PendingOutboundBannerState.Default(pending.summary, dropFeedback)
             } else {
                 val peerName = conflictPeerName(peerId)
                 when (engineState) {
                     is PeerTransferState.ActiveOutbound,
                     is PeerTransferState.ActiveInbound,
                     is PeerTransferState.Reconnecting,
-                    -> PendingBannerState.BusyPeer(pending.summary, peerName, tick)
+                    -> PendingOutboundBannerState.BusyPeer(pending.summary, peerName)
 
                     is PeerTransferState.Sent,
                     is PeerTransferState.Received,
                     is PeerTransferState.Error,
                     is PeerTransferState.Cancelled,
-                    -> PendingBannerState.TerminalDisplay(peerName, tick)
+                    -> PendingOutboundBannerState.TerminalDisplay(peerName)
 
                     is PeerTransferState.Idle,
                     null,
-                    -> PendingBannerState.Default(pending.summary, dropFeedback)
+                    -> PendingOutboundBannerState.Default(pending.summary, dropFeedback)
                 }
             }
-        }.stateIn(scope, SharingStarted.Eagerly, PendingBannerState.Hidden)
+        }.stateIn(scope, SharingStarted.Eagerly, PendingOutboundBannerState.Hidden)
     }
 
     private companion object {

@@ -121,7 +121,7 @@ class BannersComponentTest {
 
         runCurrent()
 
-        assertIs<PendingBannerState.Hidden>(component.pendingBanner.value)
+        assertIs<PendingOutboundBannerState.Hidden>(component.pendingBanner.value)
     }
 
     @Test
@@ -133,7 +133,7 @@ class BannersComponentTest {
 
         runCurrent()
 
-        val state = assertIs<PendingBannerState.Default>(component.pendingBanner.value)
+        val state = assertIs<PendingOutboundBannerState.Default>(component.pendingBanner.value)
         assertEquals(summary, state.summary)
     }
 
@@ -162,7 +162,7 @@ class BannersComponentTest {
         repo.setPending(summary, listOf(FakeFileSource("share.txt", 100L)))
         runCurrent()
 
-        val state = assertIs<PendingBannerState.Default>(component.pendingBanner.value)
+        val state = assertIs<PendingOutboundBannerState.Default>(component.pendingBanner.value)
         assertEquals(summary, state.summary)
     }
 
@@ -191,10 +191,9 @@ class BannersComponentTest {
         runCurrent()
         runCurrent()
 
-        val state = assertIs<PendingBannerState.BusyPeer>(component.pendingBanner.value)
+        val state = assertIs<PendingOutboundBannerState.BusyPeer>(component.pendingBanner.value)
         assertEquals(summary, state.summary)
         assertEquals(peerName, state.peerName)
-        assertEquals(1, state.announcementTick)
     }
 
     @Test
@@ -224,7 +223,7 @@ class BannersComponentTest {
         runCurrent()
         runCurrent()
 
-        val state = assertIs<PendingBannerState.BusyPeer>(component.pendingBanner.value)
+        val state = assertIs<PendingOutboundBannerState.BusyPeer>(component.pendingBanner.value)
         assertEquals(summary, state.summary)
         assertEquals(peerName, state.peerName)
     }
@@ -257,39 +256,7 @@ class BannersComponentTest {
         runCurrent()
         runCurrent()
 
-        assertIs<PendingBannerState.BusyPeer>(component.pendingBanner.value)
-    }
-
-    @Test
-    fun `repeat busy tap on same peer bumps announcementTick`() = runTest {
-        val repo = PendingFilesRepository()
-        val relay = PeerConflictRelay()
-        val pauseChannel = Channel<Unit>(0)
-        val registry = pausedRegistry(pauseChannel, backgroundScope)
-        val component = buildComponent(
-            repo = repo,
-            peersRepository = fakePeersRepository(),
-            engineRegistry = registry,
-            conflictRelay = relay,
-            coroutineScope = backgroundScope,
-        )
-        repo.setPending(PendingFilesSummary(1, 100L), listOf(FakeFileSource("f.txt", 100L)))
-        registry.engineFor(peerId).startOutbound(listOf(FakeFileSource("in-flight.txt", 50L)))
-        runCurrent()
-
-        relay.reportBusyTap(peerId)
-        runCurrent()
-        runCurrent()
-        runCurrent()
-        val first = assertIs<PendingBannerState.BusyPeer>(component.pendingBanner.value)
-
-        relay.reportBusyTap(peerId)
-        runCurrent()
-        runCurrent()
-        runCurrent()
-        val second = assertIs<PendingBannerState.BusyPeer>(component.pendingBanner.value)
-
-        assertEquals(first.announcementTick + 1, second.announcementTick)
+        assertIs<PendingOutboundBannerState.BusyPeer>(component.pendingBanner.value)
     }
 
     @Test
@@ -312,13 +279,13 @@ class BannersComponentTest {
         runCurrent()
         runCurrent()
         runCurrent()
-        assertIs<PendingBannerState.BusyPeer>(component.pendingBanner.value)
+        assertIs<PendingOutboundBannerState.BusyPeer>(component.pendingBanner.value)
 
         repo.clear()
         runCurrent()
         runCurrent()
 
-        assertIs<PendingBannerState.Hidden>(component.pendingBanner.value)
+        assertIs<PendingOutboundBannerState.Hidden>(component.pendingBanner.value)
     }
 
     @Test
@@ -341,7 +308,7 @@ class BannersComponentTest {
         runCurrent()
         runCurrent()
         runCurrent()
-        assertIs<PendingBannerState.BusyPeer>(component.pendingBanner.value)
+        assertIs<PendingOutboundBannerState.BusyPeer>(component.pendingBanner.value)
 
         registry.engineFor(peerId).onCancel()
         runCurrent()
@@ -349,14 +316,14 @@ class BannersComponentTest {
         runCurrent()
         runCurrent()
 
-        assertIs<PendingBannerState.TerminalDisplay>(component.pendingBanner.value)
+        assertIs<PendingOutboundBannerState.TerminalDisplay>(component.pendingBanner.value)
 
         registry.engineFor(peerId).onDismiss()
         runCurrent()
         runCurrent()
         runCurrent()
 
-        assertIs<PendingBannerState.Default>(component.pendingBanner.value)
+        assertIs<PendingOutboundBannerState.Default>(component.pendingBanner.value)
     }
 
     @Test
@@ -384,7 +351,7 @@ class BannersComponentTest {
         runCurrent()
         runCurrent()
 
-        assertIs<PendingBannerState.TerminalDisplay>(component.pendingBanner.value)
+        assertIs<PendingOutboundBannerState.TerminalDisplay>(component.pendingBanner.value)
     }
 
     @Test
@@ -414,7 +381,7 @@ class BannersComponentTest {
         runCurrent()
         runCurrent()
 
-        assertIs<PendingBannerState.TerminalDisplay>(component.pendingBanner.value)
+        assertIs<PendingOutboundBannerState.TerminalDisplay>(component.pendingBanner.value)
     }
 
     @Test
@@ -444,7 +411,7 @@ class BannersComponentTest {
         runCurrent()
         runCurrent()
 
-        assertIs<PendingBannerState.TerminalDisplay>(component.pendingBanner.value)
+        assertIs<PendingOutboundBannerState.TerminalDisplay>(component.pendingBanner.value)
     }
 
     @Test
@@ -469,7 +436,7 @@ class BannersComponentTest {
         runCurrent()
         runCurrent()
 
-        val state = assertIs<PendingBannerState.BusyPeer>(component.pendingBanner.value)
+        val state = assertIs<PendingOutboundBannerState.BusyPeer>(component.pendingBanner.value)
         assertEquals(peerId.id, state.peerName)
     }
 }

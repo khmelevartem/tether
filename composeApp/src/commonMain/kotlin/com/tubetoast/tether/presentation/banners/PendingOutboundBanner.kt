@@ -14,15 +14,15 @@ import com.tubetoast.tether.ui.preview.Themes
 
 @Composable
 fun PendingOutboundBanner(
-    state: PendingBannerState,
+    state: PendingOutboundBannerState,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     when (state) {
-        PendingBannerState.Hidden -> Unit
-        is PendingBannerState.Default -> DefaultBanner(state.summary, state.dropFeedback, onCancel, modifier)
-        is PendingBannerState.BusyPeer -> BusyPeerBanner(state.summary, state.peerName, onCancel, modifier)
-        is PendingBannerState.TerminalDisplay -> TerminalDisplayBanner(state.peerName, onCancel, modifier)
+        PendingOutboundBannerState.Hidden -> Unit
+        is PendingOutboundBannerState.Default -> DefaultBanner(state.summary, state.dropFeedback, onCancel, modifier)
+        is PendingOutboundBannerState.BusyPeer -> BusyPeerBanner(state.summary, state.peerName, onCancel, modifier)
+        is PendingOutboundBannerState.TerminalDisplay -> TerminalDisplayBanner(state.peerName, onCancel, modifier)
     }
 }
 
@@ -96,7 +96,7 @@ private fun TerminalDisplayBanner(
 private fun PreviewSingleFile(@PreviewParameter(Themes::class) dark: Boolean) =
     PreviewSurface(darkTheme = dark) {
         PendingOutboundBanner(
-            state = PendingBannerState.Default(PendingFilesSummary(1, 5_242_880L), false),
+            state = PendingOutboundBannerState.Default(PendingFilesSummary(1, 5_242_880L), false),
             onCancel = {},
         )
     }
@@ -106,7 +106,7 @@ private fun PreviewSingleFile(@PreviewParameter(Themes::class) dark: Boolean) =
 private fun PreviewMultipleFiles(@PreviewParameter(Themes::class) dark: Boolean) =
     PreviewSurface(darkTheme = dark) {
         PendingOutboundBanner(
-            state = PendingBannerState.Default(PendingFilesSummary(12, 524_288_000L), false),
+            state = PendingOutboundBannerState.Default(PendingFilesSummary(12, 524_288_000L), false),
             onCancel = {},
         )
     }
@@ -116,7 +116,7 @@ private fun PreviewMultipleFiles(@PreviewParameter(Themes::class) dark: Boolean)
 private fun PreviewDropRejected(@PreviewParameter(Themes::class) dark: Boolean) =
     PreviewSurface(darkTheme = dark) {
         PendingOutboundBanner(
-            state = PendingBannerState.Default(PendingFilesSummary(5, 104_857_600L), true),
+            state = PendingOutboundBannerState.Default(PendingFilesSummary(5, 104_857_600L), true),
             onCancel = {},
         )
     }
@@ -126,7 +126,7 @@ private fun PreviewDropRejected(@PreviewParameter(Themes::class) dark: Boolean) 
 private fun PreviewBusyPeer(@PreviewParameter(Themes::class) dark: Boolean) =
     PreviewSurface(darkTheme = dark) {
         PendingOutboundBanner(
-            state = PendingBannerState.BusyPeer(PendingFilesSummary(3, 15_728_640L), "Alice's Mac", 1),
+            state = PendingOutboundBannerState.BusyPeer(PendingFilesSummary(3, 15_728_640L), "Alice's Mac"),
             onCancel = {},
         )
     }
@@ -136,7 +136,7 @@ private fun PreviewBusyPeer(@PreviewParameter(Themes::class) dark: Boolean) =
 private fun PreviewTerminalDisplay(@PreviewParameter(Themes::class) dark: Boolean) =
     PreviewSurface(darkTheme = dark) {
         PendingOutboundBanner(
-            state = PendingBannerState.TerminalDisplay("Alice's Mac", 1),
+            state = PendingOutboundBannerState.TerminalDisplay("Alice's Mac"),
             onCancel = {},
         )
     }
