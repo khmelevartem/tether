@@ -2,9 +2,8 @@
 
 package com.tubetoast.tether.network
 
+import com.tubetoast.tether.TempDirs
 import platform.Foundation.NSFileManager
-import platform.Foundation.NSTemporaryDirectory
-import platform.Foundation.NSUUID
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
@@ -12,26 +11,12 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class AppleUploadStorageBackendTest {
-    private val tempDirs = mutableListOf<String>()
+    private val tempDirs = TempDirs(slug = "tether-upload")
 
     @AfterTest
-    fun cleanup() {
-        val fm = NSFileManager.defaultManager
-        tempDirs.forEach { fm.removeItemAtPath(it, error = null) }
-        tempDirs.clear()
-    }
+    fun cleanup() = tempDirs.cleanup()
 
-    private fun newTempDir(): String {
-        val path = "${NSTemporaryDirectory()}tether-apple-backend-${NSUUID().UUIDString}"
-        NSFileManager.defaultManager.createDirectoryAtPath(
-            path,
-            withIntermediateDirectories = true,
-            attributes = null,
-            error = null,
-        )
-        tempDirs += path
-        return path
-    }
+    private fun newTempDir(): String = tempDirs.newDir()
 
     @Test
     fun mkdirIfAbsent_returns_true_when_directory_is_newly_created() {

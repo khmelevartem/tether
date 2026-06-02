@@ -64,7 +64,6 @@ The user never sees keys, never types a code into a field, never picks an algori
 
 - Channel encryption of file transfers — separate, see [security.md](../../security.md).
 - A "forget device" or "manage trusted devices" screen — comes after MVP.
-- Stronger storage on Apple platforms (Keychain). The first version uses default per-platform storage; Keychain is a follow-up.
 - Pairing of more than two devices in one action (group pairing) — out of scope.
 - Recovering pairing when one device's identity drifts (e.g. OS-level keychain reset without app reinstall) — same path as reinstall, no special handling.
 
