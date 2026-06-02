@@ -52,8 +52,8 @@ internal class BonjourState(
     private fun cleanupName(name: String) {
         pendingPorts.remove(name)
         pendingIps.remove(name)
-        pendingFingerprints.remove(name)
-        store.removeByName(name)
+        val fp = pendingFingerprints.remove(name)
+        if (fp != null) store.removeByFingerprint(fp) else store.removeByName(name)
     }
 
     private fun emitIfReady(name: String) {

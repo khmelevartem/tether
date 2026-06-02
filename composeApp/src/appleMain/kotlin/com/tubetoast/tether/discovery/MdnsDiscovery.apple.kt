@@ -51,6 +51,7 @@ actual class MdnsDiscovery(
     private var serviceDelegate: ServiceDelegate? = null
     private var browserDelegate: BrowserDelegate? = null
     private val resolutionDelegates = mutableListOf<ResolutionDelegate>()
+    private val nameToFingerprint = mutableMapOf<String, String>()
 
     actual override suspend fun start(deviceName: String, port: Int) {
         val fingerprint = deviceIdentityStore.getOrCreate()
@@ -112,6 +113,7 @@ actual class MdnsDiscovery(
             serviceDelegate = null
             browserDelegate = null
             resolutionDelegates.clear()
+            nameToFingerprint.clear()
             store.clear()
 
             log.info { "stopped" }
@@ -178,7 +180,8 @@ actual class MdnsDiscovery(
     private fun onServiceRemoved(service: NSNetService) {
         val serviceName = service.name
         log.info { "service removed $serviceName" }
-        store.removeByName(serviceName)
+        val fp = nameToFingerprint.remove(serviceName)
+        if (fp != null) store.removeByFingerprint(fp) else store.removeByName(serviceName)
     }
 
     private fun onServiceResolved(service: NSNetService) {
@@ -198,6 +201,7 @@ actual class MdnsDiscovery(
         }
 
         val peerFingerprint = extractFingerprintFromTxt(service)
+        if (peerFingerprint != null) nameToFingerprint[serviceName] = peerFingerprint
 
         val device = Device(
             name = serviceName,

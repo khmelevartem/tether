@@ -5,9 +5,7 @@ set -euo pipefail
 # are alive. macOS mDNSResponder will canonicalise the duplicate as `SmokeMacA (2)`.
 #
 # Regression guard for #346: the same physical peer must collapse to a single entry in every
-# observer's [peers] list. Pre-fix bug — pre-rename and post-rename announces from one peer
-# resolved to the same (host, port) but distinct names, and the store keyed entries by name,
-# so [peers] listed both aliases for ~75s until the pre-rename TTL expired.
+# observer's [peers] list.
 #
 # Assertion: in each CLI's last [peers] line, no two peers share the same host:port.
 
@@ -15,15 +13,13 @@ LOG_A="${LOG_A:-/tmp/smoke-cliA.log}"
 LOG_B="${LOG_B:-/tmp/smoke-cliB.log}"
 LOG_C="${LOG_C:-/tmp/smoke-cliC.log}"
 
-# Extract host:port tokens from the last [peers] line of a log and count duplicates.
-# Returns the number of (host, port) collisions — 0 means deduplicated.
 collisions() {
     local log="$1"
     local last
     last=$(grep -aE "\[peers\]" "$log" 2>/dev/null | tail -1 || true)
     [ -z "$last" ] && { echo 0; return; }
     echo "$last" \
-        | grep -oE '[^ ,]+@[^ ,]+' \
+        | { grep -oE '[^ ,]+@[^ ,]+' || true; } \
         | sed 's/.*@//' \
         | sort \
         | uniq -d \

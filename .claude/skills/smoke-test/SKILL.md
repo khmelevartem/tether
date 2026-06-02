@@ -99,7 +99,7 @@ Cleanup of instance C — in Block 7.
 
 Run: `./block-3.1-peer-dedup.sh`
 
-Regression guard for #346. macOS `mDNSResponder` canonicalises duplicate service names (`Self` → `Self (2)`). A peer receiving both the pre-rename and post-rename announces for the same instance must collapse them into one entry — assertion: in each CLI's last `[peers]` line, no two peers share the same `host:port`.
+Regression guard for #346. macOS `mDNSResponder` canonicalises duplicate service names by appending a numeric suffix to the conflicting name. A peer receiving both the pre-rename and post-rename announces for the same instance must collapse them into one entry — assertion: in each CLI's last `[peers]` line, no two peers share the same `host:port`.
 
 Prerequisite: Block 3 (three CLIs alive — A, B, and C reusing A's name). FAIL → attach the last `[peers]` lines from all three logs in Details.
 

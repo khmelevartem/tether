@@ -131,6 +131,7 @@ internal class MdnsDiscoveryJmdns(
                 tearDown(key, jmdns)
             }
             instances.clear()
+            nameToFingerprint.clear()
             ownPort = -1
             store.clear()
         }
@@ -182,6 +183,8 @@ internal class MdnsDiscoveryJmdns(
         }
     }
 
+    private val nameToFingerprint = mutableMapOf<String, String>()
+
     private fun makeListener(owningJmdns: JmDNS): ServiceListener = object : ServiceListener {
         override fun serviceAdded(event: ServiceEvent) {
             owningJmdns.requestServiceInfo(event.type, event.name)
@@ -189,7 +192,8 @@ internal class MdnsDiscoveryJmdns(
 
         override fun serviceRemoved(event: ServiceEvent) {
             log.info { "serviceRemoved '${event.name}'" }
-            store.removeByName(event.name)
+            val fp = nameToFingerprint.remove(event.name)
+            if (fp != null) store.removeByFingerprint(fp) else store.removeByName(event.name)
         }
 
         override fun serviceResolved(event: ServiceEvent) {
@@ -207,6 +211,7 @@ internal class MdnsDiscoveryJmdns(
                 val peerFingerprint = info.getPropertyString("fp")
                 if (isOwnAnnounce(peerFingerprint)) return
                 val ipv4 = resolveIPv4(info, event.name) ?: return
+                if (peerFingerprint != null) nameToFingerprint[event.name] = peerFingerprint
                 val device = Device(
                     name = event.name,
                     host = ipv4,

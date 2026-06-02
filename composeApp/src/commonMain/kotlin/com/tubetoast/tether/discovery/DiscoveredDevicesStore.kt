@@ -23,7 +23,6 @@ class DiscoveredDevicesStore {
      */
     fun upsert(device: Device) {
         _devices.update { prev ->
-            // Rule 1: match by fingerprint (most stable identity).
             if (device.fingerprint != null) {
                 val fpIdx = prev.indexOfFirst { it.fingerprint == device.fingerprint }
                 if (fpIdx >= 0) {
@@ -31,7 +30,6 @@ class DiscoveredDevicesStore {
                 }
             }
 
-            // Rule 2: incoming has fingerprint, existing at same host:port has none → promote.
             if (device.fingerprint != null) {
                 val hostPortIdx = prev.indexOfFirst {
                     it.host == device.host &&
@@ -43,13 +41,11 @@ class DiscoveredDevicesStore {
                 }
             }
 
-            // Rule 3: incoming has no fingerprint, but an entry already exists at same host:port → drop.
             if (device.fingerprint == null) {
                 val hostPortMatch = prev.any { it.host == device.host && it.port == device.port }
                 if (hostPortMatch) return@update prev
             }
 
-            // Rule 4: legacy id-based replace + same-name eviction.
             val result = ArrayList<Device>(prev.size + 1)
             var replaced = false
             for (existing in prev) {
@@ -69,6 +65,10 @@ class DiscoveredDevicesStore {
 
     fun removeByName(name: String) {
         _devices.update { prev -> prev.filter { it.name != name } }
+    }
+
+    fun removeByFingerprint(fingerprint: String) {
+        _devices.update { prev -> prev.filter { it.fingerprint != fingerprint } }
     }
 
     fun clear() {

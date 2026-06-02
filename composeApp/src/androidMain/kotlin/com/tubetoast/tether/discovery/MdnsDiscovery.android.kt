@@ -37,6 +37,7 @@ actual class MdnsDiscovery(
     @Volatile private var currentPort: Int = 0
     private val resolving = AtomicBoolean(false)
     private val resolveQueue = ConcurrentLinkedQueue<NsdServiceInfo>()
+    private val nameToFingerprint = mutableMapOf<String, String>()
 
     @Volatile private var registrationListener: NsdManager.RegistrationListener? = null
 
@@ -97,8 +98,9 @@ actual class MdnsDiscovery(
         override fun onServiceLost(serviceInfo: NsdServiceInfo) {
             if (nsdManager == null) return
             log.debug { "NSD service lost: ${serviceInfo.serviceName}" }
+            val fp = nameToFingerprint.remove(serviceInfo.serviceName)
             // NsdManager only populates serviceName here; host/port are null/0 — can't rebuild id.
-            store.removeByName(serviceInfo.serviceName)
+            if (fp != null) store.removeByFingerprint(fp) else store.removeByName(serviceInfo.serviceName)
         }
     }
 
@@ -132,6 +134,7 @@ actual class MdnsDiscovery(
                 return
             }
             val peerFingerprint = serviceInfo.attributes["fp"]?.decodeToString()
+            if (peerFingerprint != null) nameToFingerprint[serviceInfo.serviceName] = peerFingerprint
             val device = Device(
                 name = serviceInfo.serviceName,
                 host = host,
@@ -239,6 +242,7 @@ actual class MdnsDiscovery(
             currentPort = 0
             resolveQueue.clear()
             resolving.set(false)
+            nameToFingerprint.clear()
             store.clear()
         }
     }

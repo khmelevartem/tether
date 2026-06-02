@@ -117,11 +117,11 @@ class DiscoveredDevicesStoreTest {
         )
     }
 
-    // Rule 1: same fingerprint, different host/port — replaces in place.
+    // Rule 1: same fingerprint, different name/host — replaces in place (verifies Rule 1, not Rule 4).
     @Test
     fun `same fingerprint different host replaces in place`() {
         store.upsert(device("Peer", host = "1.0.0.1", fingerprint = "fp1"))
-        store.upsert(device("Peer", host = "1.0.0.2", fingerprint = "fp1"))
+        store.upsert(device("Peer (2)", host = "1.0.0.2", fingerprint = "fp1"))
         assertEquals(1, store.devices.value.size)
         assertEquals(
             "1.0.0.2",
@@ -131,11 +131,11 @@ class DiscoveredDevicesStoreTest {
         )
     }
 
-    // Rule 2: name-only entry first, then fingerprint-bearing at same host:port — promotes.
+    // Rule 2: name-only entry first, then fingerprint-bearing at same host:port with different name — promotes.
     @Test
     fun `fingerprint-bearing entry at same host-port promotes name-only entry`() {
         store.upsert(device("Peer"))
-        store.upsert(device("Peer", fingerprint = "fp1"))
+        store.upsert(device("Peer (2)", fingerprint = "fp1"))
         assertEquals(1, store.devices.value.size)
         assertEquals(
             "fp1",
@@ -185,5 +185,33 @@ class DiscoveredDevicesStoreTest {
         store.upsert(device("A", fingerprint = "fp1"))
         store.upsert(device("B", port = 81, fingerprint = "fp2"))
         assertEquals(2, store.devices.value.size)
+    }
+
+    // Finding 5: distinct fingerprints at same host:port must not collapse.
+    @Test
+    fun `two entries with distinct fingerprints at same host-port coexist`() {
+        store.upsert(device("A", host = "1.2.3.4", port = 8080, fingerprint = "fp1"))
+        store.upsert(device("B", host = "1.2.3.4", port = 8080, fingerprint = "fp2"))
+        assertEquals(2, store.devices.value.size)
+        val fingerprints = store.devices.value
+            .map { it.fingerprint }
+            .toSet()
+        assertEquals(setOf("fp1", "fp2"), fingerprints)
+    }
+
+    @Test
+    fun `removeByFingerprint evicts renamed entry by fingerprint`() {
+        store.upsert(device("A", fingerprint = "fp1"))
+        store.upsert(device("A (2)", fingerprint = "fp1"))
+        assertEquals(1, store.devices.value.size)
+        store.removeByFingerprint("fp1")
+        assertTrue(store.devices.value.isEmpty())
+    }
+
+    @Test
+    fun `removeByFingerprint is a no-op when no entry matches`() {
+        store.upsert(device("A", fingerprint = "fp1"))
+        store.removeByFingerprint("fp-unknown")
+        assertEquals(1, store.devices.value.size)
     }
 }
