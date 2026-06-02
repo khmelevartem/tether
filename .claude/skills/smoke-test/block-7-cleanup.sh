@@ -7,6 +7,11 @@ DOWNLOADS_B="${DOWNLOADS_B:-$HOME/Downloads/Tether}"
 
 set +e
 
+echo "quit" > /tmp/smoke-cliA-in 2>/dev/null || true
+echo "quit" > /tmp/smoke-cliB-in 2>/dev/null || true
+echo "quit" > /tmp/smoke-cliC-in 2>/dev/null || true
+sleep 2
+
 kill "$(cat /tmp/smoke-cliA.pid /tmp/smoke-cliB.pid /tmp/smoke-cliC.pid \
   /tmp/smoke-cliA-keeper.pid /tmp/smoke-cliB-keeper.pid /tmp/smoke-cliC-keeper.pid 2>/dev/null)" 2>/dev/null
 
