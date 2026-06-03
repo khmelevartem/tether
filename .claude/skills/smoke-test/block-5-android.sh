@@ -29,7 +29,7 @@ while [ "$(date +%s)" -lt "$DEADLINE" ]; do
 done
 NSD_READY_MS=$(python3 -c "import time; print(int(time.time() * 1000))")
 
-ANDROID_PORT=$(adb logcat -d 2>/dev/null | grep "FileServer started on port" | grep -oE '[0-9]+$' | tail -1)
+ANDROID_PORT=$(adb logcat -d 2>/dev/null | grep "FileServer started on port" | grep -oE 'port [0-9]+' | awk '{print $2}' | tail -1)
 echo "Android port: $ANDROID_PORT"
 
 ANDROID_IP=$(adb shell ip addr show wlan0 2>&1 | grep "inet " | awk '{print $2}' | cut -d/ -f1 | head -1)
@@ -71,10 +71,12 @@ else
   ANDROID_NAME_FILE="smoke-android-$(date +%s).txt"
   ANDROID_SRC="/tmp/$ANDROID_NAME_FILE"
   echo "send-to-android-$(date +%s)" > "$ANDROID_SRC"
-  set +e; PREV_DONE=$(grep -cE "^\[send\] done" "$LOG_A" 2>/dev/null || echo 0); set -e
+  PREV_DONE=$(grep -cE "^\[send\] done" "$LOG_A" 2>/dev/null || true)
+  PREV_DONE=${PREV_DONE:-0}
   echo "send $ANDROID_NAME $ANDROID_SRC" > /tmp/smoke-cliA-in &
   for i in $(seq 1 15); do
-    set +e; NOW_DONE=$(grep -cE "^\[send\] done" "$LOG_A" 2>/dev/null || echo 0); set -e
+    NOW_DONE=$(grep -cE "^\[send\] done" "$LOG_A" 2>/dev/null || true)
+    NOW_DONE=${NOW_DONE:-0}
     [ "$NOW_DONE" -gt "$PREV_DONE" ] && break
     sleep 1
   done
