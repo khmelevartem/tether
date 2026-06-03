@@ -14,7 +14,7 @@
 | 4 | [#317](https://github.com/khmelevartem/tether/issues/317) | Apply v0 visual references to transfer UI | refactor | M | ✅ закрыт ([PR #360](https://github.com/khmelevartem/tether/pull/360)) |
 | 5 | [#321](https://github.com/khmelevartem/tether/issues/321) | Codify the UI → Presentation → Domain → Data layering scheme | docs | M | ✅ закрыт ([PR #356](https://github.com/khmelevartem/tether/pull/356)) |
 | 6 | [#116](https://github.com/khmelevartem/tether/issues/116) | Apple: настоящая EC P-256 пара ключей через Security framework + Keychain | enhancement | S | ✅ закрыт ([PR #351](https://github.com/khmelevartem/tether/pull/351)) |
-| 7 | [#10](https://github.com/khmelevartem/tether/issues/10) | Pairing — handshake, вычисление PIN-кода, CLI-флоу | feature | M | ❌ не сделан, перенесён в sprint-12 |
+| 7 | [#10](https://github.com/khmelevartem/tether/issues/10) | Pairing — handshake, вычисление PIN-кода, CLI-флоу | feature | M | ❌ не сделан, перенесён в sprint-11 |
 | 8 | [#328](https://github.com/khmelevartem/tether/issues/328) | Batch send + retry in CLI via PeerTransferEngine | feature | M | ✅ закрыт ([PR #343](https://github.com/khmelevartem/tether/pull/343)) |
 
 ## Дополнительные результаты
