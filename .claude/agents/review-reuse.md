@@ -24,7 +24,7 @@ If you find a near-duplicate, flag it. "Near" includes: same logic with differen
 
 **Threshold — second copy.** Once the same shape appears in **two** places in the diff (or once in the diff + once already in the codebase), flag it for extraction. Do not wait for the third copy. The fact that each copy currently lives as a private helper next to its caller is not a defence; private-helper duplication across sibling files is the precise pattern this rule targets.
 
-**Conceptual duplication.** Beyond name/body matches: when a new unit — class, interface, method, type, anything — reads as a renamed or reshaped version of something the codebase likely already provides, do a targeted search before treating it as new. Judgment-triggered on that smell, not an exhaustive per-entity sweep; start at the domain layer, where canonical concepts live. On a match, flag it: reuse the existing one or justify why it is unfit. A divergent shape is not justification.
+**Conceptual duplication.** Name/body grep misses a new unit — class, interface, method, type, anything — that restates an existing concept under a different name and shape. Cheap filter first, from the declaration alone: does its name and purpose denote a domain concept — a category, status, role, or entity the product reasons about, the kind of term `docs/glossary.md` catalogues — rather than a mechanism (formatter, mapper, transport)? Only for those, search the domain layer for a type that already models it. On a match, flag it: reuse the existing one or justify why it is unfit. A divergent shape is not justification.
 
 ### 2. Doc-vs-code drift
 
