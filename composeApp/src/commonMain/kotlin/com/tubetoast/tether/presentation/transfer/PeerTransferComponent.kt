@@ -8,6 +8,7 @@ import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.destroy
 import com.tubetoast.tether.peer.Peer
 import com.tubetoast.tether.presentation.banners.PeerConflictRelay
+import com.tubetoast.tether.protocol.DeviceType
 import com.tubetoast.tether.transfer.FileSource
 import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PeerTransferEngine
@@ -31,6 +32,9 @@ class PeerTransferComponent(
     private val onOpenPicker: () -> Unit = {},
     private val conflictRelay: PeerConflictRelay,
 ) : ComponentContext by componentContext {
+    // TODO(#332): read from peer.device.deviceType once Device carries the field
+    val deviceType: DeviceType? = null
+
     fun destroyContext() {
         lifecycleRegistry.destroy()
     }

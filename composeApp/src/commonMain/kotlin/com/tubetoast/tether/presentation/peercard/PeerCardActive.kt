@@ -4,8 +4,12 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -17,16 +21,18 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import com.tubetoast.tether.protocol.Device
+import com.tubetoast.tether.transfer.ByteFormatting
 import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.ui.designsystem.Button
+import com.tubetoast.tether.ui.designsystem.NumericText
 import com.tubetoast.tether.ui.designsystem.ProgressBar
 import com.tubetoast.tether.ui.designsystem.TitleText
-import com.tubetoast.tether.ui.feature.ByteProgressRow
 import com.tubetoast.tether.ui.feature.CurrentFileLabel
 import com.tubetoast.tether.ui.feature.SkipCountBadge
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
 import com.tubetoast.tether.ui.preview.TransferPreviewFixtures
+import com.tubetoast.tether.ui.theme.TetherTheme
 
 @Composable
 internal fun PeerCardActiveOutbound(
@@ -34,6 +40,7 @@ internal fun PeerCardActiveOutbound(
     device: Device,
     callbacks: PeerCardCallbacks,
     modifier: Modifier = Modifier,
+    isPaired: Boolean = false,
 ) {
     val peerName = device.name
     val sending = state as? PeerTransferState.ActiveOutbound.Sending
@@ -52,6 +59,7 @@ internal fun PeerCardActiveOutbound(
         totalBytes = state.totalBytes,
         bytesPerSec = sending?.bytesPerSec,
         isInbound = false,
+        isPaired = isPaired,
         trailingContent = {
             val skipped = sending?.skippedCount ?: 0
             if (skipped > 0) {
@@ -72,6 +80,7 @@ internal fun PeerCardActiveInbound(
     device: Device,
     callbacks: PeerCardCallbacks,
     modifier: Modifier = Modifier,
+    isPaired: Boolean = false,
 ) {
     val peerName = device.name
     val progress = if (state.totalBytes != null && state.totalBytes > 0) {
@@ -89,6 +98,7 @@ internal fun PeerCardActiveInbound(
         totalBytes = state.totalBytes,
         bytesPerSec = state.bytesPerSec,
         isInbound = true,
+        isPaired = isPaired,
         trailingContent = {},
         cancelDescription = "Cancel incoming transfer from $peerName",
         onCancel = callbacks.onCancel,
@@ -108,6 +118,7 @@ private fun ActiveCardShell(
     totalBytes: Long?,
     bytesPerSec: Long?,
     isInbound: Boolean,
+    isPaired: Boolean,
     trailingContent: @Composable () -> Unit,
     cancelDescription: String,
     onCancel: () -> Unit,
@@ -115,6 +126,9 @@ private fun ActiveCardShell(
     showDetailsDescription: String,
     modifier: Modifier = Modifier,
 ) {
+    val spacing = TetherTheme.spacing
+    val colors = TetherTheme.colors
+
     val animatedProgress by animateFloatAsState(
         targetValue = progress,
         animationSpec = spring(stiffness = Spring.StiffnessLow),
@@ -123,6 +137,7 @@ private fun ActiveCardShell(
 
     PeerCardShell(
         modifier = modifier.semantics { liveRegion = LiveRegionMode.Polite },
+        isPaired = isPaired,
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -141,28 +156,53 @@ private fun ActiveCardShell(
             )
         }
 
-        TransferProgressBar(
-            progress = animatedProgress,
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .semantics { contentDescription = "Transfer in progress" },
-        )
+                .padding(start = spacing.xxl),
+        ) {
+            CurrentFileLabel(
+                fileName = currentFile,
+                contentDescription = if (isInbound) {
+                    "Currently receiving: $currentFile"
+                } else {
+                    "Currently sending: $currentFile"
+                },
+                modifier = Modifier.fillMaxWidth(),
+            )
 
-        CurrentFileLabel(
-            fileName = currentFile,
-            contentDescription = if (isInbound) {
-                "Currently receiving: $currentFile"
-            } else {
-                "Currently sending: $currentFile"
-            },
-            modifier = Modifier.fillMaxWidth(),
-        )
+            Spacer(Modifier.height(spacing.xs))
 
-        ByteProgressRow(
-            sentBytes = sentBytes,
-            totalBytes = totalBytes,
-            bytesPerSecond = bytesPerSec,
-        )
+            TransferProgressBar(
+                progress = animatedProgress,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .semantics { contentDescription = "Transfer in progress" },
+            )
+
+            Spacer(Modifier.height(spacing.xs))
+
+            Row(modifier = Modifier.fillMaxWidth()) {
+                val sentFormatted = ByteFormatting.formatSize(sentBytes)
+                val totalFormatted = totalBytes?.let { ByteFormatting.formatSize(it) }
+                NumericText(
+                    text = if (totalFormatted != null) "$sentFormatted of $totalFormatted" else sentFormatted,
+                    color = colors.textMuted,
+                    modifier = Modifier.weight(1f),
+                )
+                if (bytesPerSec != null) {
+                    NumericText(
+                        text = "${ByteFormatting.formatSize(bytesPerSec)}/s",
+                        color = colors.textMuted,
+                    )
+                } else {
+                    NumericText(
+                        text = "Calculating…",
+                        color = colors.textMuted,
+                    )
+                }
+            }
+        }
 
         Row(
             modifier = Modifier.fillMaxWidth(),
