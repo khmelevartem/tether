@@ -32,7 +32,6 @@ actual class MdnsDiscovery(
     actual override suspend fun republish(name: String) = delegate.republish(name)
 }
 
-/** Extended interface for JVM mDNS backends that expose the mDNS-canonical own name. */
 internal interface OwnNameDiscovery : DeviceDiscovery {
     val ownPublishedName: StateFlow<String?>
 }

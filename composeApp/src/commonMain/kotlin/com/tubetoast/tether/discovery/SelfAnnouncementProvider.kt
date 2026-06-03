@@ -14,9 +14,9 @@ interface SelfAnnouncementProvider {
 }
 
 // On async-publish platforms (macOS/Bonjour) the canonical name arrives via a callback that fires
-// after the coroutine that calls get() is already running. Two seconds is enough for the callback
-// to fire in the normal case (observed: <100 ms); the fallback protects against a pathologically
-// late or absent callback.
+// after the coroutine that calls get() is already running. Two seconds is generous enough for the
+// callback to fire in the normal case; the fallback protects against a pathologically late or absent
+// callback.
 private const val CANONICAL_NAME_WAIT_MS = 2_000L
 
 class DefaultSelfAnnouncementProvider(
