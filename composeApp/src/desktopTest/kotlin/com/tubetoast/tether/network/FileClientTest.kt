@@ -220,6 +220,76 @@ class FileClientTest {
     }
 
     @Test
+    fun `send encodes spaces in filename as percent-20 not plus`() = runTest {
+        val capturedQuery = AtomicReference<String?>()
+        val client = mockClient { request ->
+            capturedQuery.set(request.url.encodedQuery)
+            val body = request.body as OutgoingContent.ReadChannelContent
+            val ch = body.readFrom()
+            val buf = ByteArray(8 * 1024)
+            while (!ch.isClosedForRead) ch.readAvailable(buf)
+            respond(
+                content = okResponse("/saved/manual with space.txt"),
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+        val source = ByteChannel(autoFlush = true)
+        source.writeFully(ByteArray(4))
+        source.close()
+        try {
+            client.send(
+                device = device,
+                channel = source,
+                fileName = "manual with space.txt",
+                totalBytes = 4L,
+            )
+            val query = capturedQuery.get() ?: error("handler did not capture request")
+            assertTrue(
+                query.contains("name=manual%20with%20space") && !query.contains('+'),
+                "expected spaces encoded as %20 (not +) in query, got: $query",
+            )
+        } finally {
+            client.close()
+        }
+    }
+
+    @Test
+    fun `send encodes hash in filename as percent-23`() = runTest {
+        val capturedQuery = AtomicReference<String?>()
+        val client = mockClient { request ->
+            capturedQuery.set(request.url.encodedQuery)
+            val body = request.body as OutgoingContent.ReadChannelContent
+            val ch = body.readFrom()
+            val buf = ByteArray(8 * 1024)
+            while (!ch.isClosedForRead) ch.readAvailable(buf)
+            respond(
+                content = okResponse("/saved/file#name.txt"),
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+        val source = ByteChannel(autoFlush = true)
+        source.writeFully(ByteArray(4))
+        source.close()
+        try {
+            client.send(
+                device = device,
+                channel = source,
+                fileName = "file#name.txt",
+                totalBytes = 4L,
+            )
+            val query = capturedQuery.get() ?: error("handler did not capture request")
+            assertTrue(
+                query.contains("name=file%23name"),
+                "expected # encoded as %23 in query, got: $query",
+            )
+        } finally {
+            client.close()
+        }
+    }
+
+    @Test
     fun `send does not trip watchdog during cold-start before first byte is sent`() = runTest {
         val client = mockClient(noProgressTimeout = 500.milliseconds) {
             delay(Long.MAX_VALUE)

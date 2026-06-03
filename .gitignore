@@ -19,3 +19,4 @@ captures
 node_modules/
 .claude/scheduled_tasks.lock
 scripts/.run-all/
+.obsidian
