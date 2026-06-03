@@ -6,6 +6,7 @@ import android.net.nsd.NsdServiceInfo
 import android.os.Build
 import com.tubetoast.tether.identity.DeviceIdentityStore
 import com.tubetoast.tether.protocol.Device
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -25,6 +26,9 @@ actual class MdnsDiscovery(
     private val deviceIdentityStore: DeviceIdentityStore,
 ) : DeviceDiscovery {
     actual override val discoveredDevices: StateFlow<List<Device>> = store.devices
+
+    private val _ownPublishedName = MutableStateFlow<String?>(null)
+    actual val ownPublishedName: StateFlow<String?> = _ownPublishedName
 
     private val lifecycleLock = Mutex()
 
@@ -62,6 +66,7 @@ actual class MdnsDiscovery(
                 // NsdManager may modify the requested name (e.g. strip special chars or resolve conflicts).
                 // Track the actual registered name so self-filter in onServiceFound stays accurate.
                 ownName = serviceInfo.serviceName
+                _ownPublishedName.value = serviceInfo.serviceName
             }
 
             override fun onServiceUnregistered(serviceInfo: NsdServiceInfo) {
@@ -180,6 +185,7 @@ actual class MdnsDiscovery(
             currentPort = port
             resolveQueue.clear()
             resolving.set(false)
+            _ownPublishedName.value = null
             val nm = context.getSystemService(Context.NSD_SERVICE) as NsdManager
             nsdManager = nm
             val serviceInfo = NsdServiceInfo().apply {
@@ -214,6 +220,7 @@ actual class MdnsDiscovery(
             log.debug { "Republishing NSD as name=$name" }
             unregisterPreviousListener(nm, "republish")
             ownName = name
+            _ownPublishedName.value = null
             val serviceInfo = NsdServiceInfo().apply {
                 serviceName = name
                 serviceType = SERVICE_TYPE
@@ -243,6 +250,7 @@ actual class MdnsDiscovery(
             currentPort = 0
             resolveQueue.clear()
             resolving.set(false)
+            _ownPublishedName.value = null
             store.clear()
         }
     }

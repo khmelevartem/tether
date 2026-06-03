@@ -80,7 +80,7 @@ abstract class AppContainer {
     }
 
     open val selfAnnouncementProvider: SelfAnnouncementProvider by lazy {
-        DefaultSelfAnnouncementProvider(nameStore, fileServer, deviceIdentityStore, ownDeviceType)
+        DefaultSelfAnnouncementProvider(nameStore, fileServer, deviceIdentityStore, ownDeviceType, mdnsDiscovery)
     }
 
     open val rendezvousAnnouncer: RendezvousAnnouncer by lazy {

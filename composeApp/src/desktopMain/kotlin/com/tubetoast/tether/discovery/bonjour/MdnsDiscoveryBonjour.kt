@@ -3,8 +3,8 @@ package com.tubetoast.tether.discovery.bonjour
 import com.sun.jna.Memory
 import com.sun.jna.Pointer
 import com.sun.jna.ptr.PointerByReference
-import com.tubetoast.tether.discovery.DeviceDiscovery
 import com.tubetoast.tether.discovery.DiscoveredDevicesStore
+import com.tubetoast.tether.discovery.OwnNameDiscovery
 import com.tubetoast.tether.discovery.txtProps
 import com.tubetoast.tether.identity.DeviceIdentityStore
 import com.tubetoast.tether.protocol.Device
@@ -16,6 +16,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -23,6 +24,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import ru.pocketbyte.kydra.log.KydraLog
+import ru.pocketbyte.kydra.log.info
 import ru.pocketbyte.kydra.log.warn
 import ru.pocketbyte.kydra.log.wrapper.withTag
 import java.net.NetworkInterface
@@ -45,8 +47,11 @@ private val log = KydraLog.withTag(default = "MdnsDiscovery.Bonjour")
 internal class MdnsDiscoveryBonjour(
     private val store: DiscoveredDevicesStore,
     private val deviceIdentityStore: DeviceIdentityStore,
-) : DeviceDiscovery {
+) : OwnNameDiscovery {
     override val discoveredDevices: StateFlow<List<Device>> = store.devices
+
+    private val _ownPublishedName = MutableStateFlow<String?>(null)
+    override val ownPublishedName: StateFlow<String?> = _ownPublishedName
 
     private val lifecycleLock = Mutex()
 
@@ -65,7 +70,8 @@ internal class MdnsDiscoveryBonjour(
             stopped = false
             currentPort = port
             this.fingerprint = fingerprint
-            session = Session.start(deviceName, port, store, fingerprint)
+            _ownPublishedName.value = null
+            session = Session.start(deviceName, port, store, fingerprint) { _ownPublishedName.value = it }
         }
     }
 
@@ -78,6 +84,7 @@ internal class MdnsDiscoveryBonjour(
             current
         }
         toClose?.close()
+        _ownPublishedName.value = null
         store.clear()
     }
 
@@ -91,7 +98,10 @@ internal class MdnsDiscoveryBonjour(
         toClose.close()
         lifecycleLock.withLock {
             if (stopped) return
-            if (session == null) session = Session.start(name, port, store, fingerprint)
+            if (session == null) {
+                _ownPublishedName.value = null
+                session = Session.start(name, port, store, fingerprint) { _ownPublishedName.value = it }
+            }
         }
     }
 
@@ -319,6 +329,7 @@ internal class MdnsDiscoveryBonjour(
                 port: Int,
                 store: DiscoveredDevicesStore,
                 fingerprint: String = "",
+                onNameAssigned: (String) -> Unit = {},
             ): Session {
                 val events = Channel<Event>(Channel.UNLIMITED)
                 val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -330,7 +341,7 @@ internal class MdnsDiscoveryBonjour(
                 session.bindState(state)
 
                 // interfaceIndex=0 → kDNSServiceInterfaceIndexAny; Bonjour fans out to all interfaces by default.
-                val registerRef = openRegisterRef(deviceName, port, fingerprint) { session.callbackAnchors.add(it) }
+                val registerRef = openRegisterRef(deviceName, port, fingerprint, onNameAssigned) { session.callbackAnchors.add(it) }
 
                 val browseCallback = object : DnsSd.BrowseReply {
                     override fun invoke(
@@ -399,6 +410,7 @@ internal class MdnsDiscoveryBonjour(
                 deviceName: String,
                 port: Int,
                 fingerprint: String,
+                onNameAssigned: (String) -> Unit,
                 anchor: (Any) -> Unit,
             ): Pointer? {
                 val outRef = PointerByReference()
@@ -414,6 +426,11 @@ internal class MdnsDiscoveryBonjour(
                     ) {
                         if (errorCode != DnsSd.NO_ERROR) {
                             log.warn { "DNSServiceRegister callback errorCode=$errorCode" }
+                            return
+                        }
+                        if (name != null) {
+                            log.info { "DNSServiceRegister assigned name='$name'" }
+                            onNameAssigned(name)
                         }
                     }
                 }

@@ -16,9 +16,10 @@ class DefaultSelfAnnouncementProvider(
     private val fileServer: FileServer,
     private val deviceIdentityStore: DeviceIdentityStore,
     private val ownDeviceType: DeviceType,
+    private val mdnsDiscovery: MdnsDiscovery,
 ) : SelfAnnouncementProvider {
     override suspend fun get() = PeerAnnouncement(
-        alias = nameStore.name.first(),
+        alias = mdnsDiscovery.ownPublishedName.value ?: nameStore.name.first(),
         fingerprint = deviceIdentityStore.getOrCreate(),
         port = fileServer.port,
         deviceType = ownDeviceType,
