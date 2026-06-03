@@ -27,6 +27,9 @@ actual class FileServer(
     private val deviceIdentityStore: DeviceIdentityStore? = null,
     private val discoveredDevicesStore: DiscoveredDevicesStore? = null,
 ) {
+    /** Override the default JVM filesystem storage. Must be set before [start] is called. */
+    internal var uploadStorageFactory: (() -> UploadStorage)? = null
+
     private var server: EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration>? = null
 
     @Volatile private var _port: Int = -1
@@ -34,10 +37,13 @@ actual class FileServer(
 
     actual fun start(): Int {
         check(server == null) { "FileServer is already running" }
-        val storage = FileUploadStorage(
-            root = downloadsDir.absolutePath,
-            backend = JvmUploadStorageBackend(downloadsDir.absolutePath),
-        )
+        val factory = uploadStorageFactory ?: {
+            FileUploadStorage(
+                root = downloadsDir.absolutePath,
+                backend = JvmUploadStorageBackend(downloadsDir.absolutePath),
+            )
+        }
+        val storage = factory()
         storage.ensureRoot()
         val srv = try {
             embeddedServer(CIO, port = configuredPort) {

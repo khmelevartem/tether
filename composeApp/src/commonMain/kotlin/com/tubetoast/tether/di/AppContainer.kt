@@ -28,6 +28,7 @@ import com.tubetoast.tether.security.TrustedDeviceStore
 import com.tubetoast.tether.transfer.AutoSendDispatcher
 import com.tubetoast.tether.transfer.BatchSender
 import com.tubetoast.tether.transfer.ConnectionMonitor
+import com.tubetoast.tether.transfer.FilePicker
 import com.tubetoast.tether.transfer.NoOpConnectionMonitor
 import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PeerTransferEngine
@@ -66,6 +67,8 @@ abstract class AppContainer {
     open val pendingFilesRepository: PendingFilesRepository by lazy { PendingFilesRepository() }
 
     open val peerConflictRelay: PeerConflictRelay by lazy { PeerConflictRelay() }
+
+    abstract val filePicker: FilePicker
 
     open val connectionMonitor: ConnectionMonitor = NoOpConnectionMonitor
 
@@ -123,6 +126,7 @@ abstract class AppContainer {
             peerTransferEngineRegistry = peerTransferEngineRegistry,
             pendingFilesRepository = pendingFilesRepository,
             peerConflictRelay = peerConflictRelay,
+            filePicker = filePicker,
         )
     }
 }

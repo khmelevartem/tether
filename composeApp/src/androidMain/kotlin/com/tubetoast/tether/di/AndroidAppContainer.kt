@@ -10,12 +10,17 @@ import com.tubetoast.tether.discovery.DiscoveredDevicesStore
 import com.tubetoast.tether.discovery.MdnsDiscovery
 import com.tubetoast.tether.identity.DataStoreFingerprintPersistence
 import com.tubetoast.tether.identity.FingerprintPersistence
+import com.tubetoast.tether.network.AndroidMediaStoreUploadStorage
 import com.tubetoast.tether.network.AndroidTransferLockHolder
 import com.tubetoast.tether.network.DefaultTransferActivityTracker
+import com.tubetoast.tether.network.FileServer
 import com.tubetoast.tether.network.TransferActivityTracker
 import com.tubetoast.tether.preferences.DefaultFileTransferPreferences
 import com.tubetoast.tether.preferences.FileTransferPreferences
 import com.tubetoast.tether.protocol.DeviceType
+import com.tubetoast.tether.transfer.AndroidFilePicker
+import com.tubetoast.tether.transfer.AndroidPickerCoordinator
+import com.tubetoast.tether.transfer.FilePicker
 import okio.Path.Companion.toOkioPath
 
 class AndroidAppContainer(
@@ -53,4 +58,28 @@ class AndroidAppContainer(
         saveLocationWritable = true,
     )
     override val ownDeviceType: DeviceType = DeviceType.Android
+
+    val activityProvider: AndroidActivityProvider = AndroidActivityProvider()
+
+    val pickerCoordinator: AndroidPickerCoordinator = AndroidPickerCoordinator()
+
+    val androidFilePicker: AndroidFilePicker = AndroidFilePicker(
+        activityProvider = activityProvider,
+        coordinator = pickerCoordinator,
+        contentResolver = application.contentResolver,
+    )
+
+    override val filePicker: FilePicker = androidFilePicker
+
+    override val fileServer: FileServer by lazy {
+        FileServer(
+            configuredPort = config.port,
+            downloadsDir = downloadsDir,
+            trustedDeviceStore = trustedDeviceStore,
+            deviceKeyPair = config.deviceKeyPair,
+            tracker = transferActivityTracker,
+            deviceIdentityStore = deviceIdentityStore,
+            discoveredDevicesStore = discoveredDevicesStore,
+        ).also { it.uploadStorageFactory = { AndroidMediaStoreUploadStorage(application.contentResolver) } }
+    }
 }

@@ -3,22 +3,28 @@ package com.tubetoast.tether
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.Build
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
 import androidx.core.content.ContextCompat
 import com.arkivanov.decompose.retainedComponent
+import com.tubetoast.tether.di.AndroidAppContainer
 import com.tubetoast.tether.di.AppContainerProvider
 import com.tubetoast.tether.network.TetherForegroundService
 import com.tubetoast.tether.presentation.RootContent
+import com.tubetoast.tether.transfer.PendingFilesSummary
+import com.tubetoast.tether.transfer.ShareIntentParser
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.warn
 import ru.pocketbyte.kydra.log.wrapper.withTag
 
 private val log = KydraLog.withTag(default = "MainActivity")
+private const val KEY_LAST_SHARE_INTENT_HASH = "last_share_intent_hash"
 
 class MainActivity : ComponentActivity() {
     private val notificationPermissionRequest = registerForActivityResult(
@@ -33,23 +39,77 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            val granted = ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.POST_NOTIFICATIONS,
-            ) == PackageManager.PERMISSION_GRANTED
-            if (!granted) {
-                notificationPermissionRequest.launch(Manifest.permission.POST_NOTIFICATIONS)
-            }
+        val granted = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.POST_NOTIFICATIONS,
+        ) == PackageManager.PERMISSION_GRANTED
+        if (!granted) {
+            notificationPermissionRequest.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
 
         startService()
 
         val container = (application as AppContainerProvider).container
+
+        val filesLauncher = activityResultRegistry.register(
+            "tether.pick.files",
+            ActivityResultContracts.OpenMultipleDocuments(),
+        ) { uris ->
+            container.pickerCoordinator.resolve(container.androidFilePicker.resolveUris(uris))
+        }
+        val folderLauncher = activityResultRegistry.register(
+            "tether.pick.folder",
+            ActivityResultContracts.OpenDocumentTree(),
+        ) { uri: Uri? ->
+            val sources = if (uri != null) container.androidFilePicker.resolveTree(uri) else emptyList()
+            container.pickerCoordinator.resolve(sources)
+        }
+        val photosLauncher = activityResultRegistry.register(
+            "tether.pick.photos",
+            ActivityResultContracts.PickMultipleVisualMedia(),
+        ) { uris: List<Uri> ->
+            container.pickerCoordinator.resolve(container.androidFilePicker.resolveUris(uris))
+        }
+        container.androidFilePicker.attach(filesLauncher, folderLauncher, photosLauncher)
+
+        val lastHash = savedInstanceState?.getInt(KEY_LAST_SHARE_INTENT_HASH)
+        handleShareIntent(intent, lastHash, container)
+
         val component = retainedComponent { container.rootComponentFactory.create(it) }
         setContent {
             RootContent(component)
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        val container = (application as AppContainerProvider).container
+        handleShareIntent(intent, null, container)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        val action = intent.action
+        if (action == Intent.ACTION_SEND || action == Intent.ACTION_SEND_MULTIPLE) {
+            outState.putInt(KEY_LAST_SHARE_INTENT_HASH, intent.hashCode())
+        }
+    }
+
+    private fun handleShareIntent(
+        intent: Intent,
+        lastHash: Int?,
+        container: AndroidAppContainer,
+    ) {
+        val action = intent.action
+        if (action != Intent.ACTION_SEND && action != Intent.ACTION_SEND_MULTIPLE) return
+        if (lastHash != null && intent.hashCode() == lastHash) return
+        val sources = ShareIntentParser.parse(intent, contentResolver)
+        if (sources.isEmpty()) return
+        val summary = PendingFilesSummary(
+            fileCount = sources.size,
+            totalBytes = sources.sumOf { it.sizeBytes ?: 0L },
+        )
+        container.pendingFilesRepository.setPending(summary, sources)
     }
 
     /**

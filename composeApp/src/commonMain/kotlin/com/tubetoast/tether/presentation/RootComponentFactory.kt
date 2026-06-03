@@ -6,6 +6,7 @@ import com.tubetoast.tether.peer.PeersRepository
 import com.tubetoast.tether.presentation.banners.BannersComponent
 import com.tubetoast.tether.presentation.banners.PeerConflictRelay
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
+import com.tubetoast.tether.transfer.FilePicker
 import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PeerTransferEngineRegistry
 import com.tubetoast.tether.transfer.PendingFilesRepository
@@ -17,7 +18,7 @@ class RootComponentFactory(
     private val peerTransferEngineRegistry: PeerTransferEngineRegistry,
     private val pendingFilesRepository: PendingFilesRepository,
     private val peerConflictRelay: PeerConflictRelay,
-    private val onPickerPick: (PeerIdentity) -> Unit = {},
+    private val filePicker: FilePicker? = null,
 ) {
     fun create(componentContext: ComponentContext): RootComponent =
         RootComponent(
@@ -37,7 +38,7 @@ class RootComponentFactory(
                             scope = componentScope,
                             onShowDetails = onShowDetails,
                             pendingFilesRepository = pendingFilesRepository,
-                            onOpenPicker = { onPickerPick(peer.id) },
+                            filePicker = filePicker,
                             conflictRelay = peerConflictRelay,
                         )
                     },

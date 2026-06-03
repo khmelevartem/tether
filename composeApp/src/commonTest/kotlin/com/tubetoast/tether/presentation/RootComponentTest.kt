@@ -12,6 +12,7 @@ import com.tubetoast.tether.presentation.banners.BannersComponent
 import com.tubetoast.tether.presentation.banners.PeerConflictRelay
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.protocol.Device
+import com.tubetoast.tether.transfer.FakeFilePicker
 import com.tubetoast.tether.transfer.FakeFileSource
 import com.tubetoast.tether.transfer.PeerTransferEngine
 import com.tubetoast.tether.transfer.PeerTransferState
@@ -143,12 +144,12 @@ class RootComponentTest {
     }
 
     @Test
-    fun `onCardClick without pending sources invokes onOpenPicker`() = runTest {
+    fun `onCardClick without pending sources invokes file picker`() = runTest {
         val devices = MutableStateFlow(listOf(deviceA))
-        var pickerInvoked = false
+        val picker = FakeFilePicker(result = emptyList())
         val component = buildComponent(
             devices = devices,
-            onPickerPick = { pickerInvoked = true },
+            filePicker = picker,
             coroutineScope = backgroundScope,
         )
         runCurrent()
@@ -157,8 +158,9 @@ class RootComponentTest {
         assertNotNull(peerComponent)
 
         peerComponent.onCardClick()
+        runCurrent()
 
-        assertTrue(pickerInvoked)
+        assertTrue(picker.pickFilesCalled)
     }
 
     @Test
@@ -215,7 +217,7 @@ class RootComponentTest {
         backDispatcher: BackDispatcher? = null,
         devices: MutableStateFlow<List<Device>> = MutableStateFlow(emptyList()),
         pendingFilesRepository: PendingFilesRepository = PendingFilesRepository(),
-        onPickerPick: () -> Unit = {},
+        filePicker: FakeFilePicker? = null,
         coroutineScope: CoroutineScope,
     ): RootComponent {
         val ctx = if (backDispatcher != null) {
@@ -254,7 +256,7 @@ class RootComponentTest {
                             onShowDetails = onShowDetails,
                             scope = coroutineScope,
                             pendingFilesRepository = pendingFilesRepository,
-                            onOpenPicker = onPickerPick,
+                            filePicker = filePicker,
                             conflictRelay = PeerConflictRelay(),
                         )
                     },

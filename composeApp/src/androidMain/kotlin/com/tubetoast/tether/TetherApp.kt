@@ -18,6 +18,7 @@ class TetherApp :
         super.onCreate()
         val debuggable = (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
         initTetherLogging(debugEnabled = debuggable)
+        registerActivityLifecycleCallbacks(container.activityProvider)
         container.autoSendDispatcher.start()
     }
 }

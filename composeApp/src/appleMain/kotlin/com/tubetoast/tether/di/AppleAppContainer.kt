@@ -13,6 +13,8 @@ import com.tubetoast.tether.network.FileServer
 import com.tubetoast.tether.preferences.DefaultFileTransferPreferences
 import com.tubetoast.tether.preferences.FileTransferPreferences
 import com.tubetoast.tether.protocol.DeviceType
+import com.tubetoast.tether.transfer.FilePicker
+import com.tubetoast.tether.transfer.FileSource
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.ObjCObjectVar
 import kotlinx.cinterop.alloc
@@ -58,6 +60,13 @@ open class AppleAppContainer(
         saveLocationWritable = false,
     )
     override val ownDeviceType: DeviceType = DeviceType.Ios
+
+    // TODO(#194): replace with real iOS file picker
+    override val filePicker: FilePicker = object : FilePicker {
+        override suspend fun pickFiles(): List<FileSource> = throw NotImplementedError("TODO(#194): iOS file picker not yet implemented")
+        override suspend fun pickFolder(): List<FileSource> = throw NotImplementedError("TODO(#194): iOS file picker not yet implemented")
+        override suspend fun pickPhotos(): List<FileSource> = throw NotImplementedError("TODO(#194): iOS photo picker not yet implemented")
+    }
 }
 
 @OptIn(ExperimentalForeignApi::class, kotlinx.cinterop.BetaInteropApi::class)
