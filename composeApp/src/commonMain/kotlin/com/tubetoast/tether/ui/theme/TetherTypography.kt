@@ -21,6 +21,7 @@ data class TetherTypography(
     val bodyMedium: TextStyle,
     val labelSmall: TextStyle,
     val numeric: TextStyle,
+    val pinDisplay: TextStyle,
 )
 
 private val lineHeightStyle = LineHeightStyle(
@@ -87,6 +88,15 @@ fun rememberTetherTypography(): TetherTypography {
             fontFeatureSettings = "tnum",
             lineHeightStyle = lineHeightStyle,
         ),
+        pinDisplay = TextStyle(
+            fontFamily = inter,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 48.sp,
+            lineHeight = 56.sp,
+            letterSpacing = 8.sp,
+            fontFeatureSettings = "tnum",
+            lineHeightStyle = lineHeightStyle,
+        ),
     )
 }
 
@@ -99,4 +109,5 @@ private fun placeholderTypography() = TetherTypography(
     bodyMedium = TextStyle.Default,
     labelSmall = TextStyle.Default,
     numeric = TextStyle.Default,
+    pinDisplay = TextStyle.Default,
 )

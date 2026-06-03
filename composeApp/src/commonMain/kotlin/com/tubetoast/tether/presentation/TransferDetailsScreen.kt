@@ -27,9 +27,10 @@ import com.tubetoast.tether.presentation.transfer.aggregateStripCopy
 import com.tubetoast.tether.presentation.transfer.detailsSubtitleCopy
 import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.PerFileStatus
+import com.tubetoast.tether.ui.designsystem.BackChevronButton
 import com.tubetoast.tether.ui.designsystem.BodyText
 import com.tubetoast.tether.ui.designsystem.Button
-import com.tubetoast.tether.ui.designsystem.DismissCloseButton
+import com.tubetoast.tether.ui.designsystem.ButtonVariant
 import com.tubetoast.tether.ui.designsystem.LabelText
 import com.tubetoast.tether.ui.designsystem.TitleText
 import com.tubetoast.tether.ui.preview.PreviewSurface
@@ -129,6 +130,7 @@ private fun TransferDetailsContent(
                     isSenderSide = isSenderSide,
                     onCancelFile = onCancelFile,
                     onRetryFile = onRetryFile,
+                    identityColor = TetherTheme.colors.peerIdentity,
                     modifier = if (isFirst) Modifier.focusRequester(firstItemFocusRequester) else Modifier,
                 )
             }
@@ -154,12 +156,13 @@ private fun TopBar(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        DismissCloseButton(
+        BackChevronButton(
             onClick = onBack,
             contentDescription = "Back to device list",
         )
         Column(
             modifier = Modifier.weight(1f).padding(horizontal = spacing.sm),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             TitleText(text = peerName)
             LabelText(text = subtitle)
@@ -169,6 +172,7 @@ private fun TopBar(
                 label = "Cancel",
                 onClick = onCancelTransfer,
                 contentDescription = "Cancel transfer to $peerName",
+                variant = ButtonVariant.Destructive,
             )
         }
     }

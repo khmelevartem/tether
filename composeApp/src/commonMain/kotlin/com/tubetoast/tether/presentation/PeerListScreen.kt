@@ -16,7 +16,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -108,8 +107,6 @@ private fun PeerListContent(
                     }
                     val cardModifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = spacing.lg, vertical = spacing.sm)
-                        .clip(TetherTheme.shapes.md)
                         .clickable(onClick = tapAction)
                         .semantics {
                             role = Role.Button
@@ -231,9 +228,7 @@ private fun PeerListContentPreview(specs: List<PeerCardPreviewSpec>) {
                         isOnline = spec.peer.isOnline,
                         device = spec.peer.device,
                         callbacks = previewCallbacks(),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = spacing.lg, vertical = spacing.sm),
+                        modifier = Modifier.fillMaxWidth(),
                     )
                 }
             }
