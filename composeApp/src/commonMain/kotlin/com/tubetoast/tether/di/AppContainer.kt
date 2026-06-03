@@ -11,6 +11,7 @@ import com.tubetoast.tether.discovery.MdnsDiscovery
 import com.tubetoast.tether.discovery.RendezvousAnnouncer
 import com.tubetoast.tether.discovery.SelfAnnouncementProvider
 import com.tubetoast.tether.identity.DeviceIdentityStore
+import com.tubetoast.tether.identity.FingerprintPersistence
 import com.tubetoast.tether.network.DefaultTransferActivityTracker
 import com.tubetoast.tether.network.FileClient
 import com.tubetoast.tether.network.FileServer
@@ -43,6 +44,7 @@ abstract class AppContainer {
     protected abstract val trustedDataStore: DataStore<Preferences>
 
     protected abstract val namePersistence: DeviceNamePersistence
+    protected abstract val fingerprintPersistence: FingerprintPersistence
     open val nameStore: DeviceNameStore by lazy { DeviceNameStore(namePersistence) }
     abstract val fileServer: FileServer
     abstract val mdnsDiscovery: MdnsDiscovery
@@ -54,7 +56,7 @@ abstract class AppContainer {
     open val peerPreferencesStore: PeerPreferencesStore by lazy { DefaultPeerPreferencesStore(dataStore) }
     abstract val fileTransferPreferences: FileTransferPreferences
 
-    open val deviceIdentityStore: DeviceIdentityStore by lazy { DeviceIdentityStore(dataStore) }
+    open val deviceIdentityStore: DeviceIdentityStore by lazy { DeviceIdentityStore(fingerprintPersistence) }
     protected abstract val ownDeviceType: DeviceType
 
     open val appScope: CoroutineScope by lazy { CoroutineScope(SupervisorJob() + Dispatchers.Default) }

@@ -7,6 +7,7 @@ data class Device(
     val name: String,
     val host: String,
     val port: Int,
+    val fingerprint: String? = null,
 ) {
     val id: String get() = "$name@$host:$port"
 }

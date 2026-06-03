@@ -59,11 +59,11 @@ internal class BonjourState(
     private fun emitIfReady(name: String) {
         val ip = pendingIps[name] ?: return
         val port = pendingPorts[name] ?: return
-        val peerFingerprint = pendingFingerprints[name]
-        if (peerFingerprint != null && peerFingerprint == ownFingerprint) return
+        // Defer the upsert until TXT resolves — the store never holds anonymous entries.
+        val peerFingerprint = pendingFingerprints[name] ?: return
+        if (peerFingerprint == ownFingerprint) return
         if (isSelf(ip, port)) return
-        val device = Device(name = name, host = ip, port = port)
-        store.upsert(device)
+        store.upsert(Device(name = name, host = ip, port = port, fingerprint = peerFingerprint))
     }
 
     internal interface Sink {

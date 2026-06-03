@@ -97,7 +97,6 @@ actual class MdnsDiscovery(
         override fun onServiceLost(serviceInfo: NsdServiceInfo) {
             if (nsdManager == null) return
             log.debug { "NSD service lost: ${serviceInfo.serviceName}" }
-            // NsdManager only populates serviceName here; host/port are null/0 — can't rebuild id.
             store.removeByName(serviceInfo.serviceName)
         }
     }
@@ -131,10 +130,17 @@ actual class MdnsDiscovery(
                 onResolveComplete()
                 return
             }
+            val peerFingerprint = serviceInfo.attributes["fp"]?.decodeToString()
+            if (peerFingerprint == null) {
+                log.debug { "NSD resolved '${serviceInfo.serviceName}' without fp TXT, deferring upsert" }
+                onResolveComplete()
+                return
+            }
             val device = Device(
                 name = serviceInfo.serviceName,
                 host = host,
                 port = port,
+                fingerprint = peerFingerprint,
             )
             log.debug { "NSD peer discovered: $device" }
             store.upsert(device)

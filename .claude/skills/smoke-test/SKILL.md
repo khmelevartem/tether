@@ -95,6 +95,14 @@ FAIL → attach the last `[peers]` lines from all three logs in Details.
 
 Cleanup of instance C — in Block 7.
 
+### Block 3.1: Peer dedup (same instance under multiple aliases)
+
+Run: `./block-3.1-peer-dedup.sh`
+
+Regression guard for #346. macOS `mDNSResponder` canonicalises duplicate service names by appending a numeric suffix to the conflicting name. A peer receiving both the pre-rename and post-rename announces for the same instance must collapse them into one entry — assertion: in each CLI's last `[peers]` line, no two peers share the same `host:port`.
+
+Prerequisite: Block 3 (three CLIs alive — A, B, and C reusing A's name). FAIL → attach the last `[peers]` lines from all three logs in Details.
+
 ### Block 3.5: Device name rename
 
 Run: `./block-3.5-rename.sh`
@@ -183,6 +191,7 @@ At the end of the run print a markdown report:
 | Desktop↔Desktop | retry after error | ✓ PASS | file lands after `retry`, diff empty |
 | Desktop CLI A | exit code on `quit` | ✓ PASS | exit=0 (last send AllSent) |
 | Same-name discovery | A/B/C convergence | ✓ PASS | each sees 2 SmokeMac peers in 3s |
+| Peer dedup (#346) | no host:port collisions | ✓ PASS | A=0 B=0 C=0 duplicate (host,port) entries |
 | Device name | rename via stdin | ✓ PASS | peer sees new name in <15s |
 | Desktop CLI A | graceful `quit` | ✓ PASS | exit in 3s |
 | Android | adb device | ✓ PASS | <serial>, model, API |

@@ -200,24 +200,28 @@ internal class MdnsDiscoveryJmdns(
                     log.warn { "invalid port ${info.port} for '${event.name}', skipping" }
                     return
                 }
-                // Self-suppression by name first: TXT records (carrying the fingerprint) arrive in a
-                // separate mDNS transaction from A-records, so the early serviceResolved callbacks often
-                // expose a null peer fingerprint while the announce is unambiguously ours.
-                if (event.name == deviceName) return
-                val peerFingerprint = info.getPropertyString("fp")
-                if (peerFingerprint != null && peerFingerprint == fingerprint) return
+                // TXT records (carrying the fingerprint) arrive in a separate mDNS transaction from
+                // A-records, so an early serviceResolved callback can expose a null peer fingerprint.
+                // Defer the upsert until JmDNS re-resolves with TXT — the store never holds anonymous entries.
+                val peerFingerprint = info.getPropertyString("fp") ?: return
+                if (isOwnAnnounce(peerFingerprint)) return
                 val ipv4 = resolveIPv4(info, event.name) ?: return
-                val device = Device(
-                    name = event.name,
-                    host = ipv4,
-                    port = info.port,
+                store.upsert(
+                    Device(
+                        name = event.name,
+                        host = ipv4,
+                        port = info.port,
+                        fingerprint = peerFingerprint,
+                    ),
                 )
-                store.upsert(device)
             } catch (e: Exception) {
                 log.warn { "serviceResolved error for '${event.name}' — ${e.message}" }
             }
         }
     }
+
+    internal fun isOwnAnnounce(peerFingerprint: String?): Boolean =
+        peerFingerprint != null && peerFingerprint == fingerprint
 
     /** JmDNS resolves A/AAAA in stages; first callback may carry only IPv6. Returns `null` to wait for next event. */
     private fun resolveIPv4(info: ServiceInfo, serviceName: String): String? {

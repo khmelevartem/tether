@@ -242,7 +242,7 @@
 - [ ] Heap vs Stack — что хранится где
 - [ ] ClassLoader — как загружается класс, parent delegation
 - [ ] `synchronized` — monitor, reentrant, оверхед
-- [ ] `volatile` — видимость, не атомарность
+- [x] `volatile` — видимость, не атомарность
 - [ ] `happens-before` — гарантии JMM
 - [ ] `ThreadLocal` — зачем, утечки
 - [ ] `@JvmStatic` / `@JvmField` / `@JvmOverloads` — Kotlin-Java interop

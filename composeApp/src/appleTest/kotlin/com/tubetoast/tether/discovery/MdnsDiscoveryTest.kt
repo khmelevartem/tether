@@ -1,5 +1,6 @@
 package com.tubetoast.tether.discovery
 
+import com.tubetoast.tether.identity.DataStoreFingerprintPersistence
 import com.tubetoast.tether.identity.DeviceIdentityStore
 import com.tubetoast.tether.preferences.TempDataStore
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -16,7 +17,7 @@ import kotlin.time.TimeSource
 
 private fun testDiscovery(): MdnsDiscovery {
     val temp = TempDataStore()
-    return MdnsDiscovery(DiscoveredDevicesStore(), DeviceIdentityStore(temp.dataStore))
+    return MdnsDiscovery(DiscoveredDevicesStore(), DeviceIdentityStore(DataStoreFingerprintPersistence(temp.dataStore)))
 }
 
 // NSNetService delivers callbacks via NSRunLoop, not via coroutine dispatchers.

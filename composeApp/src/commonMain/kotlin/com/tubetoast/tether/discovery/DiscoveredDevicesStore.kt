@@ -14,28 +14,32 @@ class DiscoveredDevicesStore {
     private val _devices = MutableStateFlow<List<Device>>(emptyList())
     val devices: StateFlow<List<Device>> = _devices.asStateFlow()
 
-    /** Adds or replaces by id; same-name entries with different id are evicted atomically. */
     fun upsert(device: Device) {
         _devices.update { prev ->
-            val result = ArrayList<Device>(prev.size + 1)
-            var replaced = false
-            for (existing in prev) {
-                when {
-                    existing.id == device.id -> {
-                        result += device
-                        replaced = true
-                    }
-                    existing.name == device.name -> Unit
-                    else -> result += existing
-                }
-            }
-            if (!replaced) result += device
-            result
+            prev.replaceMatchingFingerprint(device) ?: (prev + device)
         }
     }
 
+    private fun List<Device>.replaceMatchingFingerprint(device: Device): List<Device>? {
+        val fp = device.fingerprint ?: return null
+        val idx = indexOfFirst { it.fingerprint == fp }
+        return if (idx >= 0) toMutableList().also { it[idx] = device } else null
+    }
+
+    fun removeByFingerprint(fingerprint: String) {
+        _devices.update { prev -> prev.filter { it.fingerprint != fingerprint } }
+    }
+
+    /**
+     * Looks up the entry whose current name matches [name] and removes it by fingerprint —
+     * one atomic CAS step. A removal under a stale intermediate rename name (already
+     * superseded by Rule 1) finds no match and is a no-op; the live canonical entry survives.
+     */
     fun removeByName(name: String) {
-        _devices.update { prev -> prev.filter { it.name != name } }
+        _devices.update { prev ->
+            val fp = prev.firstOrNull { it.name == name }?.fingerprint
+            if (fp == null) prev else prev.filter { it.fingerprint != fp }
+        }
     }
 
     fun clear() {
