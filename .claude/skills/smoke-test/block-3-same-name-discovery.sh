@@ -6,7 +6,7 @@ set -euo pipefail
 LOG_A="${LOG_A:-/tmp/smoke-cliA.log}"
 LOG_B="${LOG_B:-/tmp/smoke-cliB.log}"
 JAR="${JAR:-$(ls "$(git rev-parse --show-toplevel)"/composeApp/build/libs/tether-cli-*.jar \
-  "$(git rev-parse --show-toplevel)"/composeApp/build/libs/tether-cli.jar 2>/dev/null | head -1)}"
+  "$(git rev-parse --show-toplevel)"/composeApp/build/libs/tether-cli.jar 2>/dev/null | head -1 || true)}"
 
 LOG_C=/tmp/smoke-cliC.log
 rm -f /tmp/smoke-cliC-in
