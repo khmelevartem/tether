@@ -191,7 +191,7 @@
 - [ ] `suspend` функции в iOS — Swift Export, `async/await` bridge
 
 ### Библиотеки
-- [ ] Ktor Client — multiplatform HTTP
+- [x] Ktor Client — multiplatform HTTP
 - [ ] SQLDelight — multiplatform database
 - [ ] Kotlinx.serialization — vs Gson/Moshi, почему KMP-friendly
 - [ ] Kotlinx.datetime, Kotlinx.coroutines multiplatform
