@@ -5,7 +5,7 @@ set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
 
-JAR="${JAR:-$(ls composeApp/build/libs/tether-cli-*.jar composeApp/build/libs/tether-cli.jar 2>/dev/null | head -1)}"
+JAR="${JAR:-$(ls composeApp/build/libs/tether-cli-*.jar composeApp/build/libs/tether-cli.jar 2>/dev/null | head -1 || true)}"
 [ -z "$JAR" ] && { echo "FAIL: cli jar not found — run block-0 first"; exit 1; }
 
 LOG_A=/tmp/smoke-cliA.log
