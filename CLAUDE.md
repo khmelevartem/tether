@@ -28,11 +28,11 @@ Read on demand. Match what you're touching to the corresponding canon:
 
 ## Git conventions
 
-All git naming in English. **All commit messages and PR titles must start with the issue number:** `#<issue>: <message>` (e.g., `#42: add mDNS discovery for Android`). Retro commits and PRs use `retro from #<issue>: <message>`.
+All git naming in English. **All commit messages and PR titles must start with the issue number:** `#<issue>: <message>` (e.g., `#42: add mDNS discovery for Android`). Two prefixes stand in for an issue number where no backing issue is warranted: retro commits and PRs use `retro from #<issue>: <message>`; sprint-planning commits and PRs (close the previous sprint, compose the next — see [`docs/sprints/`](docs/sprints/)) use `plan sprint <N>: <message>`.
 
 All issue titles, issue bodies, and PR descriptions must be written in English. Russian is only permitted in interactive chat.
 
-Before committing, make sure the issue exists. If it does not — ask the user to create it.
+Before committing, make sure the issue exists. If it does not — ask the user to create it. Sprint-planning commits under `plan sprint <N>` are the exception: planning needs no backing issue.
 
 To pull main into the branch — `/pull-main` (merges fresh main and shows what came in). It runs from both `/close-issue` and mid-flight.
 
