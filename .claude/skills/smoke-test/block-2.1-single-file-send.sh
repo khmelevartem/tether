@@ -37,7 +37,33 @@ SEND1_SRC="/tmp/$SEND1_NAME"
 echo "send-via-cli-$(date +%s)" > "$SEND1_SRC"
 echo "send SmokeMacB $SEND1_SRC" > /tmp/smoke-cliA-in &
 
-for i in $(seq 1 15); do
+# Pairing: on first encounter the CLI pairing handler and the command loop both
+# read from System.in.  The command loop holds the BufferedReader lock first, so
+# the first "y" is consumed as an unknown command.  A second "y" reaches the
+# handler.  We poll for the "[pair] Confirm?" prompt and send two "y" lines with
+# a short delay so the lock handoff has time to complete.
+confirm_pairing() {
+  local log="$1" fifo="$2" label="$3"
+  for j in $(seq 1 20); do
+    set +e; grep -q '\[pair\] Confirm' "$log" 2>/dev/null; RC=$?; set -e
+    if [ $RC -eq 0 ]; then
+      echo "y" > "$fifo"   # may be eaten by command loop
+      sleep 0.3
+      echo "y" > "$fifo"   # reaches handler after lock handoff
+      echo "  [smoke] pairing confirmation sent to $label"
+      return 0
+    fi
+    sleep 1
+  done
+  echo "  [smoke] WARN: pairing prompt not seen in $label within 20s"
+  return 1
+}
+
+# B confirms first (server side); then A confirms (client side).
+confirm_pairing "$LOG_B" /tmp/smoke-cliB-in "B (server)" || true
+confirm_pairing "$LOG_A" /tmp/smoke-cliA-in "A (client)" || true
+
+for i in $(seq 1 30); do
   set +e; grep -qE "^\[send\] (done|partial|error)" "$LOG_A" 2>/dev/null; RC=$?; set -e
   [ $RC -eq 0 ] && break
   sleep 1
