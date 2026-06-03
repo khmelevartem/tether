@@ -13,6 +13,12 @@ The goal is not a report for its own sake and not a catalog of pointwise mistake
 
 ---
 
+## Step 0 — Load the writing discipline
+
+Every change a retro produces lands in a long-lived artifact — a skill, an agent brief, a command, a guide, `CLAUDE.md`, a KDoc. Read [`docs/engineering/long-lived-artifacts.md`](../../../docs/engineering/long-lived-artifacts.md) before drafting any wording, and hold its rules through the analysis and the proposed edits, not only at the commit gate in Step 6. A retro is uniquely exposed here: the incident under review is the nearest material at hand, so drafts gravitate to it and have to be reworked before they can land. Loading the discipline up front makes the first draft conform.
+
+---
+
 ## Step 1 — Gather facts
 
 Collect context:
