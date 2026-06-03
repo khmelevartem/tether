@@ -36,8 +36,10 @@ class MdnsDiscoveryOwnNameTest {
         val d = discovery(listOf("lo0" to addr))
         try {
             d.start("TestInstance", 29900)
-            // JmDNS registerService returns synchronously with the conflict-resolved name;
-            // it is assigned inside the locked start block, so it is visible immediately after.
+            // JmDNS registerService returns synchronously with the locally-deduplicated name
+            // (resolved against its in-memory cache and same-process registrations, not live
+            // network conflicts); it is assigned inside the locked start block, so it is visible
+            // immediately after.
             assertNotNull(d.ownPublishedName.value, "ownPublishedName must be set after start with a live address")
         } finally {
             d.stop()
