@@ -95,6 +95,8 @@ class SomeService(private val repo: SomeRepository) { ... }
 
 No `lateinit var repo: SomeRepository` set after construction. No service-locator lookups inside methods. Dependencies are explicit constructor arguments — a class's constructor signature is its honest dependency list. Anything reached through globals is invisible.
 
+A nullable dependency with a `= null` default is the same dishonesty: a collaborator the production composition always supplies looks optional, and a caller that omits it silently disables the feature with no compile error. Make it required; update old tests to pass a fake. Reserve the nullable default for a genuinely optional dependency — and then test the null branch.
+
 The composition root creates shared instances once and hands them to every component that needs them. Tests construct fakes.
 
 ### 2. Platform context is a dependency, not a global

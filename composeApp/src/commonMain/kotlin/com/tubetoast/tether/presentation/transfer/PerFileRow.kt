@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
@@ -31,6 +32,7 @@ import com.tubetoast.tether.ui.designsystem.LabelText
 import com.tubetoast.tether.ui.designsystem.NumericText
 import com.tubetoast.tether.ui.designsystem.ProgressBar
 import com.tubetoast.tether.ui.designsystem.RowCancelButton
+import com.tubetoast.tether.ui.feature.PeerIdentityAccent
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
 import com.tubetoast.tether.ui.preview.TransferPreviewFixtures
@@ -40,9 +42,11 @@ import compose.icons.tablericons.AlertCircle
 import compose.icons.tablericons.Check
 import compose.icons.tablericons.Clock
 
+private val PeerIdentityStripWidth = 3.dp
 private val StatusIconSize = 20.dp
 private val TrailingSlotSize = 28.dp
 private val ProgressBarHeight = 3.dp
+private val RowHeight = 56.dp
 
 @Composable
 fun PerFileRow(
@@ -53,6 +57,7 @@ fun PerFileRow(
     modifier: Modifier = Modifier,
     peerName: String = "",
     isOnline: Boolean = true,
+    identityColor: Color = Color.Unspecified,
 ) {
     val colors = TetherTheme.colors
     val spacing = TetherTheme.spacing
@@ -63,94 +68,106 @@ fun PerFileRow(
         if (peerOffline) {
             modifier
                 .fillMaxWidth()
+                .height(RowHeight)
                 .semantics {
                     role = Role.Button
                     contentDescription = semanticLabel
-                }.padding(vertical = spacing.xs)
+                }
         } else {
             modifier
                 .fillMaxWidth()
+                .height(RowHeight)
                 .clickable(onClick = { onRetryFile(status.name) })
                 .semantics {
                     role = Role.Button
                     contentDescription = semanticLabel
-                }.padding(vertical = spacing.xs)
+                }
         }
     } else {
         modifier
             .fillMaxWidth()
-            .padding(vertical = spacing.xs)
+            .height(RowHeight)
     }
 
     Row(
         modifier = rowModifier,
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(spacing.sm),
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            BodyText(text = status.name, maxLines = 1)
-            when (status) {
-                is PerFileStatus.InProgress -> ProgressBar(
-                    progress = if (status.size != null && status.size > 0) {
-                        (status.bytesDone.toFloat() / status.size.toFloat()).coerceIn(0f, 1f)
-                    } else {
-                        0f
-                    },
-                    height = ProgressBarHeight,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = spacing.xs),
-                )
-                is PerFileStatus.Failed -> LabelText(
-                    text = failedRowHelperText(status),
-                    color = colors.error,
-                    modifier = Modifier.padding(top = spacing.xs),
-                )
-                else -> Unit
+        if (identityColor != Color.Unspecified) {
+            PeerIdentityAccent(identityColor = identityColor, width = PeerIdentityStripWidth)
+        }
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = spacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(spacing.sm),
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                BodyText(text = status.name, maxLines = 1)
+                when (status) {
+                    is PerFileStatus.InProgress -> ProgressBar(
+                        progress = if (status.size != null && status.size > 0) {
+                            (status.bytesDone.toFloat() / status.size.toFloat()).coerceIn(0f, 1f)
+                        } else {
+                            0f
+                        },
+                        height = ProgressBarHeight,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = spacing.xs),
+                    )
+                    is PerFileStatus.Failed -> LabelText(
+                        text = failedRowHelperText(status),
+                        color = colors.error,
+                        modifier = Modifier.padding(top = spacing.xs),
+                    )
+                    else -> Unit
+                }
             }
-        }
 
-        status.size?.let { bytes ->
-            NumericText(
-                text = ByteFormatting.formatSize(bytes),
-                color = colors.textMuted,
-            )
-        }
+            status.size?.let { bytes ->
+                NumericText(
+                    text = ByteFormatting.formatSize(bytes),
+                    color = colors.textMuted,
+                )
+            }
 
-        TrailingSlot {
-            when (status) {
-                is PerFileStatus.Queued -> {
-                    if (isSenderSide) {
-                        RowCancelButton(
-                            onClick = { onCancelFile(status.name) },
-                            contentDescription = "Cancel sending ${status.name}",
-                        )
-                    } else {
-                        StatusIcon(
-                            icon = TablerIcons.Clock,
-                            tint = colors.textMuted,
-                            contentDescription = "Queued",
-                        )
+            TrailingSlot {
+                when (status) {
+                    is PerFileStatus.Queued -> {
+                        if (isSenderSide) {
+                            RowCancelButton(
+                                onClick = { onCancelFile(status.name) },
+                                contentDescription = "Cancel sending ${status.name}",
+                            )
+                        } else {
+                            StatusIcon(
+                                icon = TablerIcons.Clock,
+                                tint = colors.textMuted,
+                                contentDescription = "Queued",
+                            )
+                        }
                     }
-                }
-                is PerFileStatus.InProgress -> {
-                    if (isSenderSide) {
-                        RowCancelButton(
-                            onClick = { onCancelFile(status.name) },
-                            contentDescription = "Cancel sending ${status.name}",
-                        )
+                    is PerFileStatus.InProgress -> {
+                        if (isSenderSide) {
+                            RowCancelButton(
+                                onClick = { onCancelFile(status.name) },
+                                contentDescription = "Cancel sending ${status.name}",
+                            )
+                        }
                     }
+                    is PerFileStatus.Done -> StatusIcon(
+                        icon = TablerIcons.Check,
+                        tint = colors.accent,
+                        contentDescription = "Sent",
+                    )
+                    is PerFileStatus.Failed -> StatusIcon(
+                        icon = TablerIcons.AlertCircle,
+                        tint = colors.error,
+                        contentDescription = "Failed",
+                    )
                 }
-                is PerFileStatus.Done -> StatusIcon(
-                    icon = TablerIcons.Check,
-                    tint = colors.accent,
-                    contentDescription = "Sent",
-                )
-                is PerFileStatus.Failed -> StatusIcon(
-                    icon = TablerIcons.AlertCircle,
-                    tint = colors.error,
-                    contentDescription = "Failed",
-                )
             }
         }
     }

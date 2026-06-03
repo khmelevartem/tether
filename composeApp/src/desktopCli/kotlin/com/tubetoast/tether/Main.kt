@@ -9,6 +9,7 @@ import com.tubetoast.tether.config.EphemeralDeviceNamePersistence
 import com.tubetoast.tether.di.CliAppContainer
 import com.tubetoast.tether.di.DefaultDesktopAppConfig
 import com.tubetoast.tether.discovery.DiscoveredDevicesStore
+import com.tubetoast.tether.identity.EphemeralFingerprintPersistence
 import com.tubetoast.tether.logging.initTetherLogging
 import com.tubetoast.tether.logging.isDebugEnabled
 import com.tubetoast.tether.network.FileClient
@@ -81,7 +82,11 @@ class TetherCommand :
         val activeEngineRef = AtomicReference<PeerTransferEngine?>(null)
 
         val container = CliAppContainer(
-            DefaultDesktopAppConfig(port = port ?: 0, namePersistenceOverride = EphemeralDeviceNamePersistence()),
+            DefaultDesktopAppConfig(
+                port = port ?: 0,
+                namePersistenceOverride = EphemeralDeviceNamePersistence(),
+                fingerprintPersistenceOverride = EphemeralFingerprintPersistence(),
+            ),
         )
 
         container.nameStore.init()

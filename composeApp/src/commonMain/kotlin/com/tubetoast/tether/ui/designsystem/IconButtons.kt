@@ -26,6 +26,7 @@ import com.tubetoast.tether.ui.theme.TetherTheme
 import com.tubetoast.tether.ui.theme.tetherMinTouchTarget
 import compose.icons.TablerIcons
 import compose.icons.tablericons.ChevronDown
+import compose.icons.tablericons.ChevronLeft
 import compose.icons.tablericons.ChevronUp
 import compose.icons.tablericons.InfoCircle
 import compose.icons.tablericons.X
@@ -139,11 +140,37 @@ fun RowCancelButton(
     }
 }
 
+@Composable
+fun BackChevronButton(
+    onClick: () -> Unit,
+    contentDescription: String,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .tetherMinTouchTarget()
+            .clickable(onClick = onClick)
+            .semantics {
+                this.contentDescription = contentDescription
+                role = Role.Button
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        Image(
+            painter = rememberVectorPainter(TablerIcons.ChevronLeft),
+            contentDescription = null,
+            colorFilter = ColorFilter.tint(TetherTheme.colors.textPrimary),
+            modifier = Modifier.size(22.dp),
+        )
+    }
+}
+
 @Preview(name = "Icon buttons")
 @Composable
 private fun PreviewIconButtons(@PreviewParameter(Themes::class) dark: Boolean) =
     PreviewSurface(darkTheme = dark) {
         Row {
+            BackChevronButton(onClick = {}, contentDescription = "Back")
             ChevronToggleIcon(expanded = false, onClick = {}, contentDescription = "Expand")
             ChevronToggleIcon(expanded = true, onClick = {}, contentDescription = "Collapse")
             InfoIconButton(onClick = {}, contentDescription = "Info")

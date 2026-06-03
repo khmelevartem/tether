@@ -1,6 +1,7 @@
 package com.tubetoast.tether.discovery
 
 import com.tubetoast.tether.network.FileClient
+import com.tubetoast.tether.protocol.Device
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,7 +20,7 @@ class RendezvousAnnouncer(
     private val selfAnnouncementProvider: SelfAnnouncementProvider,
 ) {
     @Volatile private var collectJob: Job? = null
-    private val acknowledgedIds = MutableStateFlow(emptySet<String>())
+    private val acknowledgedKeys = MutableStateFlow(emptySet<String>())
 
     fun start(scope: CoroutineScope) {
         if (collectJob != null) return
@@ -27,10 +28,11 @@ class RendezvousAnnouncer(
             store.devices.collect { devices ->
                 val info = selfAnnouncementProvider.get()
                 for (device in devices) {
-                    if (device.id in acknowledgedIds.value) continue
+                    val key = peerKey(device)
+                    if (key in acknowledgedKeys.value) continue
                     log.info { "announce → ${device.id}" }
                     val ok = client.sendHello(device, info)
-                    if (ok) acknowledgedIds.update { it + device.id }
+                    if (ok) acknowledgedKeys.update { it + key }
                 }
             }
         }
@@ -39,6 +41,8 @@ class RendezvousAnnouncer(
     fun stop() {
         collectJob?.cancel()
         collectJob = null
-        acknowledgedIds.value = emptySet()
+        acknowledgedKeys.value = emptySet()
     }
+
+    private fun peerKey(device: Device): String = device.fingerprint ?: device.id
 }

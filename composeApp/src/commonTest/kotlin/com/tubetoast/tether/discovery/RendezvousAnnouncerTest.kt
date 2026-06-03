@@ -142,4 +142,27 @@ class RendezvousAnnouncerTest {
 
         a.stop()
     }
+
+    @Test
+    fun `does not re-send hello after peer rename when fingerprint is stable`() {
+        val store = DiscoveredDevicesStore()
+        val scope = TestScope(UnconfinedTestDispatcher())
+        val a = RendezvousAnnouncer(
+            store = store,
+            client = fakeClient,
+            selfAnnouncementProvider = fakeSelfAnnouncementProvider,
+        )
+        a.start(scope)
+
+        store.upsert(Device(name = "PeerA", host = "10.0.0.1", port = 5001, fingerprint = "fp-peer"))
+        scope.advanceUntilIdle()
+        assertEquals(1, sentHellos.size, "hello should be sent after initial discovery")
+
+        // mDNSResponder rename: same fingerprint, new name — Rule 1 replaces in place.
+        store.upsert(Device(name = "PeerA (2)", host = "10.0.0.1", port = 5001, fingerprint = "fp-peer"))
+        scope.advanceUntilIdle()
+        assertEquals(1, sentHellos.size, "renamed peer with same fingerprint must not trigger a second hello")
+
+        a.stop()
+    }
 }
