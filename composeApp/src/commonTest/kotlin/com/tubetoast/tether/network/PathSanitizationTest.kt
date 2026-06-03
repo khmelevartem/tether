@@ -129,4 +129,44 @@ class PathSanitizationTest {
         // %F0%9F%8F%96 → 🏖 (four-byte UTF-8 emoji)
         assertEquals("vacation/🏖.jpg", sanitize("vacation/%F0%9F%8F%96.jpg"))
     }
+
+    @Test
+    fun `percent-encoded space decodes to space`() {
+        assertEquals("manual with space.txt", sanitize("manual%20with%20space.txt"))
+    }
+
+    @Test
+    fun `percent-encoded hash decodes correctly`() {
+        assertEquals("file#name.txt", sanitize("file%23name.txt"))
+    }
+
+    @Test
+    fun `percent-encoded question mark decodes correctly`() {
+        assertEquals("file?name.txt", sanitize("file%3Fname.txt"))
+    }
+
+    @Test
+    fun `percent-encoded ampersand decodes correctly`() {
+        assertEquals("key&value.txt", sanitize("key%26value.txt"))
+    }
+
+    @Test
+    fun `percent-encoded equals decodes correctly`() {
+        assertEquals("key=value.txt", sanitize("key%3Dvalue.txt"))
+    }
+
+    @Test
+    fun `percent-encoded percent decodes correctly`() {
+        assertEquals("50%.txt", sanitize("50%25.txt"))
+    }
+
+    @Test
+    fun `plus literal in filename is preserved as-is`() {
+        assertEquals("a+b.txt", sanitize("a+b.txt"))
+    }
+
+    @Test
+    fun `mixed Latin and Cyrillic filename passes`() {
+        assertEquals("report_Отчёт.pdf", sanitize("report_%D0%9E%D1%82%D1%87%D1%91%D1%82.pdf"))
+    }
 }
