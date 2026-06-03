@@ -62,7 +62,6 @@ class SelfAnnouncementProviderTest {
     @Test
     fun `alias falls back to nameStore when ownPublishedName is null`() = runBlocking {
         val source = canonicalSource(null)
-        assertNull(source.ownPublishedName.value)
         val store = nameStore("MyDevice")
         store.init()
         val identityStore = DeviceIdentityStore(EphemeralFingerprintPersistence())
@@ -94,17 +93,7 @@ class SelfAnnouncementProviderTest {
         store.init()
         val identityStore = DeviceIdentityStore(EphemeralFingerprintPersistence())
         // FileServer not started — port reads 0, which is fine for this alias-only assertion.
-        val configDir = Files.createTempDirectory("tether-sap-timeout-keys").toFile()
-        val downloadsDir = Files.createTempDirectory("tether-sap-timeout-dl").toFile()
-        val temp = TempDataStore().also { cleanupStores += it }
-        val server = FileServer(
-            configuredPort = 0,
-            downloadsDir = downloadsDir,
-            trustedDeviceStore = DefaultTrustedDeviceStore(temp.dataStore),
-            deviceKeyPair = DeviceKeyPair(configDir),
-            deviceIdentityStore = DeviceIdentityStore(EphemeralFingerprintPersistence()),
-            discoveredDevicesStore = DiscoveredDevicesStore(),
-        )
+        val server = newServer()
         val provider = DefaultSelfAnnouncementProvider(store, server, identityStore, DeviceType.Desktop, stuck)
         val announcement = provider.get()
         assertEquals("FallbackDevice", announcement.alias, "must fall back to nameStore when ownPublishedName never becomes non-null")

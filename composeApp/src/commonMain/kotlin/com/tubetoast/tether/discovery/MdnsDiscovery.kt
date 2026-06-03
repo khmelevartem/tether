@@ -10,7 +10,6 @@ expect class MdnsDiscovery : DeviceDiscovery, CanonicalNameSource {
      * The mDNS-canonical name assigned by the platform after the publish/register callback fires.
      * Null until the callback fires and reset to null on [start]/[republish] until the callback
      * re-fires. The platform may suffix the base name (e.g. "(2)") when multiple services share it.
-     * The self-announcement waits briefly for a non-null value before falling back to the configured name.
      */
     override val ownPublishedName: StateFlow<String?>
 
