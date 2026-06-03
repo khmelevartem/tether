@@ -6,7 +6,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -49,13 +48,10 @@ internal class MdnsDiscoveryJmdns(
     private val requeryContext: CoroutineContext,
     private val deviceIdentityStore: DeviceIdentityStore,
     private val networkInterfaceProvider: NetworkInterfaceProvider = DefaultNetworkInterfaceProvider(),
-) : OwnNameDiscovery {
+) : DeviceDiscovery {
     private val discoveryScope = CoroutineScope(SupervisorJob() + requeryContext)
 
     override val discoveredDevices: StateFlow<List<Device>> = store.devices
-
-    private val _ownPublishedName = MutableStateFlow<String?>(null)
-    override val ownPublishedName: StateFlow<String?> = _ownPublishedName
 
     private val lifecycleLock = Mutex()
 
@@ -78,7 +74,6 @@ internal class MdnsDiscoveryJmdns(
             this.ownPort = port
             this.fingerprint = fingerprint
             started = true
-            _ownPublishedName.value = null
 
             for (entry in networkInterfaceProvider.bindAddresses()) {
                 bringUp(entry, entry.second, deviceName, port)
@@ -113,7 +108,6 @@ internal class MdnsDiscoveryJmdns(
         lifecycleLock.withLock {
             if (!started) return
             deviceName = name
-            _ownPublishedName.value = null
             for (jmdns in instances.values) {
                 try {
                     jmdns.unregisterAllServices()
@@ -121,13 +115,7 @@ internal class MdnsDiscoveryJmdns(
                     log.warn { "unregisterAllServices (republish) failed — ${e.message}" }
                 }
                 try {
-                    val info = ServiceInfo.create(SERVICE_TYPE, name, ownPort, 0, 0, txtProps(fingerprint))
-                    jmdns.registerService(info)
-                    val assigned = info.name
-                    if (assigned != null && _ownPublishedName.value == null) {
-                        log.info { "JmDNS republish assigned name='$assigned'" }
-                        _ownPublishedName.value = assigned
-                    }
+                    jmdns.registerService(ServiceInfo.create(SERVICE_TYPE, name, ownPort, 0, 0, txtProps(fingerprint)))
                 } catch (e: Exception) {
                     log.warn { "registerService (republish) failed — ${e.message}" }
                 }
@@ -144,7 +132,6 @@ internal class MdnsDiscoveryJmdns(
             }
             instances.clear()
             ownPort = -1
-            _ownPublishedName.value = null
             store.clear()
         }
     }
@@ -155,13 +142,7 @@ internal class MdnsDiscoveryJmdns(
             val listener = makeListener(jmdns)
             jmdns.addServiceListener(SERVICE_TYPE, listener)
             try {
-                val info = ServiceInfo.create(SERVICE_TYPE, name, port, 0, 0, txtProps(fingerprint))
-                jmdns.registerService(info)
-                val assigned = info.name
-                if (assigned != null && _ownPublishedName.value == null) {
-                    log.info { "JmDNS assigned name='$assigned'" }
-                    _ownPublishedName.value = assigned
-                }
+                jmdns.registerService(ServiceInfo.create(SERVICE_TYPE, name, port, 0, 0, txtProps(fingerprint)))
             } catch (e: Exception) {
                 log.warn { "registerService failed on ${addr.hostAddress} — ${e.message}" }
             }

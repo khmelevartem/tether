@@ -97,7 +97,7 @@ The endpoint is idempotent; repeated calls upsert. Mis-firing is harmless. The c
 
 ### Receiver behaviour
 
-On receipt: build a `Device` from `(remoteAddress, body.port, body.alias, body.fingerprint)` and upsert into `DiscoveredDevicesStore`. The upsert path is identical to the one mDNS resolves into — entries are not tagged by discovery source. The announcement carries the mDNS-canonical own-name (see [glossary — canonical name](../glossary.md#technical)) once the publish callback has fired, falling back to the configured name before then.
+On receipt: build a `Device` from `(remoteAddress, body.port, body.alias, body.fingerprint)` and upsert into `DiscoveredDevicesStore`. The upsert path is identical to the one mDNS resolves into — entries are not tagged by discovery source.
 
 ### Self-suppression
 

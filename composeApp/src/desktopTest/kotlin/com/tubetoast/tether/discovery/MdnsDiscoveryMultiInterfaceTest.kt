@@ -10,8 +10,6 @@ import kotlinx.coroutines.withTimeout
 import java.net.InetAddress
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 // JmDNS binds real sockets and delivers callbacks on real threads outside our CoroutineScope.
@@ -115,32 +113,6 @@ class MdnsDiscoveryMultiInterfaceTest {
             d.diffInterfaces()
 
             assertEquals(2, d.instanceCount, "new interface must be brought up by diffInterfaces")
-        } finally {
-            d.stop()
-        }
-    }
-
-    @Test
-    fun `diffInterfaces sets ownPublishedName when first interface arrives`(): Unit = runBlocking {
-        val addr = fakeAddr("127.0.0.1")
-        val fakeProvider = FakeNetworkInterfaceProvider(emptyList())
-        val store = DiscoveredDevicesStore()
-        val temp = TempDataStore()
-        val d = MdnsDiscoveryJmdns(
-            store,
-            Dispatchers.IO,
-            DeviceIdentityStore(DataStoreFingerprintPersistence(temp.dataStore)),
-            fakeProvider,
-        )
-        try {
-            d.start("DiffNameTest", 29450)
-            // No interfaces at start — ownPublishedName stays null.
-            assertNull(d.ownPublishedName.value, "no interfaces means ownPublishedName must be null after start")
-
-            fakeProvider.addresses = listOf("lo0" to addr)
-            d.diffInterfaces()
-
-            assertNotNull(d.ownPublishedName.value, "ownPublishedName must be set after diffInterfaces brings up the first interface")
         } finally {
             d.stop()
         }

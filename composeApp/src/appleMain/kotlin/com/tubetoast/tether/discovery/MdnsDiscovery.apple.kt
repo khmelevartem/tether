@@ -10,7 +10,6 @@ import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.ObjCSignatureOverride
 import kotlinx.cinterop.interpretCPointer
 import kotlinx.cinterop.readBytes
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -36,11 +35,8 @@ private val log = KydraLog.withTag(default = "MdnsDiscovery.Apple")
 actual class MdnsDiscovery(
     private val store: DiscoveredDevicesStore,
     private val deviceIdentityStore: DeviceIdentityStore,
-) : DeviceDiscovery, CanonicalNameSource {
+) : DeviceDiscovery {
     actual override val discoveredDevices: StateFlow<List<Device>> get() = store.devices
-
-    private val _ownPublishedName = MutableStateFlow<String?>(null)
-    actual override val ownPublishedName: StateFlow<String?> = _ownPublishedName
 
     private val lifecycleLock = Mutex()
 
@@ -66,7 +62,6 @@ actual class MdnsDiscovery(
             this.fingerprint = fingerprint
             ownServiceName = deviceName
             currentPort = port
-            _ownPublishedName.value = null
 
             val service = NSNetService(
                 domain = "",
@@ -117,7 +112,6 @@ actual class MdnsDiscovery(
             serviceDelegate = null
             browserDelegate = null
             resolutionDelegates.clear()
-            _ownPublishedName.value = null
             store.clear()
 
             log.info { "stopped" }
@@ -139,7 +133,6 @@ actual class MdnsDiscovery(
                 log.warn { "failed to stop service for republish — ${e.message ?: "unknown error"}" }
             }
             ownServiceName = name
-            _ownPublishedName.value = null
 
             val service = NSNetService(
                 domain = "",
@@ -244,7 +237,6 @@ actual class MdnsDiscovery(
         override fun netServiceDidPublish(sender: NSNetService) {
             log.info { "service published: ${sender.name}" }
             discovery.ownServiceName = sender.name
-            discovery._ownPublishedName.value = sender.name
         }
 
         @ObjCSignatureOverride

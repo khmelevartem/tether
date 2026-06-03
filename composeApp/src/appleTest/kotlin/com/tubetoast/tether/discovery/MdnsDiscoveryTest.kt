@@ -87,20 +87,6 @@ class MdnsDiscoveryTest {
     // --- Integration tests (NSRunLoop-pumped) ---
 
     @Test
-    fun `ownPublishedName becomes non-null after start`() = runBlocking {
-        val discovery = testDiscovery()
-        discovery.start("OwnNameTest", 19106)
-        try {
-            assertTrue(
-                awaitCondition { discovery.ownPublishedName.value != null },
-                "ownPublishedName must become non-null after NSNetService publish callback fires",
-            )
-        } finally {
-            discovery.stop()
-        }
-    }
-
-    @Test
     fun `two instances discover each other`() = runBlocking {
         val a = testDiscovery()
         val b = testDiscovery()
