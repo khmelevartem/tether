@@ -86,6 +86,8 @@ gh pr view <PR> --json reviews,comments --jq '{reviews: .reviews, comments: .com
 
 Make sure all review comments are resolved (resolved or replied to with a justification). The `/close-issue` invocation itself is the user's approval for the merge; a separate APPROVED review or a "lgtm" phrase is not required.
 
+**The review must cover the final diff, not a stale one.** If commits landed after the most recent review pass — merges, fix iterations, late additions — resolved comments on the earlier state are not coverage of what is about to merge. Run a fresh review pass (`/code-review`, or the `implement` review wave) over the current diff before proceeding. Test-discipline regressions that slip in late commits — a bugfix that ends up without a failing-pre/passing-post test, tests deleted or weakened during a refactor — are caught by that pass, not by re-reading old threads.
+
 ---
 
 ## Step 4 — Update documentation
@@ -111,6 +113,8 @@ If the documentation is out of date — update it. Small edits do immediately, l
 **New runtime flag — the entry-point doc must mention it.** If the PR introduces a new runtime flag (env var, JVM system property, CLI option, build flag) that affects observable application behavior — the README or the corresponding entry-point section must mention it with at least one line and a link to the engineering doc. Engineering doc as the only documentation location does not count as coverage: a contributor / user looks in the README, not in `docs/engineering/`.
 
 **New rule in a live document — audit actual code.** If the PR adds or extends a policy or rule in `docs/engineering/` (sensitive-data policy, naming convention, layering rule, etc.) — run it against the code actually touched in the fresh PR and make sure the diff does not violate the just-introduced rule. Otherwise the doc will immediately diverge from reality, or the rule will silently create invisible violations.
+
+**Findings from manual / smoke validation — fold the durable ones into `docs/knowledge/`.** Manual testing and the smoke run often surface platform quirks or behavioural gotchas that are not the task's subject but will bite the next contributor (a discovered edge of the fix, a confusing-but-correct observation, a workaround). A finding that outlives this task belongs in `docs/knowledge/` (extend the relevant note or add one), not only in the chat or the PR thread. If it is a defect rather than a quirk, file an issue instead.
 
 ---
 
