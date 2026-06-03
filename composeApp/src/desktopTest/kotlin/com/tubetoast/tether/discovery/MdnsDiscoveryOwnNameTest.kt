@@ -9,6 +9,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import java.net.InetAddress
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
@@ -30,7 +31,7 @@ class MdnsDiscoveryOwnNameTest {
     }
 
     @Test
-    fun `ownPublishedName is set after registration on loopback`() = runBlocking {
+    fun `ownPublishedName is set after registration on loopback`(): Unit = runBlocking {
         val addr = InetAddress.getByName("127.0.0.1")
         val d = discovery(listOf("lo0" to addr))
         try {
@@ -53,15 +54,14 @@ class MdnsDiscoveryOwnNameTest {
     }
 
     @Test
-    fun `ownPublishedName resets to null on republish until re-registration`() = runBlocking {
+    fun `ownPublishedName reflects new name after republish`() = runBlocking {
         val addr = InetAddress.getByName("127.0.0.1")
         val d = discovery(listOf("lo0" to addr))
         try {
             d.start("RepublishTest", 29902)
             assertNotNull(d.ownPublishedName.value, "set after start")
             d.republish("RepublishTestNew")
-            // After republish, it is re-set synchronously (republish calls registerService inline).
-            assertNotNull(d.ownPublishedName.value, "set again after republish")
+            assertEquals("RepublishTestNew", d.ownPublishedName.value, "ownPublishedName must reflect the new name after republish")
         } finally {
             d.stop()
         }

@@ -33,6 +33,9 @@ import java.util.concurrent.CopyOnWriteArrayList
 
 private val log = KydraLog.withTag(default = "MdnsDiscovery.Bonjour")
 
+// ownPublishedName is set by the DNSServiceRegister callback, which requires a live mDNSResponder.
+// This path cannot be unit-tested on Linux/Windows CI where mDNSResponder is absent.
+
 /**
  * JVM-on-macOS mDNS discovery backed by Apple's DNS-SD API ([DnsSd]).
  *

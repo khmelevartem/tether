@@ -9,7 +9,10 @@ import com.tubetoast.tether.preferences.TempDataStore
 import com.tubetoast.tether.protocol.DeviceType
 import com.tubetoast.tether.security.DefaultTrustedDeviceStore
 import com.tubetoast.tether.security.DeviceKeyPair
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import java.nio.file.Files
 import kotlin.test.AfterTest
 import kotlin.test.Test
@@ -52,38 +55,58 @@ class SelfAnnouncementProviderTest {
         return DeviceNameStore(persistence)
     }
 
+    private fun canonicalSource(name: String?): CanonicalNameSource = object : CanonicalNameSource {
+        override val ownPublishedName: StateFlow<String?> = MutableStateFlow(name)
+    }
+
     @Test
     fun `alias falls back to nameStore when ownPublishedName is null`() = runBlocking {
-        val mdns = testDiscovery()
-        // No start — ownPublishedName stays null.
-        assertNull(mdns.ownPublishedName.value, "ownPublishedName must be null before start")
+        val source = canonicalSource(null)
+        assertNull(source.ownPublishedName.value)
         val store = nameStore("MyDevice")
         store.init()
         val identityStore = DeviceIdentityStore(EphemeralFingerprintPersistence())
         val server = newServer()
         server.start()
-        val provider = DefaultSelfAnnouncementProvider(store, server, identityStore, DeviceType.Desktop, mdns)
+        val provider = DefaultSelfAnnouncementProvider(store, server, identityStore, DeviceType.Desktop, source)
         val announcement = provider.get()
         assertEquals("MyDevice", announcement.alias, "alias must come from nameStore when ownPublishedName is null")
     }
 
     @Test
     fun `alias uses ownPublishedName when set, ignoring nameStore`() = runBlocking {
-        val mdns = testDiscovery()
-        // No start; manually drive the flow value via the underlying JmDNS impl on Linux/Windows,
-        // or test the contract by starting on macOS where Bonjour sets ownPublishedName.
-        // The core contract is tested here without real mDNS by verifying DefaultSelfAnnouncementProvider
-        // reads the flow value: when ownPublishedName.value is non-null it takes priority.
-        // The actual name-capture after registration is covered by MdnsDiscoveryOwnNameTest.
-        assertNull(mdns.ownPublishedName.value)
-        // nameStore name differs from what mDNS would assign; no real registration here.
-        val store = nameStore("BaseNameFromStore")
+        val source = canonicalSource("BaseName (2)")
+        val store = nameStore("BaseName")
         store.init()
         val identityStore = DeviceIdentityStore(EphemeralFingerprintPersistence())
         val server = newServer()
         server.start()
-        val provider = DefaultSelfAnnouncementProvider(store, server, identityStore, DeviceType.Desktop, mdns)
-        // Pre-callback window: alias is the raw configured name.
-        assertEquals("BaseNameFromStore", provider.get().alias, "fallback to nameStore before callback fires")
+        val provider = DefaultSelfAnnouncementProvider(store, server, identityStore, DeviceType.Desktop, source)
+        assertEquals("BaseName (2)", provider.get().alias, "canonical name must win over nameStore name")
+    }
+
+    @Test
+    fun `alias falls back to nameStore when ownPublishedName stays null past the timeout`() = runTest {
+        val stuck = object : CanonicalNameSource {
+            override val ownPublishedName: StateFlow<String?> = MutableStateFlow(null)
+        }
+        val store = nameStore("FallbackDevice")
+        store.init()
+        val identityStore = DeviceIdentityStore(EphemeralFingerprintPersistence())
+        // FileServer not started — port reads 0, which is fine for this alias-only assertion.
+        val configDir = Files.createTempDirectory("tether-sap-timeout-keys").toFile()
+        val downloadsDir = Files.createTempDirectory("tether-sap-timeout-dl").toFile()
+        val temp = TempDataStore().also { cleanupStores += it }
+        val server = FileServer(
+            configuredPort = 0,
+            downloadsDir = downloadsDir,
+            trustedDeviceStore = DefaultTrustedDeviceStore(temp.dataStore),
+            deviceKeyPair = DeviceKeyPair(configDir),
+            deviceIdentityStore = DeviceIdentityStore(EphemeralFingerprintPersistence()),
+            discoveredDevicesStore = DiscoveredDevicesStore(),
+        )
+        val provider = DefaultSelfAnnouncementProvider(store, server, identityStore, DeviceType.Desktop, stuck)
+        val announcement = provider.get()
+        assertEquals("FallbackDevice", announcement.alias, "must fall back to nameStore when ownPublishedName never becomes non-null")
     }
 }

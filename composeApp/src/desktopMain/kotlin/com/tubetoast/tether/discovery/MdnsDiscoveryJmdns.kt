@@ -124,7 +124,7 @@ internal class MdnsDiscoveryJmdns(
                     val info = ServiceInfo.create(SERVICE_TYPE, name, ownPort, 0, 0, txtProps(fingerprint))
                     jmdns.registerService(info)
                     val assigned = info.name
-                    if (assigned != null) {
+                    if (assigned != null && _ownPublishedName.value == null) {
                         log.info { "JmDNS republish assigned name='$assigned'" }
                         _ownPublishedName.value = assigned
                     }

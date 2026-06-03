@@ -36,11 +36,11 @@ private val log = KydraLog.withTag(default = "MdnsDiscovery.Apple")
 actual class MdnsDiscovery(
     private val store: DiscoveredDevicesStore,
     private val deviceIdentityStore: DeviceIdentityStore,
-) : DeviceDiscovery {
+) : DeviceDiscovery, CanonicalNameSource {
     actual override val discoveredDevices: StateFlow<List<Device>> get() = store.devices
 
     private val _ownPublishedName = MutableStateFlow<String?>(null)
-    actual val ownPublishedName: StateFlow<String?> = _ownPublishedName
+    actual override val ownPublishedName: StateFlow<String?> = _ownPublishedName
 
     private val lifecycleLock = Mutex()
 

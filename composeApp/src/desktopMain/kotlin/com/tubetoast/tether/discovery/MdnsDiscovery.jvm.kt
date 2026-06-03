@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 actual class MdnsDiscovery(
     store: DiscoveredDevicesStore,
     deviceIdentityStore: DeviceIdentityStore,
-) : DeviceDiscovery {
+) : DeviceDiscovery, CanonicalNameSource {
     private val delegate: OwnNameDiscovery =
         if (isMacOsHost()) {
             MdnsDiscoveryBonjour(store, deviceIdentityStore)
@@ -23,7 +23,7 @@ actual class MdnsDiscovery(
 
     actual override val discoveredDevices: StateFlow<List<Device>> get() = delegate.discoveredDevices
 
-    actual val ownPublishedName: StateFlow<String?> get() = delegate.ownPublishedName
+    actual override val ownPublishedName: StateFlow<String?> get() = delegate.ownPublishedName
 
     actual override suspend fun start(deviceName: String, port: Int) = delegate.start(deviceName, port)
 
