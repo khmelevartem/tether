@@ -15,6 +15,8 @@ import com.tubetoast.tether.identity.FingerprintPersistence
 import com.tubetoast.tether.network.DefaultTransferActivityTracker
 import com.tubetoast.tether.network.FileClient
 import com.tubetoast.tether.network.FileServer
+import com.tubetoast.tether.network.NoPairing
+import com.tubetoast.tether.network.PeerPairing
 import com.tubetoast.tether.network.TransferActivityTracker
 import com.tubetoast.tether.peer.PeersRepository
 import com.tubetoast.tether.preferences.DefaultPeerPreferencesStore
@@ -35,6 +37,7 @@ import com.tubetoast.tether.transfer.PeerTransferEngineRegistry
 import com.tubetoast.tether.transfer.PeerUnreachableException
 import com.tubetoast.tether.transfer.PendingFilesRepository
 import com.tubetoast.tether.transfer.ReconnectionTimeout
+import io.ktor.client.HttpClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -51,7 +54,16 @@ abstract class AppContainer {
     open val discoveredDevicesStore: DiscoveredDevicesStore by lazy { DiscoveredDevicesStore() }
     open val nameRepublisher: DeviceNameRepublisher by lazy { DeviceNameRepublisher(nameStore, mdnsDiscovery) }
     open val transferActivityTracker: TransferActivityTracker = DefaultTransferActivityTracker()
-    open val fileClient: FileClient by lazy { FileClient.default(transferActivityTracker) }
+
+    // Shared by fileClient and any PeerPairing that needs to issue POST /pair; fileClient owns closing it.
+    protected open val httpClient: HttpClient by lazy { FileClient.cioClient() }
+
+    // TODO(#11): only CliAppContainer overrides this with HandshakePairing; Apple, Android, and Desktop
+    // UI containers stay on NoPairing until their PIN confirmation dialog lands.
+    open val peerPairing: PeerPairing get() = NoPairing
+    open val fileClient: FileClient by lazy {
+        FileClient(httpClient, transferActivityTracker, pairing = peerPairing)
+    }
     open val trustedDeviceStore: TrustedDeviceStore by lazy { DefaultTrustedDeviceStore(trustedDataStore) }
     open val peerPreferencesStore: PeerPreferencesStore by lazy { DefaultPeerPreferencesStore(dataStore) }
     abstract val fileTransferPreferences: FileTransferPreferences

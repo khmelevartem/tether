@@ -327,18 +327,25 @@ class FileClientTest {
         trustedDeviceStore: TrustedDeviceStore = fixtures.newTrustedStore(),
         keyPair: DeviceKeyPair = DeviceKeyPair(fixtures.newConfigDir()),
         confirmationHandler: PairingConfirmationHandler = PairingConfirmationHandler { _, _ -> true },
-    ): FileClient = FileClient(
-        client = httpFor { request ->
+    ): FileClient {
+        // FileClient and HandshakePairing share one client, exactly as the containers wire them.
+        val client = httpFor { request ->
             when {
                 request.url.segments.last() == "pair" -> pairHandler(request)
                 else -> uploadHandler(request)
             }
-        },
-        trustedDeviceStore = trustedDeviceStore,
-        ownKeyPair = keyPair,
-        ownNameProvider = { "TestDevice" },
-        pairingHandler = confirmationHandler,
-    )
+        }
+        return FileClient(
+            client = client,
+            pairing = HandshakePairing(
+                client = client,
+                trustedDeviceStore = trustedDeviceStore,
+                ownKeyPair = keyPair,
+                ownDeviceName = { "TestDevice" },
+                confirmationHandler = confirmationHandler,
+            ),
+        )
+    }
 
     @Test
     fun `send skips ensurePaired when pairing not configured`() = runTest {

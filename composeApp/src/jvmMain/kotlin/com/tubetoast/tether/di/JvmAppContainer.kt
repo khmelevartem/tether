@@ -1,16 +1,17 @@
 package com.tubetoast.tether.di
 
-import com.tubetoast.tether.network.FileClient
 import com.tubetoast.tether.network.FileServer
 import com.tubetoast.tether.network.PairingConfirmationHandler
-import kotlinx.coroutines.flow.first
+import com.tubetoast.tether.security.DeviceKeyPair
 import java.io.File
 
 abstract class JvmAppContainer(
     private val config: JvmAppConfig,
 ) : AppContainer() {
     val downloadsDir: File = config.downloadsDir
+    protected val deviceKeyPair: DeviceKeyPair = config.deviceKeyPair
 
+    // Server-side PIN confirmation; null = auto-accept (platforms without a confirmation UI yet).
     open val pairingConfirmationHandler: PairingConfirmationHandler? = null
 
     override val fileServer: FileServer by lazy {
@@ -18,21 +19,11 @@ abstract class JvmAppContainer(
             configuredPort = config.port,
             downloadsDir = downloadsDir,
             trustedDeviceStore = trustedDeviceStore,
-            deviceKeyPair = config.deviceKeyPair,
+            deviceKeyPair = deviceKeyPair,
             tracker = transferActivityTracker,
             deviceIdentityStore = deviceIdentityStore,
             discoveredDevicesStore = discoveredDevicesStore,
             pairingConfirmationHandler = pairingConfirmationHandler,
-        )
-    }
-
-    override val fileClient: FileClient by lazy {
-        FileClient.withPairing(
-            trustedDeviceStore = trustedDeviceStore,
-            ownKeyPair = config.deviceKeyPair,
-            ownNameProvider = { nameStore.name.first() },
-            pairingHandler = pairingConfirmationHandler,
-            tracker = transferActivityTracker,
         )
     }
 }

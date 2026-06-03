@@ -1,14 +1,8 @@
 package com.tubetoast.tether.network
 
 import com.tubetoast.tether.protocol.Device
-import com.tubetoast.tether.protocol.PairRequest
-import com.tubetoast.tether.protocol.PairResponse
 import com.tubetoast.tether.protocol.PeerAnnouncement
 import com.tubetoast.tether.protocol.SendResult
-import com.tubetoast.tether.security.DeviceKeyPair
-import com.tubetoast.tether.security.TrustedDeviceStore
-import com.tubetoast.tether.security.computePinCode
-import com.tubetoast.tether.security.deviceIdFromPublicKey
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
@@ -49,32 +43,14 @@ open class FileClient(
     private val client: HttpClient,
     private val tracker: TransferActivityTracker = DefaultTransferActivityTracker(),
     private val noProgressTimeout: Duration = DEFAULT_NO_PROGRESS_TIMEOUT,
-    private val trustedDeviceStore: TrustedDeviceStore? = null,
-    private val ownKeyPair: DeviceKeyPair? = null,
-    private val ownNameProvider: (suspend () -> String)? = null,
-    private val pairingHandler: PairingConfirmationHandler? = null,
+    private val pairing: PeerPairing = NoPairing,
 ) : Closeable {
     companion object {
         fun default(
             tracker: TransferActivityTracker = DefaultTransferActivityTracker(),
         ): FileClient = FileClient(client = cioClient(), tracker = tracker)
 
-        fun withPairing(
-            trustedDeviceStore: TrustedDeviceStore,
-            ownKeyPair: DeviceKeyPair,
-            ownNameProvider: suspend () -> String,
-            pairingHandler: PairingConfirmationHandler?,
-            tracker: TransferActivityTracker = DefaultTransferActivityTracker(),
-        ): FileClient = FileClient(
-            client = cioClient(),
-            tracker = tracker,
-            trustedDeviceStore = trustedDeviceStore,
-            ownKeyPair = ownKeyPair,
-            ownNameProvider = ownNameProvider,
-            pairingHandler = pairingHandler,
-        )
-
-        private fun cioClient(): HttpClient = HttpClient(CIO) {
+        internal fun cioClient(): HttpClient = HttpClient(CIO) {
             install(ContentNegotiation) { json() }
             install(HttpTimeout) {
                 requestTimeoutMillis = HttpTimeoutConfig.INFINITE_TIMEOUT_MS
@@ -103,7 +79,7 @@ open class FileClient(
         totalBytes: Long? = null,
         onProgress: ((bytesTransferred: Long, totalBytes: Long?) -> Unit)? = null,
     ): SendResult = tracker.withActiveTransfer {
-        if (!ensurePaired(device)) return@withActiveTransfer SendResult.Failure("pairing failed")
+        if (!pairing.ensurePaired(device)) return@withActiveTransfer SendResult.Failure("pairing failed")
         log.info { "sending '$fileName'${totalBytes?.let { " ($it bytes)" } ?: ""} → ${device.host}:${device.port}" }
         try {
             sendInternal(device, channel, fileName, totalBytes, onProgress)
@@ -112,44 +88,6 @@ open class FileClient(
         } catch (e: Throwable) {
             SendResult.Failure(e.message ?: e::class.simpleName ?: "unknown error")
         }
-    }
-
-    private suspend fun ensurePaired(device: Device): Boolean {
-        if (trustedDeviceStore == null || ownKeyPair == null || pairingHandler == null) return true
-        val response = try {
-            client.post("http://${device.host}:${device.port}/pair") {
-                contentType(ContentType.Application.Json)
-                setBody(
-                    PairRequest(
-                        publicKey = ownKeyPair.publicKey,
-                        deviceName =
-                            ownNameProvider?.invoke() ?: "unknown",
-                    ),
-                )
-            }
-        } catch (e: Exception) {
-            log.error { e withMessage "ensurePaired failed → ${device.host}:${device.port}" }
-            return false
-        }
-        if (!response.status.isSuccess()) {
-            if (response.status == HttpStatusCode.Forbidden) {
-                log.info { "pairing rejected by remote → ${device.host}:${device.port}" }
-            } else {
-                log.error { "pair request failed with ${response.status} → ${device.host}:${device.port}" }
-            }
-            return false
-        }
-        val serverPublicKey = response.body<PairResponse>().publicKey
-        val deviceId = deviceIdFromPublicKey(serverPublicKey)
-        if (trustedDeviceStore.isTrusted(deviceId)) return true
-        val pin = computePinCode(ownKeyPair.publicKey, serverPublicKey)
-        val confirmed = pairingHandler.confirmPairing(pin, device.name)
-        if (!confirmed) {
-            log.info { "pairing declined by user → ${device.host}:${device.port}" }
-            return false
-        }
-        trustedDeviceStore.saveTrustedKey(deviceId, serverPublicKey)
-        return true
     }
 
     override fun close() {
