@@ -27,6 +27,14 @@ All these items must appear in the **"Manual verification required"** section of
 
 The FIFO keeps stdin open for `list`, `send`, `quit` commands. All blocks that launch a CLI instance follow this pattern — see `block-1-desktop-cli-a.sh` for the canonical form.
 
+## Shell idioms for blocks
+
+Blocks run under `set -euo pipefail`. Commands that exit nonzero as a *normal* result — `grep` / `grep -c` with no match, glob expansion that matches nothing — then abort the script or feed a wrong value downstream. Two idioms keep blocks robust:
+
+- **Counting occurrences:** capture with `… || true`, then default with `${VAR:-0}`. Never `… || echo 0` — on an empty match `grep -c` already prints `0` *and* exits nonzero, so the fallback appends a second line and the variable becomes two values, breaking later arithmetic.
+- **Resolving a path that may be absent:** guard the lookup so an empty result is an explicit branch, not a pipeline abort; do not rely on a bare glob or `ls` succeeding.
+- **Parsing a field from a log line:** match the field by its label, not by line position — a trailing column (a path, a suffix) shifts what an end-of-line pattern captures.
+
 ## Run plan
 
 Execute blocks sequentially. A block failure does not prevent subsequent blocks from running. Run cleanup (`block-7-cleanup.sh`) **always**, even after earlier FAILs.
