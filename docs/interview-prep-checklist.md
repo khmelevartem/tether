@@ -231,7 +231,7 @@
 - [x] `Fake` vs `Mock` — когда что, архитектурные последствия
 - [ ] `Turbine` — тестирование Flow, задержки, cancellation
 - [ ] `Compose Testing` — семантическое дерево, `assertIsDisplayed`, `performClick`
-- [ ] `TestCoroutineDispatcher` / `UnconfinedTestDispatcher` — контроль времени в тестах
+- [x] `TestCoroutineDispatcher` / `UnconfinedTestDispatcher` — контроль времени в тестах
 - [ ] Integration tests vs Unit tests — что где тестировать
 
 ---
