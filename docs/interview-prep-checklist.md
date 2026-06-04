@@ -279,7 +279,7 @@
 
 ## Блок 11 — System Design (Senior-уровень)
 
-- [ ] Offline-first приложение — sync стратегия, conflict resolution
+- [x] Offline-first приложение — sync стратегия, conflict resolution
 - [ ] Лента с пагинацией — Paging 3, стратегии кэша
 - [ ] Чат / real-time — WebSocket vs SSE vs polling, reconnect логика
 - [ ] B2B/B2C из одной кодовой базы (твой кейс) — flavors, feature flags, разная монетизация
