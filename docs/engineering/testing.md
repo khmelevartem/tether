@@ -27,6 +27,12 @@ A test lives in the most general source set across whose targets every reference
 
 - `Thread.sleep` and `System.currentTimeMillis`-polling are permissible **only** when waiting for events from external native APIs (JmDNS, NsdManager, etc.) that run on real threads outside our `CoroutineScope`. Everything else inside the test body uses virtual time.
 - `withTimeout` inside `runTest` uses **virtual** clocks even on `Dispatchers.IO` — do not rely on it as a real-time timeout.
+- Under `runTest`, the **inputs** must also live on the test scheduler, not only the unit under test. A source backed by real I/O — a file stream adapted into a channel — pumps its bytes on a real dispatcher and escapes virtual time even when the engine dispatcher is pinned, making timing-sensitive assertions race. Feed the unit an in-memory source produced inside the test scope instead.
+
+A test that genuinely runs on real threads (an integration suite around a real server/client) cannot use virtual time. It stays deterministic by two rules:
+
+- **Synchronize on an observable condition, not a timer.** Await a completion signal or a state transition the unit exposes; never advance by a fixed delay chosen to be "long enough" for the work to reach some point.
+- **Assert the contract, not a racy side-effect.** Check the operation's result and emitted events. A side-effect that another thread produces (a file the peer writes, a log line) lands at a moment the test does not control — assert it only where the contract does not already imply it, and never by polling for it to appear.
 
 ## Apple targets
 

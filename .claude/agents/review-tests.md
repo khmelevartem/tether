@@ -78,6 +78,13 @@ feature ran. Flag as `[REQUIRED]`.
 
 When a component subscribes to a repository or flow and derives state from each emit, the test suite must cover every variation the source can produce — not only the happy path used at construction time. That means: empty / single / multiple shapes; both polarities of every boolean the emitted model carries; transitions across successive emits (presence flips, flag flips, mixed combinations). Missing a variation the source can legally emit is `[REQUIRED]` — without it a future enrichment of the source ships an untested code path on the consumer side.
 
+### 11. Test determinism — no escape from virtual time, no timer synchronization
+
+Per `testing.md §Real time vs virtual time`, flag as `[REQUIRED]`:
+- a test under `runTest` whose input or dispatcher runs on a real dispatcher — a real-I/O-backed source, an un-pinned engine — escaping virtual time and making timing-sensitive assertions race;
+- a real-thread integration test that synchronizes by a fixed delay ("wait long enough") instead of awaiting an observable condition (completion signal / state transition);
+- an assertion on a side-effect produced by another thread (a file the peer writes, a log line) where the operation's contract already implies it, or that polls for the side-effect to appear.
+
 ## What you do NOT check
 
 - AC coverage → review-dod
