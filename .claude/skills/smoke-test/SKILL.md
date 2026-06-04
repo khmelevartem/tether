@@ -63,7 +63,7 @@ Launches CLI A (`SmokeMacA`, random port), then checks:
 6. **mDNS publish (dns-sd, optional)** — `dns-sd -B` browse. SKIP if `dns-sd` unavailable (Linux).
 7. **stdin `list`** — must produce a `[list]` or `[peers]` line.
 
-CLI A stays alive through Block 3. Graceful quit — Block 4.
+CLI A stays alive through the Android and iOS blocks (they need it for cross-discovery). Graceful quit — Block 4, deferred to just before cleanup.
 
 ### Block 2: Desktop ↔ Desktop send (via CLI)
 
@@ -125,14 +125,6 @@ Run: `./block-3.5-rename.sh`
 
 Sends `name RenamedA` to A via stdin; B must see the new name via mDNS republish within 15 s.
 
-### Block 4: Graceful quit of instance A — and `lastExit` propagation
-
-Run: `./block-4-graceful-quit.sh`
-
-Sends `quit` to A, waits up to 8 s, checks exit. PASS if the process exited.
-
-Checks exit code = 0 (last send was AllSent after the retry scenario). If the process had to be force-killed — exit-code check SKIP.
-
 ### Block 5: Android (conditional)
 
 Run: `./block-5-android.sh`
@@ -147,11 +139,9 @@ SKIP if no adb device connected. If present:
 6. Send Desktop → Android via CLI `send`. SKIP if emulator with QEMU NAT (`10.0.2.x`) or Android peer not discovered.
 7. `force-stop`.
 
-### Block 5.5: iOS simulator runtime (conditional)
+### Block 5.5: iOS simulator runtime
 
 Run: `./block-5.5-ios.sh`
-
-SKIP if Xcode CLI tools absent or `iosApp/iosApp.xcodeproj` not found.
 
 1. Resolve + boot simulator (default `iPhone 17`; override via `IOS_DEVICE` env var).
 2. `xcodebuild`, install, launch.
@@ -163,6 +153,16 @@ SKIP if Xcode CLI tools absent or `iosApp/iosApp.xcodeproj` not found.
 8. Keychain persistence across cold launches — restart the app, fetch `/pair` again, compare the public key byte-for-byte.
 
 iOS cleanup — in Block 7.
+
+### Block 4: Graceful quit of instance A — and `lastExit` propagation
+
+Run: `./block-4-graceful-quit.sh`
+
+Runs after the Android and iOS blocks — both need instance A alive for cross-discovery, so A's graceful quit is deferred to just before cleanup.
+
+Sends `quit` to A, waits up to 8 s, checks exit. PASS if the process exited.
+
+Checks exit code = 0 (last send was AllSent after the retry scenario). If the process had to be force-killed — exit-code check SKIP.
 
 ### Block 7: Cleanup
 
