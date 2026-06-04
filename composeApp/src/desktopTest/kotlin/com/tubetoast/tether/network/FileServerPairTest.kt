@@ -46,7 +46,7 @@ class FileServerPairTest {
         store: TrustedDeviceStore,
         keyPair: DeviceKeyPair,
         handler: PairingConfirmationHandler? = PairingConfirmationHandler { _, _ -> true },
-        pairingTimeoutMillis: Long = 30_000L,
+        pairingTimeoutMillis: Long = DEFAULT_PAIRING_TIMEOUT_MS,
     ): Pair<FileServer, Int> {
         val server =
             FileServer(

@@ -29,7 +29,7 @@ actual class FileServer(
     private val deviceIdentityStore: DeviceIdentityStore? = null,
     private val discoveredDevicesStore: DiscoveredDevicesStore? = null,
     private val pairingConfirmationHandler: PairingConfirmationHandler? = null,
-    private val pairingTimeoutMillis: Long = 30_000L,
+    private val pairingTimeoutMillis: Long = DEFAULT_PAIRING_TIMEOUT_MS,
 ) {
     private val downloadsDir: String = downloadsDir ?: defaultDownloadsDir()
     private var server: EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration>? = null

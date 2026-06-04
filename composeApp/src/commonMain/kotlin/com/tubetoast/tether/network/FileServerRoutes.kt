@@ -33,6 +33,9 @@ import ru.pocketbyte.kydra.log.wrapper.withTag
 
 internal const val UPLOAD_BUFFER_SIZE = 64 * 1024
 
+// How long the server holds the /pair response while waiting for the user to confirm the PIN.
+internal const val DEFAULT_PAIRING_TIMEOUT_MS = 60_000L
+
 internal fun dedupFilename(leafName: String, exists: (candidate: String) -> Boolean): String {
     if (!exists(leafName)) return leafName
     // A leading dot marks a hidden file, not an extension separator.
@@ -74,7 +77,7 @@ internal fun Application.installFileServerRoutes(
     deviceIdentityStore: DeviceIdentityStore? = null,
     discoveredDevicesStore: DiscoveredDevicesStore? = null,
     pairingConfirmationHandler: PairingConfirmationHandler? = null,
-    pairingTimeoutMillis: Long = 30_000L,
+    pairingTimeoutMillis: Long = DEFAULT_PAIRING_TIMEOUT_MS,
 ) {
     install(ContentNegotiation) { json() }
     routing {
