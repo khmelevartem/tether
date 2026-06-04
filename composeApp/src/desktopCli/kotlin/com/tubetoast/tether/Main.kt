@@ -69,6 +69,8 @@ class TetherCommand :
             append("Environment:\n```\n")
             append("TETHER_LOG_DEBUG=true       Enable DEBUG-level logs.\n")
             append("-Dtether.log.debug=true     Same, via JVM system property.\n")
+            append("TETHER_LOG_STDOUT=true      Route subsystem logs to stdout instead of stderr.\n")
+            append("-Dtether.log.stdout=true    Same, via JVM system property.\n")
         },
     ) {
     private val nameOverride by option("--name", help = "Device name advertised via mDNS (persisted)")
@@ -121,9 +123,13 @@ class TetherCommand :
 
         val discovery = container.mdnsDiscovery
         launch {
+            var lastPeersIds: String? = null
             discovery.discoveredDevices.collect { peers ->
-                val ids = if (peers.isEmpty()) "none" else peers.joinToString(", ") { it.id }
-                echo("[peers] $ids")
+                val ids = peersIds(peers)
+                if (ids != lastPeersIds) {
+                    lastPeersIds = ids
+                    echo("[peers] $ids")
+                }
             }
         }
 
@@ -438,5 +444,8 @@ fun parseTokens(line: String): List<String> {
     if (current.isNotEmpty()) tokens.add(current.toString())
     return tokens
 }
+
+fun peersIds(peers: List<Device>): String =
+    if (peers.isEmpty()) "none" else peers.joinToString(", ") { it.id }
 
 fun main(args: Array<String>) = TetherCommand().main(args)
