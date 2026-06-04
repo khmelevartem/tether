@@ -6,11 +6,6 @@ import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import ru.pocketbyte.kydra.log.KydraLog
-import ru.pocketbyte.kydra.log.info
-import ru.pocketbyte.kydra.log.wrapper.withTag
-
-private val log = KydraLog.withTag(default = "Tether.FilePicker")
 
 class AndroidFilePicker(
     private val coordinator: AndroidPickerCoordinator,
@@ -19,9 +14,7 @@ class AndroidFilePicker(
 ) : FilePicker {
     override suspend fun pickFiles(): List<FileSource> {
         val deferred = coordinator.begin()
-        val launched = coordinator.launchFiles() != null
-        log.info { "pickFiles — launcher ${if (launched) "fired" else "ABSENT"}" }
-        if (!launched) {
+        if (coordinator.launchFiles() == null) {
             deferred.completeExceptionally(IllegalStateException("AndroidFilePicker: no file launcher attached"))
         }
         return deferred.await()
@@ -29,9 +22,7 @@ class AndroidFilePicker(
 
     override suspend fun pickFolder(): List<FileSource> {
         val deferred = coordinator.begin()
-        val launched = coordinator.launchFolder() != null
-        log.info { "pickFolder — launcher ${if (launched) "fired" else "ABSENT"}" }
-        if (!launched) {
+        if (coordinator.launchFolder() == null) {
             deferred.completeExceptionally(IllegalStateException("AndroidFilePicker: no folder launcher attached"))
         }
         return deferred.await()
@@ -39,9 +30,7 @@ class AndroidFilePicker(
 
     override suspend fun pickPhotos(): List<FileSource> {
         val deferred = coordinator.begin()
-        val launched = coordinator.launchPhotos() != null
-        log.info { "pickPhotos — launcher ${if (launched) "fired" else "ABSENT"}" }
-        if (!launched) {
+        if (coordinator.launchPhotos() == null) {
             deferred.completeExceptionally(IllegalStateException("AndroidFilePicker: no photos launcher attached"))
         }
         return deferred.await()
