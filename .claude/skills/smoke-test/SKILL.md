@@ -27,6 +27,8 @@ All these items must appear in the **"Manual verification required"** section of
 
 The FIFO keeps stdin open for `list`, `send`, `quit` commands. All blocks that launch a CLI instance follow this pattern — see `block-1-desktop-cli-a.sh` for the canonical form.
 
+Each instance launches with its own `-Duser.home` (`/tmp/smoke-tether-{A,B,C}`), so every CLI gets a **distinct** device key, trust store, and downloads dir. Without this the instances share `~/.config/tether` — one device key for all — and pairing degenerates (the PIN is computed over a key XOR'd with itself) and is silently skipped on later runs because trust persists. Block 7 wipes these homes, making each run a deterministic first encounter that exercises the real two-key PIN.
+
 ## Shell idioms for blocks
 
 Blocks run under `set -euo pipefail`. Commands that exit nonzero as a *normal* result — `grep` / `grep -c` with no match, glob expansion that matches nothing — then abort the script or feed a wrong value downstream. Two idioms keep blocks robust:
@@ -57,11 +59,12 @@ Launches CLI A (`SmokeMacA`, random port), then checks:
 
 1. **Startup** — port parsed, java pid alive. PASS if both.
 2. **`/health`** — must return `Tether OK`.
-3. **`/pair` — X.509 EC P-256 shape.** Response must be 91 bytes, first byte `0x30`, byte 26 `0x04`. Verifies real key material, not a placeholder.
-4. **Port LISTEN** — java listener shown by `lsof`.
-5. **mDNS publish (log)** — the CLI's startup log shows that mDNS advertising started for its configured instance name.
-6. **mDNS publish (dns-sd, optional)** — `dns-sd -B` browse. SKIP if `dns-sd` unavailable (Linux).
-7. **stdin `list`** — must produce a `[list]` or `[peers]` line.
+3. **Port LISTEN** — java listener shown by `lsof`.
+4. **mDNS publish (log)** — the CLI's startup log shows that mDNS advertising started for its configured instance name.
+5. **mDNS publish (dns-sd, optional)** — `dns-sd -B` browse. SKIP if `dns-sd` unavailable (Linux).
+6. **stdin `list`** — must produce a `[list]` or `[peers]` line.
+
+(No curl `/pair` shape-check: the CLI now has a real confirmation handler, so an untrusted `/pair` blocks on a y/n prompt. The X.509 key material is covered by the real handshake in Block 2.1; the explicit SPKI gate is in Block 5.5 for iOS, whose server auto-accepts.)
 
 CLI A stays alive through the Android and iOS blocks (they need it for cross-discovery). Graceful quit — Block 4, deferred to just before cleanup.
 
@@ -75,7 +78,7 @@ Scenario 2.1 starts CLI B (`SmokeMacB`) and waits for mutual mDNS discovery; 2.2
 
 Run: `./block-2.1-single-file-send.sh`
 
-Sends one file from A to B. PASS if `[send] done` appears in A's log AND the file lands at `$HOME/Downloads/Tether/` byte-identical to the source.
+Sends one file from A to B. On the first encounter this triggers the real pairing handshake: both CLIs print `[pair] Confirm?` with the same 4-digit PIN, and the block auto-confirms both sides over stdin (server B first, then client A). PASS if `[send] done` appears in A's log AND the file lands at `$DOWNLOADS_B` (`/tmp/smoke-tether-B/Downloads/Tether/`) byte-identical to the source.
 
 #### Scenario 2.2 — multi-file send (3 files in one `send` command)
 
@@ -168,7 +171,7 @@ Checks exit code = 0 (last send was AllSent after the retry scenario). If the pr
 
 Run: `./block-7-cleanup.sh` — **always**.
 
-Kills all CLI instances and keepers, removes FIFOs, logs, PIDs, scratch files in `$HOME/Downloads/Tether/`, Android device files, iOS simulator app, and build logs.
+Kills all CLI instances and keepers, removes FIFOs, logs, PIDs, the isolated per-instance homes `/tmp/smoke-tether-{A,B,C}/` (device keys, trust stores, downloads), Android device files, iOS simulator app, and build logs.
 
 ## Report format
 
@@ -197,12 +200,11 @@ At the end of the run print a markdown report:
 | Build | cli jar | ✓ PASS | <Ns>, jar=<name> |
 | Desktop CLI A | startup + port | ✓ PASS | port=49507, pid=83952 |
 | Desktop CLI A | /health | ✓ PASS | "Tether OK" |
-| Desktop CLI A | /pair X.509 EC P-256 | ✓ PASS | 91 bytes, DER prefix OK |
 | Desktop CLI A | port LISTEN | ✓ PASS | java *:49507 |
 | Desktop CLI A | mDNS publish (log) | ✓ PASS | advertising 'SmokeMacA' |
 | Desktop CLI A | mDNS publish (dns-sd) | ✓ PASS | SmokeMacA in browse |
 | Desktop CLI A | stdin `list` | ✓ PASS | peer printed |
-| Desktop↔Desktop | single-file send | ✓ PASS | file lands in receiver downloads, diff empty |
+| Desktop↔Desktop | pairing + single-file send | ✓ PASS | first-encounter PIN auto-confirmed both sides, file lands, diff empty |
 | Desktop↔Desktop | multi-file send (3 files) | ✓ PASS | `[send] done — 3/3 sent`, all 3 diff empty |
 | Desktop↔Desktop | retry after error | ✓ PASS | file lands after `retry`, diff empty |
 | Desktop CLI A | exit code on `quit` | ✓ PASS | exit=0 (last send AllSent) |

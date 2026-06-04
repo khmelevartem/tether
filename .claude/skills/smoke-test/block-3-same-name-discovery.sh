@@ -9,13 +9,15 @@ JAR="${JAR:-$(ls "$(git rev-parse --show-toplevel)"/composeApp/build/libs/tether
   "$(git rev-parse --show-toplevel)"/composeApp/build/libs/tether-cli.jar 2>/dev/null | head -1 || true)}"
 
 LOG_C=/tmp/smoke-cliC.log
+# Own home so C is a third distinct identity and does not pollute the real ~/.config/tether.
+HOME_C="${HOME_C:-/tmp/smoke-tether-C}"
 rm -f /tmp/smoke-cliC-in
 mkfifo /tmp/smoke-cliC-in
 sleep 600 > /tmp/smoke-cliC-in &
 KEEPER_C=$!; disown $KEEPER_C
 echo $KEEPER_C > /tmp/smoke-cliC-keeper.pid
 
-nohup java -jar "$JAR" --name SmokeMacA --port 0 < /tmp/smoke-cliC-in > "$LOG_C" 2>&1 &
+nohup java -Duser.home="$HOME_C" -jar "$JAR" --name SmokeMacA --port 0 < /tmp/smoke-cliC-in > "$LOG_C" 2>&1 &
 JPID_C=$!; disown $JPID_C
 echo $JPID_C > /tmp/smoke-cliC.pid
 

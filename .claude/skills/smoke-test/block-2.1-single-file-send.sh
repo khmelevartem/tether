@@ -6,7 +6,10 @@ set -euo pipefail
 # block-2.2 and block-2.3 assume CLI B is still alive after this script.
 
 LOG_A="${LOG_A:-/tmp/smoke-cliA.log}"
-DOWNLOADS_B="${DOWNLOADS_B:-$HOME/Downloads/Tether}"
+# Isolated home (see block-1): B is a distinct identity from A, so pairing is a real
+# two-key first encounter. Downloads land under this home, not the user's real ~/Downloads.
+HOME_B="${HOME_B:-/tmp/smoke-tether-B}"
+DOWNLOADS_B="${DOWNLOADS_B:-$HOME_B/Downloads/Tether}"
 JAR="${JAR:-$(ls "$(git rev-parse --show-toplevel)"/composeApp/build/libs/tether-cli-*.jar \
   "$(git rev-parse --show-toplevel)"/composeApp/build/libs/tether-cli.jar 2>/dev/null | head -1 || true)}"
 
@@ -17,7 +20,7 @@ sleep 600 > /tmp/smoke-cliB-in &
 KEEPER_B=$!; disown $KEEPER_B
 echo $KEEPER_B > /tmp/smoke-cliB-keeper.pid
 
-nohup java -jar "$JAR" --name SmokeMacB --port 0 < /tmp/smoke-cliB-in > "$LOG_B" 2>&1 &
+nohup java -Duser.home="$HOME_B" -jar "$JAR" --name SmokeMacB --port 0 < /tmp/smoke-cliB-in > "$LOG_B" 2>&1 &
 JPID_B=$!; disown $JPID_B
 echo $JPID_B > /tmp/smoke-cliB.pid
 
@@ -77,4 +80,4 @@ RC=$?
 set -e
 
 [ $RC -eq 0 ] && echo "PASS: single-file send — $SEND1_NAME byte-identical" || echo "FAIL: single-file send"
-export SEND1_NAME SEND1_SRC LOG_B JPID_B
+export SEND1_NAME SEND1_SRC LOG_B JPID_B HOME_B DOWNLOADS_B

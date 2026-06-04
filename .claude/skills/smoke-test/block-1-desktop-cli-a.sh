@@ -9,13 +9,17 @@ JAR="${JAR:-$(ls composeApp/build/libs/tether-cli-*.jar composeApp/build/libs/te
 [ -z "$JAR" ] && { echo "FAIL: cli jar not found — run block-0 first"; exit 1; }
 
 LOG_A=/tmp/smoke-cliA.log
+# Isolated home → own device key + trust store, so A and B pair as two DISTINCT
+# identities (real two-key PIN, real first encounter), not the shared ~/.config/tether
+# under which the PIN degenerates to a constant. Wiped in block-7.
+HOME_A="${HOME_A:-/tmp/smoke-tether-A}"
 rm -f /tmp/smoke-cliA-in
 mkfifo /tmp/smoke-cliA-in
 sleep 600 > /tmp/smoke-cliA-in &
 KEEPER_A=$!; disown $KEEPER_A
 echo $KEEPER_A > /tmp/smoke-cliA-keeper.pid
 
-nohup java -jar "$JAR" --name SmokeMacA --port 0 < /tmp/smoke-cliA-in > "$LOG_A" 2>&1 &
+nohup java -Duser.home="$HOME_A" -jar "$JAR" --name SmokeMacA --port 0 < /tmp/smoke-cliA-in > "$LOG_A" 2>&1 &
 JPID_A=$!; disown $JPID_A
 echo $JPID_A > /tmp/smoke-cliA.pid
 
@@ -36,15 +40,11 @@ echo "PASS: startup — pid=$JPID_A, port=$PORT_A"
 HEALTH=$(curl -sf --max-time 5 "http://localhost:$PORT_A/health" || echo "FAIL")
 [ "$HEALTH" = "Tether OK" ] && echo "PASS: /health — $HEALTH" || echo "FAIL: /health returned: $HEALTH"
 
-# /pair — X.509 EC P-256 SubjectPublicKeyInfo shape check
-PAIR_RESP=$(curl -sf --max-time 5 -X POST "http://localhost:$PORT_A/pair" \
-  -H "Content-Type: application/json" \
-  -d '{"publicKey":[1,2,3], "deviceName":"smoke"}' || echo "")
-set +e
-echo "$PAIR_RESP" | jq -e '.publicKey | length == 91 and .[0] == 48 and .[26] == 4' > /dev/null 2>&1
-RC=$?
-set -e
-[ $RC -eq 0 ] && echo "PASS: /pair X.509 EC P-256 SubjectPublicKeyInfo" || echo "FAIL: bad publicKey shape: $PAIR_RESP"
+# No curl /pair shape-check here: the CLI now has a real PairingConfirmationHandler, so an
+# untrusted /pair blocks on an interactive y/n prompt instead of auto-responding — a 5s curl
+# would always time out. The Desktop key-material path is covered end-to-end by the real
+# handshake in block-2.1; the explicit X.509 SPKI gate lives in block-5.5 (iOS), whose server
+# has no handler and still auto-accepts.
 
 # Port LISTEN
 set +e; lsof -nP -iTCP:"$PORT_A" 2>/dev/null | head -3; set -e
@@ -71,4 +71,4 @@ set +e; tail "$LOG_A" | grep -qE "\[list\]|\[peers\]"; RC=$?; set -e
 [ $RC -eq 0 ] && echo "PASS: stdin list" || echo "FAIL: no [list] or [peers] line in log"
 
 echo ""
-echo "CLI A alive. PORT_A=$PORT_A  JPID_A=$JPID_A  LOG_A=$LOG_A"
+echo "CLI A alive. PORT_A=$PORT_A  JPID_A=$JPID_A  LOG_A=$LOG_A  HOME_A=$HOME_A"

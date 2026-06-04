@@ -5,7 +5,7 @@ set -euo pipefail
 # Requires: CLI B alive with name SmokeMacB.
 
 LOG_A="${LOG_A:-/tmp/smoke-cliA.log}"
-DOWNLOADS_B="${DOWNLOADS_B:-$HOME/Downloads/Tether}"
+DOWNLOADS_B="${DOWNLOADS_B:-/tmp/smoke-tether-B/Downloads/Tether}"
 
 TS=$(date +%s)
 M1="/tmp/smoke-multi-${TS}-1.txt"; echo "m1-$TS" > "$M1"

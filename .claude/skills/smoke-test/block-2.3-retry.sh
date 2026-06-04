@@ -13,7 +13,8 @@ exit 0
 
 LOG_A="${LOG_A:-/tmp/smoke-cliA.log}"
 LOG_B="${LOG_B:-/tmp/smoke-cliB.log}"
-DOWNLOADS_B="${DOWNLOADS_B:-$HOME/Downloads/Tether}"
+HOME_B="${HOME_B:-/tmp/smoke-tether-B}"
+DOWNLOADS_B="${DOWNLOADS_B:-$HOME_B/Downloads/Tether}"
 JAR="${JAR:-$(ls "$(git rev-parse --show-toplevel)"/composeApp/build/libs/tether-cli-*.jar \
   "$(git rev-parse --show-toplevel)"/composeApp/build/libs/tether-cli.jar 2>/dev/null | head -1 || true)}"
 
@@ -47,7 +48,7 @@ PREV_HELLO=$(grep -cE "hello from SmokeMacB@" "$LOG_A" 2>/dev/null || true)
 PREV_HELLO=${PREV_HELLO:-0}
 
 # Restart B with the same name so the engine's PeerIdentity resolves again.
-nohup java -jar "$JAR" --name SmokeMacB --port 0 < /tmp/smoke-cliB-in > "$LOG_B" 2>&1 &
+nohup java -Duser.home="$HOME_B" -jar "$JAR" --name SmokeMacB --port 0 < /tmp/smoke-cliB-in > "$LOG_B" 2>&1 &
 JPID_B=$!; disown $JPID_B
 echo $JPID_B > /tmp/smoke-cliB.pid
 
