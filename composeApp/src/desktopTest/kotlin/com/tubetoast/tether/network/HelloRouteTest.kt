@@ -249,6 +249,45 @@ class HelloRouteTest {
     }
 
     @Test
+    fun `hello with known fingerprint refreshes address but preserves canonical name`() {
+        val store = DiscoveredDevicesStore()
+        val server = newServer(store = store)
+        val port = server.start()
+        val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
+        try {
+            runBlocking {
+                store.upsert(
+                    Device(
+                        name = "Host (2)",
+                        host = "1.1.1.1",
+                        port = 5000,
+                        fingerprint = "fp-roaming",
+                    ),
+                )
+
+                val response = client.post("http://localhost:$port/hello") {
+                    contentType(ContentType.Application.Json)
+                    setBody(
+                        PeerAnnouncement(
+                            alias = "Host",
+                            fingerprint = "fp-roaming",
+                            port = 6000,
+                            deviceType = DeviceType.Desktop,
+                        ),
+                    )
+                }
+                assertEquals(HttpStatusCode.OK, response.status)
+            }
+            assertEquals(1, store.devices.value.size, "no duplicate should be added")
+            val entry = store.devices.value.first()
+            assertEquals("Host (2)", entry.name, "canonical name must not be overwritten")
+            assertEquals(6000, entry.port, "port must be refreshed to new value")
+        } finally {
+            client.close()
+        }
+    }
+
+    @Test
     fun `hello uses TCP remoteAddress not body ip for device host`() {
         val store = DiscoveredDevicesStore()
         val server = newServer(store = store)
