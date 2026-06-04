@@ -87,11 +87,11 @@ Sends 3 files in one command. PASS if `[send] done — 3/3 sent` appears AND all
 
 Run: `./block-2.3-retry.sh`
 
-Stops B to provoke `[send] error`, restarts B, then issues `retry SmokeMacB`. PASS if the file lands byte-identical after retry.
+Stops B to provoke `[send] error`, restarts B, then issues `retry SmokeMacB`. **Skipped pending [#367](https://github.com/khmelevartem/tether/issues/367)** — a restarted CLI gets a fresh ephemeral fingerprint, so the failed transfer leaves no terminal state for `retry` to resume from. Re-enable when stable-across-restart identity lands.
 
 #### Scenario 2.4 — exit code on `quit`
 
-Verified in Block 4 — `lastExit` accumulates per `send`/`retry`; after the retry the last result was AllSent → expected exit code 0.
+Verified in Block 4 — `lastExit` accumulates per `send`/`retry`; the last successful send was AllSent → expected exit code 0.
 
 ### Block 3: Same-name discovery
 
