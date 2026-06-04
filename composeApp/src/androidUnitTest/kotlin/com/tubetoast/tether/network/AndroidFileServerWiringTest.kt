@@ -6,7 +6,6 @@ import android.provider.MediaStore
 import com.tubetoast.tether.TetherApp
 import io.ktor.utils.io.ByteReadChannel
 import kotlinx.coroutines.test.runTest
-import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -22,12 +21,6 @@ import kotlin.test.assertTrue
 class AndroidFileServerWiringTest {
     private val contentResolver: ContentResolver = RuntimeEnvironment.getApplication().contentResolver
     private val storage = AndroidMediaStoreUploadStorage(contentResolver)
-
-    @After
-    fun tearDown() {
-        // Reset shadow state between tests
-        Shadows.shadowOf(contentResolver)
-    }
 
     @Test
     fun `resolveDestination inserts a row and returns a handle with the URI, or throws on null insert`() {

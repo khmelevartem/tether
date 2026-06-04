@@ -24,11 +24,7 @@ internal class AndroidMediaStoreUploadStorage(
     override fun resolveDestination(relativePath: String): UploadHandle {
         val leaf = relativePath.substringAfterLast('/', relativePath)
         val subDir = relativePath.substringBeforeLast('/', "")
-        val mediaRelativePath = if (subDir.isEmpty()) {
-            "${Environment.DIRECTORY_DOWNLOADS}/Tether"
-        } else {
-            "${Environment.DIRECTORY_DOWNLOADS}/Tether/$subDir"
-        }
+        val mediaRelativePath = "${Environment.DIRECTORY_DOWNLOADS}/Tether${if (subDir.isEmpty()) "" else "/$subDir"}"
         val values = ContentValues().apply {
             put(MediaStore.Downloads.DISPLAY_NAME, leaf)
             put(MediaStore.Downloads.RELATIVE_PATH, mediaRelativePath)

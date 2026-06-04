@@ -8,8 +8,8 @@ import kotlinx.coroutines.CompletableDeferred
 
 /**
  * Retains the in-flight pick deferred and launcher references across Activity recreation.
- * Lives in AndroidAppContainer. If a new pick starts while one is already in flight, the
- * prior deferred is cancelled.
+ * Must be container-scoped (not Activity-scoped) for rotation survival. If a new pick starts
+ * while one is already in flight, the prior deferred is cancelled.
  *
  * Launchers must be set (via [updateLaunchers]) before any pick is triggered.
  * [launchFiles], [launchFolder], [launchPhotos] return null when the launcher is absent;
