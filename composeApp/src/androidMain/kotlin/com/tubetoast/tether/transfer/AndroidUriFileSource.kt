@@ -5,6 +5,7 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.jvm.javaio.toByteReadChannel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import ru.pocketbyte.kydra.log.KydraLog
@@ -35,9 +36,20 @@ internal class AndroidUriFileSource(
 
     override suspend fun openReadChannel(): ByteReadChannel = withContext(Dispatchers.IO) {
         tryTakePersistablePermission()
-        val stream = contentResolver.openInputStream(uri)
-            ?: error("ContentResolver returned null InputStream for $uri")
-        stream.toByteReadChannel()
+        try {
+            val stream = contentResolver.openInputStream(uri)
+                ?: throw UnreadableSourceException(
+                    name,
+                    IllegalStateException("ContentResolver returned null InputStream for $uri"),
+                )
+            stream.toByteReadChannel()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: UnreadableSourceException) {
+            throw e
+        } catch (e: Exception) {
+            throw UnreadableSourceException(name, e)
+        }
     }
 
     private fun tryTakePersistablePermission() {

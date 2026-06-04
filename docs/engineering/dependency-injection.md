@@ -15,7 +15,7 @@ AppContainer            (commonMain)
 ├── JvmAppContainer     (jvmMain)
 │   ├── AndroidAppContainer  (androidMain)
 │   └── DesktopAppContainer  (desktopMain — ships on Windows / Linux / macOS)
-│       └── CliAppContainer  (desktopCli — CLI runner, overrides batchSenderFactory)
+│       └── CliAppContainer  (desktopCli — CLI runner, device-type tag only)
 └── AppleAppContainer   (appleMain)
     └── IosAppContainer     (iosMain)
 ```

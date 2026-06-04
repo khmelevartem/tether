@@ -1,0 +1,84 @@
+package com.tubetoast.tether.network
+
+import com.tubetoast.tether.discovery.DiscoveredDevicesStore
+import com.tubetoast.tether.protocol.Device
+import com.tubetoast.tether.transfer.FakeFileSource
+import com.tubetoast.tether.transfer.PeerUnreachableException
+import com.tubetoast.tether.transfer.toPeerIdentity
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.mock.MockEngine
+import io.ktor.client.engine.mock.respond
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.OutgoingContent
+import io.ktor.http.headersOf
+import io.ktor.serialization.kotlinx.json.json
+import io.ktor.utils.io.readAvailable
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.runTest
+import kotlin.test.Test
+import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
+
+class PeerFileSenderTest {
+    private val device = Device(name = "test-peer", host = "127.0.0.1", port = 9090)
+
+    private fun TestScope.clientWith(status: HttpStatusCode, body: String): FileClient =
+        FileClient(
+            client = HttpClient(MockEngine) {
+                install(ContentNegotiation) { json() }
+                engine {
+                    dispatcher = StandardTestDispatcher(testScheduler)
+                    addHandler { request ->
+                        val ch = (request.body as OutgoingContent.ReadChannelContent).readFrom()
+                        val buf = ByteArray(8 * 1024)
+                        while (!ch.isClosedForRead) ch.readAvailable(buf)
+                        respond(
+                            content = body,
+                            status = status,
+                            headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                        )
+                    }
+                }
+            },
+        )
+
+    @Test
+    fun `send throws PeerUnreachableException when peer not in store`() = runTest {
+        val store = DiscoveredDevicesStore()
+        val sender = PeerFileSender(clientWith(HttpStatusCode.OK, """{"savedPath":"/s"}"""), store)
+        val source = FakeFileSource(name = "file.txt", sizeBytes = 4L)
+
+        assertFailsWith<PeerUnreachableException> {
+            sender.send(device.toPeerIdentity(), source) { _, _ -> }
+        }
+    }
+
+    @Test
+    fun `send completes normally and closes source on 200 OK`() = runTest {
+        val store = DiscoveredDevicesStore().also { it.upsert(device) }
+        val sender = PeerFileSender(clientWith(HttpStatusCode.OK, """{"savedPath":"/s"}"""), store)
+        val source = FakeFileSource(name = "file.txt", sizeBytes = 4L)
+
+        sender.send(device.toPeerIdentity(), source) { _, _ -> }
+
+        assertTrue(source.closeCalled, "source.close() must be called after successful send")
+    }
+
+    @Test
+    fun `send throws PeerUnreachableException and still closes source on non-OK status`() = runTest {
+        val store = DiscoveredDevicesStore().also { it.upsert(device) }
+        val sender = PeerFileSender(
+            clientWith(HttpStatusCode.InternalServerError, """{"error":"write failed"}"""),
+            store,
+        )
+        val source = FakeFileSource(name = "file.txt", sizeBytes = 4L)
+
+        assertFailsWith<PeerUnreachableException> {
+            sender.send(device.toPeerIdentity(), source) { _, _ -> }
+        }
+        assertTrue(source.closeCalled, "source.close() must be called even when send fails")
+    }
+}

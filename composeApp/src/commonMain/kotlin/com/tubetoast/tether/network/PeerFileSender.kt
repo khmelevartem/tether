@@ -8,13 +8,9 @@ import com.tubetoast.tether.transfer.PeerUnreachableException
 import com.tubetoast.tether.transfer.toPeerIdentity
 
 /**
- * Concrete `sendOne` for [com.tubetoast.tether.transfer.BatchSender]: resolves a peer's current
- * address from discovery and streams one source over [FileClient]. Lives in the data layer so
- * BatchSender stays transport-agnostic.
- *
- * Resolves the address per call rather than capturing it, so a peer that re-announced on a new
- * port between batches is reached at its latest address. Throws [PeerUnreachableException] on any
- * failure ([FileClient.send] folds errors into [SendResult.Failure]).
+ * Resolves the peer's current discovered entry per call (not a captured snapshot) and streams
+ * one source over [FileClient]. Throws [PeerUnreachableException] when the peer is no longer
+ * in the store or when the send fails ([FileClient.send] folds errors into [SendResult.Failure]).
  */
 class PeerFileSender(
     private val fileClient: FileClient,
