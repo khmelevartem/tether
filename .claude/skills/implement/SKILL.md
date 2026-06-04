@@ -173,6 +173,8 @@ Use the built-in `Plan` agent (or `general-purpose` if plan unavailable) to prod
 
 **Plan conflicts with guides.** If the plan conflicts with loaded engineering guides → present to user, stop. Otherwise, accept and continue.
 
+**Approach-fork empirical gate.** When the task forks into more than one viable implementation — bugfix fix-hypotheses, or any design choice with several candidate mechanisms — first weigh the options and converge on the most suitable one (via `architect` when the choice is non-trivial), then implement *that* candidate and **verify it at runtime under the conditions that distinguish the candidates** — notably each affected OS / platform — before spending the review → simplify → full-review pipeline on it. Only an empirically-confirmed approach earns that investment. Static review, including the adversarial pass, reasons about code in the abstract; an approach whose correctness rests on platform or third-party-library runtime behaviour must be *run* to be trusted, and running it early turns a wrong approach into a cheap pivot instead of a full implement-and-revert cycle. This pulls the runtime check (Step 7) forward for fork tasks; single-implementation tasks keep the default order — review first, runtime verification at Step 7.
+
 ## Step 4 — Inner loop: coder ↔ fast reviewers
 
 Per track (or sequentially if single track):
