@@ -20,6 +20,7 @@ import com.tubetoast.tether.transfer.PendingFilesSummary
 import com.tubetoast.tether.transfer.ShareIntentParser
 import kotlinx.coroutines.launch
 import ru.pocketbyte.kydra.log.KydraLog
+import ru.pocketbyte.kydra.log.info
 import ru.pocketbyte.kydra.log.warn
 import ru.pocketbyte.kydra.log.wrapper.withTag
 
@@ -75,6 +76,7 @@ class MainActivity : ComponentActivity() {
             container.pickerCoordinator.resolve(container.androidFilePicker.resolveUris(uris))
         }
         container.pickerCoordinator.updateLaunchers(filesLauncher, folderLauncher, photosLauncher)
+        log.info { "picker launchers registered + attached to coordinator" }
 
         val lastHash = savedInstanceState?.getInt(KEY_LAST_SHARE_INTENT_HASH)
         handleShareIntent(intent, lastHash, container)
@@ -109,14 +111,17 @@ class MainActivity : ComponentActivity() {
         // Identity-based guard: same Intent object (same hash) after rotation → skip re-parse.
         // After process death the Intent is recreated, so the hash differs → safe to re-parse.
         if (lastHash != null && intent.hashCode() == lastHash) return
+        log.info { "share intent received: $action" }
         container.appScope.launch {
             val sources = ShareIntentParser.parse(intent, contentResolver)
+            log.info { "share intent parsed ${sources.size} source(s)" }
             if (sources.isEmpty()) return@launch
             val summary = PendingFilesSummary(
                 fileCount = sources.size,
                 totalBytes = sources.sumOf { it.sizeBytes ?: 0L },
             )
             container.pendingFilesRepository.setPending(summary, sources)
+            log.info { "share intent → pending set (${sources.size})" }
         }
     }
 

@@ -26,6 +26,12 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import ru.pocketbyte.kydra.log.KydraLog
+import ru.pocketbyte.kydra.log.info
+import ru.pocketbyte.kydra.log.warn
+import ru.pocketbyte.kydra.log.wrapper.withTag
+
+private val log = KydraLog.withTag(default = "Tether.PeerTransfer")
 
 /** Sources staged for send, pending user confirmation via LargeSelectionConfirmDialog. */
 data class PendingLargeConfirm(
@@ -79,12 +85,21 @@ class PeerTransferComponent(
     }
 
     fun onPick(kind: PickKind) {
+        log.info { "onPick($kind) — launching picker coroutine" }
         scope.launch {
-            val sources = when (kind) {
-                PickKind.Files -> filePicker.pickFiles()
-                PickKind.Folder -> filePicker.pickFolder()
-                PickKind.Photos -> filePicker.pickPhotos()
+            val sources = try {
+                when (kind) {
+                    PickKind.Files -> filePicker.pickFiles()
+                    PickKind.Folder -> filePicker.pickFolder()
+                    PickKind.Photos -> filePicker.pickPhotos()
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.warn { "onPick($kind) — picker failed: $e" }
+                return@launch
             }
+            log.info { "onPick($kind) — picker returned ${sources.size} source(s)" }
             if (sources.isEmpty()) return@launch
             sendOrConfirmLarge(sources)
         }
