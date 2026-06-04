@@ -358,6 +358,9 @@ class PeerListComponentTest {
                     engine = engine,
                     onShowDetails = {},
                     scope = coroutineScope,
+                    pendingFilesRepository = PendingFilesRepository(),
+                    filePicker = com.tubetoast.tether.transfer
+                        .FakeFilePicker(result = emptyList()),
                     conflictRelay = PeerConflictRelay(),
                 )
             },
@@ -407,6 +410,9 @@ class PeerListComponentTest {
                     engine = engine,
                     onShowDetails = {},
                     scope = coroutineScope,
+                    pendingFilesRepository = PendingFilesRepository(),
+                    filePicker = com.tubetoast.tether.transfer
+                        .FakeFilePicker(result = emptyList()),
                     conflictRelay = PeerConflictRelay(),
                 )
             },

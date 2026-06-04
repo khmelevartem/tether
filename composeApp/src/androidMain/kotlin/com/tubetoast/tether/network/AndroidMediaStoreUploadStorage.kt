@@ -6,12 +6,14 @@ import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
 import io.ktor.utils.io.ByteReadChannel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.error
 import ru.pocketbyte.kydra.log.info
 import ru.pocketbyte.kydra.log.wrapper.withTag
 
-private val log = KydraLog.withTag(default = "AndroidMediaStoreStorage")
+private val log = KydraLog.withTag(default = "Tether.Upload.MediaStore")
 
 internal class AndroidMediaStoreUploadStorage(
     private val contentResolver: ContentResolver,
@@ -42,10 +44,12 @@ internal class AndroidMediaStoreUploadStorage(
         val stream = contentResolver.openOutputStream(uri)
             ?: error("MediaStore: failed to open OutputStream for $uri")
         var bytesWritten = 0L
-        stream.use { output ->
-            streamUploadBody(body) { buffer, length ->
-                output.write(buffer, 0, length)
-                bytesWritten += length
+        withContext(Dispatchers.IO) {
+            stream.use { output ->
+                streamUploadBody(body) { buffer, length ->
+                    output.write(buffer, 0, length)
+                    bytesWritten += length
+                }
             }
         }
         val updated = ContentValues().apply { put(MediaStore.Downloads.IS_PENDING, 0) }

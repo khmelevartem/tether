@@ -3,11 +3,11 @@ package com.tubetoast.tether.presentation
 import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.essenty.lifecycle.coroutines.withLifecycle
 import com.tubetoast.tether.peer.PeersRepository
+import com.tubetoast.tether.preferences.FileTransferPreferences
 import com.tubetoast.tether.presentation.banners.BannersComponent
 import com.tubetoast.tether.presentation.banners.PeerConflictRelay
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.transfer.FilePicker
-import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PeerTransferEngineRegistry
 import com.tubetoast.tether.transfer.PendingFilesRepository
 import kotlinx.coroutines.CoroutineScope
@@ -18,7 +18,8 @@ class RootComponentFactory(
     private val peerTransferEngineRegistry: PeerTransferEngineRegistry,
     private val pendingFilesRepository: PendingFilesRepository,
     private val peerConflictRelay: PeerConflictRelay,
-    private val filePicker: FilePicker? = null,
+    private val filePicker: FilePicker,
+    private val fileTransferPreferences: FileTransferPreferences? = null,
 ) {
     fun create(componentContext: ComponentContext): RootComponent =
         RootComponent(
@@ -40,6 +41,7 @@ class RootComponentFactory(
                             pendingFilesRepository = pendingFilesRepository,
                             filePicker = filePicker,
                             conflictRelay = peerConflictRelay,
+                            fileTransferPreferences = fileTransferPreferences,
                         )
                     },
                     bannersComponentFactory = { bannersCtx ->

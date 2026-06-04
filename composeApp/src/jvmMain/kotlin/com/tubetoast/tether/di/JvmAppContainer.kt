@@ -5,6 +5,15 @@ import com.tubetoast.tether.transfer.FilePicker
 import com.tubetoast.tether.transfer.FileSource
 import java.io.File
 
+// TODO(#193): replace with real Desktop file picker
+private object DesktopNoOpFilePicker : FilePicker {
+    override suspend fun pickFiles(): List<FileSource> = emptyList()
+
+    override suspend fun pickFolder(): List<FileSource> = emptyList()
+
+    override suspend fun pickPhotos(): List<FileSource> = emptyList()
+}
+
 abstract class JvmAppContainer(
     private val config: JvmAppConfig,
 ) : AppContainer() {
@@ -22,9 +31,5 @@ abstract class JvmAppContainer(
     }
 
     // TODO(#193): replace with real Desktop file picker
-    override val filePicker: FilePicker = object : FilePicker {
-        override suspend fun pickFiles(): List<FileSource> = throw NotImplementedError("TODO(#193): Desktop file picker not yet implemented")
-        override suspend fun pickFolder(): List<FileSource> = throw NotImplementedError("TODO(#193): Desktop file picker not yet implemented")
-        override suspend fun pickPhotos(): List<FileSource> = throw UnsupportedOperationException("pickPhotos is not supported on Desktop")
-    }
+    override val filePicker: FilePicker = DesktopNoOpFilePicker
 }

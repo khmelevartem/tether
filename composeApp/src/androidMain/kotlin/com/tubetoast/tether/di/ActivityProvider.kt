@@ -4,7 +4,9 @@ import androidx.activity.ComponentActivity
 
 actual typealias PlatformActivity = ComponentActivity
 
-class AndroidActivityProvider : ActivityProvider, android.app.Application.ActivityLifecycleCallbacks {
+class AndroidActivityProvider :
+    ActivityProvider,
+    android.app.Application.ActivityLifecycleCallbacks {
     @Volatile private var resumed: ComponentActivity? = null
 
     override val current: PlatformActivity?
@@ -19,8 +21,12 @@ class AndroidActivityProvider : ActivityProvider, android.app.Application.Activi
     }
 
     override fun onActivityCreated(activity: android.app.Activity, savedInstanceState: android.os.Bundle?) = Unit
+
     override fun onActivityStarted(activity: android.app.Activity) = Unit
+
     override fun onActivityStopped(activity: android.app.Activity) = Unit
+
     override fun onActivitySaveInstanceState(activity: android.app.Activity, outState: android.os.Bundle) = Unit
+
     override fun onActivityDestroyed(activity: android.app.Activity) = Unit
 }

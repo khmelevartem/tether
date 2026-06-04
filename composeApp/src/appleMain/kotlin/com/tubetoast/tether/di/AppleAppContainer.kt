@@ -29,6 +29,15 @@ import platform.Foundation.NSFileManager
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSUserDomainMask
 
+// TODO(#194): replace with real iOS file picker
+private object IosNoOpFilePicker : FilePicker {
+    override suspend fun pickFiles(): List<FileSource> = emptyList()
+
+    override suspend fun pickFolder(): List<FileSource> = emptyList()
+
+    override suspend fun pickPhotos(): List<FileSource> = emptyList()
+}
+
 open class AppleAppContainer(
     private val config: AppleAppConfig,
 ) : AppContainer() {
@@ -62,11 +71,7 @@ open class AppleAppContainer(
     override val ownDeviceType: DeviceType = DeviceType.Ios
 
     // TODO(#194): replace with real iOS file picker
-    override val filePicker: FilePicker = object : FilePicker {
-        override suspend fun pickFiles(): List<FileSource> = throw NotImplementedError("TODO(#194): iOS file picker not yet implemented")
-        override suspend fun pickFolder(): List<FileSource> = throw NotImplementedError("TODO(#194): iOS file picker not yet implemented")
-        override suspend fun pickPhotos(): List<FileSource> = throw NotImplementedError("TODO(#194): iOS photo picker not yet implemented")
-    }
+    override val filePicker: FilePicker = IosNoOpFilePicker
 }
 
 @OptIn(ExperimentalForeignApi::class, kotlinx.cinterop.BetaInteropApi::class)

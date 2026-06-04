@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,12 +29,16 @@ import com.composables.core.rememberModalBottomSheetState
 import com.tubetoast.tether.foundation.IsMobileChooserPlatform
 import com.tubetoast.tether.peer.Peer
 import com.tubetoast.tether.presentation.banners.BannersSection
+import com.tubetoast.tether.presentation.banners.PendingOutboundBannerState
+import com.tubetoast.tether.presentation.dialogs.LargeSelectionConfirmDialog
 import com.tubetoast.tether.presentation.peercard.PeerCard
 import com.tubetoast.tether.presentation.peercard.PeerCardCallbacks
 import com.tubetoast.tether.presentation.peercard.PeerCardContent
 import com.tubetoast.tether.presentation.sheets.MobilePickerChooserSheet
 import com.tubetoast.tether.presentation.transfer.PeerCardState
+import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.transfer.PeerTransferState
+import com.tubetoast.tether.transfer.PickKind
 import com.tubetoast.tether.transfer.toPeerIdentity
 import com.tubetoast.tether.ui.designsystem.BodyText
 import com.tubetoast.tether.ui.designsystem.BrandMark
@@ -47,13 +52,15 @@ import com.tubetoast.tether.ui.theme.TetherTheme
 @Composable
 fun PeerListScreen(component: PeerListComponent, modifier: Modifier = Modifier) {
     val state by component.state.subscribeAsState()
+    val bannerState by component.bannersComponent.pendingBanner.collectAsState()
+    val hasPendingOutbound = bannerState != PendingOutboundBannerState.Hidden
 
     Column(modifier = modifier.fillMaxSize()) {
         BannersSection(
             component = component.bannersComponent,
             modifier = Modifier.fillMaxWidth(),
         )
-        PeerListContent(rows = state.rows)
+        PeerListContent(rows = state.rows, hasPendingOutbound = hasPendingOutbound)
     }
 }
 
@@ -61,6 +68,7 @@ fun PeerListScreen(component: PeerListComponent, modifier: Modifier = Modifier) 
 private fun PeerListContent(
     rows: List<PeerRow>,
     modifier: Modifier = Modifier,
+    hasPendingOutbound: Boolean = false,
     showMobileChooser: Boolean = IsMobileChooserPlatform,
 ) {
     val spacing = TetherTheme.spacing
@@ -68,11 +76,11 @@ private fun PeerListContent(
     val sheetState = rememberModalBottomSheetState(
         initialDetent = SheetDetent.Hidden,
     )
-    var triggerClick by remember { mutableStateOf<(() -> Unit)?>(null) }
+    var pendingPickComponent by remember { mutableStateOf<PeerTransferComponent?>(null) }
 
     LaunchedEffect(sheetState.currentDetent) {
         if (sheetState.currentDetent == SheetDetent.Hidden) {
-            triggerClick = null
+            pendingPickComponent = null
         }
     }
 
@@ -95,11 +103,10 @@ private fun PeerListContent(
                 items(rows, key = { it.peer.device.id }) { row ->
                     val peerComponent = row.transferComponent
                     val transferState by peerComponent.state.subscribeAsState()
-                    val tapAction: () -> Unit = if (transferState.transfer is PeerTransferState.Idle &&
-                        showMobileChooser
-                    ) {
+                    val isIdle = transferState.transfer is PeerTransferState.Idle
+                    val tapAction: () -> Unit = if (isIdle && showMobileChooser && !hasPendingOutbound) {
                         {
-                            triggerClick = peerComponent::onCardClick
+                            pendingPickComponent = peerComponent
                             sheetState.targetDetent = SheetDetent.FullyExpanded
                         }
                     } else {
@@ -112,6 +119,19 @@ private fun PeerListContent(
                             role = Role.Button
                             contentDescription = "Tap to interact with ${row.peer.device.name}"
                         }
+
+                    transferState.largeConfirm?.let { confirm ->
+                        LargeSelectionConfirmDialog(
+                            fileCount = confirm.summary.fileCount,
+                            totalBytes = confirm.summary.totalBytes,
+                            peer = peerComponent.peer.id,
+                            dontShowAgain = confirm.dontShowAgain,
+                            onDontShowAgainToggle = peerComponent::onUpdateLargeConfirmDontShowAgain,
+                            onConfirm = { peerComponent.onConfirmLargeSelection(confirm.dontShowAgain) },
+                            onDismiss = peerComponent::onDismissLargeSelection,
+                        )
+                    }
+
                     PeerCard(
                         component = peerComponent,
                         modifier = cardModifier,
@@ -124,15 +144,15 @@ private fun PeerListContent(
     MobilePickerChooserSheet(
         sheetState = sheetState,
         onPickPhotos = {
-            triggerClick?.invoke()
+            pendingPickComponent?.onPick(PickKind.Photos)
             sheetState.targetDetent = SheetDetent.Hidden
         },
         onPickFiles = {
-            triggerClick?.invoke()
+            pendingPickComponent?.onPick(PickKind.Files)
             sheetState.targetDetent = SheetDetent.Hidden
         },
         onPickFolder = {
-            triggerClick?.invoke()
+            pendingPickComponent?.onPick(PickKind.Folder)
             sheetState.targetDetent = SheetDetent.Hidden
         },
         onDismiss = { sheetState.targetDetent = SheetDetent.Hidden },
@@ -199,11 +219,15 @@ private fun PreviewPendingState(@PreviewParameter(Themes::class) dark: Boolean) 
                     peerCardState = PeerCardState(TransferPreviewFixtures.idleCollapsed, expanded = false),
                 ),
             ),
+            hasPendingOutbound = true,
         )
     }
 
 @Composable
-private fun PeerListContentPreview(specs: List<PeerCardPreviewSpec>) {
+private fun PeerListContentPreview(
+    specs: List<PeerCardPreviewSpec>,
+    hasPendingOutbound: Boolean = false,
+) {
     val spacing = TetherTheme.spacing
 
     Column(modifier = Modifier.fillMaxSize()) {

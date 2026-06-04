@@ -80,6 +80,7 @@ class AndroidAppContainer(
             tracker = transferActivityTracker,
             deviceIdentityStore = deviceIdentityStore,
             discoveredDevicesStore = discoveredDevicesStore,
-        ).also { it.uploadStorageFactory = { AndroidMediaStoreUploadStorage(application.contentResolver) } }
+            uploadStorageFactory = { AndroidMediaStoreUploadStorage(application.contentResolver) },
+        )
     }
 }

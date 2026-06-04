@@ -217,7 +217,7 @@ class RootComponentTest {
         backDispatcher: BackDispatcher? = null,
         devices: MutableStateFlow<List<Device>> = MutableStateFlow(emptyList()),
         pendingFilesRepository: PendingFilesRepository = PendingFilesRepository(),
-        filePicker: FakeFilePicker? = null,
+        filePicker: FakeFilePicker = FakeFilePicker(result = emptyList()),
         coroutineScope: CoroutineScope,
     ): RootComponent {
         val ctx = if (backDispatcher != null) {

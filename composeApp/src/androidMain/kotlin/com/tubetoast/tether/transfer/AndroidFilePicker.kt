@@ -2,63 +2,61 @@ package com.tubetoast.tether.transfer
 
 import android.content.ContentResolver
 import android.net.Uri
-import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
+import android.provider.OpenableColumns
 import androidx.documentfile.provider.DocumentFile
 import com.tubetoast.tether.di.ActivityProvider
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class AndroidFilePicker(
     private val activityProvider: ActivityProvider,
     val coordinator: AndroidPickerCoordinator,
     private val contentResolver: ContentResolver,
 ) : FilePicker {
-    private var filesLauncher: ActivityResultLauncher<Array<String>>? = null
-    private var folderLauncher: ActivityResultLauncher<Uri?>? = null
-    private var photosLauncher: ActivityResultLauncher<PickVisualMediaRequest>? = null
-
-    fun attach(
-        files: ActivityResultLauncher<Array<String>>,
-        folder: ActivityResultLauncher<Uri?>,
-        photos: ActivityResultLauncher<PickVisualMediaRequest>,
-    ) {
-        filesLauncher = files
-        folderLauncher = folder
-        photosLauncher = photos
-    }
-
     override suspend fun pickFiles(): List<FileSource> {
-        checkNotNull(activityProvider.current) { "AndroidFilePicker: no Activity resumed" }
         val deferred = coordinator.begin()
-        filesLauncher?.launch(arrayOf("*/*"))
+        if (coordinator.launchFiles() == null) {
+            deferred.completeExceptionally(IllegalStateException("AndroidFilePicker: no file launcher attached"))
+        }
         return deferred.await()
     }
 
     override suspend fun pickFolder(): List<FileSource> {
-        checkNotNull(activityProvider.current) { "AndroidFilePicker: no Activity resumed" }
         val deferred = coordinator.begin()
-        folderLauncher?.launch(null)
+        if (coordinator.launchFolder() == null) {
+            deferred.completeExceptionally(IllegalStateException("AndroidFilePicker: no folder launcher attached"))
+        }
         return deferred.await()
     }
 
     override suspend fun pickPhotos(): List<FileSource> {
-        checkNotNull(activityProvider.current) { "AndroidFilePicker: no Activity resumed" }
         val deferred = coordinator.begin()
-        photosLauncher?.launch(PickVisualMediaRequest(PickVisualMedia.ImageAndVideo))
+        if (coordinator.launchPhotos() == null) {
+            deferred.completeExceptionally(IllegalStateException("AndroidFilePicker: no photos launcher attached"))
+        }
         return deferred.await()
     }
 
     fun resolveUris(uris: List<Uri>): List<FileSource> =
-        uris.map { uri ->
-            AndroidUriFileSource(uri, contentResolver, uri.lastPathSegment ?: "file")
-        }
+        uris.map { uri -> AndroidUriFileSource(uri, contentResolver, resolveDisplayName(uri)) }
 
-    fun resolveTree(treeUri: Uri): List<FileSource> {
+    suspend fun resolveTree(treeUri: Uri): List<FileSource> {
         val activity = checkNotNull(activityProvider.current) { "AndroidFilePicker: no Activity resumed" }
         val root = DocumentFile.fromTreeUri(activity, treeUri) ?: return emptyList()
-        return collectVisible(root, "")
+        return withContext(Dispatchers.IO) { collectVisible(root, "") }
     }
+
+    fun resolveDisplayName(uri: Uri): String =
+        contentResolver
+            .query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+            ?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val idx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    if (idx >= 0) cursor.getString(idx) else null
+                } else {
+                    null
+                }
+            } ?: uri.lastPathSegment ?: "file"
 
     private fun collectVisible(dir: DocumentFile, prefix: String): List<FileSource> {
         val result = mutableListOf<FileSource>()

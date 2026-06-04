@@ -8,11 +8,13 @@ import com.tubetoast.tether.preferences.FakePeerPreferencesStore
 import com.tubetoast.tether.presentation.banners.PeerConflictRelay
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.FailureReason
+import com.tubetoast.tether.transfer.FakeFilePicker
 import com.tubetoast.tether.transfer.FakeFileSource
 import com.tubetoast.tether.transfer.FileSource
 import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PeerTransferEngine
 import com.tubetoast.tether.transfer.PeerTransferState
+import com.tubetoast.tether.transfer.PendingFilesRepository
 import com.tubetoast.tether.transfer.PerFileStatus
 import com.tubetoast.tether.transfer.ReceiverWriteFailedException
 import com.tubetoast.tether.transfer.fakeBatchSender
@@ -71,6 +73,8 @@ class TransferDetailsComponentTest {
             engine = engine,
             onShowDetails = {},
             scope = scope,
+            pendingFilesRepository = PendingFilesRepository(),
+            filePicker = FakeFilePicker(result = emptyList()),
             conflictRelay = PeerConflictRelay(),
         )
     }

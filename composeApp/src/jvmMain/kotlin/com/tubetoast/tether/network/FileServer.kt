@@ -18,7 +18,7 @@ import java.io.File
 
 private val log = KydraLog.withTag(default = "FileServer")
 
-actual class FileServer(
+actual class FileServer internal constructor(
     private val configuredPort: Int,
     private val downloadsDir: File = File(System.getProperty("user.home"), "Downloads/Tether"),
     private val trustedDeviceStore: TrustedDeviceStore,
@@ -26,10 +26,8 @@ actual class FileServer(
     private val tracker: TransferActivityTracker = DefaultTransferActivityTracker(),
     private val deviceIdentityStore: DeviceIdentityStore? = null,
     private val discoveredDevicesStore: DiscoveredDevicesStore? = null,
+    private val uploadStorageFactory: (() -> UploadStorage)? = null,
 ) {
-    /** Override the default JVM filesystem storage. Must be set before [start] is called. */
-    internal var uploadStorageFactory: (() -> UploadStorage)? = null
-
     private var server: EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration>? = null
 
     @Volatile private var _port: Int = -1

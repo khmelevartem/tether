@@ -127,6 +127,7 @@ abstract class AppContainer {
             pendingFilesRepository = pendingFilesRepository,
             peerConflictRelay = peerConflictRelay,
             filePicker = filePicker,
+            fileTransferPreferences = fileTransferPreferences,
         )
     }
 }

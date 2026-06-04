@@ -1,9 +1,11 @@
 package com.tubetoast.tether.di
 
 /**
- * Android-only: exposes the currently resumed Activity so container-scoped objects
- * can launch Activity-level operations (e.g. file picker intents).
- * [current] is null on all non-Android platforms and when no Activity is resumed on Android.
+ * The platform's current foreground UI host. Container-scoped objects use this to launch
+ * platform-level operations (e.g. file picker intents) against the currently resumed context.
+ *
+ * [current] is null when no host is active. On Android it is the resumed ComponentActivity;
+ * on other platforms it is null until those platforms implement their host in #193/#194.
  */
 expect class PlatformActivity
 

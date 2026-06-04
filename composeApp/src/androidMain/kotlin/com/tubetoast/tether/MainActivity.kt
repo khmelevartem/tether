@@ -8,9 +8,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
 import androidx.core.content.ContextCompat
 import com.arkivanov.decompose.retainedComponent
 import com.tubetoast.tether.di.AndroidAppContainer
@@ -19,11 +17,12 @@ import com.tubetoast.tether.network.TetherForegroundService
 import com.tubetoast.tether.presentation.RootContent
 import com.tubetoast.tether.transfer.PendingFilesSummary
 import com.tubetoast.tether.transfer.ShareIntentParser
+import kotlinx.coroutines.launch
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.warn
 import ru.pocketbyte.kydra.log.wrapper.withTag
 
-private val log = KydraLog.withTag(default = "MainActivity")
+private val log = KydraLog.withTag(default = "Tether.MainActivity")
 private const val KEY_LAST_SHARE_INTENT_HASH = "last_share_intent_hash"
 
 class MainActivity : ComponentActivity() {
@@ -61,8 +60,10 @@ class MainActivity : ComponentActivity() {
             "tether.pick.folder",
             ActivityResultContracts.OpenDocumentTree(),
         ) { uri: Uri? ->
-            val sources = if (uri != null) container.androidFilePicker.resolveTree(uri) else emptyList()
-            container.pickerCoordinator.resolve(sources)
+            container.appScope.launch {
+                val sources = if (uri != null) container.androidFilePicker.resolveTree(uri) else emptyList()
+                container.pickerCoordinator.resolve(sources)
+            }
         }
         val photosLauncher = activityResultRegistry.register(
             "tether.pick.photos",
@@ -70,7 +71,7 @@ class MainActivity : ComponentActivity() {
         ) { uris: List<Uri> ->
             container.pickerCoordinator.resolve(container.androidFilePicker.resolveUris(uris))
         }
-        container.androidFilePicker.attach(filesLauncher, folderLauncher, photosLauncher)
+        container.pickerCoordinator.updateLaunchers(filesLauncher, folderLauncher, photosLauncher)
 
         val lastHash = savedInstanceState?.getInt(KEY_LAST_SHARE_INTENT_HASH)
         handleShareIntent(intent, lastHash, container)
@@ -102,6 +103,8 @@ class MainActivity : ComponentActivity() {
     ) {
         val action = intent.action
         if (action != Intent.ACTION_SEND && action != Intent.ACTION_SEND_MULTIPLE) return
+        // Identity-based guard: same Intent object (same hash) after rotation → skip re-parse.
+        // After process death the Intent is recreated, so the hash differs → safe to re-parse.
         if (lastHash != null && intent.hashCode() == lastHash) return
         val sources = ShareIntentParser.parse(intent, contentResolver)
         if (sources.isEmpty()) return

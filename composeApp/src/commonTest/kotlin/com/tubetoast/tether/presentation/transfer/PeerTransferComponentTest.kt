@@ -55,8 +55,8 @@ class PeerTransferComponentTest {
     )
 
     private fun buildComponent(
-        pendingFilesRepository: PendingFilesRepository? = null,
-        filePicker: FakeFilePicker? = null,
+        pendingFilesRepository: PendingFilesRepository = PendingFilesRepository(),
+        filePicker: FakeFilePicker = FakeFilePicker(result = emptyList()),
         conflictRelay: PeerConflictRelay = PeerConflictRelay(),
         scope: kotlinx.coroutines.CoroutineScope,
     ): Pair<PeerTransferComponent, LifecycleRegistry> {
@@ -171,6 +171,7 @@ class PeerTransferComponentTest {
             onShowDetails = {},
             scope = backgroundScope,
             pendingFilesRepository = repo,
+            filePicker = FakeFilePicker(result = emptyList()),
             conflictRelay = relay,
         )
 
@@ -196,7 +197,7 @@ class PeerTransferComponentTest {
     }
 
     @Test
-    fun `onPick with non-empty result sets pending and starts outbound`() = runTest {
+    fun `onPick with non-empty result starts outbound directly without setPending`() = runTest {
         val repo = PendingFilesRepository()
         val sources = listOf(FakeFileSource("photo.jpg", 200L))
         val picker = FakeFilePicker(result = sources)
@@ -210,11 +211,11 @@ class PeerTransferComponentTest {
         runCurrent()
 
         assertIs<PeerTransferState.Sent>(component.state.value.transfer)
-        assertNull(repo.pending.value, "pending cleared after successful startOutbound")
+        assertNull(repo.pending.value, "onPick must NOT call setPending — goes directly to engine")
     }
 
     @Test
-    fun `onPick with empty result does not set pending and does not start outbound`() = runTest {
+    fun `onPick with empty result does not start outbound`() = runTest {
         val repo = PendingFilesRepository()
         val picker = FakeFilePicker(result = emptyList())
         val (component) = buildComponent(
@@ -249,7 +250,25 @@ class PeerTransferComponentTest {
     }
 
     @Test
-    fun `onPick when engine busy preserves pending and reports to conflictRelay`() = runTest {
+    fun `onPick Folder delegates to pickFolder`() = runTest {
+        val sources = listOf(FakeFileSource("doc.pdf", 100L))
+        val picker = FakeFilePicker(result = sources)
+        val repo = PendingFilesRepository()
+        val (component) = buildComponent(
+            pendingFilesRepository = repo,
+            filePicker = picker,
+            scope = backgroundScope,
+        )
+
+        component.onPick(PickKind.Folder)
+        runCurrent()
+
+        assertTrue(picker.pickFolderCalled)
+        assertIs<PeerTransferState.Sent>(component.state.value.transfer)
+    }
+
+    @Test
+    fun `onPick when engine busy does not set pending and reports to conflictRelay`() = runTest {
         val pauseChannel = Channel<Unit>(0)
         val relay = PeerConflictRelay()
         val lifecycle = LifecycleRegistry()
@@ -288,10 +307,75 @@ class PeerTransferComponentTest {
         runCurrent()
 
         assertIs<PeerTransferState.ActiveOutbound>(component.state.value.transfer)
-        assertNotNull(repo.pending.value, "pending must survive busy tap")
+        assertNull(repo.pending.value, "onPick must NOT set pending")
         assertEquals(listOf(peer.id), emitted)
 
         collectJob.cancel()
+    }
+
+    @Test
+    fun `large selection gates both onPick and onCardClick behind confirm`() = runTest {
+        val repo = PendingFilesRepository()
+        // 501 files exceeds the 500-file threshold
+        val bigSources = (1..501).map { FakeFileSource("f$it.txt", 100L) }
+        val picker = FakeFilePicker(result = bigSources)
+        val (component) = buildComponent(
+            pendingFilesRepository = repo,
+            filePicker = picker,
+            scope = backgroundScope,
+        )
+
+        component.onPick(PickKind.Files)
+        runCurrent()
+
+        assertIs<PeerTransferState.Idle>(component.state.value.transfer)
+        assertNotNull(component.state.value.largeConfirm, "large-confirm dialog must be pending")
+
+        component.onConfirmLargeSelection(dontShowAgain = false)
+        runCurrent()
+
+        assertIs<PeerTransferState.Sent>(component.state.value.transfer)
+        assertNull(component.state.value.largeConfirm)
+    }
+
+    @Test
+    fun `onDismissLargeSelection clears confirm without starting outbound`() = runTest {
+        val repo = PendingFilesRepository()
+        val bigSources = (1..501).map { FakeFileSource("f$it.txt", 100L) }
+        val picker = FakeFilePicker(result = bigSources)
+        val (component) = buildComponent(
+            pendingFilesRepository = repo,
+            filePicker = picker,
+            scope = backgroundScope,
+        )
+
+        component.onPick(PickKind.Files)
+        runCurrent()
+
+        assertNotNull(component.state.value.largeConfirm)
+
+        component.onDismissLargeSelection()
+        runCurrent()
+
+        assertNull(component.state.value.largeConfirm)
+        assertIs<PeerTransferState.Idle>(component.state.value.transfer)
+    }
+
+    @Test
+    fun `large selection confirm also fires for onCardClick with pending sources`() = runTest {
+        val repo = PendingFilesRepository()
+        val bigSources = (1..501).map { FakeFileSource("f$it.txt", 100L) }
+        repo.setPending(PendingFilesSummary(bigSources.size, bigSources.sumOf { it.sizeBytes ?: 0L }), bigSources)
+        val (component) = buildComponent(
+            pendingFilesRepository = repo,
+            scope = backgroundScope,
+        )
+
+        component.onCardClick()
+        runCurrent()
+
+        assertIs<PeerTransferState.Idle>(component.state.value.transfer)
+        assertNotNull(component.state.value.largeConfirm, "large-confirm must fire for onCardClick too")
     }
 
     @Test
@@ -326,6 +410,8 @@ class PeerTransferComponentTest {
             engine = registry.engineFor(peer.id),
             onShowDetails = {},
             scope = backgroundScope,
+            pendingFilesRepository = PendingFilesRepository(),
+            filePicker = FakeFilePicker(result = emptyList()),
             conflictRelay = PeerConflictRelay(),
         )
 
@@ -344,6 +430,8 @@ class PeerTransferComponentTest {
             engine = registry.engineFor(peer.id),
             onShowDetails = {},
             scope = backgroundScope,
+            pendingFilesRepository = PendingFilesRepository(),
+            filePicker = FakeFilePicker(result = emptyList()),
             conflictRelay = PeerConflictRelay(),
         )
         runCurrent()

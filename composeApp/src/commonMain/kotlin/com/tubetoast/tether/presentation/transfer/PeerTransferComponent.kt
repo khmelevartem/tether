@@ -7,12 +7,14 @@ import com.arkivanov.decompose.value.update
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.destroy
 import com.tubetoast.tether.peer.Peer
+import com.tubetoast.tether.preferences.FileTransferPreferences
 import com.tubetoast.tether.presentation.banners.PeerConflictRelay
 import com.tubetoast.tether.protocol.DeviceType
 import com.tubetoast.tether.transfer.FilePicker
 import com.tubetoast.tether.transfer.FileSource
 import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PeerTransferEngine
+import com.tubetoast.tether.transfer.Pending
 import com.tubetoast.tether.transfer.PendingFilesRepository
 import com.tubetoast.tether.transfer.PendingFilesSummary
 import com.tubetoast.tether.transfer.PickKind
@@ -20,9 +22,17 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
+/** Sources staged for send, pending user confirmation via LargeSelectionConfirmDialog. */
+data class PendingLargeConfirm(
+    val sources: List<FileSource>,
+    val summary: PendingFilesSummary,
+    val dontShowAgain: Boolean = false,
+)
 
 class PeerTransferComponent(
     componentContext: ComponentContext,
@@ -31,9 +41,10 @@ class PeerTransferComponent(
     private val engine: PeerTransferEngine,
     onShowDetails: (PeerIdentity) -> Unit,
     private val scope: CoroutineScope,
-    private val pendingFilesRepository: PendingFilesRepository? = null,
-    private val filePicker: FilePicker? = null,
+    private val pendingFilesRepository: PendingFilesRepository,
+    private val filePicker: FilePicker,
     private val conflictRelay: PeerConflictRelay,
+    private val fileTransferPreferences: FileTransferPreferences? = null,
 ) : ComponentContext by componentContext {
     // TODO(#332): read from peer.device.deviceType once Device carries the field
     val deviceType: DeviceType? = null
@@ -44,51 +55,85 @@ class PeerTransferComponent(
 
     private val showDetailsCallback = onShowDetails
     private val expanded = MutableStateFlow(false)
-    private val mutableState = MutableValue(PeerCardState(engine.state.value, expanded.value))
+    private val _largeConfirm = MutableStateFlow<PendingLargeConfirm?>(null)
+    private val mutableState = MutableValue(
+        PeerCardState(engine.state.value, expanded.value, _largeConfirm.value),
+    )
     val state: Value<PeerCardState> = mutableState
 
     init {
-        combine(engine.state, expanded) { transfer, exp -> mutableState.update { PeerCardState(transfer, exp) } }
-            .launchIn(scope)
+        combine(engine.state, expanded, _largeConfirm) { transfer, exp, confirm ->
+            mutableState.update { PeerCardState(transfer, exp, confirm) }
+        }.launchIn(scope)
     }
 
     fun startOutbound(sources: List<FileSource>) = engine.startOutbound(sources)
 
     fun onCardClick() {
-        val pending = pendingFilesRepository?.pending?.value
+        val pending = pendingFilesRepository.pending.value
         if (pending == null) {
-            scope.launch { onPick(PickKind.Files) }
+            onPick(PickKind.Files)
             return
         }
-        val accepted = engine.startOutbound(pending.sources)
-        if (accepted) {
-            pendingFilesRepository.clearIfMatches(pending)
-        } else {
-            conflictRelay.reportBusyTap(peer.id)
-        }
+        sendOrConfirmLarge(pending.sources, clearOnSuccess = pending)
     }
 
     fun onPick(kind: PickKind) {
         scope.launch {
-            val picker = filePicker ?: return@launch
             val sources = when (kind) {
-                PickKind.Files -> picker.pickFiles()
-                PickKind.Folder -> picker.pickFolder()
-                PickKind.Photos -> picker.pickPhotos()
+                PickKind.Files -> filePicker.pickFiles()
+                PickKind.Folder -> filePicker.pickFolder()
+                PickKind.Photos -> filePicker.pickPhotos()
             }
             if (sources.isEmpty()) return@launch
+            sendOrConfirmLarge(sources)
+        }
+    }
+
+    fun onConfirmLargeSelection(dontShowAgain: Boolean) {
+        val confirm = _largeConfirm.value ?: return
+        _largeConfirm.value = null
+        if (dontShowAgain) {
+            scope.launch { fileTransferPreferences?.setLargeSelectionWarning(false) }
+        }
+        dispatchSend(confirm.sources)
+    }
+
+    fun onUpdateLargeConfirmDontShowAgain(checked: Boolean) {
+        _largeConfirm.update { it?.copy(dontShowAgain = checked) }
+    }
+
+    fun onDismissLargeSelection() {
+        _largeConfirm.value = null
+    }
+
+    private fun sendOrConfirmLarge(
+        sources: List<FileSource>,
+        clearOnSuccess: Pending? = null,
+    ) {
+        scope.launch {
+            val warningEnabled = fileTransferPreferences?.observeLargeSelectionWarning()?.first() ?: true
             val summary = PendingFilesSummary(
                 fileCount = sources.size,
                 totalBytes = sources.sumOf { it.sizeBytes ?: 0L },
             )
-            pendingFilesRepository?.setPending(summary, sources)
-            val pending = pendingFilesRepository?.pending?.value ?: return@launch
-            val accepted = engine.startOutbound(sources)
-            if (accepted) {
-                pendingFilesRepository.clearIfMatches(pending)
+            if (warningEnabled && exceedsLargeSelectionThreshold(summary)) {
+                _largeConfirm.value = PendingLargeConfirm(sources, summary)
             } else {
-                conflictRelay.reportBusyTap(peer.id)
+                dispatchSend(sources, clearOnSuccess)
             }
+        }
+    }
+
+    private fun dispatchSend(
+        sources: List<FileSource>,
+        clearOnSuccess: Pending? = null,
+    ) {
+        val accepted = engine.startOutbound(sources)
+        if (accepted) {
+            clearOnSuccess?.let { pendingFilesRepository.clearIfMatches(it) }
+        } else {
+            conflictRelay.reportBusyTap(peer.id)
         }
     }
 
@@ -109,4 +154,12 @@ class PeerTransferComponent(
     fun setAutoSend(enabled: Boolean) = engine.setAutoSend(enabled)
 
     fun onShowDetails() = showDetailsCallback(peer.id)
+
+    companion object {
+        private const val LARGE_FILE_COUNT = 500
+        private const val LARGE_TOTAL_BYTES = 2L * 1024 * 1024 * 1024 // 2 GB
+
+        fun exceedsLargeSelectionThreshold(summary: PendingFilesSummary): Boolean =
+            summary.fileCount > LARGE_FILE_COUNT || summary.totalBytes > LARGE_TOTAL_BYTES
+    }
 }
