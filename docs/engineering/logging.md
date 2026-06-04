@@ -62,11 +62,9 @@ The Desktop CLI splits its two output kinds across the two console streams:
 - **stdout** carries product output the user reads as the tool's answer: the startup banner, the device/port lines, and the bracketed status lines (`[peers]`, `[list]`, `[send]`). These are the CLI's UX, not logging — they go through the CLI's own output channels, never through a logger.
 - **stderr** carries subsystem diagnostics by default. KydraLog's stock JVM writer prints to stdout ([KydraLog source](https://github.com/PocketByte/kotlin-kydra-log/blob/master/library/src/jvmCommonMain/kotlin/ru/pocketbyte/kydra/log/PrintLogger.kt)); the Desktop writer instead targets stderr at initialisation so diagnostics stay off the product channel. Ktor's framework logs reach stderr independently through the SLF4J binding (see [adr-logging-kydra.md](adr/adr-logging-kydra.md) §Costs accepted).
 
-The stderr default applies to the whole Desktop (JVM) process — both the CLI and the Compose UI initialise the same writer. The split is motivated by the CLI: it is the entry point that emits bracketed product output on stdout, which diagnostics must not corrupt. The Compose UI has no stdout product channel, so it inherits the same stderr routing harmlessly. Keeping diagnostics off stdout by default is what lets a script consume the CLI's product lines cleanly and a future redraw-based UI own the product stream.
+The stderr default applies to the whole Desktop (JVM) process — both the CLI and the Compose UI initialise the same writer. The split is motivated by the CLI: it is the entry point that emits bracketed product output on stdout, which diagnostics must not corrupt. The Compose UI has no stdout product channel, so it inherits the same stderr routing harmlessly.
 
 One toggle moves the subsystem stream onto stdout for a session where the operator watches stdout and wants diagnostics interleaved there: the JVM system property `tether.log.stdout` *or* the environment variable `TETHER_LOG_STDOUT`, non-empty to enable — the same env-plus-property pairing the debug knob uses, for the same launch-context reason. The selector is Desktop-wide, applying to whichever entry point the process started from. This selects the writer's **stream**; the debug knob selects the **level**. The two are orthogonal: either, both, or neither may be set, and neither implies the other.
-
-Selecting the writer's stream is not selecting its level, so the toggle leaves the one-gating-mechanism-per-platform rule below intact.
 
 ## Forbidden idioms in production code
 
