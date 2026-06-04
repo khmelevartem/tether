@@ -9,13 +9,13 @@ import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.HttpTimeoutConfig
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.OutgoingContent
 import io.ktor.http.contentType
+import io.ktor.http.encodeURLQueryComponent
 import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.utils.io.ByteChannel
@@ -142,7 +142,7 @@ open class FileClient(
         totalBytes: Long?,
     ): SendResult = try {
         val response = client.post("http://${device.host}:${device.port}/upload") {
-            parameter("name", fileName)
+            url.encodedParameters.append("name", fileName.encodeURLQueryComponent(encodeFull = true))
             setBody(channel.asOctetStreamContent(totalBytes))
         }
         log.debug { "response status ${response.status} for '$fileName' → ${device.host}:${device.port}" }
