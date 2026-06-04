@@ -38,7 +38,7 @@ DEBUG is off by default. Per platform:
 
 - **Android** — DEBUG is enabled when the running build is `debuggable` (`ApplicationInfo.FLAG_DEBUGGABLE`). Release APKs go to INFO. No env var on Android; the build flag is the single source of truth.
 - **Apple (iOS + macOS)** — DEBUG is enabled when the Kotlin/Native binary is built in `DEBUG` configuration (`Platform.isDebugBinary`). Release framework goes to INFO.
-- **Desktop (JVM)** — DEBUG is enabled when the JVM system property `tether.log.debug` is set (e.g. `-Dtether.log.debug=true`) **or** the environment variable `TETHER_LOG_DEBUG` is non-empty. Both knobs exist because the CLI is launched via the wrapper shell script (env var is natural there) and the Compose UI is launched via Gradle (system property is natural there).
+- **Desktop (JVM)** — DEBUG is enabled when the JVM system property `tether.log.debug` is set (e.g. `-Dtether.log.debug=true`) **or** the environment variable `TETHER_LOG_DEBUG` is set to `true`. Both knobs exist because the CLI is launched via the wrapper shell script (env var is natural there) and the Compose UI is launched via Gradle (system property is natural there).
 
 The single-source-of-truth rule: each platform has exactly one gating mechanism resolved at writer initialisation. Per-tag overrides are *not* supported — if a subsystem needs a different default, raise its WARNING-or-higher signal in code, do not invent a new level threshold.
 
@@ -64,7 +64,7 @@ The Desktop CLI splits its two output kinds across the two console streams:
 
 The stderr default applies to the whole Desktop (JVM) process — both the CLI and the Compose UI initialise the same writer. The split is motivated by the CLI: it is the entry point that emits bracketed product output on stdout, which diagnostics must not corrupt. The Compose UI has no stdout product channel, so it inherits the same stderr routing harmlessly.
 
-One toggle moves the subsystem stream onto stdout for a session where the operator watches stdout and wants diagnostics interleaved there: the JVM system property `tether.log.stdout` *or* the environment variable `TETHER_LOG_STDOUT`, non-empty to enable — the same env-plus-property pairing the debug knob uses, for the same launch-context reason. The selector is Desktop-wide, applying to whichever entry point the process started from. This selects the writer's **stream**; the debug knob selects the **level**. The two are orthogonal: either, both, or neither may be set, and neither implies the other.
+One toggle moves the subsystem stream onto stdout for a session where the operator watches stdout and wants diagnostics interleaved there: the JVM system property `tether.log.stdout` *or* the environment variable `TETHER_LOG_STDOUT`, set to `true` to enable — the same env-plus-property pairing the debug knob uses, for the same launch-context reason. The selector is Desktop-wide, applying to whichever entry point the process started from. This selects the writer's **stream**; the debug knob selects the **level**. The two are orthogonal: either, both, or neither may be set, and neither implies the other.
 
 ## Forbidden idioms in production code
 
