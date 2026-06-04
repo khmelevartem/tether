@@ -178,7 +178,7 @@ The idle window is intentionally generous — peers reappear cheaply, and stale 
 
 Discovery is unauthenticated by design across every layer. Any device on a reachable subnet can announce itself over mDNS today; rendezvous, subnet-scan, and broadcast do not widen this surface — they only diversify how an announcement reaches us.
 
-Trust is established exclusively at [pairing](../product/security.md#pairing-flow) time, with the PIN comparison and SPKI-pinned TLS handshake that follow. No file moves between two devices until they have completed pairing. Discovery's job is to populate the device list; the list itself is not a trust claim.
+Trust is established exclusively at [pairing](../product/security.md#pairing-flow) time, with the PIN comparison and SPKI-pinned TLS handshake that follow. Tether intends that no file moves between two devices until they have completed pairing; in the shipping code this gate is not yet enforced (see [security.md](../product/security.md#what-the-wire-does-today)). Discovery's job is to populate the device list; the list itself is not a trust claim.
 
 ## Cross-layer concerns
 
