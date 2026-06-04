@@ -115,7 +115,7 @@ Prerequisite: Block 3 (three CLIs alive — A, B, and C reusing A's name). FAIL 
 
 Run: `./block-3.2-same-name-distinct.sh`
 
-Regression guard for #368. The mDNS-canonical `(N)` suffix recorded on discovery must survive the subsequent `/hello` exchange — assertion: in each CLI's last `[peers]` line, no two peers share the same display name. Complements Block 3.1 (which guards the same scenario against host:port merges).
+Regression guard for #368. The mDNS-canonical `(N)` suffix recorded on discovery must survive the subsequent `/hello` exchange — assertion: in each CLI's last `[peers]` line, no two peers share the same display name. Complements Block 3.1.
 
 Prerequisite: Block 3 (three CLIs alive — A, B, and C reusing A's name). FAIL → attach the last `[peers]` lines from all three logs in Details.
 
