@@ -105,6 +105,10 @@ The eight sub-decisions called out by #74 resolve as follows:
 - **Ktor framework logs become load-bearing** for production support (e.g. we need INFO from the CIO engine in user-submitted logs). Trigger: replace `slf4j-simple` with a custom `SLF4JServiceProvider` that forwards into KydraLog, unifying the two sink formats. Until that pressure exists, the asymmetry is cheaper than the bridge.
 - **iOS-as-sender background networking** ([ios-background-networking.md](../../knowledge/ios-background-networking.md)) ships. Background tasks log into OSLog from a different process state; verify `AppleLogger`'s OSLog subsystem still routes correctly and tighten the writer init if it does not.
 
+## Amendment 2026-06-04
+
+The Desktop CLI routes KydraLog subsystem output to **stderr**, leaving stdout for product output. KydraLog's stock JVM writer prints to stdout (Cost #2 already notes subsystem logs are not generically on stderr); the CLI installs a stderr-targeting writer at its initialisation point to achieve the split. A CLI-local toggle (env var / system-property pair) optionally moves the subsystem stream onto stdout for an operator who watches that channel — a sink choice, not a level filter, so sub-decision 4's one-gating-mechanism rule is untouched. The stream split and toggle are specified in [logging.md](../logging.md) §CLI streams; this amendment does not alter the original decision or its accepted costs.
+
 ## References
 
 - [logging.md](../logging.md) — the living doc this ADR underpins.

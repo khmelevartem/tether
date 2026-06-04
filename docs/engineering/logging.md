@@ -1,12 +1,12 @@
 # Logging
 
-Tether logs through one Kotlin Multiplatform façade — [KydraLog](https://github.com/PocketByte/kotlin-kydra-log) — so that `commonMain` code can log directly and every platform writes to its native sink (Logcat on Android, OSLog on Apple, stderr on JVM). Why this façade and not another: [adr-logging-kydra.md](adr/adr-logging-kydra.md).
+Tether logs through one Kotlin Multiplatform façade — [KydraLog](https://github.com/PocketByte/kotlin-kydra-log) — so that `commonMain` code can log directly and every platform writes to its native sink (Logcat on Android, OSLog on Apple, a print stream on JVM). Why this façade and not another: [adr-logging-kydra.md](adr/adr-logging-kydra.md).
 
 The rest of this doc is the contract any new logging call site must respect.
 
 ## Goal
 
-A reader debugging a cross-platform issue sees the same logger names and the same level semantics in Logcat, Console.app / Xcode, and Desktop stderr. The CLI starts without spurious framework warnings. Release builds do not leak DEBUG.
+A reader debugging a cross-platform issue sees the same logger names and the same level semantics in Logcat, Console.app / Xcode, and a Desktop print stream. The CLI starts without spurious framework warnings. Release builds do not leak DEBUG.
 
 ## Logger names
 
@@ -24,9 +24,9 @@ The name is the **tag** passed to the underlying writer. On Android it appears i
 Four levels, present-tense semantics:
 
 - **ERROR** — an operation we promised the caller has failed and the user-visible outcome is degraded. Always logged. Includes a short message; stack traces go through the same call.
-- **WARNING** — something the system recovered from, or a configuration that will bite later if not addressed. Always logged.
+- **WARNING** — something the system recovered from, or a configuration that will bite later if not addressed. Always logged. A failed handshake probe the caller retries or routes around — discovery still holds the peer — is WARNING, not ERROR: nothing the caller was promised has failed yet.
 - **INFO** — lifecycle events the operator wants to see in production support cases: service start/stop, peer paired, transfer started/finished with byte count.
-- **DEBUG** — per-step internal state useful for engineering only. Off by default in every configuration except explicit local opt-in.
+- **DEBUG** — per-step internal state useful for engineering only. Off by default in every configuration except explicit local opt-in. Internal handshake steps — announcing presence, sending a probe to a peer — are DEBUG everywhere: they are sub-steps of a lifecycle event, not the event, and at default level they would only add noise.
 
 VERBOSE is not used. If a DEBUG call site is too chatty for routine debugging, split the subsystem's logger and gate the chatty half with a separate tag filter, do not introduce a fifth level.
 
@@ -55,6 +55,19 @@ Each platform initialises KydraLog exactly once at process start, before any sub
 
 If a subsystem logs before initialisation runs, KydraLog's auto-init path catches it with the platform default — events are not lost. Reviewers should still flag pre-init logging in PRs because the level filter is not yet applied at that point.
 
+## CLI streams
+
+The Desktop CLI splits its two output kinds across the two console streams:
+
+- **stdout** carries product output the user reads as the tool's answer: the startup banner, the device/port lines, and the bracketed status lines (`[peers]`, `[list]`, `[send]`). These are the CLI's UX, not logging — they go through the CLI's own output channels, never through a logger.
+- **stderr** carries subsystem diagnostics by default. KydraLog's stock JVM writer prints to stdout; the CLI installs a stderr-targeting writer at initialisation so diagnostics stay off the product channel. Ktor's framework logs reach stderr independently through the SLF4J binding (see [adr-logging-kydra.md](adr/adr-logging-kydra.md) §Costs accepted).
+
+Keeping diagnostics off stdout by default is what lets a script consume the product lines cleanly and a future redraw-based UI own the product stream.
+
+One toggle moves the subsystem stream onto stdout for a session where the operator watches stdout and wants diagnostics interleaved there: the JVM system property `tether.log.stdout` *or* the environment variable `TETHER_LOG_STDOUT`, non-empty to enable — the same env-plus-property pairing the debug knob uses, for the same launch-context reason. This selects the writer's **stream**; the debug knob selects the **level**. The two are orthogonal: either, both, or neither may be set, and neither implies the other.
+
+The stream toggle is a CLI-local sink choice, not a level filter, so it leaves the one-gating-mechanism-per-platform rule below intact.
+
 ## Forbidden idioms in production code
 
 These idioms were the pre-KydraLog status quo and must not return:
@@ -76,7 +89,7 @@ All three should return no production hits. Test source sets may print freely.
 
 ## Sensitive data
 
-Logs from this app land on the same device the user runs it on — Logcat on Android, OSLog on Apple, stderr on Desktop. There is no central aggregation. The threat model is therefore narrow: a bug report or screen share exfiltrates whatever was in the log at that moment, and a separate process with log-read permission can see it. Logs are not a network exfiltration channel.
+Logs from this app land on the same device the user runs it on — Logcat on Android, OSLog on Apple, a console stream on Desktop. There is no central aggregation. The threat model is therefore narrow: a bug report or screen share exfiltrates whatever was in the log at that moment, and a separate process with log-read permission can see it. Logs are not a network exfiltration channel.
 
 Three categories never appear in any log line at any level:
 
