@@ -92,7 +92,9 @@ internal fun Application.installFileServerRoutes(
                 call.respond(HttpStatusCode.OK, emptyMap<String, String>())
                 return@post
             }
-            val remoteHost = call.request.origin.remoteHost
+            // remoteAddress is the numeric peer IP; remoteHost may reverse-resolve to a
+            // hostname (e.g. "Mac") that the sender platform cannot resolve back to an IP.
+            val remoteHost = call.request.origin.remoteAddress
             val knownName = discoveredDevicesStore?.nameFor(body.fingerprint)
             val device = Device(
                 name = knownName ?: body.alias,
