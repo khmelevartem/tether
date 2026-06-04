@@ -288,6 +288,53 @@ class HelloRouteTest {
     }
 
     @Test
+    fun `hello inserts raw name for unknown peer, later mDNS upsert upgrades it to canonical`() {
+        val store = DiscoveredDevicesStore()
+        val server = newServer(store = store)
+        val port = server.start()
+        val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
+        try {
+            runBlocking {
+                // /hello arrives before any mDNS resolve: the peer is unknown, so its raw name is used.
+                val response = client.post("http://localhost:$port/hello") {
+                    contentType(ContentType.Application.Json)
+                    setBody(
+                        PeerAnnouncement(
+                            alias = "Host",
+                            fingerprint = "fp-late",
+                            port = 7000,
+                            deviceType = DeviceType.Desktop,
+                        ),
+                    )
+                }
+                assertEquals(HttpStatusCode.OK, response.status)
+            }
+            assertEquals(
+                "Host",
+                store.devices.value
+                    .first()
+                    .name,
+                "unknown peer takes the /hello raw name",
+            )
+
+            // mDNS resolves the same fingerprint and upserts the canonical name — full replace upgrades it.
+            store.upsert(
+                Device(name = "Host (3)", host = "192.168.1.5", port = 7000, fingerprint = "fp-late"),
+            )
+            assertEquals(1, store.devices.value.size, "same fingerprint must not duplicate")
+            assertEquals(
+                "Host (3)",
+                store.devices.value
+                    .first()
+                    .name,
+                "mDNS upsert must upgrade the raw name to the canonical one",
+            )
+        } finally {
+            client.close()
+        }
+    }
+
+    @Test
     fun `hello uses TCP remoteAddress not body ip for device host`() {
         val store = DiscoveredDevicesStore()
         val server = newServer(store = store)
