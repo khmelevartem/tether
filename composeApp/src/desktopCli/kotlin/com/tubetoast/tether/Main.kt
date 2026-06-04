@@ -10,8 +10,7 @@ import com.tubetoast.tether.di.CliAppContainer
 import com.tubetoast.tether.di.DefaultDesktopAppConfig
 import com.tubetoast.tether.discovery.DiscoveredDevicesStore
 import com.tubetoast.tether.identity.EphemeralFingerprintPersistence
-import com.tubetoast.tether.logging.initTetherLogging
-import com.tubetoast.tether.logging.isDebugEnabled
+import com.tubetoast.tether.logging.initCliLogging
 import com.tubetoast.tether.network.FileClient
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.protocol.SendResult
@@ -69,9 +68,9 @@ class TetherCommand :
         help = "Tether debug runner — local peer-to-peer file transfer over WiFi",
         epilog = buildString {
             append("Environment:\n```\n")
-            append("TETHER_LOG_DEBUG=true       Enable DEBUG-level logs.\n")
+            append("TETHER_LOG_DEBUG=true       Show subsystem logs (off by default).\n")
             append("-Dtether.log.debug=true     Same, via JVM system property.\n")
-            append("TETHER_LOG_STDOUT=true      Route subsystem logs to stdout instead of stderr.\n")
+            append("TETHER_LOG_STDOUT=true      Route those logs to stdout instead of stderr.\n")
             append("-Dtether.log.stdout=true    Same, via JVM system property.\n")
         },
     ) {
@@ -81,7 +80,7 @@ class TetherCommand :
         .int()
 
     override fun run() = runBlocking {
-        initTetherLogging(debugEnabled = isDebugEnabled())
+        initCliLogging()
 
         val activeEngineRef = AtomicReference<PeerTransferEngine?>(null)
 

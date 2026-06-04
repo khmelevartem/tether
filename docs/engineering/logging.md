@@ -38,7 +38,9 @@ DEBUG is off by default. Per platform:
 
 - **Android** — DEBUG is enabled when the running build is `debuggable` (`ApplicationInfo.FLAG_DEBUGGABLE`). Release APKs go to INFO. No env var on Android; the build flag is the single source of truth.
 - **Apple (iOS + macOS)** — DEBUG is enabled when the Kotlin/Native binary is built in `DEBUG` configuration (`Platform.isDebugBinary`). Release framework goes to INFO.
-- **Desktop (JVM)** — DEBUG is enabled when the JVM system property `tether.log.debug` is set (e.g. `-Dtether.log.debug=true`) **or** the environment variable `TETHER_LOG_DEBUG` is set to `true`. Both knobs exist because the CLI is launched via the wrapper shell script (env var is natural there) and the Compose UI is launched via Gradle (system property is natural there).
+- **Desktop (JVM)** — the knob is the JVM system property `tether.log.debug` (e.g. `-Dtether.log.debug=true`) **or** the environment variable `TETHER_LOG_DEBUG` set to `true`. Both forms exist because the CLI is launched via the wrapper shell script (env var is natural there) and the Compose UI is launched via Gradle (system property is natural there). The knob's meaning is surface-specific:
+  - **CLI** — it is the on/off switch for the whole console logger. Unset, the logger writes nothing to either stream; a no-op writer is installed at startup so KydraLog's auto-init path cannot print either. Set, the logger runs at DEBUG (stream per §Desktop streams).
+  - **Compose UI** and the native-sink platforms — the sink is always active; the knob selects DEBUG over the INFO default.
 
 The single-source-of-truth rule: each platform has exactly one gating mechanism resolved at writer initialisation. Per-tag overrides are *not* supported — if a subsystem needs a different default, raise its WARNING-or-higher signal in code, do not invent a new level threshold.
 
@@ -57,14 +59,15 @@ If a subsystem logs before initialisation runs, KydraLog's auto-init path catche
 
 ## Desktop streams
 
-The Desktop CLI splits its two output kinds across the two console streams:
+The two Desktop entry points route the subsystem logger differently, because their relationship to the console differs.
 
-- **stdout** carries product output the user reads as the tool's answer: the startup banner, the device/port lines, and the bracketed status lines (`[peers]`, `[list]`, `[send]`). These are the CLI's UX, not logging — they go through the CLI's own output channels, never through a logger.
-- **stderr** carries subsystem diagnostics by default. KydraLog's stock JVM writer prints to stdout ([KydraLog source](https://github.com/PocketByte/kotlin-kydra-log/blob/master/library/src/jvmCommonMain/kotlin/ru/pocketbyte/kydra/log/PrintLogger.kt)); the Desktop writer instead targets stderr at initialisation so diagnostics stay off the product channel. Ktor's framework logs reach stderr independently through the SLF4J binding (see [adr-logging-kydra.md](adr/adr-logging-kydra.md) §Costs accepted).
+The **CLI** console logger is off by default: at no level — including ERROR and WARNING — does it write to either console stream. The only thing the user sees on the console is the CLI's own product output: the startup banner, the device/port lines, and the bracketed status lines (`[peers]`, `[list]`, `[send]`, including `[send] ERROR:` echoes). That product output is the tool's answer, not logging — it goes through the CLI's own output channels on stdout, never through a logger. The debug knob (§DEBUG gating) turns the CLI logger on at DEBUG; once on, diagnostics go to stderr by default, or to stdout when the stream toggle below is set.
 
-The stderr default applies to the whole Desktop (JVM) process — both the CLI and the Compose UI initialise the same writer. The split is motivated by the CLI: it is the entry point that emits bracketed product output on stdout, which diagnostics must not corrupt. The Compose UI has no stdout product channel, so it inherits the same stderr routing harmlessly.
+The **Compose UI** logger is on at INFO by default and writes to stderr (the debug knob raises it to DEBUG; the stream toggle applies). The UI has no stdout product channel, so operator-visible diagnostics on stderr are the default there, matching the native-sink platforms.
 
-One toggle moves the subsystem stream onto stdout for a session where the operator watches stdout and wants diagnostics interleaved there: the JVM system property `tether.log.stdout` *or* the environment variable `TETHER_LOG_STDOUT`, set to `true` to enable — the same env-plus-property pairing the debug knob uses, for the same launch-context reason. The selector is Desktop-wide, applying to whichever entry point the process started from. This selects the writer's **stream**; the debug knob selects the **level**. The two are orthogonal: either, both, or neither may be set, and neither implies the other.
+KydraLog's stock JVM writer prints to stdout ([KydraLog source](https://github.com/PocketByte/kotlin-kydra-log/blob/master/library/src/jvmCommonMain/kotlin/ru/pocketbyte/kydra/log/PrintLogger.kt)); the Desktop writer targets stderr at initialisation so diagnostics stay off the CLI's product channel. Ktor's framework logs reach stderr independently through the SLF4J binding (see [adr-logging-kydra.md](adr/adr-logging-kydra.md) §Costs accepted).
+
+When the Desktop logger is on, one toggle moves the subsystem stream onto stdout for a session where the operator watches stdout and wants diagnostics interleaved there: the JVM system property `tether.log.stdout` *or* the environment variable `TETHER_LOG_STDOUT`, set to `true` to enable — the same env-plus-property pairing the debug knob uses, for the same launch-context reason. The selector is Desktop-wide, applying to whichever entry point the process started from. This selects the writer's **stream**; the debug knob selects whether (CLI) or at what level (Compose UI) the logger writes. The two are orthogonal: either, both, or neither may be set, and neither implies the other.
 
 ## Forbidden idioms in production code
 
