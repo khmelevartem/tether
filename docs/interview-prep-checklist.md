@@ -191,7 +191,7 @@
 - [ ] `suspend` функции в iOS — Swift Export, `async/await` bridge
 
 ### Библиотеки
-- [ ] Ktor Client — multiplatform HTTP
+- [x] Ktor Client — multiplatform HTTP
 - [ ] SQLDelight — multiplatform database
 - [ ] Kotlinx.serialization — vs Gson/Moshi, почему KMP-friendly
 - [ ] Kotlinx.datetime, Kotlinx.coroutines multiplatform
@@ -231,7 +231,7 @@
 - [x] `Fake` vs `Mock` — когда что, архитектурные последствия
 - [ ] `Turbine` — тестирование Flow, задержки, cancellation
 - [ ] `Compose Testing` — семантическое дерево, `assertIsDisplayed`, `performClick`
-- [ ] `TestCoroutineDispatcher` / `UnconfinedTestDispatcher` — контроль времени в тестах
+- [x] `TestCoroutineDispatcher` / `UnconfinedTestDispatcher` — контроль времени в тестах
 - [ ] Integration tests vs Unit tests — что где тестировать
 
 ---
@@ -279,7 +279,7 @@
 
 ## Блок 11 — System Design (Senior-уровень)
 
-- [ ] Offline-first приложение — sync стратегия, conflict resolution
+- [x] Offline-first приложение — sync стратегия, conflict resolution
 - [ ] Лента с пагинацией — Paging 3, стратегии кэша
 - [ ] Чат / real-time — WebSocket vs SSE vs polling, reconnect логика
 - [ ] B2B/B2C из одной кодовой базы (твой кейс) — flavors, feature flags, разная монетизация

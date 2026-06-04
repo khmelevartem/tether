@@ -13,6 +13,12 @@ The goal is not a report for its own sake and not a catalog of pointwise mistake
 
 ---
 
+## Step 0 — Load the writing discipline
+
+Every change a retro produces is a long-lived artifact. Read [`docs/engineering/long-lived-artifacts.md`](../../../docs/engineering/long-lived-artifacts.md) before drafting any wording and apply it through the analysis and proposed edits, not only at the Step 6 commit gate.
+
+---
+
 ## Step 1 — Gather facts
 
 Collect context:

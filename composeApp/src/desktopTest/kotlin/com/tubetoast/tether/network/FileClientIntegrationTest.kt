@@ -17,7 +17,7 @@ import kotlin.test.assertTrue
 
 // real CIO server — CIOApplicationEngine hardcodes real-thread dispatchers
 @Suppress("ktlint:tether:no-run-blocking-in-tests")
-class FileClientProgressTest {
+class FileClientIntegrationTest {
     private lateinit var tmpDir: File
     private lateinit var configDir: File
     private lateinit var tempStore: TempDataStore
@@ -51,32 +51,13 @@ class FileClientProgressTest {
     }
 
     @Test
-    fun `send with onProgress reports monotonically increasing bytes`() {
-        val content = ByteArray(64 * 1024) { it.toByte() }
-        val file = Files.createTempFile("progress-test", ".bin")
-        file.writeBytes(content)
-
-        val reports = mutableListOf<Long>()
-        runBlocking {
-            val result = client.send(device, file) { transferred, _ -> reports.add(transferred) }
-            assertIs<SendResult.Success>(result)
-        }
-
-        assertTrue(reports.isNotEmpty(), "onProgress was never called")
-        assertTrue(reports.last() == content.size.toLong(), "Last report must equal file size")
-        assertTrue(reports.zipWithNext().all { (a, b) -> b >= a }, "Progress must be non-decreasing")
-
-        Files.deleteIfExists(file)
-    }
-
-    @Test
-    fun `send with onProgress preserves file content`() {
+    fun `send preserves file content over real HTTP`() {
         val content = ByteArray(256) { it.toByte() }
-        val file = Files.createTempFile("progress-content-test", ".bin")
+        val file = Files.createTempFile("content-fidelity-test", ".bin")
         file.writeBytes(content)
 
         runBlocking {
-            val result = client.send(device, file) { _, _ -> } as SendResult.Success
+            val result = client.send(device, file) as SendResult.Success
             val saved = File(result.savedPath).readBytes()
             assertTrue(content.contentEquals(saved), "Saved content must match sent content")
         }

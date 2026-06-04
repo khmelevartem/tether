@@ -10,7 +10,7 @@ A receiver, given a sequence of files belonging to one folder send, lands them o
 
 A single endpoint, `POST /upload`, carries every file transfer — flat or nested. Each file is one HTTP request. The sender supplies, per request:
 
-- The **relative POSIX path** of the file inside the send, in the `name` query parameter. For a flat single-file send this is the leaf name (`photo.jpg`); for a folder send it is the path within the chosen folder using `/` separators (`Vacation/2024/IMG_001.jpg`).
+- The **relative POSIX path** of the file inside the send, in the `name` query parameter. The value must be percent-encoded per RFC 3986. The receiver decodes `%XX` sequences before applying path safety checks; `+` is not treated as space on the receive path. For a flat single-file send this is the leaf name (`photo.jpg`); for a folder send it is the path within the chosen folder using `/` separators (`Vacation/2024/IMG_001.jpg`).
 - The **file bytes** as the raw request body (`application/octet-stream`), streamed — no buffering on either side.
 - `Content-Length` when the sender knows the size; absent for unbounded streams.
 
@@ -82,7 +82,7 @@ Responsibilities owned by the route handler, not the seam:
 For each, the reason it was rejected — short, because none was close.
 
 - **Dedicated `X-Tether-Relative-Path` HTTP header.** Adjacent in shape to the chosen design but introduces a parallel metadata channel for no gain — the existing `?name=` already carries filename metadata, widening its semantics to "relative path" is a one-word change in the contract description. Reduces wire-shape diversity to debug across four platforms.
-- **Path as URL segments (`POST /upload/{percent-encoded-path}`).** Forces every sender platform to percent-encode `/` inside the path, with per-platform encoding quirks (NSURLSession normalises path segments in ways that are hard to predict). Higher integration risk than query parameter for no expressive gain.
+- **Path as URL segments (`POST /upload/{percent-encoded-path}`).** Forces every sender platform to percent-encode `/` inside the path, with per-platform encoding quirks. Higher integration risk than query parameter for no expressive gain.
 - **`multipart/form-data` with a `relativePath` text part and a `file` binary part.** Standards-friendly but adds a multipart parser on the hot path of every file transfer, against the streaming-not-buffering invariant. Multipart parsing differences between the engines in play across `adr-network-stack.md` are exactly the kind of cross-platform surface this contract is trying to keep small.
 - **Custom framing inside the body (length-prefixed JSON header, then bytes).** Defeats curl- and Wireshark-level debuggability for no scope this doc covers. Listed for completeness — the rejection is the rule.
 

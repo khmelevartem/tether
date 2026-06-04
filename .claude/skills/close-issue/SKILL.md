@@ -86,6 +86,8 @@ gh pr view <PR> --json reviews,comments --jq '{reviews: .reviews, comments: .com
 
 Make sure all review comments are resolved (resolved or replied to with a justification). The `/close-issue` invocation itself is the user's approval for the merge; a separate APPROVED review or a "lgtm" phrase is not required.
 
+**The review must cover the final diff.** If commits landed after the most recent review pass, resolved comments on the earlier state are not coverage of what is about to merge — run a fresh review pass (`/code-review`, or the `implement` review wave) over the current diff before proceeding.
+
 ---
 
 ## Step 4 — Update documentation

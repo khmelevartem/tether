@@ -38,7 +38,6 @@ import java.io.IOException
 import java.nio.file.Files
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
-import kotlin.io.path.writeBytes
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -69,6 +68,15 @@ class FileClientTest {
 
     private fun okResponse(savedPath: String) = """{"savedPath":"$savedPath"}"""
 
+    private fun TestScope.channelOf(payload: ByteArray): ByteChannel {
+        val channel = ByteChannel(autoFlush = true)
+        launch {
+            channel.writeFully(payload)
+            channel.close()
+        }
+        return channel
+    }
+
     @Test
     fun `send returns Success with saved path`() = runTest {
         val client = mockClient { request ->
@@ -82,15 +90,19 @@ class FileClientTest {
                 headers = headersOf(HttpHeaders.ContentType, "application/json"),
             )
         }
-        val file = Files.createTempFile("send-test", ".txt")
-        file.writeBytes("hello from client".toByteArray())
+        val payload = "hello from client".toByteArray()
+        val source = channelOf(payload)
         try {
-            val result = client.send(device, file)
+            val result = client.send(
+                device,
+                channel = source,
+                fileName = "path.txt",
+                totalBytes = payload.size.toLong(),
+            )
             assertIs<SendResult.Success>(result)
             assertTrue(result.savedPath.endsWith(".txt"))
         } finally {
             client.close()
-            Files.deleteIfExists(file)
         }
     }
 
@@ -127,17 +139,15 @@ class FileClientTest {
             )
         }
         val payload = ByteArray(256) { it.toByte() }
-        val file = Files.createTempFile("binary-test", ".bin")
-        file.writeBytes(payload)
+        val source = channelOf(payload)
         try {
-            client.send(device, file)
+            client.send(device, channel = source, fileName = "file.bin", totalBytes = payload.size.toLong())
             assertTrue(
                 payload.contentEquals(captured.get()),
                 "Captured content does not match sent content",
             )
         } finally {
             client.close()
-            Files.deleteIfExists(file)
         }
     }
 
@@ -167,10 +177,14 @@ class FileClientTest {
             )
         }
         val payload = ByteArray(2048) { (it % 251).toByte() }
-        val file = Files.createTempFile("content-length-test", ".bin")
-        file.writeBytes(payload)
+        val source = channelOf(payload)
         try {
-            client.send(device, file)
+            client.send(
+                device,
+                channel = source,
+                fileName = "content-length-test.bin",
+                totalBytes = payload.size.toLong(),
+            )
             val c = captured.get() ?: error("handler did not capture request")
             assertTrue(
                 c.contentLength == payload.size.toLong(),
@@ -179,21 +193,24 @@ class FileClientTest {
             assertNull(c.transferEncoding, "Transfer-Encoding must be absent (no chunked)")
         } finally {
             client.close()
-            Files.deleteIfExists(file)
         }
     }
 
     @Test
     fun `send returns Failure when server is not running`() = runTest {
         val client = mockClient { throw IOException("connection refused") }
-        val file = Files.createTempFile("no-server", ".txt")
-        file.writeBytes("data".toByteArray())
+        val payload = "data".toByteArray()
+        val source = channelOf(payload)
         try {
-            val result = client.send(device, file)
+            val result = client.send(
+                device,
+                channel = source,
+                fileName = "no-server.txt",
+                totalBytes = payload.size.toLong(),
+            )
             assertIs<SendResult.Failure>(result)
         } finally {
             client.close()
-            Files.deleteIfExists(file)
         }
     }
 
@@ -212,10 +229,14 @@ class FileClientTest {
         }
         val observed = mutableListOf<Long>()
         val payload = ByteArray(64 * 1024) { it.toByte() }
-        val file = Files.createTempFile("progress-test", ".bin")
-        file.writeBytes(payload)
+        val source = channelOf(payload)
         try {
-            val result = client.send(device, file) { sent, _ -> observed.add(sent) }
+            val result = client.send(
+                device,
+                channel = source,
+                fileName = "progress-test.bin",
+                totalBytes = payload.size.toLong(),
+            ) { sent, _ -> observed.add(sent) }
             assertIs<SendResult.Success>(result)
             assertTrue(observed.isNotEmpty(), "onProgress must fire at least once")
             assertTrue(
@@ -228,7 +249,76 @@ class FileClientTest {
             )
         } finally {
             client.close()
-            Files.deleteIfExists(file)
+        }
+    }
+
+    @Test
+    fun `send encodes spaces in filename as percent-20 not plus`() = runTest {
+        val capturedQuery = AtomicReference<String?>()
+        val client = mockClient { request ->
+            capturedQuery.set(request.url.encodedQuery)
+            val body = request.body as OutgoingContent.ReadChannelContent
+            val ch = body.readFrom()
+            val buf = ByteArray(8 * 1024)
+            while (!ch.isClosedForRead) ch.readAvailable(buf)
+            respond(
+                content = okResponse("/saved/manual with space.txt"),
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+        val source = ByteChannel(autoFlush = true)
+        source.writeFully(ByteArray(4))
+        source.close()
+        try {
+            client.send(
+                device = device,
+                channel = source,
+                fileName = "manual with space.txt",
+                totalBytes = 4L,
+            )
+            val query = capturedQuery.get() ?: error("handler did not capture request")
+            assertTrue(
+                query.contains("name=manual%20with%20space") && !query.contains('+'),
+                "expected spaces encoded as %20 (not +) in query, got: $query",
+            )
+        } finally {
+            client.close()
+        }
+    }
+
+    @Test
+    fun `send encodes hash in filename as percent-23`() = runTest {
+        val capturedQuery = AtomicReference<String?>()
+        val client = mockClient { request ->
+            capturedQuery.set(request.url.encodedQuery)
+            val body = request.body as OutgoingContent.ReadChannelContent
+            val ch = body.readFrom()
+            val buf = ByteArray(8 * 1024)
+            while (!ch.isClosedForRead) ch.readAvailable(buf)
+            respond(
+                content = okResponse("/saved/file#name.txt"),
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json"),
+            )
+        }
+        val source = ByteChannel(autoFlush = true)
+        source.writeFully(ByteArray(4))
+        source.close()
+        try {
+            client.send(
+                device = device,
+                channel = source,
+                fileName = "file#name.txt",
+                totalBytes = 4L,
+            )
+            val query = capturedQuery.get() ?: error("handler did not capture request")
+            assertTrue(
+                query.contains("name=file%23name"),
+                "expected # encoded as %23 in query, got: $query",
+            )
+        } finally {
+            client.close()
         }
     }
 

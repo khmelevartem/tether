@@ -144,7 +144,8 @@ echo "✅ Pre-push hook installed at $PUSH_HOOK_FILE"
 # that truncates COMMIT_EDITMSG.
 #
 # Fix: when the first meaningful line of COMMIT_EDITMSG does not match our
-# commit convention `#<N>: ...`, restore from `$GIT_DIR/rebase-merge/message`,
+# commit convention (`#<N>: …`, `retro from #<N>: …`, `plan sprint <N>: …`),
+# restore from `$GIT_DIR/rebase-merge/message`,
 # which git populates with the original commit message before invoking the editor.
 # ---------------------------------------------------------------------------
 PREPARE_HOOK_FILE="$HOOK_DIR/prepare-commit-msg"
@@ -163,8 +164,9 @@ REBASE_MSG="$GIT_DIR/rebase-merge/message"
 # Our commit subjects start with "#<digits>:" and survive this filter.
 FIRST_LINE=$(grep -vE '^#([[:space:]]|$)' "$COMMIT_MSG_FILE" | grep -v '^[[:space:]]*$' | head -1)
 
-# Restore unless the first meaningful line already matches `#<N>: ...`.
-if ! echo "$FIRST_LINE" | grep -qE '^#[0-9]+:'; then
+# Restore unless the first meaningful line already matches a valid subject:
+# `#<N>: …`, `retro from #<N>: …`, or `plan sprint <N>: …` (see CLAUDE.md §Git conventions).
+if ! echo "$FIRST_LINE" | grep -qE '^(#[0-9]+|retro from #[0-9]+|plan sprint [0-9]+):'; then
   cp "$REBASE_MSG" "$COMMIT_MSG_FILE"
   echo "ℹ️  prepare-commit-msg: restored subject from rebase-merge/message" >&2
 fi
@@ -174,3 +176,35 @@ EOF
 
 chmod +x "$PREPARE_HOOK_FILE"
 echo "✅ prepare-commit-msg hook installed at $PREPARE_HOOK_FILE"
+
+# ---------------------------------------------------------------------------
+# commit-msg: enforce the subject convention after the editor closes.
+# Valid subjects (see CLAUDE.md §Git conventions):
+#   #<N>: …            retro from #<N>: …            plan sprint <N>: …
+# ---------------------------------------------------------------------------
+MSG_HOOK_FILE="$HOOK_DIR/commit-msg"
+
+cat > "$MSG_HOOK_FILE" << 'EOF'
+#!/bin/bash
+# commit-msg hook: enforce commit subject format
+
+COMMIT_MSG_FILE="$1"
+
+# Skip auto-generated merge / squash messages.
+COMMIT_SOURCE="$2"
+[ "$COMMIT_SOURCE" = "merge" ] || [ "$COMMIT_SOURCE" = "squash" ] && exit 0
+
+# Strip git template comments ("# " or bare "#") and blank lines, take the subject.
+SUBJECT=$(grep -vE '^#([[:space:]]|$)' "$COMMIT_MSG_FILE" | grep -v '^[[:space:]]*$' | head -1)
+
+if ! echo "$SUBJECT" | grep -qE '^(#[0-9]+:|retro from #[0-9]+:|plan sprint [0-9]+:)'; then
+  echo "❌  Commit subject must start with '#<N>: …', 'retro from #<N>: …', or 'plan sprint <N>: …'" >&2
+  echo "    Got: \"$SUBJECT\"" >&2
+  exit 1
+fi
+
+exit 0
+EOF
+
+chmod +x "$MSG_HOOK_FILE"
+echo "✅ commit-msg hook installed at $MSG_HOOK_FILE"

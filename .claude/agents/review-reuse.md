@@ -24,6 +24,8 @@ If you find a near-duplicate, flag it. "Near" includes: same logic with differen
 
 **Threshold — second copy.** Once the same shape appears in **two** places in the diff (or once in the diff + once already in the codebase), flag it for extraction. Do not wait for the third copy. The fact that each copy currently lives as a private helper next to its caller is not a defence; private-helper duplication across sibling files is the precise pattern this rule targets.
 
+**Same-package siblings.** When the diff adds a new declaration to an existing package, it's worth reading that package's current files and weighing whether a sibling already models the same thing under a different name — something name/body grep won't surface. The scan stays bounded to one package, so it's cheap; a likely match is worth flagging for the author to reconcile.
+
 ### 2. Doc-vs-code drift
 
 If the diff changes a public API, type, or contract that's referenced in:

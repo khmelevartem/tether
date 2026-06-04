@@ -395,15 +395,19 @@ def build_graph_data(issues: list, blocked_by: dict, schools: list) -> dict:
 
     issue_map = {i["number"]: i for i in issues}
     has_parent = set()
-    has_blocked_by: set[int] = set()
-    has_blocks: set[int] = set()
+    # Only issues with at least one *open* blocker are considered "in chains".
+    has_active_blocked_by: set[int] = set()
+    # Only open issues that actively block something open are marked as blockers.
+    has_active_blocks: set[int] = set()
 
     for num_str, blockers in blocked_by.items():
         num = int(num_str)
-        has_blocked_by.add(num)
         for b in blockers:
-            has_blocks.add(int(b))
-            edges.append({"source": int(b), "target": num, "type": "block"})
+            blocker_open = issue_map.get(b, {}).get("state") == "open"
+            if blocker_open:
+                has_active_blocked_by.add(num)
+                has_active_blocks.add(b)
+                edges.append({"source": b, "target": num, "type": "block"})
 
     for issue in issues:
         if issue.get("parent_issue_url"):
@@ -416,9 +420,13 @@ def build_graph_data(issues: list, blocked_by: dict, schools: list) -> dict:
     for issue in issues:
         num = issue["number"]
         is_open = issue.get("state") == "open"
-        isolated = (num not in has_parent and num not in has_blocked_by and num not in has_blocks)
+        isolated = (
+            num not in has_parent
+            and num not in has_active_blocked_by
+            and num not in has_active_blocks
+        )
         orphan = is_open and isolated
-        blocked = is_open and num in has_blocked_by
+        blocked = is_open and num in has_active_blocked_by
         nodes.append({
             "id": num,
             "title": issue["title"],
