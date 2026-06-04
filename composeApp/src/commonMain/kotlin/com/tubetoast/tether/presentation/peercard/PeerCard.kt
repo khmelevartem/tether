@@ -27,9 +27,9 @@ fun PeerCard(
         onRetryOutbound = component::onRetryOutbound,
         onShowDetails = component::onShowDetails,
         onOpenFiles = {
-            // TODO(#192): Android — Intent.ACTION_VIEW to FileProvider URI for received folder
-            // TODO(#193): Desktop — Desktop.open() / xdg-open / Finder reveal
-            // TODO(#194): iOS — UIApplication.shared.open(Files-app deep link); fallback hint per UX brief §State 6
+            // TODO(#195): per-platform OS open of the received folder —
+            //   Android: Intent.ACTION_VIEW to FileProvider URI; Desktop: Desktop.open() / xdg-open / Finder reveal;
+            //   iOS: UIApplication.shared.open(Files-app deep link), fallback hint per UX brief §State 6
         },
         onClick = component::onCardClick,
     )
