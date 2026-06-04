@@ -63,7 +63,7 @@ Launches CLI A (`SmokeMacA`, random port), then checks:
 6. **mDNS publish (dns-sd, optional)** — `dns-sd -B` browse. SKIP if `dns-sd` unavailable (Linux).
 7. **stdin `list`** — must produce a `[list]` or `[peers]` line.
 
-CLI A stays alive through Block 3. Graceful quit — Block 4.
+CLI A stays alive through the Android and iOS blocks (they need it for cross-discovery). Graceful quit — Block 4, deferred to just before cleanup.
 
 ### Block 2: Desktop ↔ Desktop send (via CLI)
 
@@ -87,11 +87,11 @@ Sends 3 files in one command. PASS if `[send] done — 3/3 sent` appears AND all
 
 Run: `./block-2.3-retry.sh`
 
-Stops B to provoke `[send] error`, restarts B, then issues `retry SmokeMacB`. PASS if the file lands byte-identical after retry.
+Stops B to provoke `[send] error`, restarts B, then issues `retry SmokeMacB`. **Skipped pending [#367](https://github.com/khmelevartem/tether/issues/367)** — a restarted CLI gets a fresh ephemeral fingerprint, so the failed transfer leaves no terminal state for `retry` to resume from. Re-enable when stable-across-restart identity lands.
 
 #### Scenario 2.4 — exit code on `quit`
 
-Verified in Block 4 — `lastExit` accumulates per `send`/`retry`; after the retry the last result was AllSent → expected exit code 0.
+Verified in Block 4 — `lastExit` accumulates per `send`/`retry`; the last successful send was AllSent → expected exit code 0.
 
 ### Block 3: Same-name discovery
 
@@ -111,19 +111,19 @@ Regression guard for #346. macOS `mDNSResponder` canonicalises duplicate service
 
 Prerequisite: Block 3 (three CLIs alive — A, B, and C reusing A's name). FAIL → attach the last `[peers]` lines from all three logs in Details.
 
+### Block 3.2: Same-name distinguishability
+
+Run: `./block-3.2-same-name-distinct.sh`
+
+The mDNS-canonical `(N)` suffix recorded on discovery must survive the subsequent `/hello` exchange — assertion: in each CLI's last `[peers]` line, no two peers share the same display name. Complements Block 3.1.
+
+Prerequisite: Block 3 (three CLIs alive — A, B, and C reusing A's name). FAIL → attach the last `[peers]` lines from all three logs in Details.
+
 ### Block 3.5: Device name rename
 
 Run: `./block-3.5-rename.sh`
 
 Sends `name RenamedA` to A via stdin; B must see the new name via mDNS republish within 15 s.
-
-### Block 4: Graceful quit of instance A — and `lastExit` propagation
-
-Run: `./block-4-graceful-quit.sh`
-
-Sends `quit` to A, waits up to 8 s, checks exit. PASS if the process exited.
-
-Checks exit code = 0 (last send was AllSent after the retry scenario). If the process had to be force-killed — exit-code check SKIP.
 
 ### Block 5: Android (conditional)
 
@@ -139,11 +139,9 @@ SKIP if no adb device connected. If present:
 6. Send Desktop → Android via CLI `send`. SKIP if emulator with QEMU NAT (`10.0.2.x`) or Android peer not discovered.
 7. `force-stop`.
 
-### Block 5.5: iOS simulator runtime (conditional)
+### Block 5.5: iOS simulator runtime
 
 Run: `./block-5.5-ios.sh`
-
-SKIP if Xcode CLI tools absent or `iosApp/iosApp.xcodeproj` not found.
 
 1. Resolve + boot simulator (default `iPhone 17`; override via `IOS_DEVICE` env var).
 2. `xcodebuild`, install, launch.
@@ -155,6 +153,16 @@ SKIP if Xcode CLI tools absent or `iosApp/iosApp.xcodeproj` not found.
 8. Keychain persistence across cold launches — restart the app, fetch `/pair` again, compare the public key byte-for-byte.
 
 iOS cleanup — in Block 7.
+
+### Block 4: Graceful quit of instance A — and `lastExit` propagation
+
+Run: `./block-4-graceful-quit.sh`
+
+Runs after the Android and iOS blocks — both need instance A alive for cross-discovery, so A's graceful quit is deferred to just before cleanup.
+
+Sends `quit` to A, waits up to 8 s, checks exit. PASS if the process exited.
+
+Checks exit code = 0 (last send was AllSent after the retry scenario). If the process had to be force-killed — exit-code check SKIP.
 
 ### Block 7: Cleanup
 

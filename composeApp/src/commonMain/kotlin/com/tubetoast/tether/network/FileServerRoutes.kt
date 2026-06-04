@@ -93,8 +93,9 @@ internal fun Application.installFileServerRoutes(
                 return@post
             }
             val remoteHost = call.request.origin.remoteHost
+            val knownName = discoveredDevicesStore?.nameFor(body.fingerprint)
             val device = Device(
-                name = body.alias,
+                name = knownName ?: body.alias,
                 host = remoteHost,
                 port = body.port,
                 fingerprint = body.fingerprint,
