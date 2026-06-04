@@ -3,7 +3,6 @@ package com.tubetoast.tether.transfer
 import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
-import android.provider.OpenableColumns
 import androidx.documentfile.provider.DocumentFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -38,44 +37,26 @@ class AndroidFilePicker(
     }
 
     fun resolveUris(uris: List<Uri>): List<FileSource> =
-        uris.map { uri -> AndroidUriFileSource(uri, contentResolver, resolveDisplayName(uri)) }
+        uris.map { uri -> AndroidUriFileSource(uri, contentResolver, contentResolver.resolveDisplayName(uri)) }
 
     suspend fun resolveTree(treeUri: Uri): List<FileSource> {
         val root = DocumentFile.fromTreeUri(appContext, treeUri) ?: return emptyList()
         return withContext(Dispatchers.IO) { collectVisible(root, "") }
     }
 
-    fun resolveDisplayName(uri: Uri): String =
-        contentResolver
-            .query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
-            ?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    val idx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                    if (idx >= 0) cursor.getString(idx) else null
-                } else {
-                    null
-                }
-            } ?: uri.lastPathSegment ?: "file"
-
     private fun collectVisible(dir: DocumentFile, prefix: String): List<FileSource> {
         val result = mutableListOf<FileSource>()
         for (file in dir.listFiles()) {
             val entryName = file.name ?: continue
-            if (isHidden(entryName)) continue
             val relativePath = if (prefix.isEmpty()) entryName else "$prefix/$entryName"
+            val source = AndroidUriFileSource(file.uri, contentResolver, relativePath)
+            if (!HiddenFileFilter.isVisible(source)) continue
             if (file.isDirectory) {
                 result += collectVisible(file, relativePath)
             } else {
-                result += AndroidUriFileSource(file.uri, contentResolver, relativePath)
+                result += source
             }
         }
         return result
-    }
-
-    private fun isHidden(name: String): Boolean =
-        name.startsWith(".") || name in HIDDEN_NAMES
-
-    private companion object {
-        val HIDDEN_NAMES = setOf("Thumbs.db", ".DS_Store", "desktop.ini")
     }
 }

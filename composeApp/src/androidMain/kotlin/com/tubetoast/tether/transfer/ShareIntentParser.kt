@@ -4,7 +4,6 @@ import android.content.ContentResolver
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
-import android.provider.OpenableColumns
 
 internal object ShareIntentParser {
     fun parse(intent: Intent, contentResolver: ContentResolver): List<FileSource> {
@@ -32,19 +31,7 @@ internal object ShareIntentParser {
             else -> return emptyList()
         }
         return uris.map { uri ->
-            AndroidUriFileSource(uri, contentResolver, resolveDisplayName(uri, contentResolver))
+            AndroidUriFileSource(uri, contentResolver, contentResolver.resolveDisplayName(uri))
         }
     }
-
-    private fun resolveDisplayName(uri: Uri, contentResolver: ContentResolver): String =
-        contentResolver
-            .query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
-            ?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    val idx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                    if (idx >= 0) cursor.getString(idx) else null
-                } else {
-                    null
-                }
-            } ?: uri.lastPathSegment ?: "file"
 }

@@ -59,8 +59,6 @@ class AndroidAppContainer(
     )
     override val ownDeviceType: DeviceType = DeviceType.Android
 
-    val activityProvider: AndroidActivityProvider = AndroidActivityProvider()
-
     val pickerCoordinator: AndroidPickerCoordinator = AndroidPickerCoordinator()
 
     val androidFilePicker: AndroidFilePicker = AndroidFilePicker(

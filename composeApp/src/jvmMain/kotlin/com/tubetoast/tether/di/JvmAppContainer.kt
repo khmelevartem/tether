@@ -2,17 +2,8 @@ package com.tubetoast.tether.di
 
 import com.tubetoast.tether.network.FileServer
 import com.tubetoast.tether.transfer.FilePicker
-import com.tubetoast.tether.transfer.FileSource
+import com.tubetoast.tether.transfer.NoOpFilePicker
 import java.io.File
-
-// TODO(#193): replace with real Desktop file picker
-private object DesktopNoOpFilePicker : FilePicker {
-    override suspend fun pickFiles(): List<FileSource> = emptyList()
-
-    override suspend fun pickFolder(): List<FileSource> = emptyList()
-
-    override suspend fun pickPhotos(): List<FileSource> = emptyList()
-}
 
 abstract class JvmAppContainer(
     private val config: JvmAppConfig,
@@ -31,5 +22,5 @@ abstract class JvmAppContainer(
     }
 
     // TODO(#193): replace with real Desktop file picker
-    override val filePicker: FilePicker = DesktopNoOpFilePicker
+    override val filePicker: FilePicker = NoOpFilePicker
 }
