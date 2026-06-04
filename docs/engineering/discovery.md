@@ -97,7 +97,7 @@ The endpoint is idempotent; repeated calls upsert. Mis-firing is harmless. The c
 
 ### Receiver behaviour
 
-On receipt, a Device is built from `(remoteAddress, body.port, body.fingerprint)` and upserted. The address and port are always refreshed, but if the fingerprint is already in the store its existing name is preserved — so a name first recorded via mDNS (the canonical form) is not replaced by a peer's self-reported alias. The store keeps a single source-agnostic upsert; entries are not tagged by discovery source.
+On receipt, a device entry is built from the sender's TCP address, the announced port, and the fingerprint, then upserted. The address and port are always refreshed, but if the fingerprint is already in the store its existing name is preserved — so a name first recorded via mDNS (the canonical form) is not replaced by a peer's self-reported alias. The store keeps a single source-agnostic upsert; entries are not tagged by discovery source.
 
 ### Self-suppression
 
