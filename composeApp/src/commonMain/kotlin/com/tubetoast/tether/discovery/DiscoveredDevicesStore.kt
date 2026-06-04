@@ -26,6 +26,9 @@ class DiscoveredDevicesStore {
         return if (idx >= 0) toMutableList().also { it[idx] = device } else null
     }
 
+    /** Returns true when a peer with this [fingerprint] is already in the store. */
+    fun knows(fingerprint: String): Boolean = _devices.value.any { it.fingerprint == fingerprint }
+
     fun removeByFingerprint(fingerprint: String) {
         _devices.update { prev -> prev.filter { it.fingerprint != fingerprint } }
     }

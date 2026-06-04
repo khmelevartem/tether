@@ -93,6 +93,11 @@ internal fun Application.installFileServerRoutes(
                 return@post
             }
             val remoteHost = call.request.origin.remoteHost
+            if (discoveredDevicesStore?.knows(body.fingerprint) == true) {
+                log.debug { "hello ignored — already known fingerprint from ${body.alias}@$remoteHost:${body.port}" }
+                call.respond(HttpStatusCode.OK, emptyMap<String, String>())
+                return@post
+            }
             val device = Device(
                 name = body.alias,
                 host = remoteHost,

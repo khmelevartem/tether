@@ -97,7 +97,9 @@ The endpoint is idempotent; repeated calls upsert. Mis-firing is harmless. The c
 
 ### Receiver behaviour
 
-On receipt: build a `Device` from `(remoteAddress, body.port, body.alias, body.fingerprint)` and upsert into `DiscoveredDevicesStore`. The upsert path is identical to the one mDNS resolves into — entries are not tagged by discovery source.
+On receipt: build a `Device` from `(remoteAddress, body.port, body.alias, body.fingerprint)` and upsert into `DiscoveredDevicesStore`. The store has a single source-agnostic upsert — entries are not tagged by discovery source.
+
+The `/hello` handler upserts only when the fingerprint is not already known to the store. When a peer's fingerprint is already present (typically learned via mDNS, which carries the mDNS-canonical name), the incoming `/hello` is acknowledged with `200 OK` but the store entry is left unchanged. This preserves the canonical name assigned by mDNS infrastructure when multiple peers share a base device name. For an unknown fingerprint — the one-way-visibility case where `/hello` is the only source — the device is inserted as normal.
 
 ### Self-suppression
 

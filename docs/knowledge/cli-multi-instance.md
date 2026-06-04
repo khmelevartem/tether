@@ -18,7 +18,7 @@ Production app installations are not affected: there is no scenario where two ap
 
 Two behaviours follow from the per-process, non-persisted identity when several CLIs run on one host:
 
-- **Same-base-name instances display identical names.** When instances share the default device name, mDNSResponder canonicalises the duplicates to `… (2)`, `(3)`, … and discovery lists them under those names — but each peer's `/hello` then reports its raw configured name, which the fingerprint-keyed upsert writes over the canonical one. `[peers]` / `list` collapse to N identical names; distinguish instances by `host:port`, not by name. Tracked in [#368](https://github.com/khmelevartem/tether/issues/368).
+- **Same-base-name instances stay distinguishable.** When instances share the default device name, mDNS infrastructure assigns canonical names (`… (2)`, `(3)`, …). The discovery side records each peer under its mDNS-canonical name. When each peer subsequently sends `/hello` carrying its raw configured name, the handler skips the upsert for already-known fingerprints — so the canonical name is never overwritten. `[peers]` / `list` show the distinct canonical names across all platforms.
 - **A restarted CLI is a new peer.** Restarting an instance generates a fresh fingerprint, so the sender treats it as a different `PeerIdentity` — a `retry` queued against the pre-restart instance does not resume. Stable-across-restart identity (opt-in, like the UI targets) is tracked in [#367](https://github.com/khmelevartem/tether/issues/367).
 
 ## See also
