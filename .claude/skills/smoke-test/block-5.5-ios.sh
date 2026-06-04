@@ -5,25 +5,11 @@ set -euo pipefail
 
 LOG_A="${LOG_A:-/tmp/smoke-cliA.log}"
 
-# Pre-checks
-if ! xcrun simctl help >/dev/null 2>&1; then
-  echo "SKIP: Xcode CLI tools not installed"
-  exit 0
-fi
-if [ ! -d "$(git rev-parse --show-toplevel)/iosApp/iosApp.xcodeproj" ]; then
-  echo "SKIP: iosApp/iosApp.xcodeproj not found"
-  exit 0
-fi
-
 cd "$(git rev-parse --show-toplevel)"
 
 IOS_DEVICE="${IOS_DEVICE:-iPhone 17}"
 UDID=$(xcrun simctl list devices available \
   | awk -F '[()]' -v n="$IOS_DEVICE" '$0 ~ n && $0 !~ /unavailable/ { print $2; exit }')
-if [ -z "$UDID" ]; then
-  echo "SKIP: no available simulator matching '$IOS_DEVICE'"
-  exit 0
-fi
 
 set +e; xcrun simctl boot "$UDID" 2>/dev/null; set -e
 open -a Simulator

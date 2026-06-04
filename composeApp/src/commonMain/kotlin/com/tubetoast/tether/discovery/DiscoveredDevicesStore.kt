@@ -26,6 +26,8 @@ class DiscoveredDevicesStore {
         return if (idx >= 0) toMutableList().also { it[idx] = device } else null
     }
 
+    fun nameFor(fingerprint: String): String? = _devices.value.firstOrNull { it.fingerprint == fingerprint }?.name
+
     fun removeByFingerprint(fingerprint: String) {
         _devices.update { prev -> prev.filter { it.fingerprint != fingerprint } }
     }
