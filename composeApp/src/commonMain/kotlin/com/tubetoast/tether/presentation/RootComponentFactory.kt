@@ -19,7 +19,7 @@ class RootComponentFactory(
     private val pendingFilesRepository: PendingFilesRepository,
     private val peerConflictRelay: PeerConflictRelay,
     private val filePicker: FilePicker,
-    private val fileTransferPreferences: FileTransferPreferences? = null,
+    private val fileTransferPreferences: FileTransferPreferences,
 ) {
     fun create(componentContext: ComponentContext): RootComponent =
         RootComponent(

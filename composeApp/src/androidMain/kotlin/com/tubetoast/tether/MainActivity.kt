@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -38,12 +39,14 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
-        val granted = ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.POST_NOTIFICATIONS,
-        ) == PackageManager.PERMISSION_GRANTED
-        if (!granted) {
-            notificationPermissionRequest.launch(Manifest.permission.POST_NOTIFICATIONS)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val granted = ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS,
+            ) == PackageManager.PERMISSION_GRANTED
+            if (!granted) {
+                notificationPermissionRequest.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
         }
 
         startService()
@@ -106,13 +109,15 @@ class MainActivity : ComponentActivity() {
         // Identity-based guard: same Intent object (same hash) after rotation → skip re-parse.
         // After process death the Intent is recreated, so the hash differs → safe to re-parse.
         if (lastHash != null && intent.hashCode() == lastHash) return
-        val sources = ShareIntentParser.parse(intent, contentResolver)
-        if (sources.isEmpty()) return
-        val summary = PendingFilesSummary(
-            fileCount = sources.size,
-            totalBytes = sources.sumOf { it.sizeBytes ?: 0L },
-        )
-        container.pendingFilesRepository.setPending(summary, sources)
+        container.appScope.launch {
+            val sources = ShareIntentParser.parse(intent, contentResolver)
+            if (sources.isEmpty()) return@launch
+            val summary = PendingFilesSummary(
+                fileCount = sources.size,
+                totalBytes = sources.sumOf { it.sizeBytes ?: 0L },
+            )
+            container.pendingFilesRepository.setPending(summary, sources)
+        }
     }
 
     /**

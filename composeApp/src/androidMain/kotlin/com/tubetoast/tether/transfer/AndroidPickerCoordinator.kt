@@ -11,7 +11,7 @@ import kotlinx.coroutines.CompletableDeferred
  * Lives in AndroidAppContainer. If a new pick starts while one is already in flight, the
  * prior deferred is cancelled.
  *
- * Launchers are updated by [MainActivity.onCreate] before any pick is triggered.
+ * Launchers must be set (via [updateLaunchers]) before any pick is triggered.
  * [launchFiles], [launchFolder], [launchPhotos] return null when the launcher is absent;
  * callers must fail the deferred immediately in that case rather than waiting.
  */

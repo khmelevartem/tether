@@ -1,17 +1,17 @@
 package com.tubetoast.tether.transfer
 
 import android.content.ContentResolver
+import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.documentfile.provider.DocumentFile
-import com.tubetoast.tether.di.ActivityProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 class AndroidFilePicker(
-    private val activityProvider: ActivityProvider,
-    val coordinator: AndroidPickerCoordinator,
+    private val coordinator: AndroidPickerCoordinator,
     private val contentResolver: ContentResolver,
+    private val appContext: Context,
 ) : FilePicker {
     override suspend fun pickFiles(): List<FileSource> {
         val deferred = coordinator.begin()
@@ -41,8 +41,7 @@ class AndroidFilePicker(
         uris.map { uri -> AndroidUriFileSource(uri, contentResolver, resolveDisplayName(uri)) }
 
     suspend fun resolveTree(treeUri: Uri): List<FileSource> {
-        val activity = checkNotNull(activityProvider.current) { "AndroidFilePicker: no Activity resumed" }
-        val root = DocumentFile.fromTreeUri(activity, treeUri) ?: return emptyList()
+        val root = DocumentFile.fromTreeUri(appContext, treeUri) ?: return emptyList()
         return withContext(Dispatchers.IO) { collectVisible(root, "") }
     }
 

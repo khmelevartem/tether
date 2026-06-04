@@ -4,6 +4,7 @@ import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.resume
 import com.tubetoast.tether.peer.Peer
+import com.tubetoast.tether.preferences.FakeFileTransferPreferences
 import com.tubetoast.tether.preferences.FakePeerPreferencesStore
 import com.tubetoast.tether.presentation.banners.PeerConflictRelay
 import com.tubetoast.tether.protocol.Device
@@ -76,6 +77,7 @@ class TransferDetailsComponentTest {
             pendingFilesRepository = PendingFilesRepository(),
             filePicker = FakeFilePicker(result = emptyList()),
             conflictRelay = PeerConflictRelay(),
+            fileTransferPreferences = FakeFileTransferPreferences(),
         )
     }
 

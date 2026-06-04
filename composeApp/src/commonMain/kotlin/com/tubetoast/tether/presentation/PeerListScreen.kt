@@ -29,6 +29,7 @@ import com.composables.core.rememberModalBottomSheetState
 import com.tubetoast.tether.foundation.IsMobileChooserPlatform
 import com.tubetoast.tether.peer.Peer
 import com.tubetoast.tether.presentation.banners.BannersSection
+import com.tubetoast.tether.presentation.banners.PendingOutboundBanner
 import com.tubetoast.tether.presentation.banners.PendingOutboundBannerState
 import com.tubetoast.tether.presentation.dialogs.LargeSelectionConfirmDialog
 import com.tubetoast.tether.presentation.peercard.PeerCard
@@ -38,6 +39,7 @@ import com.tubetoast.tether.presentation.sheets.MobilePickerChooserSheet
 import com.tubetoast.tether.presentation.transfer.PeerCardState
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.transfer.PeerTransferState
+import com.tubetoast.tether.transfer.PendingFilesSummary
 import com.tubetoast.tether.transfer.PickKind
 import com.tubetoast.tether.transfer.toPeerIdentity
 import com.tubetoast.tether.ui.designsystem.BodyText
@@ -231,6 +233,16 @@ private fun PeerListContentPreview(
     val spacing = TetherTheme.spacing
 
     Column(modifier = Modifier.fillMaxSize()) {
+        if (hasPendingOutbound) {
+            PendingOutboundBanner(
+                state = PendingOutboundBannerState.Default(
+                    summary = PendingFilesSummary(fileCount = 2, totalBytes = 10_485_760L),
+                    dropFeedback = false,
+                ),
+                onCancel = {},
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
         if (specs.isEmpty()) {
             Column(
                 modifier = Modifier.fillMaxSize(),

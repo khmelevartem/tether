@@ -2,9 +2,10 @@ package com.tubetoast.tether.network
 
 import android.content.ContentResolver
 import android.net.Uri
+import android.provider.MediaStore
 import com.tubetoast.tether.TetherApp
 import io.ktor.utils.io.ByteReadChannel
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -13,6 +14,7 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows
 import org.robolectric.annotation.Config
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 @RunWith(RobolectricTestRunner::class)
@@ -27,8 +29,6 @@ class AndroidFileServerWiringTest {
         Shadows.shadowOf(contentResolver)
     }
 
-    // real CIO server — CIOApplicationEngine hardcodes real-thread dispatchers
-    @Suppress("ktlint:tether:no-run-blocking-in-tests")
     @Test
     fun `resolveDestination inserts a row and returns a handle with the URI, or throws on null insert`() {
         // Robolectric's shadow ContentResolver returns null for insert by default.
@@ -40,10 +40,8 @@ class AndroidFileServerWiringTest {
         )
     }
 
-    // real CIO server — CIOApplicationEngine hardcodes real-thread dispatchers
-    @Suppress("ktlint:tether:no-run-blocking-in-tests")
     @Test
-    fun `writeBody streams bytes and clears IS_PENDING`() {
+    fun `writeBody streams bytes and clears IS_PENDING`() = runTest {
         val fakeUri = Uri.parse("content://media/external/downloads/99")
         val outputStream = java.io.ByteArrayOutputStream()
         Shadows.shadowOf(contentResolver).registerOutputStream(fakeUri, outputStream)
@@ -52,40 +50,42 @@ class AndroidFileServerWiringTest {
         val bytes = "hello".toByteArray()
         val channel = ByteReadChannel(bytes)
 
-        runBlocking {
-            val written = storage.writeBody(channel, handle)
-            assertEquals(bytes.size.toLong(), written)
-        }
+        val written = storage.writeBody(channel, handle)
+        assertEquals(bytes.size.toLong(), written)
         assertEquals("hello", outputStream.toString(Charsets.UTF_8.name()))
+
+        val updates = Shadows.shadowOf(contentResolver).getUpdateStatements()
+        val pendingClear = updates.lastOrNull { it.uri == fakeUri }
+        checkNotNull(pendingClear) { "expected an update for $fakeUri but none found" }
+        assertEquals(
+            0,
+            pendingClear.contentValues.getAsInteger(MediaStore.Downloads.IS_PENDING),
+            "IS_PENDING must be cleared to 0 after writeBody",
+        )
     }
 
-    // real CIO server — CIOApplicationEngine hardcodes real-thread dispatchers
-    @Suppress("ktlint:tether:no-run-blocking-in-tests")
     @Test
     fun `abort deletes the MediaStore row`() {
         val fakeUri = Uri.parse("content://media/external/downloads/77")
         val handle = UploadHandle(destination = fakeUri.toString(), createdDirs = emptyList())
-        // No exception expected — shadow ContentResolver silently absorbs the delete
         storage.abort(handle)
+
+        val deletedUris = Shadows.shadowOf(contentResolver).deletedUris
+        assertTrue(deletedUris.contains(fakeUri), "abort must delete the MediaStore row URI")
     }
 
-    // real CIO server — CIOApplicationEngine hardcodes real-thread dispatchers
-    @Suppress("ktlint:tether:no-run-blocking-in-tests")
     @Test
-    fun `writeBody handles null openOutputStream guard via subclass`() {
-        // Robolectric's ShadowContentResolver never returns null from openOutputStream —
-        // it provides a default stream for every URI. The null-guard in writeBody is exercised
-        // in production when the MediaStore entry was deleted between resolveDestination and writeBody.
-        // Here we verify the guard compiles and the happy path completes successfully instead.
-        val fakeUri = Uri.parse("content://media/external/downloads/guarded")
-        val outputStream = java.io.ByteArrayOutputStream()
-        Shadows.shadowOf(contentResolver).registerOutputStream(fakeUri, outputStream)
-
+    fun `writeBody throws when openOutputStream returns null`() = runTest {
+        // Exercises the ?: error(...) guard — real failure mode: row deleted between
+        // resolveDestination and writeBody.
+        val fakeUri = Uri.parse("content://media/external/downloads/null-stream")
+        val nullOutputStorage = AndroidMediaStoreUploadStorage(
+            contentResolver = contentResolver,
+            openOutput = { null },
+        )
         val handle = UploadHandle(destination = fakeUri.toString(), createdDirs = emptyList())
-        val channel = ByteReadChannel("guard-test".toByteArray())
-        runBlocking {
-            val written = storage.writeBody(channel, handle)
-            assertEquals("guard-test".toByteArray().size.toLong(), written)
+        assertFailsWith<IllegalStateException> {
+            nullOutputStorage.writeBody(ByteReadChannel(byteArrayOf()), handle)
         }
     }
 }

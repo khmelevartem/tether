@@ -44,7 +44,7 @@ class PeerTransferComponent(
     private val pendingFilesRepository: PendingFilesRepository,
     private val filePicker: FilePicker,
     private val conflictRelay: PeerConflictRelay,
-    private val fileTransferPreferences: FileTransferPreferences? = null,
+    private val fileTransferPreferences: FileTransferPreferences,
 ) : ComponentContext by componentContext {
     // TODO(#332): read from peer.device.deviceType once Device carries the field
     val deviceType: DeviceType? = null
@@ -55,14 +55,14 @@ class PeerTransferComponent(
 
     private val showDetailsCallback = onShowDetails
     private val expanded = MutableStateFlow(false)
-    private val _largeConfirm = MutableStateFlow<PendingLargeConfirm?>(null)
+    private val largeConfirm = MutableStateFlow<PendingLargeConfirm?>(null)
     private val mutableState = MutableValue(
-        PeerCardState(engine.state.value, expanded.value, _largeConfirm.value),
+        PeerCardState(engine.state.value, expanded.value, largeConfirm.value),
     )
     val state: Value<PeerCardState> = mutableState
 
     init {
-        combine(engine.state, expanded, _largeConfirm) { transfer, exp, confirm ->
+        combine(engine.state, expanded, largeConfirm) { transfer, exp, confirm ->
             mutableState.update { PeerCardState(transfer, exp, confirm) }
         }.launchIn(scope)
     }
@@ -91,20 +91,20 @@ class PeerTransferComponent(
     }
 
     fun onConfirmLargeSelection(dontShowAgain: Boolean) {
-        val confirm = _largeConfirm.value ?: return
-        _largeConfirm.value = null
+        val confirm = largeConfirm.value ?: return
+        largeConfirm.value = null
         if (dontShowAgain) {
-            scope.launch { fileTransferPreferences?.setLargeSelectionWarning(false) }
+            scope.launch { fileTransferPreferences.setLargeSelectionWarning(false) }
         }
         dispatchSend(confirm.sources)
     }
 
     fun onUpdateLargeConfirmDontShowAgain(checked: Boolean) {
-        _largeConfirm.update { it?.copy(dontShowAgain = checked) }
+        largeConfirm.update { it?.copy(dontShowAgain = checked) }
     }
 
     fun onDismissLargeSelection() {
-        _largeConfirm.value = null
+        largeConfirm.value = null
     }
 
     private fun sendOrConfirmLarge(
@@ -112,13 +112,13 @@ class PeerTransferComponent(
         clearOnSuccess: Pending? = null,
     ) {
         scope.launch {
-            val warningEnabled = fileTransferPreferences?.observeLargeSelectionWarning()?.first() ?: true
+            val warningEnabled = fileTransferPreferences.observeLargeSelectionWarning().first()
             val summary = PendingFilesSummary(
                 fileCount = sources.size,
                 totalBytes = sources.sumOf { it.sizeBytes ?: 0L },
             )
-            if (warningEnabled && exceedsLargeSelectionThreshold(summary)) {
-                _largeConfirm.value = PendingLargeConfirm(sources, summary)
+            if (warningEnabled && summary.isLargeSelection) {
+                largeConfirm.value = PendingLargeConfirm(sources, summary)
             } else {
                 dispatchSend(sources, clearOnSuccess)
             }
@@ -154,12 +154,4 @@ class PeerTransferComponent(
     fun setAutoSend(enabled: Boolean) = engine.setAutoSend(enabled)
 
     fun onShowDetails() = showDetailsCallback(peer.id)
-
-    companion object {
-        private const val LARGE_FILE_COUNT = 500
-        private const val LARGE_TOTAL_BYTES = 2L * 1024 * 1024 * 1024 // 2 GB
-
-        fun exceedsLargeSelectionThreshold(summary: PendingFilesSummary): Boolean =
-            summary.fileCount > LARGE_FILE_COUNT || summary.totalBytes > LARGE_TOTAL_BYTES
-    }
 }

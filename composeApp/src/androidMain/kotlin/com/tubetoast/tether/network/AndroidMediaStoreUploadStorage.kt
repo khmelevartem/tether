@@ -17,6 +17,7 @@ private val log = KydraLog.withTag(default = "Tether.Upload.MediaStore")
 
 internal class AndroidMediaStoreUploadStorage(
     private val contentResolver: ContentResolver,
+    private val openOutput: (Uri) -> java.io.OutputStream? = contentResolver::openOutputStream,
 ) : UploadStorage {
     override fun ensureRoot() = Unit
 
@@ -41,7 +42,7 @@ internal class AndroidMediaStoreUploadStorage(
 
     override suspend fun writeBody(body: ByteReadChannel, handle: UploadHandle): Long {
         val uri = Uri.parse(handle.destination)
-        val stream = contentResolver.openOutputStream(uri)
+        val stream = openOutput(uri)
             ?: error("MediaStore: failed to open OutputStream for $uri")
         var bytesWritten = 0L
         withContext(Dispatchers.IO) {

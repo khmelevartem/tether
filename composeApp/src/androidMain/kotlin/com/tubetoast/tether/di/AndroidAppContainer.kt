@@ -64,9 +64,9 @@ class AndroidAppContainer(
     val pickerCoordinator: AndroidPickerCoordinator = AndroidPickerCoordinator()
 
     val androidFilePicker: AndroidFilePicker = AndroidFilePicker(
-        activityProvider = activityProvider,
         coordinator = pickerCoordinator,
         contentResolver = application.contentResolver,
+        appContext = application,
     )
 
     override val filePicker: FilePicker = androidFilePicker

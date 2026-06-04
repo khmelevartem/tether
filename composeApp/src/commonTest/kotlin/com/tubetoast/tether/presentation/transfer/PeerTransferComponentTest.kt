@@ -5,6 +5,7 @@ import com.arkivanov.essenty.lifecycle.Lifecycle
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.resume
 import com.tubetoast.tether.peer.Peer
+import com.tubetoast.tether.preferences.FakeFileTransferPreferences
 import com.tubetoast.tether.preferences.FakePeerPreferencesStore
 import com.tubetoast.tether.presentation.banners.PeerConflictRelay
 import com.tubetoast.tether.protocol.Device
@@ -80,6 +81,7 @@ class PeerTransferComponentTest {
             pendingFilesRepository = pendingFilesRepository,
             filePicker = filePicker,
             conflictRelay = conflictRelay,
+            fileTransferPreferences = FakeFileTransferPreferences(),
         )
         return component to lifecycle
     }
@@ -173,6 +175,7 @@ class PeerTransferComponentTest {
             pendingFilesRepository = repo,
             filePicker = FakeFilePicker(result = emptyList()),
             conflictRelay = relay,
+            fileTransferPreferences = FakeFileTransferPreferences(),
         )
 
         engine.startOutbound(listOf(FakeFileSource("in-flight.txt", 50L)))
@@ -293,6 +296,7 @@ class PeerTransferComponentTest {
             pendingFilesRepository = repo,
             filePicker = picker,
             conflictRelay = relay,
+            fileTransferPreferences = FakeFileTransferPreferences(),
         )
 
         engine.startOutbound(listOf(FakeFileSource("in-flight.txt", 50L)))
@@ -413,6 +417,7 @@ class PeerTransferComponentTest {
             pendingFilesRepository = PendingFilesRepository(),
             filePicker = FakeFilePicker(result = emptyList()),
             conflictRelay = PeerConflictRelay(),
+            fileTransferPreferences = FakeFileTransferPreferences(),
         )
 
         componentA.startOutbound(listOf(FakeFileSource("file.txt", 100L)))
@@ -433,6 +438,7 @@ class PeerTransferComponentTest {
             pendingFilesRepository = PendingFilesRepository(),
             filePicker = FakeFilePicker(result = emptyList()),
             conflictRelay = PeerConflictRelay(),
+            fileTransferPreferences = FakeFileTransferPreferences(),
         )
         runCurrent()
 

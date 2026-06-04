@@ -7,6 +7,7 @@ import com.arkivanov.essenty.lifecycle.resume
 import com.arkivanov.essenty.statekeeper.StateKeeperDispatcher
 import com.tubetoast.tether.discovery.FakeDeviceDiscovery
 import com.tubetoast.tether.peer.PeersRepository
+import com.tubetoast.tether.preferences.FakeFileTransferPreferences
 import com.tubetoast.tether.preferences.FakePeerPreferencesStore
 import com.tubetoast.tether.presentation.banners.BannersComponent
 import com.tubetoast.tether.presentation.banners.PeerConflictRelay
@@ -258,6 +259,7 @@ class RootComponentTest {
                             pendingFilesRepository = pendingFilesRepository,
                             filePicker = filePicker,
                             conflictRelay = PeerConflictRelay(),
+                            fileTransferPreferences = FakeFileTransferPreferences(),
                         )
                     },
                     bannersComponentFactory = { bannersCtx ->
