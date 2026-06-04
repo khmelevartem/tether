@@ -92,6 +92,8 @@ Stop and wait for answers. Do NOT proceed to Step 4 with unanswered questions or
 
 After answers arrive, pick the option that satisfies the answered constraints. Re-verify any factual claim the user relied on. The converged design now exists as: **one chosen mechanism + the trade-offs it accepts + the alternatives it rejects with one-line reasons each**.
 
+If the chosen mechanism's correctness rests on an unverified assumption about platform or third-party-library runtime behaviour (callback timing, sync-vs-async delivery, ordering guarantees), do not pass it down as a tension for the coder to discover — flag it as a **verify-before-building** item. Validate it now via the authoritative source or a cheap throwaway probe, or hand it to the orchestrator's approach-fork empirical gate, so a full implementation cycle is never spent on an assumption a quick check would have falsified.
+
 If during convergence you realise the palette was incomplete or the answers reveal a constraint nobody saw at Step 1 — go back to Step 2 with the new constraint. Don't paper over.
 
 ### Step 5 — Decide artifact scope
