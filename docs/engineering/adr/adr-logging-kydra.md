@@ -107,13 +107,11 @@ The eight sub-decisions called out by #74 resolve as follows:
 
 ## Amendment 2026-06-04
 
-The two Desktop (JVM) entry points route the KydraLog subsystem logger differently, because their relationship to the console differs.
+On Desktop the CLI console logger is off by default — silent at every level — while the Compose UI keeps its INFO default. When the CLI logger is enabled it targets stderr, leaving stdout for the CLI's product output (KydraLog's stock JVM writer targets stdout, see References).
 
-The **CLI** console logger is off by default: a no-op writer is installed at startup, so nothing is written at any level — including ERROR and WARNING — and KydraLog's auto-init path cannot print either. The console then carries only the CLI's bracketed product output on stdout. The debug knob (`TETHER_LOG_DEBUG` / `tether.log.debug`) turns the CLI logger on at DEBUG; once on, the writer targets **stderr** by default, leaving stdout for product output.
+This refines sub-decision 4: the debug knob's effect on Desktop is entry-point-specific — on/off for the CLI, level-select (INFO→DEBUG) for the Compose UI — amending its "same DEBUG-on flag in code" clause. The separate `TETHER_LOG_STDOUT` / `tether.log.stdout` stream toggle selects stream, not level, and is orthogonal to that gating mechanism.
 
-The **Compose UI** and the native-sink platforms keep their level default with the sink always active — INFO on Desktop, the debug knob selecting DEBUG over it. The Compose UI writer targets stderr; it has no stdout product channel, so operator-visible diagnostics there are harmless.
-
-KydraLog's stock JVM writer prints to stdout (Cost #2 already notes subsystem logs are not generically on stderr), so a custom writer is needed for both the no-op default and the stderr-targeted on state. A Desktop-wide toggle (env var / system-property pair) optionally moves the subsystem stream onto stdout when the logger is on — selecting the writer's stream, not its level, so sub-decision 4's one-gating-mechanism rule is untouched. The off-by-default behaviour is CLI-only: the debug knob means on/off for the CLI console logger and level selection for the Compose UI, because the CLI is an interactive foreground tool whose stdout is product output. The stream default, the off-by-default console, and the toggle are specified in [logging.md](../logging.md) §Desktop streams.
+The full present-tense rules are in [logging.md](../logging.md) §Desktop streams.
 
 ## References
 
