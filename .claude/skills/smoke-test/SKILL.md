@@ -111,6 +111,14 @@ Regression guard for #346. macOS `mDNSResponder` canonicalises duplicate service
 
 Prerequisite: Block 3 (three CLIs alive — A, B, and C reusing A's name). FAIL → attach the last `[peers]` lines from all three logs in Details.
 
+### Block 3.2: Same-name distinguishability
+
+Run: `./block-3.2-same-name-distinct.sh`
+
+Regression guard for #368. The mDNS-canonical `(N)` suffix recorded on discovery must survive the subsequent `/hello` exchange — assertion: in each CLI's last `[peers]` line, no two peers share the same display name. Complements Block 3.1 (which guards the same scenario against host:port merges).
+
+Prerequisite: Block 3 (three CLIs alive — A, B, and C reusing A's name). FAIL → attach the last `[peers]` lines from all three logs in Details.
+
 ### Block 3.5: Device name rename
 
 Run: `./block-3.5-rename.sh`
