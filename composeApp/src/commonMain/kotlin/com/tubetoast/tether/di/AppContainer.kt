@@ -15,6 +15,7 @@ import com.tubetoast.tether.identity.FingerprintPersistence
 import com.tubetoast.tether.network.DefaultTransferActivityTracker
 import com.tubetoast.tether.network.FileClient
 import com.tubetoast.tether.network.FileServer
+import com.tubetoast.tether.network.PeerFileSender
 import com.tubetoast.tether.network.TransferActivityTracker
 import com.tubetoast.tether.peer.PeersRepository
 import com.tubetoast.tether.preferences.DefaultPeerPreferencesStore
@@ -23,7 +24,6 @@ import com.tubetoast.tether.preferences.PeerPreferencesStore
 import com.tubetoast.tether.presentation.RootComponentFactory
 import com.tubetoast.tether.presentation.banners.PeerConflictRelay
 import com.tubetoast.tether.protocol.DeviceType
-import com.tubetoast.tether.protocol.SendResult
 import com.tubetoast.tether.security.DefaultTrustedDeviceStore
 import com.tubetoast.tether.security.TrustedDeviceStore
 import com.tubetoast.tether.transfer.AutoSendDispatcher
@@ -34,10 +34,8 @@ import com.tubetoast.tether.transfer.NoOpConnectionMonitor
 import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PeerTransferEngine
 import com.tubetoast.tether.transfer.PeerTransferEngineRegistry
-import com.tubetoast.tether.transfer.PeerUnreachableException
 import com.tubetoast.tether.transfer.PendingFilesRepository
 import com.tubetoast.tether.transfer.ReconnectionTimeout
-import com.tubetoast.tether.transfer.toPeerIdentity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -74,32 +72,13 @@ abstract class AppContainer {
 
     open val connectionMonitor: ConnectionMonitor = NoOpConnectionMonitor
 
+    open val peerFileSender: PeerFileSender by lazy { PeerFileSender(fileClient, discoveredDevicesStore) }
+
     // Factory: BatchSender holds per-transfer state — one instance per concurrent peer transfer.
     open val batchSenderFactory: (PeerIdentity) -> BatchSender by lazy {
         { peer ->
             BatchSender(
-                sendOne = { source, onProgress ->
-                    val device = discoveredDevicesStore.devices.value
-                        .firstOrNull { it.toPeerIdentity() == peer }
-                        ?: throw PeerUnreachableException()
-                    try {
-                        // FileClient.send folds all failures into SendResult.Failure — re-raise as typed.
-                        when (
-                            val result = fileClient.send(
-                                device = device,
-                                channel = source.openReadChannel(),
-                                fileName = source.name,
-                                totalBytes = source.sizeBytes,
-                                onProgress = onProgress,
-                            )
-                        ) {
-                            is SendResult.Success -> Unit
-                            is SendResult.Failure -> throw PeerUnreachableException(RuntimeException(result.reason))
-                        }
-                    } finally {
-                        source.close()
-                    }
-                },
+                sendOne = { source, onProgress -> peerFileSender.send(peer, source, onProgress) },
                 connectionMonitor = connectionMonitor,
             )
         }
