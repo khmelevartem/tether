@@ -1,6 +1,11 @@
 package com.tubetoast.tether
 
 import com.tubetoast.tether.protocol.Device
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -26,83 +31,22 @@ class CliPeersIdsTest {
     }
 
     @Test
-    fun `first emission is always rendered`() {
-        val lines = mutableListOf<String>()
-        var lastIds: String? = null
-
-        fun emit(peers: List<Device>) {
-            val ids = peersIds(peers)
-            if (ids != lastIds) {
-                lastIds = ids
-                lines += "[peers] $ids"
-            }
-        }
-
-        val alpha = device("alpha")
-        emit(listOf(alpha))
-
-        assertEquals(listOf("[peers] ${alpha.id}"), lines)
-    }
-
-    @Test
-    fun `identical consecutive emission is suppressed`() {
-        val lines = mutableListOf<String>()
-        var lastIds: String? = null
-
-        fun emit(peers: List<Device>) {
-            val ids = peersIds(peers)
-            if (ids != lastIds) {
-                lastIds = ids
-                lines += "[peers] $ids"
-            }
-        }
-
-        val alpha = device("alpha")
-        emit(listOf(alpha))
-        emit(listOf(alpha))
-
-        assertEquals(listOf("[peers] ${alpha.id}"), lines)
-    }
-
-    @Test
-    fun `changed peer set emits again`() {
-        val lines = mutableListOf<String>()
-        var lastIds: String? = null
-
-        fun emit(peers: List<Device>) {
-            val ids = peersIds(peers)
-            if (ids != lastIds) {
-                lastIds = ids
-                lines += "[peers] $ids"
-            }
-        }
-
+    fun `pipeline deduplicates consecutive identical peer sets`() = runTest {
         val alpha = device("alpha", port = 1)
         val beta = device("beta", port = 2)
-        emit(listOf(alpha))
-        emit(listOf(alpha))
-        emit(listOf(alpha, beta))
 
-        assertEquals(listOf("[peers] ${alpha.id}", "[peers] ${alpha.id}, ${beta.id}"), lines)
-    }
+        val result = flowOf(
+            listOf(alpha),
+            listOf(alpha),
+            listOf(alpha, beta),
+            emptyList(),
+        ).map { peersIds(it) }
+            .distinctUntilChanged()
+            .toList()
 
-    @Test
-    fun `peers going empty emits none`() {
-        val lines = mutableListOf<String>()
-        var lastIds: String? = null
-
-        fun emit(peers: List<Device>) {
-            val ids = peersIds(peers)
-            if (ids != lastIds) {
-                lastIds = ids
-                lines += "[peers] $ids"
-            }
-        }
-
-        val alpha = device("alpha")
-        emit(listOf(alpha))
-        emit(emptyList())
-
-        assertEquals(listOf("[peers] ${alpha.id}", "[peers] none"), lines)
+        assertEquals(
+            listOf(alpha.id, "${alpha.id}, ${beta.id}", "none"),
+            result,
+        )
     }
 }

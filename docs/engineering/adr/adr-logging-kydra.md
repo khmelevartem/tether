@@ -107,7 +107,7 @@ The eight sub-decisions called out by #74 resolve as follows:
 
 ## Amendment 2026-06-04
 
-The Desktop CLI routes KydraLog subsystem output to **stderr**, leaving stdout for product output. KydraLog's stock JVM writer prints to stdout (Cost #2 already notes subsystem logs are not generically on stderr); the CLI installs a stderr-targeting writer at its initialisation point to achieve the split. A CLI-local toggle (env var / system-property pair) optionally moves the subsystem stream onto stdout for an operator who watches that channel — a sink choice, not a level filter, so sub-decision 4's one-gating-mechanism rule is untouched. The stream split and toggle are specified in [logging.md](../logging.md) §CLI streams; this amendment does not alter the original decision or its accepted costs.
+The Desktop (JVM) KydraLog writer targets **stderr** by default for both Desktop entry points — the CLI and the Compose UI — leaving stdout for product output. KydraLog's stock JVM writer prints to stdout (Cost #2 already notes subsystem logs are not generically on stderr); the Desktop writer targets stderr at its initialisation point to achieve the split. The split is motivated by the CLI: it is the entry point that emits bracketed product output on stdout, which diagnostics must not corrupt. The Compose UI has no stdout product channel and inherits the same stderr routing harmlessly. A Desktop-wide toggle (env var / system-property pair) optionally moves the subsystem stream onto stdout for an operator who watches that channel — selecting the writer's stream, not its level, so sub-decision 4's one-gating-mechanism rule is untouched. The stream default and toggle are specified in [logging.md](../logging.md) §Desktop streams.
 
 ## References
 

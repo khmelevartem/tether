@@ -24,15 +24,19 @@ fun isDebugEnabled(): Boolean =
     System.getProperty("tether.log.debug")?.toBooleanStrictOrNull() == true ||
         System.getenv("TETHER_LOG_DEBUG")?.toBooleanStrictOrNull() == true
 
-fun logToStdout(): Boolean =
+private fun logToStdout(): Boolean =
     System.getProperty("tether.log.stdout")?.toBooleanStrictOrNull() == true ||
         System.getenv("TETHER_LOG_STDOUT")?.toBooleanStrictOrNull() == true
+
+private class PrintStreamPrinter(
+    private val stream: PrintStream,
+) : Printer {
+    override fun print(message: String) = stream.println(message)
+}
 
 private class PrintStreamLogger(
     stream: PrintStream,
 ) : SimplePrintLogger(
-        printer = object : Printer {
-            override fun print(message: String) = stream.println(message)
-        },
+        printer = PrintStreamPrinter(stream),
         logMessageFormatter = JvmLogMessageFormatter(),
     )

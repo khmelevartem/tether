@@ -30,7 +30,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -123,14 +125,10 @@ class TetherCommand :
 
         val discovery = container.mdnsDiscovery
         launch {
-            var lastPeersIds: String? = null
-            discovery.discoveredDevices.collect { peers ->
-                val ids = peersIds(peers)
-                if (ids != lastPeersIds) {
-                    lastPeersIds = ids
-                    echo("[peers] $ids")
-                }
-            }
+            discovery.discoveredDevices
+                .map { peersIds(it) }
+                .distinctUntilChanged()
+                .collect { ids -> echo("[peers] $ids") }
         }
 
         val cliScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
