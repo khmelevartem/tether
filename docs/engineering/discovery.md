@@ -97,7 +97,7 @@ The endpoint is idempotent; repeated calls upsert. Mis-firing is harmless. The c
 
 ### Receiver behaviour
 
-On receipt, a device entry is built from the sender's TCP address, the announced port, and the fingerprint, then upserted. The address and port are always refreshed, but if the fingerprint is already in the store its existing name is preserved — so a name first recorded via mDNS (the canonical form) is not replaced by a peer's self-reported alias. The store keeps a single source-agnostic upsert; entries are not tagged by discovery source.
+On receipt, a device entry is built from the sender's TCP address, the announced port, and the fingerprint, then upserted. The address and port are always refreshed. For the display name, mDNS resolution is authoritative: it carries the conflict-resolved canonical name and overwrites the stored name on every resolve, even one a `/hello` set earlier. `/hello` supplies a name only for a peer not yet in the store and never overwrites an existing one — so a peer seen only over `/hello` (one-way visibility / hotspot, where no canonical name exists) still gets a usable name, while a peer mDNS has named keeps that name through later `/hello` exchanges. The store keeps a single source-agnostic upsert; this naming precedence lives in the callers, not in stored entries.
 
 ### Self-suppression
 
