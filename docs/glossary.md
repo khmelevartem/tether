@@ -18,6 +18,7 @@ User-facing concepts. The vocabulary [`spec-writer`](../.claude/agents/spec-writ
 - **Auto-send** — a per-peer opt-in that, when enabled and the peer is the sole online paired peer, sends incoming pending files immediately without a device-list tap. Toggle lives in the expanded PeerCard (see [file-transfer](product/features/file-transfer/)). _Avoid:_ quick send, instant send.
 - **Pending files** — files staged for a transfer that has not yet started, typically arriving via share-sheet or drag-drop while the user picks the target peer. Surfaced by the pending-outbound banner on the device list (see [file-transfer](product/features/file-transfer/)). _Avoid:_ queued files, staged files, awaiting files.
 - **Share-sheet** — the platform-provided UI surface a user invokes from another app to send selected files into Tether (Android share-sheet, iOS Share extension). On Tether's side the selection lands in pending files. _Avoid:_ share menu, share dialog.
+- **Large selection** — a staged send exceeding the warning thresholds (more than 500 files or 2 GB total), which prompts a one-time confirmation before sending; the user may suppress future prompts. _Avoid:_ big batch, bulk send. (see [file-transfer](product/features/file-transfer/))
 
 ## Technical
 

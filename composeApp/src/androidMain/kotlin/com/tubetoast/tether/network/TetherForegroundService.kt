@@ -54,7 +54,6 @@ class TetherForegroundService : LifecycleService() {
         val container = (application as AppContainerProvider).container
         val fileServer = container.fileServer
         val mdnsDiscovery = container.mdnsDiscovery
-        val downloadsDir = container.downloadsDir
 
         lifecycleScope.launch(Dispatchers.IO) {
             container.nameStore.init()
@@ -74,7 +73,7 @@ class TetherForegroundService : LifecycleService() {
                 return@launch
             }
             runningFileServer = fileServer
-            log.info { "FileServer started on port $port, downloads → ${downloadsDir.absolutePath}" }
+            log.info { "FileServer started on port $port" }
 
             try {
                 mdnsDiscovery.start(deviceName, port)

@@ -23,6 +23,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -338,6 +339,50 @@ class PeerTransferComponentTest {
         component.onConfirmLargeSelection(dontShowAgain = false)
         runCurrent()
 
+        assertIs<PeerTransferState.Sent>(component.state.value.transfer)
+        assertNull(component.state.value.largeConfirm)
+    }
+
+    @Test
+    fun `confirm with dontShowAgain suppresses the warning preference and sends`() = runTest {
+        val repo = PendingFilesRepository()
+        val bigSources = (1..501).map { FakeFileSource("f$it.txt", 100L) }
+        val picker = FakeFilePicker(result = bigSources)
+        val prefs = FakeFileTransferPreferences()
+        val lifecycle = LifecycleRegistry()
+        lifecycle.resume()
+        val engine = PeerTransferEngine(
+            peer = peer.id,
+            batchSenderFactory = fakeBatchSender(),
+            inboundEvents = MutableSharedFlow(),
+            scope = backgroundScope,
+            peerPreferencesStore = FakePeerPreferencesStore(),
+        )
+        val component = PeerTransferComponent(
+            componentContext = DefaultComponentContext(lifecycle),
+            peer = peer,
+            lifecycleRegistry = lifecycle,
+            engine = engine,
+            onShowDetails = {},
+            scope = backgroundScope,
+            pendingFilesRepository = repo,
+            filePicker = picker,
+            conflictRelay = PeerConflictRelay(),
+            fileTransferPreferences = prefs,
+        )
+
+        component.onPick(PickKind.Files)
+        runCurrent()
+        assertNotNull(component.state.value.largeConfirm)
+
+        component.onConfirmLargeSelection(dontShowAgain = true)
+        runCurrent()
+
+        assertEquals(
+            false,
+            prefs.observeLargeSelectionWarning().first(),
+            "dontShowAgain must suppress the large-selection warning",
+        )
         assertIs<PeerTransferState.Sent>(component.state.value.transfer)
         assertNull(component.state.value.largeConfirm)
     }

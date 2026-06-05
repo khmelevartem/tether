@@ -27,7 +27,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** Sources staged for send, pending user confirmation via LargeSelectionConfirmDialog. */
+/** Sources staged for send, pending user confirmation. */
 data class PendingLargeConfirm(
     val sources: List<FileSource>,
     val summary: PendingFilesSummary,
