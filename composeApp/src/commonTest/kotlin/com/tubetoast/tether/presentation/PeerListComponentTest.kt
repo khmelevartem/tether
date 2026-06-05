@@ -13,6 +13,7 @@ import com.tubetoast.tether.presentation.banners.BannersComponent
 import com.tubetoast.tether.presentation.banners.PeerConflictRelay
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.protocol.Device
+import com.tubetoast.tether.transfer.FakeFilePicker
 import com.tubetoast.tether.transfer.FakeFileSource
 import com.tubetoast.tether.transfer.PeerTransferEngine
 import com.tubetoast.tether.transfer.PeerTransferState
@@ -360,8 +361,7 @@ class PeerListComponentTest {
                     onShowDetails = {},
                     scope = coroutineScope,
                     pendingFilesRepository = PendingFilesRepository(),
-                    filePicker = com.tubetoast.tether.transfer
-                        .FakeFilePicker(result = emptyList()),
+                    filePicker = FakeFilePicker(result = emptyList()),
                     conflictRelay = PeerConflictRelay(),
                     fileTransferPreferences = FakeFileTransferPreferences(),
                 )
@@ -413,8 +413,7 @@ class PeerListComponentTest {
                     onShowDetails = {},
                     scope = coroutineScope,
                     pendingFilesRepository = PendingFilesRepository(),
-                    filePicker = com.tubetoast.tether.transfer
-                        .FakeFilePicker(result = emptyList()),
+                    filePicker = FakeFilePicker(result = emptyList()),
                     conflictRelay = PeerConflictRelay(),
                     fileTransferPreferences = FakeFileTransferPreferences(),
                 )

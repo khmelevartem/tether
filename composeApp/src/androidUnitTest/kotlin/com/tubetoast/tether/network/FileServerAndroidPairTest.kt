@@ -55,7 +55,10 @@ class FileServerAndroidPairTest {
         }
         val srv = FileServer(
             configuredPort = 0,
-            downloadsDir = tmpDir,
+            uploadStorage = FileUploadStorage(
+                root = tmpDir.absolutePath,
+                backend = JvmUploadStorageBackend(tmpDir.absolutePath),
+            ),
             trustedDeviceStore = throwingStore,
             deviceKeyPair = DeviceKeyPair(keyPairDir),
         )

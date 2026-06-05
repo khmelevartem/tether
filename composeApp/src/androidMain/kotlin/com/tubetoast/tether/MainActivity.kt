@@ -23,7 +23,7 @@ import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.warn
 import ru.pocketbyte.kydra.log.wrapper.withTag
 
-private val log = KydraLog.withTag(default = "Tether.MainActivity")
+private val log = KydraLog.withTag(default = "MainActivity")
 private const val KEY_LAST_SHARE_INTENT_HASH = "last_share_intent_hash"
 
 class MainActivity : ComponentActivity() {

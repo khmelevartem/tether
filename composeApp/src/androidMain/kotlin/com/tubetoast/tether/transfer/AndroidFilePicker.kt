@@ -14,25 +14,19 @@ class AndroidFilePicker(
 ) : FilePicker {
     override suspend fun pickFiles(): List<FileSource> {
         val deferred = coordinator.begin()
-        if (coordinator.launchFiles() == null) {
-            deferred.completeExceptionally(IllegalStateException("AndroidFilePicker: no file launcher attached"))
-        }
+        coordinator.launchFiles()
         return deferred.await()
     }
 
     override suspend fun pickFolder(): List<FileSource> {
         val deferred = coordinator.begin()
-        if (coordinator.launchFolder() == null) {
-            deferred.completeExceptionally(IllegalStateException("AndroidFilePicker: no folder launcher attached"))
-        }
+        coordinator.launchFolder()
         return deferred.await()
     }
 
     override suspend fun pickPhotos(): List<FileSource> {
         val deferred = coordinator.begin()
-        if (coordinator.launchPhotos() == null) {
-            deferred.completeExceptionally(IllegalStateException("AndroidFilePicker: no photos launcher attached"))
-        }
+        coordinator.launchPhotos()
         return deferred.await()
     }
 

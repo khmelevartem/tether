@@ -63,7 +63,10 @@ class FileServerTest {
             .also(cleanupPaths::add)
         val server = FileServer(
             configuredPort = 0,
-            downloadsDir = resolvedDownloads,
+            uploadStorage = FileUploadStorage(
+                root = resolvedDownloads.absolutePath,
+                backend = JvmUploadStorageBackend(resolvedDownloads.absolutePath),
+            ),
             trustedDeviceStore = DefaultTrustedDeviceStore(temp.dataStore),
             deviceKeyPair = DeviceKeyPair(configDir),
             tracker = tracker,

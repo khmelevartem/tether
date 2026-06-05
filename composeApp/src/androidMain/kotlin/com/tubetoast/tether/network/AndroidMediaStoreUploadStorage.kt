@@ -13,7 +13,7 @@ import ru.pocketbyte.kydra.log.error
 import ru.pocketbyte.kydra.log.info
 import ru.pocketbyte.kydra.log.wrapper.withTag
 
-private val log = KydraLog.withTag(default = "Tether.Upload.MediaStore")
+private val log = KydraLog.withTag(default = "Upload.MediaStore")
 
 internal class AndroidMediaStoreUploadStorage(
     private val contentResolver: ContentResolver,

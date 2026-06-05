@@ -3,6 +3,8 @@ package com.tubetoast.tether
 import com.tubetoast.tether.discovery.DiscoveredDevicesStore
 import com.tubetoast.tether.network.FileClient
 import com.tubetoast.tether.network.FileServer
+import com.tubetoast.tether.network.FileUploadStorage
+import com.tubetoast.tether.network.JvmUploadStorageBackend
 import com.tubetoast.tether.network.PeerFileSender
 import com.tubetoast.tether.preferences.FakePeerPreferencesStore
 import com.tubetoast.tether.preferences.TempDataStore
@@ -56,7 +58,10 @@ class CliSendTest {
         tempStore = TempDataStore()
         server = FileServer(
             configuredPort = 0,
-            downloadsDir = tmpDir,
+            uploadStorage = FileUploadStorage(
+                root = tmpDir.absolutePath,
+                backend = JvmUploadStorageBackend(tmpDir.absolutePath),
+            ),
             trustedDeviceStore = DefaultTrustedDeviceStore(tempStore.dataStore),
             deviceKeyPair = DeviceKeyPair(configDir),
         )

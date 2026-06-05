@@ -52,7 +52,10 @@ class FileServerConcurrencyTest {
         val temp = TempDataStore().also { cleanupTempStores += it }
         val server = FileServer(
             configuredPort = 0,
-            downloadsDir = downloadsDir,
+            uploadStorage = FileUploadStorage(
+                root = downloadsDir.absolutePath,
+                backend = JvmUploadStorageBackend(downloadsDir.absolutePath),
+            ),
             trustedDeviceStore = DefaultTrustedDeviceStore(temp.dataStore),
             deviceKeyPair = DeviceKeyPair(configDir),
         )

@@ -9,7 +9,10 @@ import com.tubetoast.tether.discovery.DiscoveredDevicesStore
 import com.tubetoast.tether.discovery.MdnsDiscovery
 import com.tubetoast.tether.identity.DataStoreFingerprintPersistence
 import com.tubetoast.tether.identity.FingerprintPersistence
+import com.tubetoast.tether.network.AppleUploadStorageBackend
 import com.tubetoast.tether.network.FileServer
+import com.tubetoast.tether.network.FileUploadStorage
+import com.tubetoast.tether.network.UploadStorage
 import com.tubetoast.tether.preferences.DefaultFileTransferPreferences
 import com.tubetoast.tether.preferences.FileTransferPreferences
 import com.tubetoast.tether.protocol.DeviceType
@@ -41,9 +44,14 @@ open class AppleAppContainer(
     override val namePersistence: DeviceNamePersistence = DefaultDeviceNamePersistence(dataStore)
     override val fingerprintPersistence: FingerprintPersistence = DataStoreFingerprintPersistence(dataStore)
     override val discoveredDevicesStore: DiscoveredDevicesStore = DiscoveredDevicesStore()
+    internal open val uploadStorage: UploadStorage by lazy {
+        val dir = defaultDownloadsDir()
+        FileUploadStorage(root = dir, backend = AppleUploadStorageBackend(dir))
+    }
     override val fileServer: FileServer by lazy {
         FileServer(
             configuredPort = 0,
+            uploadStorage = uploadStorage,
             trustedDeviceStore = trustedDeviceStore,
             deviceKeyPair = config.deviceKeyPair,
             tracker = transferActivityTracker,
@@ -89,4 +97,15 @@ private fun appSupportDir(): String {
 private fun documentsDir(): String {
     val paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, true)
     return paths.firstOrNull() as? String ?: ""
+}
+
+@OptIn(ExperimentalForeignApi::class)
+private fun defaultDownloadsDir(): String {
+    val docs = NSSearchPathForDirectoriesInDomains(
+        NSDocumentDirectory,
+        NSUserDomainMask,
+        true,
+    ).firstOrNull() as? String
+        ?: error("FileServer: NSDocumentDirectory unavailable")
+    return "$docs/Tether"
 }

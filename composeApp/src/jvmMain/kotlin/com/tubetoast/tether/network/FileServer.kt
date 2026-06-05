@@ -14,19 +14,17 @@ import ru.pocketbyte.kydra.log.error
 import ru.pocketbyte.kydra.log.info
 import ru.pocketbyte.kydra.log.withMessage
 import ru.pocketbyte.kydra.log.wrapper.withTag
-import java.io.File
 
 private val log = KydraLog.withTag(default = "FileServer")
 
 actual class FileServer internal constructor(
     private val configuredPort: Int,
-    private val downloadsDir: File = File(System.getProperty("user.home"), "Downloads/Tether"),
+    private val uploadStorage: UploadStorage,
     private val trustedDeviceStore: TrustedDeviceStore,
     private val deviceKeyPair: DeviceKeyPair,
     private val tracker: TransferActivityTracker = DefaultTransferActivityTracker(),
     private val deviceIdentityStore: DeviceIdentityStore? = null,
     private val discoveredDevicesStore: DiscoveredDevicesStore? = null,
-    private val uploadStorageFactory: (() -> UploadStorage)? = null,
 ) {
     private var server: EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration>? = null
 
@@ -35,18 +33,11 @@ actual class FileServer internal constructor(
 
     actual fun start(): Int {
         check(server == null) { "FileServer is already running" }
-        val factory = uploadStorageFactory ?: {
-            FileUploadStorage(
-                root = downloadsDir.absolutePath,
-                backend = JvmUploadStorageBackend(downloadsDir.absolutePath),
-            )
-        }
-        val storage = factory()
-        storage.ensureRoot()
+        uploadStorage.ensureRoot()
         val srv = try {
             embeddedServer(CIO, port = configuredPort) {
                 installFileServerRoutes(
-                    storage,
+                    uploadStorage,
                     trustedDeviceStore,
                     deviceKeyPair.publicKey,
                     tracker,
@@ -63,7 +54,7 @@ actual class FileServer internal constructor(
         // eliminating the TOCTOU race that would exist if we probed with ServerSocket(0) first.
         val resolvedPort = runBlocking { srv.engine.resolvedConnectors() }.first().port
         _port = resolvedPort
-        log.info { "started on port $resolvedPort, downloads → ${downloadsDir.absolutePath}" }
+        log.info { "started on port $resolvedPort" }
         return resolvedPort
     }
 

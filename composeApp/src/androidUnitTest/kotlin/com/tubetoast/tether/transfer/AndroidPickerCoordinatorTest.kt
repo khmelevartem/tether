@@ -41,21 +41,45 @@ class AndroidPickerCoordinatorTest {
     }
 
     @Test
-    fun `launchFiles returns null when no launcher is attached`() {
-        val result = coordinator.launchFiles()
-        assertEquals(null, result, "launchFiles must return null when no file launcher is attached")
+    fun `launchFiles fails the deferred when no launcher is attached`() = runTest {
+        val deferred = coordinator.begin()
+        coordinator.launchFiles()
+        assertTrue(
+            deferred.isCompleted,
+            "deferred must be completed (exceptionally) when no files launcher is attached",
+        )
+        assertTrue(
+            runCatching { deferred.await() }.exceptionOrNull() is IllegalStateException,
+            "deferred must complete with IllegalStateException",
+        )
     }
 
     @Test
-    fun `launchFolder returns null when no launcher is attached`() {
-        val result = coordinator.launchFolder()
-        assertEquals(null, result, "launchFolder must return null when no folder launcher is attached")
+    fun `launchFolder fails the deferred when no launcher is attached`() = runTest {
+        val deferred = coordinator.begin()
+        coordinator.launchFolder()
+        assertTrue(
+            deferred.isCompleted,
+            "deferred must be completed (exceptionally) when no folder launcher is attached",
+        )
+        assertTrue(
+            runCatching { deferred.await() }.exceptionOrNull() is IllegalStateException,
+            "deferred must complete with IllegalStateException",
+        )
     }
 
     @Test
-    fun `launchPhotos returns null when no launcher is attached`() {
-        val result = coordinator.launchPhotos()
-        assertEquals(null, result, "launchPhotos must return null when no photos launcher is attached")
+    fun `launchPhotos fails the deferred when no launcher is attached`() = runTest {
+        val deferred = coordinator.begin()
+        coordinator.launchPhotos()
+        assertTrue(
+            deferred.isCompleted,
+            "deferred must be completed (exceptionally) when no photos launcher is attached",
+        )
+        assertTrue(
+            runCatching { deferred.await() }.exceptionOrNull() is IllegalStateException,
+            "deferred must complete with IllegalStateException",
+        )
     }
 
     @Test

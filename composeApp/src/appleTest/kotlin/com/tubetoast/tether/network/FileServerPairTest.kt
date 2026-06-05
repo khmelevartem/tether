@@ -46,9 +46,13 @@ class FileServerPairTest {
         val temp = TempDataStore().also { cleanupTempStores += it }
         store = DefaultTrustedDeviceStore(temp.dataStore)
         keyPair = DeviceKeyPair(keychain = InMemoryKeychainStore())
+        val dir = newTempDir()
         server = FileServer(
             configuredPort = 0,
-            downloadsDir = newTempDir(),
+            uploadStorage = FileUploadStorage(
+                root = dir,
+                backend = AppleUploadStorageBackend(dir),
+            ),
             trustedDeviceStore = store,
             deviceKeyPair = keyPair,
         )
@@ -100,9 +104,13 @@ class FileServerPairTest {
 
             override suspend fun getPublicKey(deviceId: String): ByteArray? = null
         }
+        val failDir = newTempDir()
         val failServer = FileServer(
             configuredPort = 0,
-            downloadsDir = newTempDir(),
+            uploadStorage = FileUploadStorage(
+                root = failDir,
+                backend = AppleUploadStorageBackend(failDir),
+            ),
             trustedDeviceStore = throwingStore,
             deviceKeyPair = keyPair,
         )

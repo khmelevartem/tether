@@ -13,7 +13,7 @@ import ru.pocketbyte.kydra.log.warn
 import ru.pocketbyte.kydra.log.withMessage
 import ru.pocketbyte.kydra.log.wrapper.withTag
 
-private val log = KydraLog.withTag(default = "Tether.UriFileSource")
+private val log = KydraLog.withTag(default = "UriFileSource")
 
 internal class AndroidUriFileSource(
     private val uri: Uri,

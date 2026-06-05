@@ -13,8 +13,8 @@ import com.tubetoast.tether.identity.FingerprintPersistence
 import com.tubetoast.tether.network.AndroidMediaStoreUploadStorage
 import com.tubetoast.tether.network.AndroidTransferLockHolder
 import com.tubetoast.tether.network.DefaultTransferActivityTracker
-import com.tubetoast.tether.network.FileServer
 import com.tubetoast.tether.network.TransferActivityTracker
+import com.tubetoast.tether.network.UploadStorage
 import com.tubetoast.tether.preferences.DefaultFileTransferPreferences
 import com.tubetoast.tether.preferences.FileTransferPreferences
 import com.tubetoast.tether.protocol.DeviceType
@@ -59,6 +59,10 @@ class AndroidAppContainer(
     )
     override val ownDeviceType: DeviceType = DeviceType.Android
 
+    internal override val uploadStorage: UploadStorage by lazy {
+        AndroidMediaStoreUploadStorage(application.contentResolver)
+    }
+
     val pickerCoordinator: AndroidPickerCoordinator = AndroidPickerCoordinator()
 
     val androidFilePicker: AndroidFilePicker = AndroidFilePicker(
@@ -68,17 +72,4 @@ class AndroidAppContainer(
     )
 
     override val filePicker: FilePicker = androidFilePicker
-
-    override val fileServer: FileServer by lazy {
-        FileServer(
-            configuredPort = config.port,
-            downloadsDir = downloadsDir,
-            trustedDeviceStore = trustedDeviceStore,
-            deviceKeyPair = config.deviceKeyPair,
-            tracker = transferActivityTracker,
-            deviceIdentityStore = deviceIdentityStore,
-            discoveredDevicesStore = discoveredDevicesStore,
-            uploadStorageFactory = { AndroidMediaStoreUploadStorage(application.contentResolver) },
-        )
-    }
 }

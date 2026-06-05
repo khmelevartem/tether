@@ -12,8 +12,8 @@ import kotlinx.coroutines.CompletableDeferred
  * while one is already in flight, the prior deferred is cancelled.
  *
  * Launchers must be set (via [updateLaunchers]) before any pick is triggered.
- * [launchFiles], [launchFolder], [launchPhotos] return null when the launcher is absent;
- * callers must fail the deferred immediately in that case rather than waiting.
+ * [launchFiles], [launchFolder], [launchPhotos] fail the in-flight deferred immediately when
+ * no launcher is attached.
  */
 class AndroidPickerCoordinator {
     private var filesLauncher: ActivityResultLauncher<Array<String>>? = null
@@ -48,11 +48,26 @@ class AndroidPickerCoordinator {
     }
 
     @Synchronized
-    fun launchFiles(): Unit? = filesLauncher?.launch(arrayOf("*/*"))
+    fun launchFiles() {
+        filesLauncher?.launch(arrayOf("*/*"))
+            ?: inFlight?.completeExceptionally(
+                IllegalStateException("AndroidPickerCoordinator: no files launcher attached"),
+            )
+    }
 
     @Synchronized
-    fun launchFolder(): Unit? = folderLauncher?.launch(null)
+    fun launchFolder() {
+        folderLauncher?.launch(null)
+            ?: inFlight?.completeExceptionally(
+                IllegalStateException("AndroidPickerCoordinator: no folder launcher attached"),
+            )
+    }
 
     @Synchronized
-    fun launchPhotos(): Unit? = photosLauncher?.launch(PickVisualMediaRequest(PickVisualMedia.ImageAndVideo))
+    fun launchPhotos() {
+        photosLauncher?.launch(PickVisualMediaRequest(PickVisualMedia.ImageAndVideo))
+            ?: inFlight?.completeExceptionally(
+                IllegalStateException("AndroidPickerCoordinator: no photos launcher attached"),
+            )
+    }
 }

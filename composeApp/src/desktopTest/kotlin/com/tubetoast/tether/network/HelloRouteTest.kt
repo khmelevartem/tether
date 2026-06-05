@@ -56,7 +56,10 @@ class HelloRouteTest {
         val keyTemp = TempDataStore().also { cleanupTempStores += it }
         val server = FileServer(
             configuredPort = 0,
-            downloadsDir = downloadsDir,
+            uploadStorage = FileUploadStorage(
+                root = downloadsDir.absolutePath,
+                backend = JvmUploadStorageBackend(downloadsDir.absolutePath),
+            ),
             trustedDeviceStore = DefaultTrustedDeviceStore(keyTemp.dataStore),
             deviceKeyPair = DeviceKeyPair(configDir),
             deviceIdentityStore = identityStore,
