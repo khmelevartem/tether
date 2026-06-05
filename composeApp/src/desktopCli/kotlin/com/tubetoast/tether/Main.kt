@@ -70,8 +70,6 @@ class TetherCommand :
             append("Environment:\n```\n")
             append("TETHER_LOG_DEBUG=true       Show subsystem logs (off by default).\n")
             append("-Dtether.log.debug=true     Same, via JVM system property.\n")
-            append("TETHER_LOG_STDOUT=true      Route those logs to stdout instead of stderr.\n")
-            append("-Dtether.log.stdout=true    Same, via JVM system property.\n")
         },
     ) {
     private val nameOverride by option("--name", help = "Device name advertised via mDNS (persisted)")

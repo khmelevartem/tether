@@ -27,6 +27,8 @@ All these items must appear in the **"Manual verification required"** section of
 
 The FIFO keeps stdin open for `list`, `send`, `quit` commands. All blocks that launch a CLI instance follow this pattern — see `block-1-desktop-cli-a.sh` for the canonical form.
 
+Desktop CLI instances are launched with `TETHER_LOG_DEBUG=true` so logger lines (e.g. `hello from`, `announce →`) are captured in the log and available for assertions and diagnostics. Product lines (`[peers]`, `[send]`, `FileServer started`, `mDNS started`) are echoed regardless of this flag.
+
 ## Shell idioms for blocks
 
 Blocks run under `set -euo pipefail`. Commands that exit nonzero as a *normal* result — `grep` / `grep -c` with no match, glob expansion that matches nothing — then abort the script or feed a wrong value downstream. Two idioms keep blocks robust:

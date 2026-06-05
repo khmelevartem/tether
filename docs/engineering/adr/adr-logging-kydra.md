@@ -107,9 +107,9 @@ The eight sub-decisions called out by #74 resolve as follows:
 
 ## Amendment 2026-06-04
 
-On Desktop the CLI console logger is off by default — silent at every level — while the Compose UI keeps its INFO default. When the CLI logger is enabled it targets stderr, leaving stdout for the CLI's product output (KydraLog's stock JVM writer targets stdout, see References).
+On Desktop the CLI console logger is off by default — silent at every level — while the Compose UI keeps its INFO default.
 
-This refines sub-decision 4: the debug knob's effect on Desktop is entry-point-specific — on/off for the CLI, level-select (INFO→DEBUG) for the Compose UI — amending its "same DEBUG-on flag in code" clause. The separate `TETHER_LOG_STDOUT` / `tether.log.stdout` stream toggle selects stream, not level, and is orthogonal to that gating mechanism.
+This refines sub-decision 4: the debug knob's effect on Desktop is entry-point-specific — on/off for the CLI, level-select (INFO→DEBUG) for the Compose UI — amending its "same DEBUG-on flag in code" clause.
 
 The full present-tense rules are in [logging.md](../logging.md) §Desktop streams.
 
