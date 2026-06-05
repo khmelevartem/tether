@@ -9,8 +9,7 @@ import com.tubetoast.tether.config.EphemeralDeviceNamePersistence
 import com.tubetoast.tether.di.CliAppContainer
 import com.tubetoast.tether.di.DefaultDesktopAppConfig
 import com.tubetoast.tether.identity.EphemeralFingerprintPersistence
-import com.tubetoast.tether.logging.initTetherLogging
-import com.tubetoast.tether.logging.isDebugEnabled
+import com.tubetoast.tether.logging.initCliLogging
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.JvmPathFileSource
 import com.tubetoast.tether.transfer.PeerTransferEngine
@@ -23,7 +22,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -60,7 +61,7 @@ class TetherCommand :
         help = "Tether debug runner — local peer-to-peer file transfer over WiFi",
         epilog = buildString {
             append("Environment:\n```\n")
-            append("TETHER_LOG_DEBUG=true       Enable DEBUG-level logs.\n")
+            append("TETHER_LOG_DEBUG=true       Show subsystem logs (off by default).\n")
             append("-Dtether.log.debug=true     Same, via JVM system property.\n")
         },
     ) {
@@ -70,7 +71,7 @@ class TetherCommand :
         .int()
 
     override fun run() = runBlocking {
-        initTetherLogging(debugEnabled = isDebugEnabled())
+        initCliLogging()
 
         val activeEngineRef = AtomicReference<PeerTransferEngine?>(null)
 
@@ -114,10 +115,10 @@ class TetherCommand :
 
         val discovery = container.mdnsDiscovery
         launch {
-            discovery.discoveredDevices.collect { peers ->
-                val ids = if (peers.isEmpty()) "none" else peers.joinToString(", ") { it.id }
-                echo("[peers] $ids")
-            }
+            discovery.discoveredDevices
+                .map { peersIds(it) }
+                .distinctUntilChanged()
+                .collect { ids -> echo("[peers] $ids") }
         }
 
         val cliScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -400,5 +401,8 @@ fun parseTokens(line: String): List<String> {
     if (current.isNotEmpty()) tokens.add(current.toString())
     return tokens
 }
+
+fun peersIds(peers: List<Device>): String =
+    if (peers.isEmpty()) "none" else peers.joinToString(", ") { it.id }
 
 fun main(args: Array<String>) = TetherCommand().main(args)

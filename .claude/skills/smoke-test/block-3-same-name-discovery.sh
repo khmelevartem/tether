@@ -15,7 +15,7 @@ sleep 600 > /tmp/smoke-cliC-in &
 KEEPER_C=$!; disown $KEEPER_C
 echo $KEEPER_C > /tmp/smoke-cliC-keeper.pid
 
-nohup java -jar "$JAR" --name SmokeMacA --port 0 < /tmp/smoke-cliC-in > "$LOG_C" 2>&1 &
+TETHER_LOG_DEBUG=true nohup java -jar "$JAR" --name SmokeMacA --port 0 < /tmp/smoke-cliC-in > "$LOG_C" 2>&1 &
 JPID_C=$!; disown $JPID_C
 echo $JPID_C > /tmp/smoke-cliC.pid
 

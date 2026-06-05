@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import ru.pocketbyte.kydra.log.KydraLog
-import ru.pocketbyte.kydra.log.info
+import ru.pocketbyte.kydra.log.debug
 import ru.pocketbyte.kydra.log.wrapper.withTag
 import kotlin.concurrent.Volatile
 
@@ -30,7 +30,7 @@ class RendezvousAnnouncer(
                 for (device in devices) {
                     val key = peerKey(device)
                     if (key in acknowledgedKeys.value) continue
-                    log.info { "announce → ${device.id}" }
+                    log.debug { "announce → ${device.id}" }
                     val ok = client.sendHello(device, info)
                     if (ok) acknowledgedKeys.update { it + key }
                 }

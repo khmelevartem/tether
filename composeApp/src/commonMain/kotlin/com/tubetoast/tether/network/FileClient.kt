@@ -32,6 +32,7 @@ import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.debug
 import ru.pocketbyte.kydra.log.error
 import ru.pocketbyte.kydra.log.info
+import ru.pocketbyte.kydra.log.warn
 import ru.pocketbyte.kydra.log.withMessage
 import ru.pocketbyte.kydra.log.wrapper.withTag
 import kotlin.time.Duration
@@ -65,10 +66,10 @@ open class FileClient(
             setBody(ownInfo)
         }
         val ok = response.status.isSuccess()
-        if (ok) log.info { "hello sent → ${target.host}:${target.port}" }
+        if (ok) log.debug { "hello sent → ${target.host}:${target.port}" }
         ok
     } catch (e: Exception) {
-        log.error { "hello failed → ${target.host}:${target.port} — ${e.message}" }
+        log.warn { "hello failed → ${target.host}:${target.port} — ${e.message}" }
         false
     }
 
