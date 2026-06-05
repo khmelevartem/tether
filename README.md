@@ -41,7 +41,7 @@ tether --name MyMac --port 8080
 
 Check the server is alive: `curl http://localhost:<port>/health` → `Tether OK`.
 
-Verbose logs (DEBUG): `TETHER_LOG_DEBUG=true tether` or `-Dtether.log.debug=true`. Full rules and platform gates — [`docs/engineering/logging.md`](docs/engineering/logging.md).
+Logs (off by default on the CLI): `TETHER_LOG_DEBUG=true tether` or `-Dtether.log.debug=true` turns the logger on at DEBUG. Full rules and platform gates — [`docs/engineering/logging.md`](docs/engineering/logging.md).
 
 Example session:
 ```
