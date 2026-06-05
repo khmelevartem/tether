@@ -1,12 +1,12 @@
 # Logging
 
-Tether logs through one Kotlin Multiplatform façade — [KydraLog](https://github.com/PocketByte/kotlin-kydra-log) — so that `commonMain` code can log directly and every platform writes to its native sink (Logcat on Android, OSLog on Apple, stderr on JVM). Why this façade and not another: [adr-logging-kydra.md](adr/adr-logging-kydra.md).
+Tether logs through one Kotlin Multiplatform façade — [KydraLog](https://github.com/PocketByte/kotlin-kydra-log) — so that `commonMain` code can log directly and every platform writes to its native sink (Logcat on Android, OSLog on Apple, a print stream on JVM). Why this façade and not another: [adr-logging-kydra.md](adr/adr-logging-kydra.md).
 
 The rest of this doc is the contract any new logging call site must respect.
 
 ## Goal
 
-A reader debugging a cross-platform issue sees the same logger names and the same level semantics in Logcat, Console.app / Xcode, and Desktop stderr. The CLI starts without spurious framework warnings. Release builds do not leak DEBUG.
+A reader debugging a cross-platform issue sees the same logger names and the same level semantics in Logcat, Console.app / Xcode, and a Desktop print stream. The CLI starts without spurious framework warnings. Release builds do not leak DEBUG.
 
 ## Logger names
 
@@ -32,13 +32,17 @@ VERBOSE is not used. If a DEBUG call site is too chatty for routine debugging, s
 
 The level encodes the **operational meaning**, not the size of the message. A two-line ERROR is still ERROR; a multi-paragraph DEBUG is still DEBUG.
 
+"Always logged" on ERROR and WARNING means never filtered out by level — not a promise that a writer is installed. Whether a surface installs a writer at all is the separate concern of [§DEBUG gating](#debug-gating) and [§Desktop streams](#desktop-streams): the Desktop CLI installs none by default, so even ERROR and WARNING stay silent there until the debug knob turns the logger on.
+
 ## DEBUG gating
 
 DEBUG is off by default. Per platform:
 
 - **Android** — DEBUG is enabled when the running build is `debuggable` (`ApplicationInfo.FLAG_DEBUGGABLE`). Release APKs go to INFO. No env var on Android; the build flag is the single source of truth.
 - **Apple (iOS + macOS)** — DEBUG is enabled when the Kotlin/Native binary is built in `DEBUG` configuration (`Platform.isDebugBinary`). Release framework goes to INFO.
-- **Desktop (JVM)** — DEBUG is enabled when the JVM system property `tether.log.debug` is set (e.g. `-Dtether.log.debug=true`) **or** the environment variable `TETHER_LOG_DEBUG` is non-empty. Both knobs exist because the CLI is launched via the wrapper shell script (env var is natural there) and the Compose UI is launched via Gradle (system property is natural there).
+- **Desktop (JVM)** — the knob is the JVM system property `tether.log.debug` (e.g. `-Dtether.log.debug=true`) **or** the environment variable `TETHER_LOG_DEBUG` set to `true`. Both forms exist because the CLI is launched via the wrapper shell script (env var is natural there) and the Compose UI is launched via Gradle (system property is natural there). The knob's meaning is surface-specific:
+  - **CLI** — it is the on/off switch for the whole console logger (see §Desktop streams).
+  - **Compose UI** and the native-sink platforms — the sink is always active; the knob selects DEBUG over the INFO default.
 
 The single-source-of-truth rule: each platform has exactly one gating mechanism resolved at writer initialisation. Per-tag overrides are *not* supported — if a subsystem needs a different default, raise its WARNING-or-higher signal in code, do not invent a new level threshold.
 
@@ -48,12 +52,22 @@ Each platform initialises KydraLog exactly once at process start, before any sub
 
 - **Android** — `Application.onCreate()`.
 - **Apple** — the `MainViewController` constructor on iOS and the equivalent entry point on macOS, both delegating to one shared `initLogging()` in `appleMain`.
-- **Desktop UI** — `DesktopBackend` initialisation (before subsystems are constructed).
+- **Desktop UI** — the `MainUi` entry point, before `DesktopBackend` and the subsystems it constructs.
 - **Desktop CLI** — first statement in `Main.kt`'s `run` block, before any Clikt-managed work.
 
 `commonMain` code never calls `KydraLog.init*`. Initialisation is platform-side; common-side code only obtains tagged logger handles.
 
 If a subsystem logs before initialisation runs, KydraLog's auto-init path catches it with the platform default — events are not lost. Reviewers should still flag pre-init logging in PRs because the level filter is not yet applied at that point.
+
+## Desktop streams
+
+Stdout carries the CLI's own product output — the startup banner, the device/port lines, and the bracketed status lines (`[peers]`, `[list]`, `[send]`, including `[send] ERROR:` echoes). That is the tool's answer, not logging; it goes through the CLI's own output channels, never through a logger.
+
+The **CLI** console logger is off by default: at no level does it write to either stream. The debug knob (§DEBUG gating) turns it on at DEBUG, writing to stderr so diagnostics stay off the product channel.
+
+The **Compose UI** logger is on at INFO by default and writes to stderr (the debug knob raises it to DEBUG). The UI has no stdout product channel, so operator-visible diagnostics on stderr match the native-sink platforms.
+
+KydraLog's stock JVM writer prints to stdout ([KydraLog source](https://github.com/PocketByte/kotlin-kydra-log/blob/master/library/src/jvmCommonMain/kotlin/ru/pocketbyte/kydra/log/PrintLogger.kt)), so the Desktop writer targets stderr instead. Ktor's framework logs reach stderr independently through the SLF4J binding (see [adr-logging-kydra.md](adr/adr-logging-kydra.md) §Costs accepted).
 
 ## Forbidden idioms in production code
 
@@ -76,7 +90,7 @@ All three should return no production hits. Test source sets may print freely.
 
 ## Sensitive data
 
-Logs from this app land on the same device the user runs it on — Logcat on Android, OSLog on Apple, stderr on Desktop. There is no central aggregation. The threat model is therefore narrow: a bug report or screen share exfiltrates whatever was in the log at that moment, and a separate process with log-read permission can see it. Logs are not a network exfiltration channel.
+Logs from this app land on the same device the user runs it on — Logcat on Android, OSLog on Apple, a console stream on Desktop. There is no central aggregation. The threat model is therefore narrow: a bug report or screen share exfiltrates whatever was in the log at that moment, and a separate process with log-read permission can see it. Logs are not a network exfiltration channel.
 
 Three categories never appear in any log line at any level:
 

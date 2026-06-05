@@ -105,6 +105,14 @@ The eight sub-decisions called out by #74 resolve as follows:
 - **Ktor framework logs become load-bearing** for production support (e.g. we need INFO from the CIO engine in user-submitted logs). Trigger: replace `slf4j-simple` with a custom `SLF4JServiceProvider` that forwards into KydraLog, unifying the two sink formats. Until that pressure exists, the asymmetry is cheaper than the bridge.
 - **iOS-as-sender background networking** ([ios-background-networking.md](../../knowledge/ios-background-networking.md)) ships. Background tasks log into OSLog from a different process state; verify `AppleLogger`'s OSLog subsystem still routes correctly and tighten the writer init if it does not.
 
+## Amendment 2026-06-04
+
+On Desktop the CLI console logger is off by default — silent at every level — while the Compose UI keeps its INFO default.
+
+This refines sub-decision 4: the debug knob's effect on Desktop is entry-point-specific — on/off for the CLI, level-select (INFO→DEBUG) for the Compose UI — amending its "same DEBUG-on flag in code" clause.
+
+The full present-tense rules are in [logging.md](../logging.md) §Desktop streams.
+
 ## References
 
 - [logging.md](../logging.md) — the living doc this ADR underpins.
