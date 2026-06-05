@@ -99,13 +99,7 @@ private fun documentsDir(): String {
     return paths.firstOrNull() as? String ?: ""
 }
 
-@OptIn(ExperimentalForeignApi::class)
 private fun defaultDownloadsDir(): String {
-    val docs = NSSearchPathForDirectoriesInDomains(
-        NSDocumentDirectory,
-        NSUserDomainMask,
-        true,
-    ).firstOrNull() as? String
-        ?: error("FileServer: NSDocumentDirectory unavailable")
+    val docs = documentsDir().ifEmpty { error("FileServer: NSDocumentDirectory unavailable") }
     return "$docs/Tether"
 }
