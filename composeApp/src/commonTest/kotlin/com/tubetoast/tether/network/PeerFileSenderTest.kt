@@ -19,6 +19,7 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
@@ -65,6 +66,36 @@ class PeerFileSenderTest {
         sender.send(device.toPeerIdentity(), source) { _, _ -> }
 
         assertTrue(source.closeCalled, "source.close() must be called after successful send")
+    }
+
+    @Test
+    fun `send transmits relativePath as wire name so folder nesting is preserved`() = runTest {
+        val store = DiscoveredDevicesStore().also { it.upsert(device) }
+        var capturedName: String? = null
+        val client = FileClient(
+            client = HttpClient(MockEngine) {
+                install(ContentNegotiation) { json() }
+                engine {
+                    dispatcher = StandardTestDispatcher(testScheduler)
+                    addHandler { request ->
+                        capturedName = request.url.parameters["name"]
+                        val ch = (request.body as OutgoingContent.ReadChannelContent).readFrom()
+                        val buf = ByteArray(8 * 1024)
+                        while (!ch.isClosedForRead) ch.readAvailable(buf)
+                        respond(
+                            content = """{"savedPath":"/s"}""",
+                            status = HttpStatusCode.OK,
+                            headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                        )
+                    }
+                }
+            },
+        )
+        val source = FakeFileSource(name = "file.txt", sizeBytes = 4L, relativePath = "photos/trip/file.txt")
+
+        PeerFileSender(client, store).send(device.toPeerIdentity(), source) { _, _ -> }
+
+        assertEquals("photos/trip/file.txt", capturedName, "wire name must carry the nested relativePath, not the leaf")
     }
 
     @Test

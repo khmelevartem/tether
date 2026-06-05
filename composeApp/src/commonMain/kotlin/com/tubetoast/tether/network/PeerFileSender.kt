@@ -29,7 +29,9 @@ class PeerFileSender(
                 val result = fileClient.send(
                     device = device,
                     channel = source.openReadChannel(),
-                    fileName = source.name,
+                    // relativePath (not name) so folder sends preserve nesting; the receiver
+                    // sanitizes the wire `name` param as a relative path. Equals name for flat sends.
+                    fileName = source.relativePath,
                     totalBytes = source.sizeBytes,
                     onProgress = onProgress,
                 )
