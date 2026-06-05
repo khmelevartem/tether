@@ -81,6 +81,7 @@ Present a focused list of 3-7 numbered questions. Each must be answerable in 1-2
 - **Constraint questions** — what the user is willing to trade (e.g. «we can either keep a long-lived background socket on Android, accepting an FGS notification, or accept a 2-3s re-handshake latency on resume. Which acceptable?»).
 - **Boundary questions** — what's in/out of scope at the architecture level («should this layer guarantee at-least-once delivery, or is best-effort sufficient because the upper layer retries?»).
 - **Risk-acceptance questions** — what failure mode the user accepts («if the optional second transport is unavailable on a platform, do we silently fall back, or surface a banner?»).
+- **Observable-default questions** — for a decision that changes user-facing or runtime behaviour, pin the default observed state before mechanism: what the user sees or gets on the no-flag, no-config path. A palette of mechanism options silently assumes a default; when the user's framing is experiential («I want it clean / quiet / instant»), the load-bearing question is the default they observe, not the mechanism that delivers it — ask it first.
 
 Bad: «what library should we use?» (that's your job to propose). Good: «we're choosing between Library A — battle-tested but unmaintained 14 months — and Library B — actively maintained but smaller surface and less platform coverage. Which trade-off matches Tether's reliability stance?».
 
@@ -124,6 +125,8 @@ When the engineering artifact is warranted, pick its flavor:
 **Living doc** at `docs/engineering/<name>.md`:
 
 Apply [`docs/engineering/long-lived-artifacts.md`](../../docs/engineering/long-lived-artifacts.md) and [`docs/engineering/README.md`](../../docs/engineering/README.md) §Writing style to every paragraph.
+
+Write at rule-altitude — the standing rule a cold reader needs — not proposal-altitude: the palette rationale and the examples that convinced the user in Steps 3–4 are decision context and live in the PR description, not the artifact.
 
 **ADR** at `docs/engineering/adr/adr-<name>.md`: copy [`adr/_template.md`](../../docs/engineering/adr/_template.md) and follow [`adr/README.md`](../../docs/engineering/adr/README.md) — Decision-vs-State, parent-living-doc requirement, append-only history. Each rejected option gets **one** line; if it needs a paragraph, the palette was incomplete — return to Step 2.
 
