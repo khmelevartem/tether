@@ -65,7 +65,7 @@ internal fun PeerCardSent(
  *   Defaults to the Desktop JVM copy; per-platform wiring is deferred — see TODO below.
  * @param showDeepLinkHint Whether to render the hint. Defaults to false; set to true by the call
  *   site on deep-link failure once the OS deep-link mechanism is wired per platform.
- *   TODO(#192/#193/#194): per-platform OS deep-link attempt — if call fails, pass showDeepLinkHint = true
+ *   TODO(#195): per-platform OS deep-link attempt — if call fails, pass showDeepLinkHint = true
  *   so the platform-specific inline hint from UX brief §State 6 renders.
  */
 @Composable

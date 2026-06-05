@@ -10,12 +10,17 @@ import com.tubetoast.tether.discovery.DiscoveredDevicesStore
 import com.tubetoast.tether.discovery.MdnsDiscovery
 import com.tubetoast.tether.identity.DataStoreFingerprintPersistence
 import com.tubetoast.tether.identity.FingerprintPersistence
+import com.tubetoast.tether.network.AndroidMediaStoreUploadStorage
 import com.tubetoast.tether.network.AndroidTransferLockHolder
 import com.tubetoast.tether.network.DefaultTransferActivityTracker
 import com.tubetoast.tether.network.TransferActivityTracker
+import com.tubetoast.tether.network.UploadStorage
 import com.tubetoast.tether.preferences.DefaultFileTransferPreferences
 import com.tubetoast.tether.preferences.FileTransferPreferences
 import com.tubetoast.tether.protocol.DeviceType
+import com.tubetoast.tether.transfer.AndroidFilePicker
+import com.tubetoast.tether.transfer.AndroidPickerCoordinator
+import com.tubetoast.tether.transfer.FilePicker
 import okio.Path.Companion.toOkioPath
 
 class AndroidAppContainer(
@@ -53,4 +58,18 @@ class AndroidAppContainer(
         saveLocationWritable = true,
     )
     override val ownDeviceType: DeviceType = DeviceType.Android
+
+    internal override val uploadStorage: UploadStorage by lazy {
+        AndroidMediaStoreUploadStorage(application.contentResolver)
+    }
+
+    val pickerCoordinator: AndroidPickerCoordinator = AndroidPickerCoordinator()
+
+    val androidFilePicker: AndroidFilePicker = AndroidFilePicker(
+        coordinator = pickerCoordinator,
+        contentResolver = application.contentResolver,
+        appContext = application,
+    )
+
+    override val filePicker: FilePicker = androidFilePicker
 }

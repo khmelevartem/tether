@@ -55,11 +55,13 @@ class FileServerConcurrencyTest {
     private fun makeClient(): HttpClient = HttpClient(CIO) { install(ContentNegotiation) { json() } }
 
     private fun newTestServer(downloadsDir: String): FileServer {
-        val configDir = newTempDir()
         val temp = TempDataStore().also { cleanupTempStores += it }
         return FileServer(
             configuredPort = 0,
-            downloadsDir = downloadsDir,
+            uploadStorage = FileUploadStorage(
+                root = downloadsDir,
+                backend = AppleUploadStorageBackend(downloadsDir),
+            ),
             trustedDeviceStore = DefaultTrustedDeviceStore(temp.dataStore),
             deviceKeyPair = DeviceKeyPair(keychain = InMemoryKeychainStore()),
         )

@@ -127,6 +127,7 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.activity.compose)
             implementation(libs.androidx.lifecycle.service)
+            implementation(libs.androidx.documentfile)
         }
 
         androidUnitTest.dependencies {

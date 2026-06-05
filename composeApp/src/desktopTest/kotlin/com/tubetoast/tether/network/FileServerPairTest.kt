@@ -56,7 +56,16 @@ class FileServerPairTest {
     }
 
     private fun startServer(store: TrustedDeviceStore, keyPair: DeviceKeyPair): Pair<FileServer, Int> {
-        val server = FileServer(configuredPort = 0, trustedDeviceStore = store, deviceKeyPair = keyPair)
+        val dir = Files.createTempDirectory("tether-pair-test-dl").toFile().also(cleanupPaths::add)
+        val server = FileServer(
+            configuredPort = 0,
+            uploadStorage = FileUploadStorage(
+                root = dir.absolutePath,
+                backend = JvmUploadStorageBackend(dir.absolutePath),
+            ),
+            trustedDeviceStore = store,
+            deviceKeyPair = keyPair,
+        )
         startedServer = server
         return server to server.start()
     }

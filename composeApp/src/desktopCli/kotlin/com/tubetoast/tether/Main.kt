@@ -8,20 +8,13 @@ import com.tubetoast.tether.config.DeviceNameStore
 import com.tubetoast.tether.config.EphemeralDeviceNamePersistence
 import com.tubetoast.tether.di.CliAppContainer
 import com.tubetoast.tether.di.DefaultDesktopAppConfig
-import com.tubetoast.tether.discovery.DiscoveredDevicesStore
 import com.tubetoast.tether.identity.EphemeralFingerprintPersistence
 import com.tubetoast.tether.logging.initCliLogging
-import com.tubetoast.tether.network.FileClient
 import com.tubetoast.tether.protocol.Device
-import com.tubetoast.tether.protocol.SendResult
-import com.tubetoast.tether.transfer.BatchSender
-import com.tubetoast.tether.transfer.ConnectionMonitor
 import com.tubetoast.tether.transfer.JvmPathFileSource
-import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PeerTransferEngine
 import com.tubetoast.tether.transfer.PeerTransferEngineRegistry
 import com.tubetoast.tether.transfer.PeerTransferState
-import com.tubetoast.tether.transfer.PeerUnreachableException
 import com.tubetoast.tether.transfer.toPeerIdentity
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -190,37 +183,6 @@ class TetherCommand :
         throw ProgramResult(lastExit)
     }
 }
-
-internal fun buildCliBatchSender(
-    peer: PeerIdentity,
-    fileClient: FileClient,
-    connectionMonitor: ConnectionMonitor,
-    discoveredDevicesStore: DiscoveredDevicesStore,
-): BatchSender = BatchSender(
-    sendOne = { source, onProgress ->
-        val device = discoveredDevicesStore.devices.value
-            .firstOrNull { it.toPeerIdentity() == peer }
-            ?: throw PeerUnreachableException()
-        try {
-            // FileClient.send swallows all exceptions into SendResult.Failure — map to typed exceptions.
-            when (
-                val result = fileClient.send(
-                    device,
-                    source.openReadChannel(),
-                    source.name,
-                    source.sizeBytes,
-                    onProgress,
-                )
-            ) {
-                is SendResult.Success -> Unit
-                is SendResult.Failure -> throw PeerUnreachableException(RuntimeException(result.reason))
-            }
-        } finally {
-            source.close()
-        }
-    },
-    connectionMonitor = connectionMonitor,
-)
 
 suspend fun handleSend(
     engineRegistry: PeerTransferEngineRegistry,

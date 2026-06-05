@@ -55,7 +55,7 @@ A failure here surfaces as an I/O error from the storage seam, mapped to `500` b
 
 ## Storage seam
 
-The route handler delegates file operations to a storage seam. The seam holds the shared algorithm for atomic reservation, directory-creation tracking, and rollback on abort. Platform syscall details live behind a sub-seam that the shared algorithm delegates to per platform — POSIX path operations on JVM and Apple today; a future Android MediaStore backend would not fit this sub-seam and would substitute the whole storage seam instead.
+The route handler delegates file operations to a storage seam. The seam holds the shared algorithm for atomic reservation, directory-creation tracking, and rollback on abort. Platform syscall details live behind a sub-seam that the shared algorithm delegates to per platform — POSIX path operations on JVM and Apple. Android does not fit this sub-seam: its MediaStore backend substitutes the whole storage seam instead.
 
 Responsibilities owned by the seam:
 

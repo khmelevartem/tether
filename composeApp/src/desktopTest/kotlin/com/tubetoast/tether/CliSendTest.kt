@@ -1,11 +1,14 @@
 package com.tubetoast.tether
 
+import com.tubetoast.tether.discovery.DiscoveredDevicesStore
 import com.tubetoast.tether.network.FileClient
 import com.tubetoast.tether.network.FileServer
+import com.tubetoast.tether.network.FileUploadStorage
+import com.tubetoast.tether.network.JvmUploadStorageBackend
+import com.tubetoast.tether.network.PeerFileSender
 import com.tubetoast.tether.preferences.FakePeerPreferencesStore
 import com.tubetoast.tether.preferences.TempDataStore
 import com.tubetoast.tether.protocol.Device
-import com.tubetoast.tether.protocol.SendResult
 import com.tubetoast.tether.security.DefaultTrustedDeviceStore
 import com.tubetoast.tether.security.DeviceKeyPair
 import com.tubetoast.tether.transfer.BatchSender
@@ -55,7 +58,10 @@ class CliSendTest {
         tempStore = TempDataStore()
         server = FileServer(
             configuredPort = 0,
-            downloadsDir = tmpDir,
+            uploadStorage = FileUploadStorage(
+                root = tmpDir.absolutePath,
+                backend = JvmUploadStorageBackend(tmpDir.absolutePath),
+            ),
             trustedDeviceStore = DefaultTrustedDeviceStore(tempStore.dataStore),
             deviceKeyPair = DeviceKeyPair(configDir),
         )
@@ -75,6 +81,8 @@ class CliSendTest {
     }
 
     private fun buildRegistry(target: Device, client: FileClient): PeerTransferEngineRegistry {
+        val store = DiscoveredDevicesStore().also { it.upsert(target) }
+        val peerFileSender = PeerFileSender(client, store)
         val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         return PeerTransferEngineRegistry(
             appScope = appScope,
@@ -84,24 +92,7 @@ class CliSendTest {
                     batchSenderFactory = {
                         BatchSender(
                             sendOne = { source, onProgress ->
-                                try {
-                                    when (
-                                        val r = client.send(
-                                            target,
-                                            source.openReadChannel(),
-                                            source.name,
-                                            source.sizeBytes,
-                                            onProgress,
-                                        )
-                                    ) {
-                                        is SendResult.Success -> Unit
-                                        is SendResult.Failure -> throw PeerUnreachableException(
-                                            RuntimeException(r.reason),
-                                        )
-                                    }
-                                } finally {
-                                    source.close()
-                                }
+                                peerFileSender.send(peer, source, onProgress)
                             },
                             connectionMonitor = NoOpConnectionMonitor,
                         )
@@ -410,6 +401,8 @@ class CliSendTest {
         }
 
         var sendCallCount = 0
+        val reconnectStore = DiscoveredDevicesStore().also { it.upsert(device) }
+        val reconnectSender = PeerFileSender(fileClient, reconnectStore)
         val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         val reconnectRegistry = PeerTransferEngineRegistry(
             appScope = appScope,
@@ -424,24 +417,7 @@ class CliSendTest {
                                     sendStarted.complete(Unit)
                                     awaitCancellation()
                                 }
-                                try {
-                                    when (
-                                        val r = fileClient.send(
-                                            device,
-                                            source.openReadChannel(),
-                                            source.name,
-                                            source.sizeBytes,
-                                            onProgress,
-                                        )
-                                    ) {
-                                        is SendResult.Success -> Unit
-                                        is SendResult.Failure -> throw PeerUnreachableException(
-                                            RuntimeException(r.reason),
-                                        )
-                                    }
-                                } finally {
-                                    source.close()
-                                }
+                                reconnectSender.send(peer, source, onProgress)
                             },
                             connectionMonitor = reconnectMonitor,
                         )
@@ -512,6 +488,8 @@ class CliSendTest {
         callCount: AtomicInteger,
         failOnCall: Int,
     ): Pair<PeerTransferEngineRegistry, AtomicInteger> {
+        val store = DiscoveredDevicesStore().also { it.upsert(target) }
+        val peerFileSender = PeerFileSender(client, store)
         val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         val registry = PeerTransferEngineRegistry(
             appScope = appScope,
@@ -525,24 +503,7 @@ class CliSendTest {
                                 if (n == failOnCall) {
                                     throw PeerUnreachableException(RuntimeException("forced failure on call $n"))
                                 }
-                                try {
-                                    when (
-                                        val r = client.send(
-                                            target,
-                                            source.openReadChannel(),
-                                            source.name,
-                                            source.sizeBytes,
-                                            onProgress,
-                                        )
-                                    ) {
-                                        is SendResult.Success -> Unit
-                                        is SendResult.Failure -> throw PeerUnreachableException(
-                                            RuntimeException(r.reason),
-                                        )
-                                    }
-                                } finally {
-                                    source.close()
-                                }
+                                peerFileSender.send(peer, source, onProgress)
                             },
                             connectionMonitor = NoOpConnectionMonitor,
                         )

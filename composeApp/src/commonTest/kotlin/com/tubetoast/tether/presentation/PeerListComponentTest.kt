@@ -7,11 +7,13 @@ import com.tubetoast.tether.discovery.FakeDeviceDiscovery
 import com.tubetoast.tether.peer.FakePeersRepository
 import com.tubetoast.tether.peer.Peer
 import com.tubetoast.tether.peer.PeersRepository
+import com.tubetoast.tether.preferences.FakeFileTransferPreferences
 import com.tubetoast.tether.preferences.FakePeerPreferencesStore
 import com.tubetoast.tether.presentation.banners.BannersComponent
 import com.tubetoast.tether.presentation.banners.PeerConflictRelay
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.protocol.Device
+import com.tubetoast.tether.transfer.FakeFilePicker
 import com.tubetoast.tether.transfer.FakeFileSource
 import com.tubetoast.tether.transfer.PeerTransferEngine
 import com.tubetoast.tether.transfer.PeerTransferState
@@ -358,7 +360,10 @@ class PeerListComponentTest {
                     engine = engine,
                     onShowDetails = {},
                     scope = coroutineScope,
+                    pendingFilesRepository = PendingFilesRepository(),
+                    filePicker = FakeFilePicker(result = emptyList()),
                     conflictRelay = PeerConflictRelay(),
+                    fileTransferPreferences = FakeFileTransferPreferences(),
                 )
             },
             bannersComponentFactory = { bannersCtx ->
@@ -407,7 +412,10 @@ class PeerListComponentTest {
                     engine = engine,
                     onShowDetails = {},
                     scope = coroutineScope,
+                    pendingFilesRepository = PendingFilesRepository(),
+                    filePicker = FakeFilePicker(result = emptyList()),
                     conflictRelay = PeerConflictRelay(),
+                    fileTransferPreferences = FakeFileTransferPreferences(),
                 )
             },
             bannersComponentFactory = { bannersCtx ->

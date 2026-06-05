@@ -32,7 +32,10 @@ class FileClientIntegrationTest {
         tempStore = TempDataStore()
         server = FileServer(
             configuredPort = 0,
-            downloadsDir = tmpDir,
+            uploadStorage = FileUploadStorage(
+                root = tmpDir.absolutePath,
+                backend = JvmUploadStorageBackend(tmpDir.absolutePath),
+            ),
             trustedDeviceStore = DefaultTrustedDeviceStore(tempStore.dataStore),
             deviceKeyPair = DeviceKeyPair(configDir),
         )

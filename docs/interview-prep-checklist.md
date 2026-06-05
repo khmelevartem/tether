@@ -99,7 +99,7 @@
 - [ ] Разница `onStop` vs `onPause` в multi-window
 
 ### Process death & State
-- [ ] Что такое process death — когда, что теряется, что остаётся
+- [x] Что такое process death — когда, что теряется, что остаётся
 - [ ] `SavedStateHandle` + `ViewModel` — правильная стратегия
 - [ ] `rememberSaveable` в Compose — связь с `SavedStateHandle`
 - [ ] `Parcelable` vs `Serializable` — производительность, `@Parcelize`
