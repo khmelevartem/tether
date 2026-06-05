@@ -32,6 +32,8 @@ VERBOSE is not used. If a DEBUG call site is too chatty for routine debugging, s
 
 The level encodes the **operational meaning**, not the size of the message. A two-line ERROR is still ERROR; a multi-paragraph DEBUG is still DEBUG.
 
+"Always logged" on ERROR and WARNING means never filtered out by level — not a promise that a writer is installed. Whether a surface installs a writer at all is the separate concern of [§DEBUG gating](#debug-gating) and [§Desktop streams](#desktop-streams): the Desktop CLI installs none by default, so even ERROR and WARNING stay silent there until the debug knob turns the logger on.
+
 ## DEBUG gating
 
 DEBUG is off by default. Per platform:
@@ -50,7 +52,7 @@ Each platform initialises KydraLog exactly once at process start, before any sub
 
 - **Android** — `Application.onCreate()`.
 - **Apple** — the `MainViewController` constructor on iOS and the equivalent entry point on macOS, both delegating to one shared `initLogging()` in `appleMain`.
-- **Desktop UI** — `DesktopBackend` initialisation (before subsystems are constructed).
+- **Desktop UI** — the `MainUi` entry point, before `DesktopBackend` and the subsystems it constructs.
 - **Desktop CLI** — first statement in `Main.kt`'s `run` block, before any Clikt-managed work.
 
 `commonMain` code never calls `KydraLog.init*`. Initialisation is platform-side; common-side code only obtains tagged logger handles.
