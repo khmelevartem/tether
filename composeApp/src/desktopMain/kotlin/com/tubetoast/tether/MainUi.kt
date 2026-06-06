@@ -25,8 +25,7 @@ import com.tubetoast.tether.di.DesktopAppContainer
 import com.tubetoast.tether.logging.initTetherLogging
 import com.tubetoast.tether.logging.isDebugEnabled
 import com.tubetoast.tether.presentation.RootContent
-import com.tubetoast.tether.transfer.JvmFolderWalker
-import com.tubetoast.tether.transfer.JvmPathFileSource
+import com.tubetoast.tether.transfer.toFileSources
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -38,7 +37,6 @@ import ru.pocketbyte.kydra.log.wrapper.withTag
 import tether.composeapp.generated.resources.Res
 import tether.composeapp.generated.resources.icon
 import java.net.URI
-import java.nio.file.Files
 import java.nio.file.Path
 
 private val log = KydraLog.withTag(default = "MainUi")
@@ -101,11 +99,7 @@ fun main() = runBlocking {
                                     uris.flatMap { uri ->
                                         val path = runCatching { Path.of(URI(uri)) }.getOrNull()
                                             ?: return@flatMap emptyList()
-                                        when {
-                                            Files.isDirectory(path) -> JvmFolderWalker().walk(path.toFile())
-                                            Files.isRegularFile(path) -> listOf(JvmPathFileSource(path))
-                                            else -> emptyList()
-                                        }
+                                        path.toFile().toFileSources()
                                     }
                                 }
                                 component.onFilesDropped(sources)

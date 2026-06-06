@@ -76,16 +76,18 @@ internal object Foundation {
         myFoundationLibrary.class_addMethod(cls, selectorName, impl, types)
 
     private var ourRunnableCallback: Callback? = null
+    private var runnableSupportFailed = false
     private val ourMainThreadRunnables: MutableMap<String?, RunnableInfo> = HashMap()
     private var ourCurrentRunnableCount: Long = 0
     private val RUNNABLE_LOCK = Any()
 
     fun executeOnMainThread(withAutoreleasePool: Boolean, waitUntilDone: Boolean, runnable: Runnable) {
+        val info = RunnableInfo(runnable, withAutoreleasePool)
         var runnableCountString: String?
         synchronized(RUNNABLE_LOCK) {
             initRunnableSupport()
             runnableCountString = (++ourCurrentRunnableCount).toString()
-            ourMainThreadRunnables.put(runnableCountString, RunnableInfo(runnable, withAutoreleasePool))
+            ourMainThreadRunnables.put(runnableCountString, info)
         }
         val runnableClass = getObjcClass("TetherObjcRunnable")
         val runnableObject = invoke(invoke(runnableClass, "alloc"), "init")
@@ -98,29 +100,40 @@ internal object Foundation {
             waitUntilDone,
         )
         invoke(runnableObject, "release")
+        info.thrown?.let { throw it }
     }
 
     // NOT THREAD-SAFE — call under RUNNABLE_LOCK only.
     private fun initRunnableSupport() {
         if (ourRunnableCallback != null) return
+        if (runnableSupportFailed) {
+            throw RuntimeException("TetherObjcRunnable registration failed on a previous attempt")
+        }
         val runnableClass = allocateObjcClassPair(getObjcClass("NSObject"), "TetherObjcRunnable")
         registerObjcClassPair(runnableClass)
         val callback: Callback = object : Callback {
             fun callback(self: ID?, selector: String?, keyObject: ID?) {
-                val key = toStringViaUTF8(keyObject)
-                invoke(keyObject, "release")
+                var key: String? = null
+                try {
+                    key = toStringViaUTF8(keyObject)
+                } finally {
+                    invoke(keyObject, "release")
+                }
                 val info: RunnableInfo? = synchronized(RUNNABLE_LOCK) { ourMainThreadRunnables.remove(key) }
                 if (info == null) return
                 var pool: ID? = null
                 try {
                     if (info.myUseAutoreleasePool) pool = invoke("NSAutoreleasePool", "new")
                     info.myRunnable.run()
+                } catch (t: Throwable) {
+                    info.thrown = t
                 } finally {
                     if (pool != null) invoke(pool, "release")
                 }
             }
         }
         if (!addMethod(runnableClass, createSelector("run:"), callback, "v@:*")) {
+            runnableSupportFailed = true
             throw RuntimeException("Unable to add method to TetherObjcRunnable objc class")
         }
         ourRunnableCallback = callback
@@ -129,7 +142,10 @@ internal object Foundation {
     private class RunnableInfo(
         val myRunnable: Runnable,
         val myUseAutoreleasePool: Boolean,
-    )
+    ) {
+        @Volatile
+        var thrown: Throwable? = null
+    }
 
     private object NSString {
         private val nsStringCls = getObjcClass("NSString")

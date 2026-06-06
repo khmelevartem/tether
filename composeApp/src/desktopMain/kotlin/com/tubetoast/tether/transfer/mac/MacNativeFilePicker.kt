@@ -13,8 +13,8 @@ internal object MacNativeFilePicker {
         val pool = Foundation.NSAutoreleasePool()
         try {
             var result: List<File> = emptyList()
-            Foundation.executeOnMainThread(withAutoreleasePool = false, waitUntilDone = true) {
-                val panel = Foundation.invoke("NSOpenPanel", "new")
+            Foundation.executeOnMainThread(withAutoreleasePool = true, waitUntilDone = true) {
+                val panel = Foundation.invoke("NSOpenPanel", "openPanel")
                 Foundation.invoke(panel, "setCanChooseFiles:", true)
                 Foundation.invoke(panel, "setCanChooseDirectories:", true)
                 Foundation.invoke(panel, "setAllowsMultipleSelection:", true)
@@ -25,7 +25,7 @@ internal object MacNativeFilePicker {
                     result = (0 until count).mapNotNull { i ->
                         val url = Foundation.invoke(urls, "objectAtIndex:", i)
                         val nsPath = Foundation.invoke(url, "path")
-                        Foundation.toStringViaUTF8(nsPath)?.let(::File)
+                        runCatching { Foundation.toStringViaUTF8(nsPath) }.getOrNull()?.let(::File)
                     }
                 }
             }

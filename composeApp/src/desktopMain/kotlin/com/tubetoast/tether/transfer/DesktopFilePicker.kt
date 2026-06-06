@@ -28,9 +28,7 @@ class DesktopFilePicker(
         val selected = MacNativeFilePicker.pickFilesAndFolders()
         log.info { "pickFiles (mac): ${selected.size} item(s) selected" }
         return withContext(Dispatchers.IO) {
-            selected.flatMap { file ->
-                if (file.isDirectory) JvmFolderWalker().walk(file) else listOf(JvmPathFileSource(file.toPath()))
-            }
+            selected.flatMap { it.toFileSources() }
         }
     }
 

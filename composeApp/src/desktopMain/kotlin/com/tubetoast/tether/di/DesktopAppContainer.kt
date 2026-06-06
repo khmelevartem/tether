@@ -47,7 +47,7 @@ open class DesktopAppContainer(
         saveLocationWritable = true,
     )
 
-    val windowHolder: WindowHolder = WindowHolder()
-    val desktopFilePicker: DesktopFilePicker = DesktopFilePicker(windowHolder)
+    open val windowHolder: WindowHolder = WindowHolder()
+    open val desktopFilePicker: DesktopFilePicker = DesktopFilePicker(windowHolder)
     open override val filePicker: FilePicker = desktopFilePicker
 }
