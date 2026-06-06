@@ -64,7 +64,7 @@ Two runtime locks are worth calling out here because they are easy to forget in 
 
 ### Self-suppression
 
-mDNS announces propagate back to the announcing host. The implementation filters by the registered service name compared to the device's own name (matching the existing Android NSD pattern: track the *resolved* name returned by `onServiceRegistered`, since the OS may modify it). Once stable identity exists (see [Identity](#identity-and-self-suppression)), self-suppression migrates to the fingerprint.
+mDNS announces propagate back to the announcing host. The implementation filters by the registered service name compared to the device's own name (matching the existing Android NSD pattern: track the *resolved* name returned by `onServiceRegistered`, since the OS may modify it). Once stable identity exists (see [Identity and self-suppression](#identity-and-self-suppression)), self-suppression migrates to the fingerprint.
 
 ## Layer 2 — `POST /hello` rendezvous
 
@@ -156,6 +156,8 @@ Any combination of failure modes Layers 1–3 cannot overcome, the user works ar
 ## Identity and self-suppression
 
 The `fingerprint` field in `/hello` and `PeerAnnouncement` carries a stable device identity. Its target is the EC P-256 public key fingerprint produced by [Pairing (#11)](https://github.com/khmelevartem/tether/issues/11) — the same identity used by [channel encryption](../product/security.md#channel-encryption) and pairing.
+
+Peer identity keys on the device fingerprint, not on the transport address (`host:port`, which can change across restarts). A peer that reappears on a new port with the same fingerprint is the same identity — its transfer engine and terminal state survive the reconnect.
 
 Until pairing identity lands, the field carries a random opaque string sufficient for self-suppression but not for trust. No code path treats it as authentication; trust gating remains pairing.
 

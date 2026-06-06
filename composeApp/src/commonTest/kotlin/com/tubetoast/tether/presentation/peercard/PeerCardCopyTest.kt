@@ -1,5 +1,6 @@
 package com.tubetoast.tether.presentation.peercard
 
+import com.tubetoast.tether.transfer.Direction
 import com.tubetoast.tether.transfer.PartialOutcome
 import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PeerTransferState
@@ -9,11 +10,12 @@ import kotlin.test.assertEquals
 
 class PeerCardCopyTest {
     private val peer = PeerIdentity("Alice")
+    private val peerName = "Alice"
 
     @Test
     fun sentFullCopy() {
         val state = PeerTransferState.Sent(peer, sent = 5, total = 5, perFile = emptyList(), partialReason = null)
-        assertEquals("Sent 5 files to Alice", sentCardCopy(state))
+        assertEquals("Sent 5 files to Alice", sentCardCopy(state, peerName))
     }
 
     @Test
@@ -25,7 +27,7 @@ class PeerCardCopyTest {
             perFile = emptyList(),
             partialReason = PartialOutcome.ReceiverCancelled,
         )
-        assertEquals("Sent 3 of 5 files to Alice (transfer was cancelled)", sentCardCopy(state))
+        assertEquals("Sent 3 of 5 files to Alice (transfer was cancelled)", sentCardCopy(state, peerName))
     }
 
     @Test
@@ -37,7 +39,7 @@ class PeerCardCopyTest {
             perFile = emptyList(),
             partialReason = PartialOutcome.ConnectionLost,
         )
-        assertEquals("Sent 2 of 5 files to Alice (connection lost)", sentCardCopy(state))
+        assertEquals("Sent 2 of 5 files to Alice (connection lost)", sentCardCopy(state, peerName))
     }
 
     @Test
@@ -49,7 +51,7 @@ class PeerCardCopyTest {
             perFile = emptyList(),
             partialReason = PartialOutcome.FilesUnreadable(2),
         )
-        assertEquals("Sent 3 of 5 files to Alice (2 files couldn't be read)", sentCardCopy(state))
+        assertEquals("Sent 3 of 5 files to Alice (2 files couldn't be read)", sentCardCopy(state, peerName))
     }
 
     @Test
@@ -61,7 +63,7 @@ class PeerCardCopyTest {
             perFile = emptyList(),
             partialReason = null,
         )
-        assertEquals("Received 5 files from Alice — tap to open", receivedCardCopy(state))
+        assertEquals("Received 5 files from Alice — tap to open", receivedCardCopy(state, peerName))
     }
 
     @Test
@@ -73,7 +75,7 @@ class PeerCardCopyTest {
             perFile = emptyList(),
             partialReason = PartialOutcome.SenderCancelled,
         )
-        assertEquals("Received 3 files from Alice — sender cancelled.", receivedCardCopy(state))
+        assertEquals("Received 3 files from Alice — sender cancelled.", receivedCardCopy(state, peerName))
     }
 
     @Test
@@ -85,7 +87,7 @@ class PeerCardCopyTest {
             perFile = emptyList(),
             partialReason = PartialOutcome.ReceiverCancelled,
         )
-        assertEquals("Received 3 files from Alice — you cancelled.", receivedCardCopy(state))
+        assertEquals("Received 3 files from Alice — you cancelled.", receivedCardCopy(state, peerName))
     }
 
     @Test
@@ -97,7 +99,7 @@ class PeerCardCopyTest {
             perFile = emptyList(),
             partialReason = PartialOutcome.ConnectionLost,
         )
-        assertEquals("Received 3 files from Alice — connection lost.", receivedCardCopy(state))
+        assertEquals("Received 3 files from Alice — connection lost.", receivedCardCopy(state, peerName))
     }
 
     @Test
@@ -109,7 +111,7 @@ class PeerCardCopyTest {
             perFile = emptyList(),
             partialReason = PartialOutcome.ReceiverCancelled,
         )
-        assertEquals("Received 2 files from Alice — you cancelled.", receivedCardCopy(state))
+        assertEquals("Received 2 files from Alice — you cancelled.", receivedCardCopy(state, peerName))
     }
 
     @Test
@@ -120,7 +122,7 @@ class PeerCardCopyTest {
             sent = 0,
             perFile = emptyList(),
         )
-        assertEquals("Connection lost. Try again when you're back on Wi-Fi.", errorCardCopy(state))
+        assertEquals("Connection lost. Try again when you're back on Wi-Fi.", errorCardCopy(state, peerName))
     }
 
     @Test
@@ -131,7 +133,7 @@ class PeerCardCopyTest {
             sent = 0,
             perFile = emptyList(),
         )
-        assertEquals("Alice is no longer reachable. Try again.", errorCardCopy(state))
+        assertEquals("Alice is no longer reachable. Try again.", errorCardCopy(state, peerName))
     }
 
     @Test
@@ -142,7 +144,7 @@ class PeerCardCopyTest {
             sent = 0,
             perFile = emptyList(),
         )
-        assertEquals("Couldn't save on Alice. Free up space and try again.", errorCardCopy(state))
+        assertEquals("Couldn't save on Alice. Free up space and try again.", errorCardCopy(state, peerName))
     }
 
     @Test
@@ -153,7 +155,7 @@ class PeerCardCopyTest {
             sent = 0,
             perFile = emptyList(),
         )
-        assertEquals("Couldn't send to Alice. Try again.", errorCardCopy(state))
+        assertEquals("Couldn't send to Alice. Try again.", errorCardCopy(state, peerName))
     }
 
     @Test
@@ -164,7 +166,7 @@ class PeerCardCopyTest {
             sent = 0,
             perFile = emptyList(),
         )
-        assertEquals("Transfer from Alice was interrupted. Ask Alice to send again.", errorCardCopy(state))
+        assertEquals("Transfer from Alice was interrupted. Ask Alice to send again.", errorCardCopy(state, peerName))
     }
 
     @Test
@@ -188,10 +190,10 @@ class PeerCardCopyTest {
     fun reconnectingCopy() {
         val state = PeerTransferState.Reconnecting(
             peer = peer,
-            direction = com.tubetoast.tether.transfer.Direction.Outbound,
+            direction = Direction.Outbound,
             remainingSeconds = 12,
             snapshotBeforeDrop = PeerTransferState.Idle(peer),
         )
-        assertEquals("Reconnecting to Alice… (12s)", reconnectingCardCopy(state))
+        assertEquals("Reconnecting to Alice… (12s)", reconnectingCardCopy(state, peerName))
     }
 }

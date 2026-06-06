@@ -41,7 +41,7 @@ internal fun PeerCardReconnecting(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         TitleText(text = peerName, modifier = Modifier.fillMaxWidth())
-        BodyText(text = reconnectingCardCopy(state), color = TetherTheme.colors.textMuted)
+        BodyText(text = reconnectingCardCopy(state, peerName), color = TetherTheme.colors.textMuted)
     }
 }
 

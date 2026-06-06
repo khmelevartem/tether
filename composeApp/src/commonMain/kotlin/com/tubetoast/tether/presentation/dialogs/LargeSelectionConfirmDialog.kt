@@ -7,7 +7,6 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.tubetoast.tether.transfer.ByteFormatting
-import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.ui.designsystem.ButtonVariant
 import com.tubetoast.tether.ui.designsystem.Checkbox
 import com.tubetoast.tether.ui.designsystem.ConfirmAction
@@ -19,7 +18,7 @@ import com.tubetoast.tether.ui.preview.Themes
 fun LargeSelectionConfirmDialog(
     fileCount: Int,
     totalBytes: Long,
-    peer: PeerIdentity,
+    peerName: String,
     dontShowAgain: Boolean,
     onDontShowAgainToggle: (Boolean) -> Unit,
     onConfirm: () -> Unit,
@@ -32,7 +31,7 @@ fun LargeSelectionConfirmDialog(
         LargeSelectionConfirmDialogContent(
             fileCount = fileCount,
             totalBytes = totalBytes,
-            peer = peer,
+            peerName = peerName,
             dontShowAgain = dontShowAgain,
             onDontShowAgainToggle = onDontShowAgainToggle,
             onConfirm = onConfirm,
@@ -45,7 +44,7 @@ fun LargeSelectionConfirmDialog(
 private fun LargeSelectionConfirmDialogContent(
     fileCount: Int,
     totalBytes: Long,
-    peer: PeerIdentity,
+    peerName: String,
     dontShowAgain: Boolean,
     onDontShowAgainToggle: (Boolean) -> Unit,
     onConfirm: () -> Unit,
@@ -54,10 +53,10 @@ private fun LargeSelectionConfirmDialogContent(
 ) {
     ConfirmDialogContent(
         title = "Large selection",
-        body = "About to send $fileCount files (${ByteFormatting.formatSize(totalBytes)}) to ${peer.id}. Continue?",
+        body = "About to send $fileCount files (${ByteFormatting.formatSize(totalBytes)}) to $peerName. Continue?",
         primary = ConfirmAction(
             label = "Send",
-            contentDescription = "Send $fileCount files to ${peer.id}",
+            contentDescription = "Send $fileCount files to $peerName",
             onClick = onConfirm,
         ),
         secondary = ConfirmAction(
@@ -84,7 +83,7 @@ private fun PreviewUnchecked(@PreviewParameter(Themes::class) dark: Boolean) =
         LargeSelectionConfirmDialogContent(
             fileCount = 47,
             totalBytes = 2_684_354_560L,
-            peer = PeerIdentity("Alice's Laptop"),
+            peerName = "Alice's Laptop",
             dontShowAgain = false,
             onDontShowAgainToggle = {},
             onConfirm = {},
@@ -99,7 +98,7 @@ private fun PreviewChecked(@PreviewParameter(Themes::class) dark: Boolean) =
         LargeSelectionConfirmDialogContent(
             fileCount = 47,
             totalBytes = 2_684_354_560L,
-            peer = PeerIdentity("Alice's Laptop"),
+            peerName = "Alice's Laptop",
             dontShowAgain = true,
             onDontShowAgainToggle = {},
             onConfirm = {},

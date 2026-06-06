@@ -126,7 +126,7 @@ private fun PeerListContent(
                         LargeSelectionConfirmDialog(
                             fileCount = confirm.summary.fileCount,
                             totalBytes = confirm.summary.totalBytes,
-                            peer = peerComponent.peer.id,
+                            peerName = peerComponent.peer.device.name,
                             dontShowAgain = confirm.dontShowAgain,
                             onDontShowAgainToggle = peerComponent::onUpdateLargeConfirmDontShowAgain,
                             onConfirm = { peerComponent.onConfirmLargeSelection(confirm.dontShowAgain) },
