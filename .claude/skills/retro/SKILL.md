@@ -37,6 +37,12 @@ Read the full history: issue, comments, review, conversation in the PR.
 
 Focus: **system → action**, not "agent → attentiveness".
 
+**Search lens — weight signals before cataloguing them.** The first signal that surfaces is usually the most *visible* defect, not the most *valuable*. Hunt by:
+- **Cost, not visibility.** Rank by the rework a gap caused — a decision built on the wrong axis and redone outranks a discrete thing review missed. Follow the longest detour in the task's history to its root.
+- **Where the human was the safety net.** Every point where the user had to correct, re-explain, repeat a request, or run a manual audit is a systemic signal — the system leaned on the user where a doc / skill / prompt / check should have carried it. Recurrence — the same kind of correction needed more than once — raises the priority.
+- **Wrong question, not wrong answer.** Look for framing/axis mismatches — the answer was locally fine but the question was on the wrong axis (mechanism asked when the user cared about the observable outcome). These hide because every step looks correct in isolation.
+- **The whole arc.** Spread the scan across design → implement → review → feedback → close; one phase rarely holds all the signals.
+
 **Systemic gaps:**
 - A gap in `CLAUDE.md` / `docs/engineering/` / a skill / a template that made the mistake *programmatic*?
 - Did the assignee / reviewer rely on something that turned out to be incorrect or outdated (doc, example, 3rd-party claim)?
