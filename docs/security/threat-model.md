@@ -34,7 +34,9 @@ Components that listen on the network and accept external input:
 
 ## SAS pairing model
 
-Trust is established by **SAS comparison** (Short Authentication String), not by entry of a secret. Both devices perform a key exchange, each independently derives a short human-readable value from the whole agreed material (both public keys), and displays it. The user compares the values on the two screens and confirms they match.
+Trust is established by **SAS comparison** (Short Authentication String), not by entry of a secret. The two devices exchange their **static long-term identity public keys** under commit-before-reveal; each independently derives a short human-readable value from **both full identity public keys plus a per-handshake nonce**, and displays it. The user compares the values on the two screens and confirms they match. The peer's identity key is committed to the trust store only after **bilateral confirmation** on both sides.
+
+The SAS authenticates the static identity keypair — the per-install root of trust ([`device-identity.md`](../engineering/device-identity.md)) that the TLS channel pins to. Pairing derives no session key and provides no forward secrecy of its own: it carries only public keys. Per-session confidentiality, forward secrecy, and proof of private-key possession on every later connection come from the **pinned TLS channel** ([#140](https://github.com/khmelevartem/tether/issues/140)), not from a pairing-time key exchange. The per-handshake nonce keeps the SAS unpredictable on each attempt even though the identity keys are static and reused. Why static identity over an app-level ephemeral key exchange — see [adr-sas-pairing-protocol.md](../engineering/adr/adr-sas-pairing-protocol.md).
 
 Security consequences:
 
@@ -163,6 +165,6 @@ Repudiation is not given its own rows: for disposable P2P transfer without accou
 ## What this doc does *not* commit to
 
 - Exact SAS length within the "5–6 decimal digits (~17–20 bits)" band — the implementation issue picks the digit count.
-- The wire shape of the commitment exchange — the protocol detail lives with the pairing implementation; this doc states that commit-before-reveal is required, not its framing.
+- The on-wire framing of the commit, reveal, nonce, and confirmation messages — the byte-level protocol detail lives with the pairing implementation; this doc states that commit-before-reveal over the static identity keys with a per-handshake nonce is required, not its framing. The key the SAS authenticates and the absence of a pairing-time session-key exchange are decided — see [adr-sas-pairing-protocol.md](../engineering/adr/adr-sas-pairing-protocol.md).
 - Concrete rate-limit, connection-cap, and size-limit constants — implementation choices that live in code.
 - The application-tag and attribute recipe for each platform secret store — owned by [`device-identity.md`](../engineering/device-identity.md).
