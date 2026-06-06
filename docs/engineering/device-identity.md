@@ -23,13 +23,13 @@ The exposed public key is **91 bytes of X.509 SubjectPublicKeyInfo for EC P-256*
 ## Cross-cutting
 
 - **Lifecycle.** Generated lazily on first construction, persisted; subsequent constructions return the same bytes. Identity rotation is via uninstall (clearing the Keychain / the config directory).
-- **Authority.** The keypair is the root of trust for the install — pinned during pairing and the secret behind the trust store. The threats against this key, and the principle that secures it (OS-bound encryption, never a static binary key, the malware-as-same-user accepted risk, hardware-backed storage out of MVP), are analysed in [`threat-model.md` §Pairing-secret storage](threat-model.md#pairing-secret-storage); the per-platform mechanisms that realise that principle are below under [Secret storage](#secret-storage). Keychain access is wrapped behind a small seam so unit tests inject an in-memory fake — the test harness has no app identity, so the real Keychain returns errors uniformly. Production wiring lives in each platform's composition root.
+- **Authority.** The keypair is the root of trust for the install — pinned during pairing and the secret behind the trust store. The threats against this key, and the principle that secures it (OS-bound encryption, never a static binary key, the malware-as-same-user accepted risk, hardware-backed storage out of MVP), are analysed in [`threat-model.md` §Pairing-secret storage](../security/threat-model.md#pairing-secret-storage); the per-platform mechanisms that realise that principle are below under [Secret storage](#secret-storage). Keychain access is wrapped behind a small seam so unit tests inject an in-memory fake — the test harness has no app identity, so the real Keychain returns errors uniformly. Production wiring lives in each platform's composition root.
 - **Placement.** Apple code in the Apple source set, JVM code in the JVM source set, the wire-format wrapper in the common layer (pure bytes, no platform API).
 - **Observability.** Corruption recovery (load returns a key but extract fails) logs and regenerates once. A non-success Keychain delete is logged because it precedes a likely duplicate-item error on the next generate.
 
 ## Secret storage
 
-Each platform persists the private half through the OS-managed secure store, which encrypts it under a key bound to the user / device. This is the per-platform realisation of the principle in [`threat-model.md` §Pairing-secret storage](threat-model.md#pairing-secret-storage).
+Each platform persists the private half through the OS-managed secure store, which encrypts it under a key bound to the user / device. This is the per-platform realisation of the principle in [`threat-model.md` §Pairing-secret storage](../security/threat-model.md#pairing-secret-storage).
 
 | Platform | Store |
 |----------|-------|

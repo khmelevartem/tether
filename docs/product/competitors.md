@@ -6,7 +6,7 @@ How Tether sits among the tools people use today to move files between devices. 
 
 | Tool | Platforms | Cost | Account | Compresses media | LAN-only | Encryption | Persistent pairing |
 |------|-----------|------|---------|------------------|----------|------------|-------------------|
-| **Tether** (target) | Android, iOS, macOS, Windows, Linux | Free + Pro | No | No | Yes | TBD (see [security.md](security.md)) | Yes (SAS comparison) |
+| **Tether** (target) | Android, iOS, macOS, Windows, Linux | Free + Pro | No | No | Yes | TBD (see [security.md](../security/README.md)) | Yes (SAS comparison) |
 | AirDrop | iOS, macOS only | Free | Apple ID for some flows | No | Yes (Bluetooth + Wi-Fi) | Yes | Implicit via contacts |
 | LocalSend | Android, iOS, macOS, Windows, Linux | Free (donations) | No | No | Yes | Yes (TLS, self-signed) | Optional ("favorites") |
 | Snapdrop / PairDrop | Web (any browser) | Free | No | No | Yes (same network only) | Yes (WebRTC) | No |

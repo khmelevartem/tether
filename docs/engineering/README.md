@@ -19,7 +19,7 @@ Product-side docs (vision, audience, features) live in [`docs/product/`](../prod
 - [Logging](logging.md) — KydraLog as the single KMP façade; `Tether.<Subsystem>` naming, levels, per-platform DEBUG gating, test silence, sensitive-data policy.
 - [Persistence](persistence.md) — key-value store contract and DataStore backend.
 - [Device identity](device-identity.md) — per-install keypair, the root of trust for pairing and TLS.
-- [Threat model](threat-model.md) — STRIDE-by-component attack surface, the SAS pairing correctness conditions, priorities and accepted risks; product-level summary in [`security.md`](../product/security.md).
+- [Security analysis](../security/README.md) — threat model, attack tree, and pentest suite; the per-component STRIDE attack surface and the SAS pairing correctness conditions.
 - [Platform concerns](platform-concerns.md) — recurring stumbling points for PRs touching platform source sets; checklist used by `review-platform`.
 - [Glossary discipline](glossary-discipline.md) — `docs/glossary.md` as the single dictionary (product / technical); `review-glossary` as a subagent that catches drift and undocumented terms in a PR diff.
 - [Long-lived artifacts](long-lived-artifacts.md) — writing discipline for prose that outlives the task. Applies to `CLAUDE.md`, `docs/`, `.claude/`, KDoc, comments, error messages.

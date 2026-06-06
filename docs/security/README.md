@@ -1,6 +1,6 @@
 # Security & Privacy
 
-Tether moves files between devices on the same local network with no cloud and no accounts. This doc captures the trust model, the pairing flow, and channel encryption at the product level. The engineering-layer STRIDE analysis — per-component attack surface and the conditions each mitigation depends on — lives in [`docs/engineering/threat-model.md`](../engineering/threat-model.md), with the SAS-pairing attack tree and pentest suite in [`docs/knowledge/sas-pairing-pentest.md`](../knowledge/sas-pairing-pentest.md).
+Tether moves files between devices on the same local network with no cloud and no accounts. This doc captures the trust model, the pairing flow, and channel encryption at the product level. The engineering-layer STRIDE analysis — per-component attack surface and the conditions each mitigation depends on — lives in [`threat-model.md`](threat-model.md), with the SAS-pairing attack tree and pentest suite in [`sas-pairing-pentest.md`](sas-pairing-pentest.md).
 
 > **Status.** This describes the **target** security model. The SAS pairing apparatus (commit-before-reveal, SAS derivation, trust stored only after mutual confirmation) and channel encryption are the model the implementation is built toward, not the current behaviour of every endpoint. Open gaps are tracked in [#10](https://github.com/khmelevartem/tether/issues/10) (SAS handshake), [#361](https://github.com/khmelevartem/tether/issues/361) (mutual confirmation before trust is stored), and [#140](https://github.com/khmelevartem/tether/issues/140) (pinned-TLS channel encryption).
 
@@ -25,7 +25,7 @@ A **lost or stolen device** is handled by OS-level security (lock screen, disk e
 
 ## Discovery and Trust
 
-Discovery is unauthenticated by design. Any device on a reachable subnet can announce itself — that is true today through mDNS and remains true through the additional discovery channels described in [tech-stack.md](tech-stack.md) and [`docs/engineering/discovery.md`](../engineering/discovery.md): the `/hello` rendezvous endpoint, HTTP-subnet-scan, and UDP-broadcast fallbacks. None of these widens the trust surface beyond what mDNS already exposes — they only diversify how a peer's existence reaches the device list. The list itself is not a trust claim.
+Discovery is unauthenticated by design. Any device on a reachable subnet can announce itself — that is true today through mDNS and remains true through the additional discovery channels described in [tech-stack.md](../product/tech-stack.md) and [`docs/engineering/discovery.md`](../engineering/discovery.md): the `/hello` rendezvous endpoint, HTTP-subnet-scan, and UDP-broadcast fallbacks. None of these widens the trust surface beyond what mDNS already exposes — they only diversify how a peer's existence reaches the device list. The list itself is not a trust claim.
 
 The trust gate is **pairing**. No file moves between two devices until they have completed the first-encounter SAS comparison and exchanged keys. A device announcing under another's name authenticates nothing — new devices surface as unverified, and only the SAS comparison grants trust. Discovery's job is to make sure both devices see each other; pairing decides which of them they will accept files from.
 
@@ -41,7 +41,7 @@ First-time connection between two devices uses **SAS comparison** — a Short Au
 4. Public keys are committed to the trust store on both sides only after that confirmation. A user who sees a mismatch and rejects leaves both trust stores unchanged.
 5. Subsequent connections between the two devices recognise each other automatically — no re-pairing.
 
-The SAS defends against active MITM during pairing: an attacker who intercepts and substitutes their own key produces a different SAS on each side, and the user catches the mismatch. This holds only when several correctness conditions all hold together — see [`threat-model.md` §SAS pairing model](../engineering/threat-model.md#sas-pairing-model).
+The SAS defends against active MITM during pairing: an attacker who intercepts and substitutes their own key produces a different SAS on each side, and the user catches the mismatch. This holds only when several correctness conditions all hold together — see [`threat-model.md` §SAS pairing model](threat-model.md#sas-pairing-model).
 
 The protection is only as strong as the user's attention: blind one-tap confirmation nullifies it, so the comparison is designed to require an active, deliberate match rather than a single button pressed without looking.
 

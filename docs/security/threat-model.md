@@ -1,6 +1,6 @@
 # Threat model
 
-STRIDE-by-component threat model for Tether's P2P file transfer within a single local network. This is the engineering-layer analysis behind the product-level trust framing in [`security.md`](../product/security.md); that doc summarises the trust model and pairing flow for a broad audience, this one holds the per-component attack surface and the conditions each mitigation depends on.
+STRIDE-by-component threat model for Tether's P2P file transfer within a single local network. This is the engineering-layer analysis behind the product-level trust framing in [`security.md`](README.md); that doc summarises the trust model and pairing flow for a broad audience, this one holds the per-component attack surface and the conditions each mitigation depends on.
 
 A living doc states what should be true of any correct implementation. Where the code has not caught up, the gap is an implementation issue, not a contradiction.
 
@@ -97,7 +97,7 @@ The listening server runs on the device of a non-technical user. Any bug here is
 | Parse exploit | T / D | Malformed multipart / JSON / headers crash the process or worse | Endpoint fuzzing, strict validation, defensive decoding |
 | Openness before pairing | E | The pairing endpoint is reachable by everyone by definition | Minimal logic before trust, hard limits, nothing extra exposed |
 
-The receive-path traversal mitigation and the streaming-not-buffering invariant are owned by [`file-transfer-wire.md`](file-transfer-wire.md); this row states the threat, that doc states the boundary.
+The receive-path traversal mitigation and the streaming-not-buffering invariant are owned by [`file-transfer-wire.md`](../engineering/file-transfer-wire.md); this row states the threat, that doc states the boundary.
 
 ### Device-selection UI
 
@@ -112,7 +112,7 @@ The receive-path traversal mitigation and the streaming-not-buffering invariant 
 |--------|----------|----------|------------|
 | Theft of the pairing secret from disk | I | Reading the stored key off disk and using it elsewhere | OS-bound secure storage — the OS encrypts the secret with a key bound to the user / device; the app never holds the master secret itself and never encrypts with a static key baked into the binary |
 
-The secret this protects is the root of trust owned by [`device-identity.md`](device-identity.md); the per-platform secure-storage mechanisms live there.
+The secret this protects is the root of trust owned by [`device-identity.md`](../engineering/device-identity.md); the per-platform secure-storage mechanisms live there.
 
 Accepted risk: malware running as the same user on the same machine can ask the OS to decrypt the secret — to it any software store is transparent. Only hardware-backed storage (TPM / Secure Enclave) closes this fully, which is out of MVP. This is a limit of the model, not a missed hole. See [accepted risks](#accepted-risks).
 
@@ -145,7 +145,7 @@ Consciously out of MVP:
 
 ## Verification
 
-The attack tree for the SAS-pairing node and the pentest-on-paper test-case suite — analysis documented, no live exploits run — live in [`docs/knowledge/sas-pairing-pentest.md`](../knowledge/sas-pairing-pentest.md). That suite states the expected behaviour each mitigation here must exhibit against a build.
+The attack tree for the SAS-pairing node and the pentest-on-paper test-case suite — analysis documented, no live exploits run — live in [`sas-pairing-pentest.md`](sas-pairing-pentest.md). That suite states the expected behaviour each mitigation here must exhibit against a build.
 
 ## STRIDE legend
 
@@ -165,4 +165,4 @@ Repudiation is not given its own rows: for disposable P2P transfer without accou
 - Exact SAS length within the "5–6 decimal digits (~17–20 bits)" band — the implementation issue picks the digit count.
 - The wire shape of the commitment exchange — the protocol detail lives with the pairing implementation; this doc states that commit-before-reveal is required, not its framing.
 - Concrete rate-limit, connection-cap, and size-limit constants — implementation choices that live in code.
-- The application-tag and attribute recipe for each platform secret store — owned by [`device-identity.md`](device-identity.md).
+- The application-tag and attribute recipe for each platform secret store — owned by [`device-identity.md`](../engineering/device-identity.md).
