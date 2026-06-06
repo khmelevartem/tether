@@ -209,7 +209,7 @@ Section names in the template — `Состав`, `Что разблокируе
 
 **Skyrim-codename.** A decorative subtitle in epic-fantasy style — for atmosphere and recognisability. **Carries no operational load.** Any tool reading `sprint-NN.md` must rely only on the number `NN`; the subtitle must not be parsed or analysed.
 
-**Size (for the column).** Size is expected human review effort, not diff size — the forward estimate is a structural proxy for it (rubric: [`sizing-rubric.md`](../../sizing-rubric.md)). The structural cues below are the multipliers that predict more review rounds:
+**Size (for the column).** Size is expected human review effort, not diff size — see [`sizing-rubric.md`](../../sizing-rubric.md) for the method. For the sprint-doc column, use these quick structural cues:
 - **S** — isolated change with no platform specifics
 - **M** — several files / one platform with nuances
 - **L** — new component / multiple platforms / lots of unknowns

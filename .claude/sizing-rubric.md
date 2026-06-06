@@ -1,6 +1,6 @@
 # Issue sizing rubric
 
-`size:S` / `size:M` / `size:L` measure **human review effort**, not the size of the diff. The label answers "how much of the author's attention did this cost to land" — caps are `S` ≤ 4 h, `M` ≤ 1 day, `L` ≤ 3 days; larger is an epic with sub-issues. Code volume is a weak proxy: a 2 000-line mechanical translation that merges with no comments is `S`; a 200-line change that takes ten rounds of review is `L`.
+`size:S` / `size:M` / `size:L` measure **human review effort**, not the size of the diff. The label answers "how much of the reviewer's attention did this cost to land" — caps are `S` ≤ 4 h, `M` ≤ 1 day, `L` ≤ 3 days; larger is an epic with sub-issues. Code volume is a weak proxy: a 2 000-line mechanical translation that merges with no comments is `S`; a 200-line change that takes ten rounds of review is `L`.
 
 The label is set twice — estimated at filing ([`create-issue`](skills/create-issue/SKILL.md)) and reconciled against actuals at merge ([`close-issue`](skills/close-issue/SKILL.md)). Both points use this rubric, so the label means the same thing throughout its life and the analytics built on it ([`progress`](skills/progress/SKILL.md) XP, [`grooming`](skills/grooming/SKILL.md) auto-eligibility) rest on an honest signal.
 
@@ -8,7 +8,7 @@ The label is set twice — estimated at filing ([`create-issue`](skills/create-i
 
 At merge the size is decided by **review burden**, measured from the PR:
 
-- **Review comments** — the count of the author's top-level (ROOT) inline review comments. These are the substantive feedback points. Replies inside a thread are excluded — many are `/check-review` auto-acknowledgements, not effort.
+- **Review comments** — the count of the reviewer's top-level (ROOT) inline review comments. These are the substantive feedback points. Replies inside a thread are excluded — many are `/check-review` auto-acknowledgements, not effort.
 - **Review rounds** — the number of distinct review sessions: ROOT comments clustered by time, a gap of more than 60 minutes starting a new cluster. This is the count of "I read it, sent feedback, waited for a fix" cycles.
 
 Both are largely independent of code volume — they capture what the work cost the reviewer, which is the thing being sized.
