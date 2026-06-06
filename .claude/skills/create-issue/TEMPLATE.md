@@ -66,7 +66,7 @@ Test: closed-issue titles listed in sequence should read as project history.
 
 Both mandatory; pass via `--label "size:<…>,<type>"` on `gh issue create`.
 
-- **`size:`** — `size:S` ≤ 4 h, `size:M` ≤ 1 day, `size:L` ≤ 3 days. Larger → epic with sub-issues; raise during interview.
+- **`size:`** — `size:S` ≤ 4 h, `size:M` ≤ 1 day, `size:L` ≤ 3 days. Larger → epic with sub-issues; raise during interview. Size is review effort, not diff size — estimate per [SKILL.md §Estimating size](SKILL.md).
 - **Type** — exactly one of `feature`, `bugfix`, `refactor`, `infra`, `docs`, `dependency`.
 
 ## What "product-level DoD" means
