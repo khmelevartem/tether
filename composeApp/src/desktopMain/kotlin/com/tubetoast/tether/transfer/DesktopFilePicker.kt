@@ -1,5 +1,6 @@
 package com.tubetoast.tether.transfer
 
+import com.tubetoast.tether.transfer.mac.MacNativeFilePicker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.swing.Swing
 import kotlinx.coroutines.withContext
@@ -14,7 +15,26 @@ private val log = KydraLog.withTag(default = "DesktopFilePicker")
 class DesktopFilePicker(
     private val windowHolder: WindowHolder,
 ) : FilePicker {
-    override suspend fun pickFiles(): List<FileSource> {
+    private val isMac = System
+        .getProperty("os.name")
+        .orEmpty()
+        .lowercase()
+        .contains("mac")
+
+    override suspend fun pickFiles(): List<FileSource> =
+        if (isMac) pickViaNativePanel() else pickViaAwtDialog()
+
+    private suspend fun pickViaNativePanel(): List<FileSource> {
+        val selected = MacNativeFilePicker.pickFilesAndFolders()
+        log.info { "pickFiles (mac): ${selected.size} item(s) selected" }
+        return withContext(Dispatchers.IO) {
+            selected.flatMap { file ->
+                if (file.isDirectory) JvmFolderWalker().walk(file) else listOf(JvmPathFileSource(file.toPath()))
+            }
+        }
+    }
+
+    private suspend fun pickViaAwtDialog(): List<FileSource> {
         val files = withContext(Dispatchers.Swing) {
             val dialog = FileDialog(windowHolder.window as? java.awt.Frame, "Select files", FileDialog.LOAD)
             dialog.isMultipleMode = true
