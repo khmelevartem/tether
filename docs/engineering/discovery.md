@@ -178,7 +178,7 @@ The idle window is intentionally generous — peers reappear cheaply, and stale 
 
 Discovery is unauthenticated by design across every layer. Any device on a reachable subnet can announce itself over mDNS today; rendezvous, subnet-scan, and broadcast do not widen this surface — they only diversify how an announcement reaches us.
 
-Trust is established exclusively at [pairing](../product/security.md#pairing-flow) time, with the PIN comparison and SPKI-pinned TLS handshake that follow. No file moves between two devices until they have completed pairing. Discovery's job is to populate the device list; the list itself is not a trust claim.
+Trust is established exclusively at [pairing](../product/security.md#pairing-flow) time, with the SAS comparison and SPKI-pinned TLS handshake that follow. No file moves between two devices until they have completed pairing. Discovery's job is to populate the device list; the list itself is not a trust claim. A device announcing under another's name authenticates nothing — discovery's threats (announce spoofing, TXT disclosure, list flooding) and their mitigations are analysed in [`threat-model.md` §Discovery](threat-model.md#discovery-mdns).
 
 ## Cross-layer concerns
 

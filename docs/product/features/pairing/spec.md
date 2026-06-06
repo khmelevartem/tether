@@ -2,7 +2,7 @@
 
 **Area:** Pairing / Security
 **Status:** `scoped`
-**GitHub Issues:** [#9](https://github.com/khmelevartem/tether/issues/9) (key exchange & trusted device memory), [#10](https://github.com/khmelevartem/tether/issues/10) (handshake & PIN computation, CLI flow), [#11](https://github.com/khmelevartem/tether/issues/11) (Android PIN confirmation UI); iOS, Desktop UI — _tbd_
+**GitHub Issues:** [#9](https://github.com/khmelevartem/tether/issues/9) (key exchange & trusted device memory), [#10](https://github.com/khmelevartem/tether/issues/10) (handshake & SAS computation, CLI flow), [#11](https://github.com/khmelevartem/tether/issues/11) (Android SAS confirmation UI); iOS, Desktop UI — _tbd_
 
 ---
 
@@ -10,13 +10,13 @@
 
 Today any device on the same Wi-Fi can send a file to any other Tether device — there is no notion of trust. For an MVP that goes to non-technical users this is unacceptable: a roommate, a coworker, or any guest on the network can drop arbitrary content uninvited. Tether's promise of "two taps to send" only works if the two devices on either end recognise each other; otherwise the receiver needs a wall of confirmations and Tether stops feeling local and effortless.
 
-[vision.md](../../vision.md) names this as one MVP commitment: *"Pairing with 4-digit code verification."* This feature is that commitment in full — the cryptographic foundation, the PIN that humans compare, and the UI that asks them to compare it.
+[roadmap.md](../../roadmap.md) names this as one MVP commitment: *"Pairing with SAS verification (compare a short code on both devices)."* This feature is that commitment in full — the cryptographic foundation, the SAS that humans compare, and the UI that asks them to compare it.
 
 ## What it does
 
-The first time two devices meet, both show the same 4-digit code. The user compares the codes on both screens and confirms on each — two taps. From that moment on the two devices recognise each other: every subsequent connection between them happens silently, no further prompt, no repeated check.
+The first time two devices meet, both show the same SAS — a short code of 5–6 digits. The user compares the SAS on both screens and confirms on each — two taps. From that moment on the two devices recognise each other: every subsequent connection between them happens silently, no further prompt, no repeated check.
 
-A device that has never paired with this one is always treated as a first encounter, regardless of who initiates. Reinstalling Tether on either device gives that device a new identity, so the next encounter starts over from the PIN screen — which matches what a user would expect after wiping and reinstalling an app.
+A device that has never paired with this one is always treated as a first encounter, regardless of who initiates. Reinstalling Tether on either device gives that device a new identity, so the next encounter starts over from the SAS screen — which matches what a user would expect after wiping and reinstalling an app.
 
 The user never sees keys, never types a code into a field, never picks an algorithm. They see two short numbers, confirm they match, and Tether remembers.
 
@@ -25,8 +25,8 @@ The user never sees keys, never types a code into a field, never picks an algori
 **Primary flow — first encounter**
 
 1. User on device A initiates a transfer to device B from the [device list](../device-list/spec.md).
-2. Both A and B show a dialog with the same 4-digit code and the name of the other device.
-3. User compares the codes. They match → user taps "Confirm" on both sides.
+2. Both A and B show a dialog with the same SAS and the name of the other device.
+3. User compares the SAS. They match → user taps "Confirm" on both sides.
 4. The dialog closes; the transfer proceeds.
 5. Tether persists the pair on both devices.
 
@@ -37,15 +37,15 @@ The user never sees keys, never types a code into a field, never picks an algori
 
 **Alternative paths**
 
-- **Codes do not match (potential MITM).** User taps "Reject" on either side. Both sides surface the rejection clearly — initiator sees "device declined the connection"; the prompt closes on the other side too.
-- **Reinstall on one side.** That device has a new identity. The next encounter is a first encounter again — both see the dialog with a fresh code.
+- **SAS does not match (potential MITM).** User taps "Reject" on either side. Both sides surface the rejection clearly — initiator sees "device declined the connection"; the prompt closes on the other side too.
+- **Reinstall on one side.** That device has a new identity. The next encounter is a first encounter again — both see the dialog with a fresh SAS.
 - **Timeout.** If neither user acts within a fixed window (current proposal: 30 s), the prompt closes with a "timed out" message on both sides; no pairing happens, the transfer is cancelled.
 - **Storage failure on the trusting device.** The remembering step quietly fails. The next encounter is treated as a first encounter and the user simply confirms again. No crash, no scary error.
 - **Three or more devices.** Memory is per pair: confirming A↔B does nothing for A↔C. Each new pair has its own first encounter.
 
 ## What "working" looks like
 
-- The first transfer between two devices always shows the dialog with a 4-digit code on **both** ends, and the codes match.
+- The first transfer between two devices always shows the dialog with a SAS on **both** ends, and the SAS matches.
 - Tapping "Confirm" on both sides lets the file go through; tapping "Reject" on either side stops it cleanly with a clear message on the other side.
 - After a successful pair, restarting Tether on either device does not undo the recognition — they still know each other.
 - Reinstalling Tether on one device causes the next encounter to behave as a first encounter again.
@@ -58,7 +58,7 @@ The user never sees keys, never types a code into a field, never picks an algori
 - **Android:** dialog must survive screen rotation without resetting the timeout.
 - **iOS:** dialog look matches Android by default; deviation only if the platform demands it (system sheet vs. modal).
 - **Desktop:** dialog window; same content.
-- **CLI runner (developer-only):** during pairing, the 4-digit code is printed to stdout and confirmation is via `y`/`n` on stdin. This is a debugging affordance for the developer, not a user-facing flow.
+- **CLI runner (developer-only):** during pairing, the SAS is printed to stdout and confirmation is via `y`/`n` on stdin. This is a debugging affordance for the developer, not a user-facing flow.
 
 ## Not in this feature
 

@@ -9,7 +9,7 @@
 
 Until this ADR landed, [docs/product/security.md](../../product/security.md) listed three options for the transport between paired Tether devices as an open question: (A) TLS with self-signed certificates pinned to paired keys, (B) plain HTTP relying solely on pairing for authentication, (C) application-level encryption (Noise / libsodium-style payload encryption above HTTP). The default in-tree behaviour was effectively B, but it was never chosen — only deferred. Resolving it became urgent because:
 
-- [#10](https://github.com/khmelevartem/tether/issues/10) (PIN handshake) and [#116](https://github.com/khmelevartem/tether/issues/116) (real EC P-256 keys via Apple Keychain with X.509 wire format) were converging on the same crypto material that any of A / C would consume. Without a fixed channel-encryption decision, neither could finalise the shape of the keys it produces.
+- [#10](https://github.com/khmelevartem/tether/issues/10) (SAS handshake) and [#116](https://github.com/khmelevartem/tether/issues/116) (real EC P-256 keys via Apple Keychain with X.509 wire format) were converging on the same crypto material that any of A / C would consume. Without a fixed channel-encryption decision, neither could finalise the shape of the keys it produces.
 - [#119](https://github.com/khmelevartem/tether/issues/119) (transport reliability hardening — CIO timeouts, `Expect: 100-continue`, large files) was about to settle plain-HTTP transport behaviour. Adding TLS on top later would re-open everything it touched.
 
 [adr-apple-fileserver-engine.md](adr-apple-fileserver-engine.md) explicitly deferred the Apple-side transport choice to "when TLS lands" — that is this ADR.
