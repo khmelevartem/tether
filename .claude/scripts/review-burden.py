@@ -23,7 +23,10 @@ import subprocess
 import sys
 from collections import defaultdict
 from datetime import datetime
+from pathlib import Path
 from statistics import mean, median
+
+BANDS_PATH = Path(__file__).resolve().parents[1] / "sizing-bands.json"
 
 SIZE_LABELS = ("size:S", "size:M", "size:L")
 
@@ -81,6 +84,9 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="Re-derive issue-sizing review-burden bands")
     ap.add_argument("--round-gap-min", type=int, default=60,
                     help="minutes between ROOT comments that start a new review round")
+    ap.add_argument("--write", action="store_true",
+                    help=f"write the per-size mean ROOT-comment bands to {BANDS_PATH.name} "
+                         "(the machine-readable source progress/build.py reads for task cost)")
     args = ap.parse_args()
 
     repo = resolve_repo()
@@ -102,14 +108,24 @@ def main() -> None:
 
     print(f"closed sized issues: {len(sizes)} · with merged PR: {linked}\n")
     print(f"{'size':4} {'n':>3}  {'ROOT comments (mean/median)':>28}  {'rounds mean':>11}  {'LOC median':>10}")
+    bands = {}
     for size in ("S", "M", "L"):
         d = by_size.get(size)
         if not d or not d["comments"]:
             continue
         c = d["comments"]
+        bands[size] = round(mean(c), 1)
         print(f"{size:4} {len(c):>3}  "
               f"{mean(c):>10.1f} / {median(c):<13.0f}  "
               f"{mean(d['rounds']):>11.2f}  {median(d['loc']):>10.0f}")
+
+    if args.write and bands:
+        BANDS_PATH.write_text(json.dumps({
+            "metric": "mean ROOT review comments per closed sized issue with a merged PR",
+            "generated_by": ".claude/scripts/review-burden.py --write",
+            "bands": bands,
+        }, indent=2) + "\n")
+        print(f"\nwrote {BANDS_PATH.relative_to(BANDS_PATH.parents[1])}: {bands}")
 
 
 if __name__ == "__main__":

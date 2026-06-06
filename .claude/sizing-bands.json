@@ -1,0 +1,9 @@
+{
+  "metric": "mean ROOT review comments per closed sized issue with a merged PR",
+  "generated_by": ".claude/scripts/review-burden.py --write",
+  "bands": {
+    "S": 0.6,
+    "M": 3.2,
+    "L": 11.7
+  }
+}

@@ -28,7 +28,7 @@ A heavy body on a `size:L` estimate is a signal to split into an epic, not to wr
 
 ## Current calibration
 
-These bands are **volatile** — they describe the current reviewer's behaviour and are re-derived from closed-issue actuals during [`grooming`](skills/grooming/SKILL.md) (see its self-calibration step), backed by [`scripts/review-burden.py`](scripts/review-burden.py). The method above is stable; only the numbers below move.
+These bands are **volatile** — they describe the current reviewer's behaviour and are re-derived from closed-issue actuals during [`grooming`](skills/grooming/SKILL.md) (see its self-calibration step), backed by [`scripts/review-burden.py`](scripts/review-burden.py). That script's `--write` also emits the per-size mean review comments to [`sizing-bands.json`](sizing-bands.json), the machine-readable source [`progress`](skills/progress/SKILL.md) reads for each task's base cost — so the cost weights are measured, not hardcoded. The method above is stable; only the numbers below move.
 
 | Size | ROOT review comments | Review rounds | LOC (median, prior only) |
 |------|----------------------|---------------|--------------------------|

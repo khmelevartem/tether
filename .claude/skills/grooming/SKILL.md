@@ -53,10 +53,10 @@ For every candidate from the closed-in-window list, verify `gh pr list --search 
 **0.7 Recalibrate the sizing bands.** `close-issue` has reconciled each merged task's `size:` against its actual review burden, so the closed-issue set is now ground truth for what `S`/`M`/`L` cost. Re-derive the bands:
 
 ```bash
-python3 .claude/scripts/review-burden.py
+python3 .claude/scripts/review-burden.py --write
 ```
 
-Compare the per-size ROOT-comment / review-round figures against the calibration table in [`sizing-rubric.md`](../../sizing-rubric.md). If a band has drifted materially, update that table (only the volatile numbers; the method above it is stable) — this keeps the forward estimate in `create-issue` and the reconciliation in `close-issue` anchored to current behaviour. No drift → nothing to change.
+`--write` refreshes [`.claude/sizing-bands.json`](../../sizing-bands.json) — the machine-readable per-size mean review burden that `progress` reads as each task's base cost (so cost analytics track measured reviewer effort, never hardcoded weights). Then compare the printed ROOT-comment / review-round figures against the calibration table in [`sizing-rubric.md`](../../sizing-rubric.md); if a band drifted materially, update that table too (only the volatile numbers; the method above it is stable). This keeps the forward estimate in `create-issue`, the reconciliation in `close-issue`, and the `progress` cost all anchored to current behaviour. No drift → nothing to change.
 
 ---
 
