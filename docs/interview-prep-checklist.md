@@ -44,7 +44,7 @@
 ## Блок 2 — Coroutines
 
 ### Механика
-- [ ] `suspend` под капотом — CPS, state machine, что компилятор делает с функцией
+- [x] `suspend` под капотом — CPS, state machine, что компилятор делает с функцией
 - [ ] `Continuation<T>` — интерфейс, как реализуется возобновление
 - [ ] Корутины vs потоки — почему «легковесные», как маппируются на потоки
 - [ ] `CoroutineContext` — `Job`, `Dispatcher`, `CoroutineName`, `CoroutineExceptionHandler`, наследование
