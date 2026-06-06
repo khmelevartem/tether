@@ -50,6 +50,14 @@ For every candidate from the closed-in-window list, verify `gh pr list --search 
 
 **0.6 Report the closing result to the user:** "Sprint N: X/Y tasks closed, Z additional results in the window. Sprint doc updated. Moving on to planning the next one."
 
+**0.7 Recalibrate the sizing bands.** `close-issue` has reconciled each merged task's `size:` against its actual review burden, so the closed-issue set is now ground truth for what `S`/`M`/`L` cost. Re-derive the bands:
+
+```bash
+python3 .claude/scripts/review-burden.py
+```
+
+Compare the per-size ROOT-comment / review-round figures against the calibration table in [`sizing-rubric.md`](../../sizing-rubric.md). If a band has drifted materially, update that table (only the volatile numbers; the method above it is stable) — this keeps the forward estimate in `create-issue` and the reconciliation in `close-issue` anchored to current behaviour. No drift → nothing to change.
+
 ---
 
 ## Step 1 — Product context
@@ -201,7 +209,7 @@ Section names in the template — `Состав`, `Что разблокируе
 
 **Skyrim-codename.** A decorative subtitle in epic-fantasy style — for atmosphere and recognisability. **Carries no operational load.** Any tool reading `sprint-NN.md` must rely only on the number `NN`; the subtitle must not be parsed or analysed.
 
-**Size (for the column):**
+**Size (for the column).** Size is expected human review effort, not diff size — the forward estimate is a structural proxy for it (rubric: [`sizing-rubric.md`](../../sizing-rubric.md)). The structural cues below are the multipliers that predict more review rounds:
 - **S** — isolated change with no platform specifics
 - **M** — several files / one platform with nuances
 - **L** — new component / multiple platforms / lots of unknowns

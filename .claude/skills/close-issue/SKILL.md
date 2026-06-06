@@ -138,7 +138,7 @@ Do not let a decision live only in the chat: sessions are lost, and the next con
 
 ## Step 6 — Merge
 
-**Before merging: compare the `size:*` label with the actual volume of work.** If the task was originally `size:S` but turned out to be `size:M` (or vice versa) — update the label via `gh issue edit <N> --remove-label size:S --add-label size:M`. The label should reflect how it actually turned out, not the initial estimate — otherwise future analytics on volumes will be inaccurate.
+**Before merging: reconcile the `size:*` label against the actual review burden.** Size means human review effort, not diff size — the rubric is [`.claude/sizing-rubric.md`](../../sizing-rubric.md). Read the ground-truth signal off this PR: the count of your ROOT (top-level) inline review comments and the number of review rounds they fall into (clusters more than 60 min apart). Match against the calibration bands; a `size:S` that drew double-digit comments over several rounds is a `size:L`, and vice versa. Update via `gh issue edit <N> --remove-label size:S --add-label size:L`. Do **not** size by lines changed or commit count — a large but mechanical diff stays small, and atomic commits make commit count meaningless. The label must reflect actual effort, otherwise the analytics and the calibration bands `grooming` re-derives drift.
 
 Don't treat this as "a poor estimate" — scope often grows along the way due to additions by the user or external conditions. Just record the fact.
 

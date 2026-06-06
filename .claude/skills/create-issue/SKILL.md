@@ -140,6 +140,10 @@ Listed in sequence, closed-issue titles should read as project history.
 
 **Type** (mandatory): exactly one of `feature`, `bugfix`, `refactor`, `infra`, `docs`, `dependency`.
 
+### Estimating size
+
+Size means **human review effort**, not diff size — the rubric is [`.claude/sizing-rubric.md`](../../sizing-rubric.md). At filing the review-burden signal does not exist yet, so estimate it as **"how many review rounds will this need":** few and mechanical → `S`; many round-trips and wide blast radius → `L`. Anchor on the type prior (`feature` → `M`/`L`, `bugfix` → `S`/`M`, `refactor` → `M`, `infra`/`docs` → `S`/`M`), then push up for structural scope — cross-platform `expect`/`actual` fan-out, a two-sided contract, a new module or crossed architecture boundary. Do **not** size by body length; a long body on a `size:L` is the split-into-epic signal (see §What to avoid), not a bigger task. The estimate is reconciled against actuals at merge by `close-issue`.
+
 ## What to avoid
 
 - **Pre-baking design** — file paths as commitments, signatures dictating contracts, package placement for new top-level types. Those are `/implement` + architect decisions against `docs/engineering/architecture-principles.md`. Issue body: "touches the file-server boundary", not "lives in `com.example.network.foo`".
