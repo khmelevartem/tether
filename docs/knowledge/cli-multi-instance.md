@@ -10,7 +10,9 @@ Both processes share the same DataStore preferences file (Linux / macOS: `~/.con
 
 ## Solution
 
-The CLI uses per-process ephemeral fingerprints (never persisted to disk), parallel to how it handles ephemeral device names. Each CLI invocation generates a fresh random fingerprint; distinct processes therefore have distinct fingerprints and see each other normally.
+By default the CLI uses per-process ephemeral fingerprints and device names. Each CLI invocation generates a fresh random fingerprint; distinct processes therefore have distinct fingerprints and see each other normally.
+
+Passing `--config-dir <dir>` opts into a persistent identity: the fingerprint, name, and key pair are stored in that directory and survive restart. Two CLI instances launched with different `--config-dir` paths each carry a distinct persistent identity and continue to see each other normally.
 
 Production app installations are not affected: there is no scenario where two app installations run simultaneously under the same OS user account, so self-suppression by fingerprint remains load-bearing.
 

@@ -89,7 +89,7 @@ Sends 3 files in one command. PASS if `[send] done — 3/3 sent` appears AND all
 
 Run: `./block-2.3-retry.sh`
 
-Stops B to provoke `[send] error`, restarts B with the same `--config-dir` it started with in 2.1, then issues `retry SmokeMacB`. B's `--config-dir` identity (name + fingerprint) survives the stop→restart, so A's engine registry keeps the same `PeerIdentity` and the failed transfer retains its terminal state for `retry` to resume from. PASS if the file lands byte-identical after retry.
+Stops B to provoke `[send] error`, restarts B with the same `--config-dir` it started with in 2.1, then issues `retry SmokeMacB`. B's `--config-dir` identity (name + fingerprint) survives the stop→restart, so A's transfer engine tracks it as the same peer and the failed transfer retains its terminal state for `retry` to resume from. PASS if the file lands byte-identical after retry.
 
 #### Scenario 2.4 — exit code on `quit`
 

@@ -82,10 +82,10 @@ class TetherCommand :
 
         val activeEngineRef = AtomicReference<PeerTransferEngine?>(null)
 
+        val dir = configDir
         val container = CliAppContainer(
-            if (configDir != null) {
-                val dir = configDir!!
-                if (!dir.mkdirs() && !dir.isDirectory || !dir.canWrite()) {
+            if (dir != null) {
+                if (!isUsableConfigDir(dir)) {
                     echo("ERROR: --config-dir is not a writable directory: ${dir.absolutePath}", err = true)
                     throw ProgramResult(1)
                 }
@@ -420,5 +420,8 @@ fun parseTokens(line: String): List<String> {
 
 fun peersIds(peers: List<Device>): String =
     if (peers.isEmpty()) "none" else peers.joinToString(", ") { it.id }
+
+fun isUsableConfigDir(dir: java.io.File): Boolean =
+    (dir.mkdirs() || dir.isDirectory) && dir.canWrite()
 
 fun main(args: Array<String>) = TetherCommand().main(args)

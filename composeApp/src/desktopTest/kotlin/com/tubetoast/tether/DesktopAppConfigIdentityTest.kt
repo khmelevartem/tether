@@ -4,6 +4,8 @@ import com.tubetoast.tether.config.EphemeralDeviceNamePersistence
 import com.tubetoast.tether.di.CliAppContainer
 import com.tubetoast.tether.di.DefaultDesktopAppConfig
 import com.tubetoast.tether.identity.EphemeralFingerprintPersistence
+import com.tubetoast.tether.security.DeviceKeyPair
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import java.io.File
 import java.nio.file.Files
@@ -64,22 +66,24 @@ class DesktopAppConfigIdentityTest {
     }
 
     @Test
-    fun `ephemeral identity differs between fresh containers`() = runBlocking {
-        val fp1 = CliAppContainer(
-            DefaultDesktopAppConfig(
-                port = 0,
-                namePersistenceOverride = EphemeralDeviceNamePersistence(),
-                fingerprintPersistenceOverride = EphemeralFingerprintPersistence(),
-            ),
-        ).deviceIdentityStore.getOrCreate()
+    fun `configDir wires DataStore-backed name persistence and round-trips a name`() = runBlocking {
+        val container = CliAppContainer(DefaultDesktopAppConfig(port = 0, configDir = tmpDir))
+        container.nameStore.init()
+        container.nameStore.setName("PersistMe")
+        assertEquals("PersistMe", container.nameStore.name.first())
+    }
 
-        val fp2 = CliAppContainer(
-            DefaultDesktopAppConfig(
-                port = 0,
-                namePersistenceOverride = EphemeralDeviceNamePersistence(),
-                fingerprintPersistenceOverride = EphemeralFingerprintPersistence(),
-            ),
-        ).deviceIdentityStore.getOrCreate()
+    @Test
+    fun `ephemeral identity differs between fresh containers`() = runBlocking {
+        // deviceKeyPair is pinned to tmpDir so the ephemeral path does not touch the real ~/.config/tether.
+        fun ephemeralConfig() = DefaultDesktopAppConfig(
+            port = 0,
+            deviceKeyPair = DeviceKeyPair(tmpDir),
+            namePersistenceOverride = EphemeralDeviceNamePersistence(),
+            fingerprintPersistenceOverride = EphemeralFingerprintPersistence(),
+        )
+        val fp1 = CliAppContainer(ephemeralConfig()).deviceIdentityStore.getOrCreate()
+        val fp2 = CliAppContainer(ephemeralConfig()).deviceIdentityStore.getOrCreate()
 
         assertNotEquals(fp1, fp2, "ephemeral fingerprints must differ between container instances")
     }
