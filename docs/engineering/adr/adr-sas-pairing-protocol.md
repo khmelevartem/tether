@@ -58,6 +58,70 @@ Option 1 without the per-handshake nonce: the SAS is a pure function of the two 
 - **Pairing needs to transmit a secret** (not just public keys) in a future protocol revision. The forward-secrecy cost was accepted because the exchange is secret-free; that premise would no longer hold.
 - **Identity keys gain rotation** such that a single pairing must establish trust across multiple successive keys. The static-key assumption behind the nonce-for-freshness trade-off would need re-examination.
 
+## Amendment — 2026-06-06 — nonce establishment and transcript binding
+
+Option 1 above fixes *what* the SAS authenticates (the two static identity public keys) and *that* a per-handshake nonce keeps the SAS fresh. It leaves *how the nonce is established and bound* unspecified. That gap is load-bearing: the nonce exists specifically to close the offline-precomputation hole that commit-before-reveal does **not** close for static keys, and an under-specified nonce reopens exactly that hole. The original Option 1 body remains above as historical record; this amendment specifies the nonce establishment and SAS input that the implementation follows.
+
+### The hole the nonce must close
+
+With static, reusable identity keys and no nonce, the SAS is a fixed function of two keys the attacker can learn in advance. A MITM precomputes a colliding key pair `f(IK_A, IK_M) = f(IK_M', IK_B)` **offline** — for a ~20-bit SAS this is a birthday search over ~2¹⁰ candidates — then commits the precomputed keys honestly in the live handshake. Commit-before-reveal is satisfied and provides no protection, because the attacker was never adaptive: it ground the collision against known static keys before the exchange began. The nonce is what forces the attack back online and bounds it to a single handshake.
+
+### Why a naive nonce is not enough
+
+The nonce closes the hole **only if it is unpredictable to the attacker before the attacker must commit its keys.** If one side sends the nonce in the clear before key commitments are locked, the attacker grinds keys against the now-known nonce inside the handshake window — a ~20-bit target with ~10³ birthday candidates is fast enough that this is a live risk, not a hypothetical.
+
+### Decision
+
+The per-handshake nonce is **contributory and committed alongside the keys**, and the SAS is computed over the **full transcript**, not over the raw keys plus a nonce.
+
+1. **Contributory nonce.** Each side generates a random share (`nonce_A`, `nonce_B`). The effective nonce is a combination of both shares. Neither side alone determines the result, so neither side — nor a MITM relaying between them — fixes or predicts it unilaterally.
+2. **Nonce shares committed in the same commit phase as the keys.** A side's commitment covers both its identity public key and its nonce share. Shares are revealed only after both commitments are received. This makes the entire SAS input unpredictable to either party until the reveal, killing both offline precomputation and adaptive online collision.
+3. **SAS over the full transcript.** The SAS is a truncation of a hash over everything exchanged, not over an isolated key-pair-plus-nonce:
+   ```
+   SAS = truncate( H( commit_A ‖ commit_B
+                      ‖ IK_A ‖ IK_B
+                      ‖ nonce_A ‖ nonce_B
+                      ‖ role_tag_A ‖ role_tag_B ) )
+   ```
+   Including both full identity keys keeps B3-T (full-coverage) satisfied. Including the commitments and both nonce shares binds freshness into the SAS. Including role tags (initiator / responder) removes residual unknown-key-share / reflection ambiguity — each side's view is unambiguously bound to a direction, not just to a symmetric key set.
+4. **Truncation length unchanged.** SAS length stays at the ≥ ~20-bit target from Option 1; this amendment changes the *input* to the hash, not the output length.
+
+### Ordering (normative)
+
+```
+A → B : commit_A = H(IK_A ‖ nonce_A ‖ role_tag_A)
+B → A : commit_B = H(IK_B ‖ nonce_B ‖ role_tag_B)
+A → B : reveal  IK_A, nonce_A
+B → A : reveal  IK_B, nonce_B
+both  : verify peer reveal against peer commit; abort on mismatch
+both  : compute SAS over the full transcript; display
+human : compare; confirm only on match
+both  : on bilateral confirm, commit peer IK to trust store
+```
+
+No reveal precedes both commitments. No party learns the peer's key or nonce share before its own commitment is sent.
+
+### Costs accepted
+
+- **One extra committed value per side (the nonce share).** Marginal — it rides inside the existing commitment, adding no round trips beyond what commit-before-reveal already requires.
+- **The combination function for the two nonce shares is a spec item** that must be fixed and not silently changed (changing it changes every SAS). Recorded here rather than left to implementation.
+
+### Consequences
+
+- The nonce is a contributory value, not a single-party one; Option 1's "nonce is load-bearing" statement is operationalised in a way a MITM cannot predict or fix.
+- The SAS subject is the full transcript, so any tampering with commitments, keys, nonce shares, or roles changes the displayed SAS and is caught by human comparison.
+- Implementation reviewers have a normative ordering to check against, rather than inferring it from prose.
+
+### Revisit if
+
+- **SAS length drops below the ~20-bit target.** The online-collision bound inside one handshake scales with SAS length; a shorter SAS narrows the margin this amendment relies on.
+- **The commitment hash or nonce-combination function changes.** Both are part of the SAS contract; a change is a protocol break, not an implementation detail.
+
+### References
+
+- [`threat-model.md` §SAS pairing model](../../security/threat-model.md#sas-pairing-model) — the standing rule this amendment refines (contributory, co-committed nonce; SAS over the full transcript).
+- [`sas-pairing-pentest.md`](../../security/sas-pairing-pentest.md) — Group B cases B5-T / B5-T2 / B6-T / B7-T cover precomputation, the contributory nonce, and transcript binding.
+
 ## References
 
 - [`threat-model.md` §SAS pairing model](../../security/threat-model.md#sas-pairing-model) — parent living doc; the standing SAS correctness rules this ADR's choice satisfies.
