@@ -4,14 +4,23 @@
 
 ## Состав
 
-| # | Issue | Название | Тип | Размер |
-| - | ----- | -------- | --- | ------ |
-| 1 | [#345](https://github.com/khmelevartem/tether/issues/345) | CLI: два экземпляра на одном хосте не видят друг друга | bugfix | S |
-| 2 | [#368](https://github.com/khmelevartem/tether/issues/368) | Same-named peers stay distinguishable in the peer list | bugfix | S |
-| 3 | [#352](https://github.com/khmelevartem/tether/issues/352) | Spaces in filenames arrive as '+' on receiver | bugfix | S |
-| 4 | [#348](https://github.com/khmelevartem/tether/issues/348) | CLI: design and apply a convenient log format | refactor | M |
-| 5 | [#192](https://github.com/khmelevartem/tether/issues/192) | Android sender wiring: SAF picker, share-sheet и MediaStore receiver | feature | M |
-| 6 | [#10](https://github.com/khmelevartem/tether/issues/10) | Паринг — handshake, вычисление PIN-кода, CLI-флоу | feature | M |
+**Итог:** 5/6 задач закрыто. #10 — частично: реальная работа вынесена в #361 и #378, перенос в sprint-12.
+
+| # | Issue | Название | Тип | Размер | Итог |
+| - | ----- | -------- | --- | ------ | ---- |
+| 1 | [#345](https://github.com/khmelevartem/tether/issues/345) | CLI: два экземпляра на одном хосте не видят друг друга | bugfix | S | ✅ closed (дубль [#346](https://github.com/khmelevartem/tether/issues/346), PR #350) |
+| 2 | [#368](https://github.com/khmelevartem/tether/issues/368) | Same-named peers stay distinguishable in the peer list | bugfix | S | ✅ closed (PR #379) |
+| 3 | [#352](https://github.com/khmelevartem/tether/issues/352) | Spaces in filenames arrive as '+' on receiver | bugfix | S | ✅ closed (PR #373) |
+| 4 | [#348](https://github.com/khmelevartem/tether/issues/348) | CLI: design and apply a convenient log format | refactor | M | ✅ closed (PR #385) |
+| 5 | [#192](https://github.com/khmelevartem/tether/issues/192) | Android sender wiring: SAF picker, share-sheet и MediaStore receiver | feature | M | ✅ closed (PR #383, follow-up #391) |
+| 6 | [#10](https://github.com/khmelevartem/tether/issues/10) | Паринг — handshake, вычисление PIN-кода, CLI-флоу | feature | M | 🟡 partial — PR #362 открыт; части вынесены в #361/#378, перенос в sprint-12 |
+
+## Дополнительные результаты
+
+Закрыто в окне спринта вне исходного состава:
+
+- **#375** (PR #377) — стабилизация флэйки `CliSendTest` и `FileClientTest`: прогон тестов перестал падать на гонках, smoke и unit-проходы читаемы.
+- **#392** (PR #393) — `/progress`: карта заданий по умолчанию скрывает закрытые задачи (галочка возвращает), а сбор сырых данных вынесен в воспроизводимый `collect.py`.
 
 ## Что разблокирует
 
