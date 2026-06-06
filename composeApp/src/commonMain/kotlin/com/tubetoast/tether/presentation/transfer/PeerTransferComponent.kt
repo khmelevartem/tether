@@ -113,10 +113,7 @@ class PeerTransferComponent(
     ) {
         scope.launch {
             val warningEnabled = fileTransferPreferences.observeLargeSelectionWarning().first()
-            val summary = PendingFilesSummary(
-                fileCount = sources.size,
-                totalBytes = sources.sumOf { it.sizeBytes ?: 0L },
-            )
+            val summary = PendingFilesSummary.from(sources)
             if (warningEnabled && summary.isLargeSelection) {
                 largeConfirm.value = PendingLargeConfirm(sources, summary)
             } else {

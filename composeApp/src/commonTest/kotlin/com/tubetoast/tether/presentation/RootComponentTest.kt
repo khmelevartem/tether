@@ -237,6 +237,7 @@ class RootComponentTest {
         )
         return RootComponent(
             componentContext = ctx,
+            pendingFilesRepository = pendingFilesRepository,
             peerListFactory = { childCtx, onShowDetails ->
                 PeerListComponent(
                     componentContext = childCtx,

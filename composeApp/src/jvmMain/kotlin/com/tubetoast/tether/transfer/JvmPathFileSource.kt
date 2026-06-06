@@ -9,9 +9,10 @@ import kotlin.io.path.inputStream
 
 class JvmPathFileSource(
     private val path: Path,
+    relativePath: String = path.fileName.toString(),
 ) : FileSource {
     override val name: String = path.fileName.toString()
-    override val relativePath: String = name
+    override val relativePath: String = relativePath
     override val sizeBytes: Long? = if (path.exists()) Files.size(path) else null
 
     private var openStream: InputStream? = null

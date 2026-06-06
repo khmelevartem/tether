@@ -1,5 +1,19 @@
+@file:OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
+
 package com.tubetoast.tether
 
+import androidx.compose.foundation.draganddrop.dragAndDropTarget
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draganddrop.DragAndDropEvent
+import androidx.compose.ui.draganddrop.DragAndDropTarget
+import androidx.compose.ui.draganddrop.DragData
+import androidx.compose.ui.draganddrop.dragData
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import com.arkivanov.decompose.DefaultComponentContext
@@ -11,10 +25,23 @@ import com.tubetoast.tether.di.DesktopAppContainer
 import com.tubetoast.tether.logging.initTetherLogging
 import com.tubetoast.tether.logging.isDebugEnabled
 import com.tubetoast.tether.presentation.RootContent
+import com.tubetoast.tether.transfer.JvmFolderWalker
+import com.tubetoast.tether.transfer.JvmPathFileSource
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.painterResource
+import ru.pocketbyte.kydra.log.KydraLog
+import ru.pocketbyte.kydra.log.info
+import ru.pocketbyte.kydra.log.wrapper.withTag
 import tether.composeapp.generated.resources.Res
 import tether.composeapp.generated.resources.icon
+import java.net.URI
+import java.nio.file.Files
+import java.nio.file.Path
+
+private val log = KydraLog.withTag(default = "MainUi")
 
 fun main() = runBlocking {
     // see docs/knowledge/desktop-system-theme.md — must be set before any Swing/AWT class loads
@@ -42,8 +69,64 @@ fun main() = runBlocking {
                 title = "Tether",
                 icon = painterResource(Res.drawable.icon),
             ) {
-                RootContent(component)
+                val scope = rememberCoroutineScope()
+                var dragActive by remember { mutableStateOf(false) }
+
+                LaunchedEffect(window) {
+                    container.desktopFilePicker.parentWindow = window
+                }
+
+                val dropTarget = remember(component) {
+                    object : DragAndDropTarget {
+                        override fun onEntered(event: DragAndDropEvent) {
+                            dragActive = true
+                        }
+
+                        override fun onExited(event: DragAndDropEvent) {
+                            dragActive = false
+                        }
+
+                        override fun onEnded(event: DragAndDropEvent) {
+                            dragActive = false
+                        }
+
+                        override fun onDrop(event: DragAndDropEvent): Boolean {
+                            dragActive = false
+                            val uris = (event.dragData() as? DragData.FilesList)
+                                ?.readFiles()
+                                .orEmpty()
+                            if (uris.isEmpty()) return false
+                            scope.launch {
+                                val sources = withContext(Dispatchers.IO) {
+                                    resolveDroppedSources(uris)
+                                }
+                                component.onFilesDropped(sources)
+                            }
+                            log.info { "onDrop: accepted ${uris.size} URI(s)" }
+                            return true
+                        }
+                    }
+                }
+
+                RootContent(
+                    component = component,
+                    modifier = Modifier.dragAndDropTarget(
+                        shouldStartDragAndDrop = { true },
+                        target = dropTarget,
+                    ),
+                    isDragActive = dragActive,
+                )
             }
         }
     }
 }
+
+private fun resolveDroppedSources(uris: List<String>) =
+    uris.flatMap { uri ->
+        val path = runCatching { Path.of(URI(uri)) }.getOrNull() ?: return@flatMap emptyList()
+        when {
+            Files.isDirectory(path) -> JvmFolderWalker().walk(path.toFile())
+            Files.isRegularFile(path) -> listOf(JvmPathFileSource(path))
+            else -> emptyList()
+        }
+    }

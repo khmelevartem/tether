@@ -30,6 +30,5 @@ abstract class JvmAppContainer(
         )
     }
 
-    // TODO(#193): replace with real Desktop file picker
     override val filePicker: FilePicker = NoOpFilePicker
 }

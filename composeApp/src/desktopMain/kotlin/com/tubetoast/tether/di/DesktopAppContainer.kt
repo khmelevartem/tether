@@ -12,6 +12,8 @@ import com.tubetoast.tether.identity.FingerprintPersistence
 import com.tubetoast.tether.preferences.DefaultFileTransferPreferences
 import com.tubetoast.tether.preferences.FileTransferPreferences
 import com.tubetoast.tether.protocol.DeviceType
+import com.tubetoast.tether.transfer.DesktopFilePicker
+import com.tubetoast.tether.transfer.FilePicker
 import okio.Path.Companion.toPath
 import java.io.File
 
@@ -43,4 +45,7 @@ open class DesktopAppContainer(
         defaultSaveLocation = File(System.getProperty("user.home"), "Downloads").absolutePath,
         saveLocationWritable = true,
     )
+
+    val desktopFilePicker: DesktopFilePicker = DesktopFilePicker()
+    override val filePicker: FilePicker = desktopFilePicker
 }

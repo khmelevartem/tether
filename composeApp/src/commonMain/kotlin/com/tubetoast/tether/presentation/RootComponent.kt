@@ -9,10 +9,14 @@ import com.arkivanov.decompose.router.stack.pop
 import com.arkivanov.decompose.router.stack.pushNew
 import com.arkivanov.decompose.value.Value
 import com.tubetoast.tether.presentation.transfer.TransferDetailsComponent
+import com.tubetoast.tether.transfer.FileSource
 import com.tubetoast.tether.transfer.PeerIdentity
+import com.tubetoast.tether.transfer.PendingFilesRepository
+import com.tubetoast.tether.transfer.PendingFilesSummary
 
 class RootComponent(
     componentContext: ComponentContext,
+    private val pendingFilesRepository: PendingFilesRepository,
     private val peerListFactory: (ComponentContext, onShowDetails: (PeerIdentity) -> Unit) -> PeerListComponent,
 ) : ComponentContext by componentContext {
     private sealed interface Config {
@@ -55,6 +59,11 @@ class RootComponent(
                 }
             }
         }
+
+    fun onFilesDropped(sources: List<FileSource>) {
+        if (sources.isEmpty()) return
+        pendingFilesRepository.setPending(PendingFilesSummary.from(sources), sources)
+    }
 
     fun showTransferDetails(peer: PeerIdentity) {
         navigation.pushNew(Config.TransferDetails(peer))

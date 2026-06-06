@@ -112,11 +112,7 @@ class MainActivity : ComponentActivity() {
         container.appScope.launch {
             val sources = ShareIntentParser.parse(intent, contentResolver)
             if (sources.isEmpty()) return@launch
-            val summary = PendingFilesSummary(
-                fileCount = sources.size,
-                totalBytes = sources.sumOf { it.sizeBytes ?: 0L },
-            )
-            container.pendingFilesRepository.setPending(summary, sources)
+            container.pendingFilesRepository.setPending(PendingFilesSummary.from(sources), sources)
         }
     }
 

@@ -12,7 +12,11 @@ import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.tubetoast.tether.ui.theme.TetherTheme
 
 @Composable
-fun RootContent(component: RootComponent, modifier: Modifier = Modifier) {
+fun RootContent(
+    component: RootComponent,
+    modifier: Modifier = Modifier,
+    isDragActive: Boolean = false,
+) {
     TetherTheme {
         Box(
             modifier = modifier
@@ -30,6 +34,8 @@ fun RootContent(component: RootComponent, modifier: Modifier = Modifier) {
                         TransferDetailsScreen(instance.component)
                 }
             }
+
+            if (isDragActive) DragOverlay(Modifier.fillMaxSize())
         }
     }
 }
