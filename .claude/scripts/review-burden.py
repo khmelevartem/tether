@@ -5,8 +5,8 @@ Backs the grooming self-calibration step and the `.claude/sizing-rubric.md`
 calibration table. For every closed, size-labelled issue it joins the merged PR
 (`#<N>: …` title) and the PR's inline review comments, then reports, per size:
 
-  - ROOT review comments  — top-level inline comments (in_reply_to == null),
-                            i.e. the author's substantive feedback points; thread
+  - ROOT review comments  — top-level inline comments (in_reply_to_id == null),
+                            i.e. the reviewer's substantive feedback points; thread
                             replies (often /check-review auto-acks) are excluded.
   - review rounds         — ROOT comments clustered by created_at, a gap of more
                             than ROUND_GAP_MIN minutes opening a new cluster.
