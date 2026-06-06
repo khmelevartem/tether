@@ -1,0 +1,22 @@
+// Adapted from FileKit (MIT, github.com/vinceglb/FileKit).
+@file:Suppress(
+    "ktlint:standard:function-naming",
+    "FunctionName",
+    "ktlint:standard:property-naming",
+    "ConstPropertyName",
+)
+
+package com.tubetoast.tether.transfer.win
+
+import com.sun.jna.platform.win32.COM.IUnknown
+import com.sun.jna.platform.win32.WinDef
+import com.sun.jna.platform.win32.WinNT
+
+@Suppress("ktlint:standard:function-naming", "FunctionName")
+internal interface IModalWindow : IUnknown {
+    fun Show(hwndOwner: WinDef.HWND?): WinNT.HRESULT?
+
+    companion object {
+        val IID_IMODALWINDOW: GuidFixed.IID = GuidFixed.IID("{b4db1657-70d7-485e-8e3e-6fcb5a5c1802}")
+    }
+}

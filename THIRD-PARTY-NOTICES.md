@@ -6,7 +6,9 @@ original notices.
 ## FileKit
 
 `composeApp/src/desktopMain/kotlin/com/tubetoast/tether/transfer/mac/` (the JNA Objective-C
-bridge and the native `NSOpenPanel` picker) is adapted from [FileKit](https://github.com/vinceglb/FileKit).
+bridge and the native `NSOpenPanel` picker) and
+`composeApp/src/desktopMain/kotlin/com/tubetoast/tether/transfer/win/` (the JNA COM
+`IFileOpenDialog` bridge) are adapted from [FileKit](https://github.com/vinceglb/FileKit).
 
 ```
 MIT License
