@@ -50,6 +50,14 @@ For every candidate from the closed-in-window list, verify `gh pr list --search 
 
 **0.6 Report the closing result to the user:** "Sprint N: X/Y tasks closed, Z additional results in the window. Sprint doc updated. Moving on to planning the next one."
 
+**0.7 Recalibrate the cost bands.** `close-issue` reconciled each merged task's `size:` against its actual review burden, so the closed set is now ground truth for what `S`/`M`/`L` cost. Regenerate the per-size means that `progress` uses for task cost:
+
+```bash
+python3 .claude/scripts/review-burden.py --write
+```
+
+This rewrites [`.claude/sizing-bands.json`](../../sizing-bands.json); commit it if the numbers moved.
+
 ---
 
 ## Step 1 — Product context

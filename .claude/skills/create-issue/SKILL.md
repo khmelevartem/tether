@@ -140,6 +140,10 @@ Listed in sequence, closed-issue titles should read as project history.
 
 **Type** (mandatory): exactly one of `feature`, `bugfix`, `refactor`, `infra`, `docs`, `dependency`.
 
+### Estimating size
+
+Size is human review effort, not diff size. At filing, predict it as **how many review rounds this will need**: a well-specified, mechanical, or single-surface task trends `S`; a fuzzy or wide-blast-radius one trends `L`. Anchor on the type prior — `feature` → `M`/`L`, `bugfix` → `S`/`M`, `refactor` → `M`, `infra`/`docs` → `S`/`M` — then push up for cross-platform `expect`/`actual` fan-out, a two-sided contract, or a new module / crossed boundary. Don't size by body length (a long body on `size:L` is the split-into-epic signal, not a bigger task). `close-issue` reconciles the estimate against actual review burden at merge.
+
 ## What to avoid
 
 - **Pre-baking design** — file paths as commitments, signatures dictating contracts, package placement for new top-level types. Those are `/implement` + architect decisions against `docs/engineering/architecture-principles.md`. Issue body: "touches the file-server boundary", not "lives in `com.example.network.foo`".
