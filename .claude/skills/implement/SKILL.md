@@ -94,6 +94,7 @@ gh pr list --search "issue:#<N>" --state open --json number,isDraft,headRefName
 - errors and fail-paths are not described;
 - it is unclear how to test (no edge cases / runtime check guidance);
 - BUGFIX without at least a hypothesised bug cause;
+- the deliverable's benefit rests on an assumption not yet established, or it carries a recurring per-run cost (tooling / process / CI / hook / inter-agent-protocol change) that may outweigh that benefit — weigh cost against benefit and gate on the assumption with the user before sinking design or implementation effort;
 - filler phrases: "fill in if you have something", "should work correctly", "and so on".
 
 Any such gap is a reason to return to the spec/AC ambiguity gate, not to "patch it along the way".
@@ -184,7 +185,7 @@ Per track (or sequentially if single track):
 1. Dispatch the implementing agent with the plan slice:
    - **UI work** (Compose, screens, components, theming, navigation) → `ui-expert`
    - **Feature spec** → `spec-writer`
-   - **Architectural design point** — plan from Step 3 surfaces a non-trivial mechanism / library / structural choice that `coder` should not make alone → `architect` first. It converges the choice (its own palette + user trade-off questions; ADR/living doc only when the orchestrator's brief explicitly asks and the user has approved), returns a one-line decision summary; that summary then becomes a hard constraint for the subsequent `coder` dispatch in the same track. **Do NOT dispatch architect** when the plan is wiring up a pattern an existing ADR or living doc already prescribes, applying a documented mechanism to a new caller, doing docs / prose cleanup, or running an ADR sibling sweep — see [architect.md §When invoked](../../agents/architect.md#when-invoked) for the full skip list. Routine FEATURE / REFACTOR work that follows the existing canon goes straight to `coder`.
+   - **Architectural design point** — plan from Step 3 surfaces a non-trivial mechanism / library / structural choice that `coder` should not make alone → `architect` first. It converges the choice (its own palette + trade-off questions it surfaces for you to relay to the user; ADR/living doc only when the orchestrator's brief explicitly asks and the user has approved), returns a one-line decision summary; that summary then becomes a hard constraint for the subsequent `coder` dispatch in the same track. **Do NOT dispatch architect** when the plan is wiring up a pattern an existing ADR or living doc already prescribes, applying a documented mechanism to a new caller, doing docs / prose cleanup, or running an ADR sibling sweep — see [architect.md §When invoked](../../agents/architect.md#when-invoked) for the full skip list. Routine FEATURE / REFACTOR work that follows the existing canon goes straight to `coder`.
    - **Everything else** (network, discovery, protocol, persistence, build, infra) → `coder`
    - **Mixed** — split into sub-tracks if disjoint files, else dispatch `coder` which can pull in `ui-expert` / `architect` via Agent tool.
 
