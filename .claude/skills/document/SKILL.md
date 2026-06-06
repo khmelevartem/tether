@@ -48,7 +48,7 @@ You MUST stop and ask the user in these cases (and only these):
   - the requested deliverable is unclear (which layers? which subsystem?) and layer classification (Step 2) cannot proceed;
   - a sub-agent (`spec-writer` / `ux-expert` / `architect`) returned Open questions it could not converge on — surface them verbatim to the user, collect answers, re-dispatch the same agent.
 
-  Architectural / product / UX trade-off questions are not D1 for you. They are handled **inside** the responsible sub-agent — `architect` runs its own design palette and asks the user trade-off questions directly; `spec-writer` and `ux-expert` do the same for their domains. You only relay Open questions a sub-agent could not resolve on its own; you don't pre-design.
+  Architectural / product / UX trade-off questions are not yours to pre-answer. They are owned **inside** the responsible sub-agent — `architect` runs its own design palette and decides the technical trade-offs; `spec-writer` and `ux-expert` do the same for their domains. Sub-agents have no user channel (they cannot use `AskUserQuestion`), so they surface the questions needing a user decision in their returned result; you relay those to the user and re-dispatch the same agent with the answers. You don't pre-design.
 
 - **D2 — Cross-doc inconsistency.** Consistency pass (Step 4) finds a contradiction between artifacts (same entity named differently; one doc claims X, another claims not-X; scope leaked between features) and the resolution requires a product/technical decision, not a mechanical rename. Route the resolution to the owning sub-agent (spec issue → `spec-writer`; tech issue → `architect`; ux issue → `ux-expert`), not to the user directly.
 
@@ -70,6 +70,7 @@ gh pr list --search "issue:#<N>" --state open --json number,isDraft,headRefName
 **Critical reading.** Treat the issue description as a **starting point, not a fact**. Flag and escalate to the user before starting work if:
 - it is unclear from the issue which specific artifacts are expected as output;
 - a conflict between a comment and the body that cannot be resolved by the prioritisation rule;
+- the deliverable's benefit rests on an assumption not yet established, or it carries a recurring per-run cost (tooling / process / inter-agent-protocol change) that may outweigh that benefit — weigh cost against benefit and gate on the assumption with the user before sinking design effort;
 - filler phrases: "describe as you see fit", "record wherever appropriate", "and so on".
 
 ### Doc discovery
@@ -124,7 +125,7 @@ Multiple layers per issue are normal (e.g. FEATURE with UI and a new mechanism �
 
 Order matters — lower layers depend on upper ones for vocabulary and scope.
 
-Each sub-agent owns the decisions inside its layer — palette, clarifying questions to the user, convergence. You do not pre-design or pre-research for them. You route, then aggregate.
+Each sub-agent owns the decisions inside its layer — palette, clarifying questions (surfaced in its result for you to relay to the user), convergence. You do not pre-design or pre-research for them. You route, relay, then aggregate.
 
 **Prose discipline carry-forward.** Every dispatch brief in this wave (`spec-writer`, `ux-expert`, `architect`) must instruct the sub-agent to load [`docs/engineering/long-lived-artifacts.md`](../../../docs/engineering/long-lived-artifacts.md) before writing and apply it to every paragraph.
 
@@ -132,7 +133,7 @@ Each sub-agent owns the decisions inside its layer — palette, clarifying quest
 
 2. **ux-brief** AND **tech-doc / ADR / knowledge** — if both needed, dispatch **in parallel** (file-disjoint by construction: ux-brief lives in `docs/product/features/<slug>/`, the others in `docs/engineering/` or `docs/knowledge/`):
    - **ux-brief** → dispatch `ux-expert`. It decides interaction model and platform idioms. Open UX questions → D1.
-   - **tech-doc / ADR / knowledge** → dispatch `architect`. For tech-doc / ADR it decides technical realisation — mechanism, libraries, protocols, lifecycle, cross-platform invariants — through its own design palette and trade-off questions. For knowledge entries the design work was already done (the incident happened, the workaround is known); architect just records it in sibling-matching shape. Open questions → D1.
+   - **tech-doc / ADR / knowledge** → dispatch `architect`. For tech-doc / ADR it decides technical realisation — mechanism, libraries, protocols, lifecycle, cross-platform invariants — through its own design palette and the trade-off questions it surfaces for you to relay to the user. For knowledge entries the design work was already done (the incident happened, the workaround is known); architect just records it in sibling-matching shape. Open questions → D1.
 
    If only one is needed, run it alone.
 
