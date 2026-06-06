@@ -77,21 +77,21 @@ internal object Foundation {
 
     private var ourRunnableCallback: Callback? = null
     private var runnableSupportFailed = false
-    private val ourMainThreadRunnables: MutableMap<String?, RunnableInfo> = HashMap()
+    private val ourMainThreadRunnables: MutableMap<Long, RunnableInfo> = HashMap()
     private var ourCurrentRunnableCount: Long = 0
     private val RUNNABLE_LOCK = Any()
 
     fun executeOnMainThread(withAutoreleasePool: Boolean, waitUntilDone: Boolean, runnable: Runnable) {
         val info = RunnableInfo(runnable, withAutoreleasePool)
-        var runnableCountString: String?
+        val count: Long
         synchronized(RUNNABLE_LOCK) {
             initRunnableSupport()
-            runnableCountString = (++ourCurrentRunnableCount).toString()
-            ourMainThreadRunnables.put(runnableCountString, info)
+            count = ++ourCurrentRunnableCount
+            ourMainThreadRunnables[count] = info
         }
         val runnableClass = getObjcClass("TetherObjcRunnable")
         val runnableObject = invoke(invoke(runnableClass, "alloc"), "init")
-        val keyObject = invoke(nsString(runnableCountString), "retain")
+        val keyObject = invoke(invoke("NSNumber", "numberWithLong:", count), "retain")
         invoke(
             runnableObject,
             "performSelectorOnMainThread:withObject:waitUntilDone:",
@@ -113,9 +113,9 @@ internal object Foundation {
         registerObjcClassPair(runnableClass)
         val callback: Callback = object : Callback {
             fun callback(self: ID?, selector: String?, keyObject: ID?) {
-                var key: String? = null
+                val key: Long
                 try {
-                    key = toStringViaUTF8(keyObject)
+                    key = myObjcMsgSend.invokeLong(prepInvoke(keyObject, createSelector("longValue"), emptyArray()))
                 } finally {
                     invoke(keyObject, "release")
                 }
