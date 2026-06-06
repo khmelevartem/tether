@@ -19,19 +19,21 @@ Fixed dictionaries and palette are in `assets/`. No names, keywords, or colours 
 
 ## What to collect (raw data)
 
-Write all outputs to `/tmp/tether-progress-raw/` (create the dir first).
+Run `collect.py` — it resolves `owner/repo` from `gh repo view` and writes every input `build.py` consumes:
 
-1. **PR statistics via GraphQL.** One paginated `gh api graphql` request over `repository.pullRequests`. Required fields per node: `number, title, state, createdAt, mergedAt, additions, deletions, changedFiles, commits { totalCount nodes { commit { committedDate } } }, comments { totalCount }, reviews { totalCount }, reviewThreads { totalCount }`. Nodes must be sorted ascending by date; only the first node is used for cycleHours. Write to `prs.json`.
+```
+python3 .claude/skills/progress/collect.py --raw-data /tmp/tether-progress-raw --repo-root .
+```
 
-   The REST list endpoint (`/pulls`) does not return commits/comments/review_threads — GraphQL is required.
+Outputs into `--raw-data`: `prs.json`, `issues.json`, `blocked_by.json`, `loc.json`, `sprint_cutoff.txt`. Do not hand-roll these in chat — edit `collect.py` if collection needs to change.
 
-2. **Issues.** `gh api 'repos/<owner>/<repo>/issues?state=all&per_page=100' --paginate` — needed for `parent_issue_url` and `issue_dependencies_summary`. Filter out objects that contain a `pull_request` key. Write to `issues.json`.
+What it gathers, and the quirks baked into the script:
 
-3. **Issue dependencies.** For each issue where `issue_dependencies_summary.total_blocked_by > 0`, call `gh api 'repos/<owner>/<repo>/issues/<N>/dependencies/blocked_by'`. Collect results as `{ "<N>": [blocker_numbers] }`. Write to `blocked_by.json` (empty `{}` when none). The `addIssueDependency` GraphQL mutation does not exist in GitHub — use REST only.
-
-4. **LOC by source set.** For each source set in `assets/locations.json`, count lines and files in `.kt`/`.swift` files under `composeApp/src/<sourceSet>/`. Write to `loc.json` as `{ "<sourceSet>": <int>, "<sourceSet>_files": <int> }` — both keys for every source set (0 when the directory does not exist).
-
-5. **Sprint cutoff.** `git log --diff-filter=A --follow --format='%aI' -- docs/sprints/sprint-01.md | tail -1`. Write the ISO date to `sprint_cutoff.txt`.
+1. **PR statistics via GraphQL** → `prs.json`. Paginated over `repository.pullRequests`, sorted ascending by date (only the first commit node feeds cycleHours). Fields: `number, title, state, createdAt, mergedAt, additions, deletions, changedFiles, commits { totalCount nodes { commit { committedDate } } }, comments { totalCount }, reviews { totalCount }, reviewThreads { totalCount }`. The REST `/pulls` list endpoint omits commits/comments/review_threads — GraphQL is required.
+2. **Issues** → `issues.json`. `--paginate --slurp` over `repos/<owner>/<repo>/issues?state=all`, objects with a `pull_request` key filtered out. Carries `parent_issue_url` and `issue_dependencies_summary`.
+3. **Issue dependencies** → `blocked_by.json`. For each issue with `total_blocked_by > 0`, REST `…/dependencies/blocked_by`, collected as `{ "<N>": [blockers] }` (`{}` when none). The `addIssueDependency` GraphQL mutation does not exist — REST only.
+4. **LOC by source set** → `loc.json`. Lines and files in `.kt`/`.swift` under `composeApp/src/<source_set>/` for each entry in `assets/locations.json`; emits `<sourceSet>` and `<sourceSet>_files` (0 when the dir is absent).
+5. **Sprint cutoff** → `sprint_cutoff.txt`. Last `git log --diff-filter=A --follow` date for `docs/sprints/sprint-01.md`.
 
 ## MVP chapters — compose in chat
 
