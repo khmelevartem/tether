@@ -186,6 +186,10 @@ When you do need to test a class that depends on a collaborator, prefer a hand-r
 
 A container field is a named object that owns or manages something — a store, a server, a client, a scope, a factory. It is not a primitive, a string, a number, a collection, or any other plain data shape. Values like an identity, an alias, a port, a device-type tag belong to the component that owns them; consumers receive the owning component and ask it for the value at the moment they need it, including across an asynchronous boundary if the value is only known after I/O. Putting plain data on the container forces materialisation at construction time, hides who is responsible for the value, and turns the container into a property bag instead of a wiring graph.
 
+### 8. No silently-throwing common defaults
+
+When a container field needs a per-platform implementation, the common contract states that explicitly: the field is `abstract` on the common container so every platform leaf is forced to declare a value, or the leaves declare explicit stubs that throw with `TODO(#<tracking-issue>)` referencing the issue that implements the real value. A concrete common default that throws unconditionally and works only because one platform happens to override it is the worst of both shapes: it compiles, satisfies fake-based tests, and surfaces only at runtime on the platforms that forgot to override. The `abstract` form makes the gap a compile error; the explicit-stub form makes the gap a discoverable `TODO` with an owner.
+
 ## Testability
 
 The container is also the seam tests use to substitute fakes. Three levels of tests, three patterns:
