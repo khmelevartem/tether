@@ -3,6 +3,7 @@ package com.tubetoast.tether.transfer
 import java.io.File
 import java.util.ArrayDeque
 
+/** Expects a directory; calling on a non-directory returns an empty list. */
 class JvmFolderWalker {
     fun walk(root: File): List<JvmPathFileSource> {
         val results = mutableListOf<JvmPathFileSource>()

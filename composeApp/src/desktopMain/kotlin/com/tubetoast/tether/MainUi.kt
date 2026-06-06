@@ -73,7 +73,7 @@ fun main() = runBlocking {
                 var dragActive by remember { mutableStateOf(false) }
 
                 LaunchedEffect(window) {
-                    container.desktopFilePicker.parentWindow = window
+                    container.windowHolder.window = window
                 }
 
                 val dropTarget = remember(component) {

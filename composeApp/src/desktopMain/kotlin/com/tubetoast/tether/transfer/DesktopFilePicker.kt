@@ -7,17 +7,16 @@ import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.info
 import ru.pocketbyte.kydra.log.wrapper.withTag
 import java.awt.FileDialog
-import java.awt.Window
 import javax.swing.JFileChooser
 
 private val log = KydraLog.withTag(default = "DesktopFilePicker")
 
-class DesktopFilePicker : FilePicker {
-    var parentWindow: Window? = null
-
+class DesktopFilePicker(
+    private val windowHolder: WindowHolder,
+) : FilePicker {
     override suspend fun pickFiles(): List<FileSource> {
         val files = withContext(Dispatchers.Swing) {
-            val dialog = FileDialog(parentWindow as? java.awt.Frame, "Select files", FileDialog.LOAD)
+            val dialog = FileDialog(windowHolder.window as? java.awt.Frame, "Select files", FileDialog.LOAD)
             dialog.isMultipleMode = true
             dialog.isVisible = true
             val selected = dialog.files?.toList() ?: emptyList()
@@ -32,7 +31,7 @@ class DesktopFilePicker : FilePicker {
         val dir = withContext(Dispatchers.Swing) {
             val chooser = JFileChooser()
             chooser.fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
-            val result = chooser.showOpenDialog(parentWindow)
+            val result = chooser.showOpenDialog(windowHolder.window)
             if (result == JFileChooser.APPROVE_OPTION) chooser.selectedFile else null
         }
         if (dir == null) {

@@ -71,4 +71,32 @@ class JvmFolderWalkerTest {
         assertEquals("flat/note.txt", sources[0].relativePath)
         assertEquals("note.txt", sources[0].name)
     }
+
+    @Test
+    fun `empty folder returns empty list`() {
+        val root = tmp.newFolder("empty")
+
+        val sources = JvmFolderWalker().walk(root)
+
+        assertEquals(emptyList(), sources)
+    }
+
+    @Test
+    fun `broken symlink is swallowed and real sibling files are returned`() {
+        val root = tmp.newFolder("broken_sym_root")
+        root.resolve("real.txt").createNewFile()
+        val link = root.resolve("dead_link").toPath()
+        val nonExistent = root.toPath().resolve("does_not_exist")
+        try {
+            Files.createSymbolicLink(link, nonExistent)
+        } catch (_: Exception) {
+            // Symlink creation not supported on this filesystem — skip.
+            return
+        }
+
+        val sources = JvmFolderWalker().walk(root)
+
+        val names = sources.map { it.name }
+        assertEquals(listOf("real.txt"), names)
+    }
 }

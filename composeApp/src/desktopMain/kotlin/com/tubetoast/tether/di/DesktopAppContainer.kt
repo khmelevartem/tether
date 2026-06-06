@@ -14,6 +14,7 @@ import com.tubetoast.tether.preferences.FileTransferPreferences
 import com.tubetoast.tether.protocol.DeviceType
 import com.tubetoast.tether.transfer.DesktopFilePicker
 import com.tubetoast.tether.transfer.FilePicker
+import com.tubetoast.tether.transfer.WindowHolder
 import okio.Path.Companion.toPath
 import java.io.File
 
@@ -46,6 +47,7 @@ open class DesktopAppContainer(
         saveLocationWritable = true,
     )
 
-    val desktopFilePicker: DesktopFilePicker = DesktopFilePicker()
+    val windowHolder: WindowHolder = WindowHolder()
+    val desktopFilePicker: DesktopFilePicker = DesktopFilePicker(windowHolder)
     override val filePicker: FilePicker = desktopFilePicker
 }

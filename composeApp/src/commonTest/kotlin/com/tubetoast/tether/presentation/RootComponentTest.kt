@@ -198,6 +198,30 @@ class RootComponentTest {
     }
 
     @Test
+    fun `onFilesDropped with empty list does not call setPending`() = runTest {
+        val repo = PendingFilesRepository()
+        val component = buildComponent(pendingFilesRepository = repo, coroutineScope = backgroundScope)
+
+        component.onFilesDropped(emptyList())
+
+        assertNull(repo.pending.value)
+    }
+
+    @Test
+    fun `onFilesDropped with non-empty list calls setPending with correct summary`() = runTest {
+        val repo = PendingFilesRepository()
+        val component = buildComponent(pendingFilesRepository = repo, coroutineScope = backgroundScope)
+        val sources = listOf(FakeFileSource("a.txt", 100L), FakeFileSource("b.txt", 200L))
+
+        component.onFilesDropped(sources)
+
+        val pending = repo.pending.value
+        assertNotNull(pending)
+        assertEquals(2, pending.summary.fileCount)
+        assertEquals(300L, pending.summary.totalBytes)
+    }
+
+    @Test
     fun `peerTransferComponent onShowDetails pushes TransferDetailsChild`() = runTest {
         val devices = MutableStateFlow(listOf(deviceA))
         val component = buildComponent(devices = devices, coroutineScope = backgroundScope)
