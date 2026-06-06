@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Re-derive the issue-sizing review-burden bands from closed-issue actuals.
+"""Compute the per-size mean review burden from closed-issue actuals.
 
-Backs the grooming self-calibration step and the `.claude/sizing-rubric.md`
-calibration table. For every closed, size-labelled issue it joins the merged PR
+With --write, emits the per-size mean ROOT-comment bands to `.claude/sizing-bands.json`,
+the source `progress/build.py` reads for each task's base cost. For every closed,
+size-labelled issue it joins the merged PR
 (`#<N>: …` title) and the PR's inline review comments, then reports, per size:
 
   - ROOT review comments  — top-level inline comments (in_reply_to_id == null),

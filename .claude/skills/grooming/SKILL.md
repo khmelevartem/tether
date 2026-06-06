@@ -50,14 +50,6 @@ For every candidate from the closed-in-window list, verify `gh pr list --search 
 
 **0.6 Report the closing result to the user:** "Sprint N: X/Y tasks closed, Z additional results in the window. Sprint doc updated. Moving on to planning the next one."
 
-**0.7 Recalibrate the sizing bands.** `close-issue` has reconciled each merged task's `size:` against its actual review burden, so the closed-issue set is now ground truth for what `S`/`M`/`L` cost. Re-derive the bands:
-
-```bash
-python3 .claude/scripts/review-burden.py --write
-```
-
-`--write` refreshes [`.claude/sizing-bands.json`](../../sizing-bands.json) — the machine-readable per-size mean review burden that `progress` reads as each task's base cost (so cost analytics track measured reviewer effort, never hardcoded weights). Then compare the printed ROOT-comment / review-round figures against the calibration table in [`sizing-rubric.md`](../../sizing-rubric.md); if a band drifted materially, update that table too (only the volatile numbers; the method above it is stable). This keeps the forward estimate in `create-issue`, the reconciliation in `close-issue`, and the `progress` cost all anchored to current behaviour. No drift → nothing to change.
-
 ---
 
 ## Step 1 — Product context
@@ -209,7 +201,7 @@ Section names in the template — `Состав`, `Что разблокируе
 
 **Skyrim-codename.** A decorative subtitle in epic-fantasy style — for atmosphere and recognisability. **Carries no operational load.** Any tool reading `sprint-NN.md` must rely only on the number `NN`; the subtitle must not be parsed or analysed.
 
-**Size (for the column).** Size is expected human review effort, not diff size — see [`sizing-rubric.md`](../../sizing-rubric.md) for the method. For the sprint-doc column, use these quick structural cues:
+**Size (for the column):**
 - **S** — isolated change with no platform specifics
 - **M** — several files / one platform with nuances
 - **L** — new component / multiple platforms / lots of unknowns
