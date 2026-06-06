@@ -108,6 +108,8 @@ Files to check:
 
 If the documentation is out of date — update it. Small edits do immediately, large ones — create a separate issue.
 
+**Apply the writing discipline.** Before writing or editing any long-lived artifact here, re-read [`long-lived-artifacts.md`](../../../docs/engineering/long-lived-artifacts.md) and apply it — do not write from memory.
+
 **Doc-as-spec on first implementation of an architectural sketch.** If the PR is the first real implementation of a pattern that was a sketch in `docs/engineering/` (marker: "skeleton lands in #N" or code examples without a working implementation) — the doc must be updated in the same PR. Otherwise, the next implementor will follow an outdated example.
 
 **New runtime flag — the entry-point doc must mention it.** If the PR introduces a new runtime flag (env var, JVM system property, CLI option, build flag) that affects observable application behavior — the README or the corresponding entry-point section must mention it with at least one line and a link to the engineering doc. Engineering doc as the only documentation location does not count as coverage: a contributor / user looks in the README, not in `docs/engineering/`.
@@ -129,6 +131,8 @@ Examples of such decisions:
 If such a decision exists and is not recorded anywhere — **before merging**, record it. A small decision — as a short entry in an existing doc. A large one — as a separate ADR or a new DOCS issue if the volume doesn't fit in the current PR.
 
 Do not let a decision live only in the chat: sessions are lost, and the next contributor (or yourself a month later) won't see the history and will reopen the same question.
+
+**Apply the writing discipline.** Before writing or editing any long-lived artifact while recording a decision (doc, ADR, KDoc, `.claude/**`), re-read [`long-lived-artifacts.md`](../../../docs/engineering/long-lived-artifacts.md) and apply it — do not write from memory.
 
 ---
 
