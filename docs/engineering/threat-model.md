@@ -4,7 +4,7 @@ STRIDE-by-component threat model for Tether's P2P file transfer within a single 
 
 A living doc states what should be true of any correct implementation. Where the code has not caught up, the gap is an implementation issue, not a contradiction.
 
-Method: STRIDE per component. Scope: the Ktor HTTP server on each device, the mDNS announce, and pairing through SAS comparison.
+Method: STRIDE per component. Scope: the HTTP server on each device, the mDNS announce, and pairing through SAS comparison.
 
 ## Assets and trust boundaries
 
@@ -47,7 +47,7 @@ Security consequences:
 The SAS scheme is sound only when all five hold. Each is load-bearing; removing any one opens the corresponding attack.
 
 1. **Both keys are covered.** The SAS is derived from the whole agreed material — both public keys in full. Otherwise a MITM fits its own pair to a matching SAS by varying the uncovered part.
-2. **Length is at least ~20 bits** (5–6 decimal digits). SAS defends probabilistically: the chance a MITM hits a collision is about one in the number of possible values. Four digits (one in 10,000) is insufficient.
+2. **Length is 5–6 decimal digits (~17–20 bits).** SAS defends probabilistically: the chance a MITM hits a collision is about one in the number of possible values. A 4-digit code (one in 10,000) is insufficient.
 3. **Commit-before-reveal.** A side first sends a hash commitment of its key and reveals the key only after receiving the other side's commitment. Without this, an active MITM sees the victim's key before fixing its own and fits a collision. This is the critical step — without it the scheme is broken at any SAS length.
 4. **Session is bound to the SAS.** After confirmation, traffic runs under the key from this exchange; every subsequent request is authenticated by it.
 5. **Defence against blind confirmation.** If the user habitually taps "yes", the protection is nil. Mitigations: prominent display, no single-button confirmation without looking, choosing the correct value among several on one device.
@@ -60,7 +60,7 @@ STRIDE letters and what each violates: see [legend](#stride-legend).
 
 | Threat | Category | Scenario | Mitigation |
 |--------|----------|----------|------------|
-| Device spoofing | S | Announce under the name "Artem's MacBook"; the victim picks the wrong device | Identity is confirmed only by pairing, never by name; new devices are marked unverified in the UI |
+| Device spoofing | S | Announce under an existing device's display name; the victim picks the wrong device | Identity is confirmed only by pairing, never by name; new devices are marked unverified in the UI |
 | TXT disclosure | I | Version, OS, exact name in the announce → reconnaissance | Minimal fields, no version, neutral default names |
 | List flooding | D | Dozens of fake devices fill the UI | Cap on displayed entries, dedup, rate-limit on announce processing |
 
@@ -68,7 +68,7 @@ STRIDE letters and what each violates: see [legend](#stride-legend).
 
 | Threat | Category | Scenario | Mitigation |
 |--------|----------|----------|------------|
-| SAS collision fitting | S / T | An active MITM fits its own key to a matching SAS | Commit-before-reveal plus SAS length ≥ ~20 bits |
+| SAS collision fitting | S / T | An active MITM fits its own key to a matching SAS | Commit-before-reveal plus SAS length of 5–6 decimal digits (~17–20 bits) |
 | MITM in key exchange | S / I / T | Wedging between the devices, a separate exchange with each | Human SAS comparison catches the mismatch; the commitment makes fitting impossible |
 | Blind confirmation | S | The user taps "yes" without looking | Prominent display, choice among options, no one-tap confirmation |
 | TOFU hijack | S | The attacker spoofs first and entrenches as trusted | SAS verification is mandatory on first contact; visible fingerprint |
@@ -103,28 +103,18 @@ The receive-path traversal mitigation and the streaming-not-buffering invariant 
 
 | Threat | Category | Scenario | Mitigation |
 |--------|----------|----------|------------|
-| Spoofing via name | S | Two "MacBook" entries in the list; the victim taps the wrong one | Show "paired before" status, visually distinguish new devices |
+| Spoofing via name | S | Two identically-named devices in the list; the victim taps the wrong one | Show "paired before" status, visually distinguish new devices |
 | Injection via device name | T | A name with control characters / markup breaks rendering | Sanitise and escape displayed strings |
 
-### Pairing-secret storage (per platform)
+### Pairing-secret storage
 
-The principle is uniform: the OS encrypts the secret with a key bound to the user / device; the app never holds the master secret itself and never encrypts with a static key baked into the binary. The keypair this protects is the root of trust owned by [`device-identity.md`](device-identity.md).
+| Threat | Category | Scenario | Mitigation |
+|--------|----------|----------|------------|
+| Theft of the pairing secret from disk | I | Reading the stored key off disk and using it elsewhere | OS-bound secure storage — the OS encrypts the secret with a key bound to the user / device; the app never holds the master secret itself and never encrypts with a static key baked into the binary |
 
-| Platform | Mechanism | Access from code |
-|----------|-----------|------------------|
-| Windows | DPAPI (`CurrentUser` scope) or Credential Manager over it | JNA → system crypto libraries |
-| macOS | Keychain | Native bridge |
-| iOS | Keychain | Native |
-| Android | Keystore | Native |
+The secret this protects is the root of trust owned by [`device-identity.md`](device-identity.md); the per-platform secure-storage mechanisms live there.
 
-Windows details:
-
-- DPAPI encrypts with a key derived from the account. Only the same user on the same machine can decrypt. Moving the blob to an attacker's machine is useless.
-- Credential Manager is the same DPAPI protection with storage management out of the box.
-- A TPM-backed key (via CNG) raises the bar — the key is not extractable even by malware — but from the JVM it is notable effort and is not present on every machine, so it is **out of MVP**.
-- Windows Hello is excessive, breaks the "two taps" flow, and is not taken.
-
-Limit of all software mechanisms (DPAPI / Credential Manager / Keystore): malware running as the same user on the same machine can ask the OS to decrypt the secret — to it the store is transparent. Only the hardware level (TPM / Secure Enclave) closes this fully. See [accepted risks](#accepted-risks).
+Accepted risk: malware running as the same user on the same machine can ask the OS to decrypt the secret — to it any software store is transparent. Only hardware-backed storage (TPM / Secure Enclave) closes this fully, which is out of MVP. This is a limit of the model, not a missed hole. See [accepted risks](#accepted-risks).
 
 ### Network layer (outside the app, inside the model)
 
@@ -137,7 +127,7 @@ Limit of all software mechanisms (DPAPI / Credential Manager / Keystore): malwar
 
 By probability × impact:
 
-1. **SAS with commit-before-reveal plus length ≥ ~20 bits.** Closes MITM in pairing. If only one thing is done, this is it.
+1. **SAS with commit-before-reveal plus length of 5–6 decimal digits (~17–20 bits).** Closes MITM in pairing. If only one thing is done, this is it.
 2. **TLS plus pinning on the LAN.** Without it, "original bytes" means someone else's data on the air.
 3. **Authorisation on every request.** Do not trust "already paired at the start of the session".
 4. **Server protection: path traversal plus limits.** The server runs on someone else's device.
@@ -172,7 +162,7 @@ Repudiation is not given its own rows: for disposable P2P transfer without accou
 
 ## What this doc does *not* commit to
 
-- Exact SAS length within the "≥ ~20 bits, 5–6 decimal digits" band — the implementation issue picks the digit count.
+- Exact SAS length within the "5–6 decimal digits (~17–20 bits)" band — the implementation issue picks the digit count.
 - The wire shape of the commitment exchange — the protocol detail lives with the pairing implementation; this doc states that commit-before-reveal is required, not its framing.
 - Concrete rate-limit, connection-cap, and size-limit constants — implementation choices that live in code.
 - The application-tag and attribute recipe for each platform secret store — owned by [`device-identity.md`](device-identity.md).

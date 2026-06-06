@@ -2,6 +2,8 @@
 
 Tether moves files between devices on the same local network with no cloud and no accounts. This doc captures the trust model, the pairing flow, and channel encryption at the product level. The engineering-layer STRIDE analysis — per-component attack surface and the conditions each mitigation depends on — lives in [`docs/engineering/threat-model.md`](../engineering/threat-model.md), with the SAS-pairing attack tree and pentest suite in [`docs/knowledge/sas-pairing-pentest.md`](../knowledge/sas-pairing-pentest.md).
 
+> **Status.** This describes the **target** security model. The SAS pairing apparatus (commit-before-reveal, SAS derivation, trust stored only after mutual confirmation) and channel encryption are the model the implementation is built toward, not the current behaviour of every endpoint. Open gaps are tracked in [#10](https://github.com/khmelevartem/tether/issues/10) (SAS handshake), [#361](https://github.com/khmelevartem/tether/issues/361) (mutual confirmation before trust is stored), and [#140](https://github.com/khmelevartem/tether/issues/140) (pinned-TLS channel encryption).
+
 ## Threat Model
 
 The local network is **untrusted** — not "home means safe". A hotspot, a café, a weak WPA2 network all put the attacker inside the segment. Who we protect against, in order of priority:
@@ -39,11 +41,7 @@ First-time connection between two devices uses **SAS comparison** — a Short Au
 4. Public keys are committed to the trust store on both sides only after that confirmation. A user who sees a mismatch and rejects leaves both trust stores unchanged.
 5. Subsequent connections between the two devices recognise each other automatically — no re-pairing.
 
-The SAS defends against active MITM during pairing: an attacker who intercepts and substitutes their own key produces a different SAS on each side, and the user catches the mismatch. Three properties make this sound, and removing any one breaks it — see [`threat-model.md` §SAS pairing model](../engineering/threat-model.md#sas-pairing-model):
-
-- **Commit-before-reveal** stops the attacker from fitting its key to the victim's SAS after seeing the victim's key.
-- **The SAS covers the full agreed material** (both keys), so the attacker cannot vary an uncovered part.
-- **The SAS is at least ~20 bits** (5–6 decimal digits), so a chance collision in a single attempt is negligible. A 4-digit code (one in 10,000) is insufficient.
+The SAS defends against active MITM during pairing: an attacker who intercepts and substitutes their own key produces a different SAS on each side, and the user catches the mismatch. This holds only when several correctness conditions all hold together — see [`threat-model.md` §SAS pairing model](../engineering/threat-model.md#sas-pairing-model).
 
 The protection is only as strong as the user's attention: blind one-tap confirmation nullifies it, so the comparison is designed to require an active, deliberate match rather than a single button pressed without looking.
 
