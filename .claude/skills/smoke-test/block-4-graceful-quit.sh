@@ -24,7 +24,17 @@ if [ $EXITED -eq 0 ]; then
   set +e; kill -9 "$JPID_A" 2>/dev/null; set -e
   echo "SKIP: exit-code check (process had to be force-killed)"
 else
-  set +e; wait "$JPID_A" 2>/dev/null; EXIT_A=$?; set -e
   echo "PASS: graceful quit — exited"
-  [ "$EXIT_A" = "0" ] && echo "PASS: exit code — exit=$EXIT_A (last send AllSent)" || echo "FAIL: exit code — exit=$EXIT_A"
+  # Exit code is written by the launch wrapper in block-1; wait on a detached PID returns 127.
+  EXIT_FILE_READY=0
+  for i in $(seq 1 5); do
+    [ -f /tmp/smoke-cliA.exit ] && { EXIT_FILE_READY=1; break; }
+    sleep 1
+  done
+  if [ $EXIT_FILE_READY -eq 0 ]; then
+    echo "FAIL: /tmp/smoke-cliA.exit never written — exit code unknown"
+  else
+    EXIT_A=$(cat /tmp/smoke-cliA.exit)
+    [ "$EXIT_A" = "0" ] && echo "PASS: exit code — exit=$EXIT_A (last send AllSent)" || echo "FAIL: exit code — exit=$EXIT_A"
+  fi
 fi

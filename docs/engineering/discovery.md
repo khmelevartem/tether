@@ -159,7 +159,7 @@ The `fingerprint` field in `/hello` and `PeerAnnouncement` carries a stable devi
 
 Until pairing identity lands, the field carries a random opaque string sufficient for self-suppression but not for trust. No code path treats it as authentication; trust gating remains pairing.
 
-For app installs (Android, iOS, Desktop UI) the string is persisted via DataStore and regenerated on reinstall, matching the user-visible "reinstall produces a new identity" behaviour of pairing. For the CLI (`tether-cli`) it is per-process ephemeral — never persisted, so two CLI processes on the same host get distinct identities. See [`docs/knowledge/cli-multi-instance.md`](../knowledge/cli-multi-instance.md).
+For app installs (Android, iOS, Desktop UI) the string is persisted via DataStore and regenerated on reinstall, matching the user-visible "reinstall produces a new identity" behaviour of pairing. For the CLI (`tether-cli`) the fingerprint is per-process ephemeral by default — never persisted, so two CLI processes on the same host get distinct identities; passing `--config-dir` opts into a persisted identity that survives restart. See [`docs/knowledge/cli-multi-instance.md`](../knowledge/cli-multi-instance.md).
 
 This dependency is reflected as a `TODO` in the discovery implementation referencing [#11](https://github.com/khmelevartem/tether/issues/11). It is not reflected in this document beyond this section, because the *contract* of the `fingerprint` field does not change between interim and final identity — only the source.
 

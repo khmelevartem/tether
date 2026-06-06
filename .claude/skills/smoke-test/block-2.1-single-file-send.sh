@@ -10,6 +10,9 @@ DOWNLOADS_B="${DOWNLOADS_B:-$HOME/Downloads/Tether}"
 JAR="${JAR:-$(ls "$(git rev-parse --show-toplevel)"/composeApp/build/libs/tether-cli-*.jar \
   "$(git rev-parse --show-toplevel)"/composeApp/build/libs/tether-cli.jar 2>/dev/null | head -1 || true)}"
 
+CONFIG_DIR_B="${CONFIG_DIR_B:-/tmp/smoke-cliB-config}"
+rm -rf "$CONFIG_DIR_B"
+
 LOG_B=/tmp/smoke-cliB.log
 rm -f /tmp/smoke-cliB-in
 mkfifo /tmp/smoke-cliB-in
@@ -17,7 +20,7 @@ sleep 600 > /tmp/smoke-cliB-in &
 KEEPER_B=$!; disown $KEEPER_B
 echo $KEEPER_B > /tmp/smoke-cliB-keeper.pid
 
-TETHER_LOG_DEBUG=true nohup java -jar "$JAR" --name SmokeMacB --port 0 < /tmp/smoke-cliB-in > "$LOG_B" 2>&1 &
+TETHER_LOG_DEBUG=true nohup java -jar "$JAR" --name SmokeMacB --port 0 --config-dir "$CONFIG_DIR_B" < /tmp/smoke-cliB-in > "$LOG_B" 2>&1 &
 JPID_B=$!; disown $JPID_B
 echo $JPID_B > /tmp/smoke-cliB.pid
 
@@ -51,4 +54,4 @@ RC=$?
 set -e
 
 [ $RC -eq 0 ] && echo "PASS: single-file send — $SEND1_NAME byte-identical" || echo "FAIL: single-file send"
-export SEND1_NAME SEND1_SRC LOG_B JPID_B
+export SEND1_NAME SEND1_SRC LOG_B JPID_B CONFIG_DIR_B

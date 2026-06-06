@@ -3,6 +3,7 @@ package com.tubetoast.tether
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.ProgramResult
 import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.types.file
 import com.github.ajalt.clikt.parameters.types.int
 import com.tubetoast.tether.config.DeviceNameStore
 import com.tubetoast.tether.config.EphemeralDeviceNamePersistence
@@ -70,17 +71,32 @@ class TetherCommand :
     private val port by option("--port", help = "Ktor server port (0 = pick random free port)")
         .int()
 
+    private val configDir by option(
+        "--config-dir",
+        help = "Persist device identity (name + fingerprint) in this directory so it survives restart. " +
+            "Default: ephemeral per-process identity.",
+    ).file()
+
     override fun run() = runBlocking {
         initCliLogging()
 
         val activeEngineRef = AtomicReference<PeerTransferEngine?>(null)
 
         val container = CliAppContainer(
-            DefaultDesktopAppConfig(
-                port = port ?: 0,
-                namePersistenceOverride = EphemeralDeviceNamePersistence(),
-                fingerprintPersistenceOverride = EphemeralFingerprintPersistence(),
-            ),
+            if (configDir != null) {
+                val dir = configDir!!
+                if (!dir.mkdirs() && !dir.isDirectory || !dir.canWrite()) {
+                    echo("ERROR: --config-dir is not a writable directory: ${dir.absolutePath}", err = true)
+                    throw ProgramResult(1)
+                }
+                DefaultDesktopAppConfig(port = port ?: 0, configDir = dir)
+            } else {
+                DefaultDesktopAppConfig(
+                    port = port ?: 0,
+                    namePersistenceOverride = EphemeralDeviceNamePersistence(),
+                    fingerprintPersistenceOverride = EphemeralFingerprintPersistence(),
+                )
+            },
         )
 
         container.nameStore.init()

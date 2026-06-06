@@ -15,9 +15,9 @@ sleep 600 > /tmp/smoke-cliA-in &
 KEEPER_A=$!; disown $KEEPER_A
 echo $KEEPER_A > /tmp/smoke-cliA-keeper.pid
 
-TETHER_LOG_DEBUG=true nohup java -jar "$JAR" --name SmokeMacA --port 0 < /tmp/smoke-cliA-in > "$LOG_A" 2>&1 &
-JPID_A=$!; disown $JPID_A
-echo $JPID_A > /tmp/smoke-cliA.pid
+rm -f /tmp/smoke-cliA.exit
+( TETHER_LOG_DEBUG=true java -jar "$JAR" --name SmokeMacA --port 0 < /tmp/smoke-cliA-in > "$LOG_A" 2>&1 ; echo $? > /tmp/smoke-cliA.exit ) &
+JPID_A=$!; disown $JPID_A; echo $JPID_A > /tmp/smoke-cliA.pid
 
 echo "Waiting for FileServer to start..."
 for i in $(seq 1 30); do

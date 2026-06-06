@@ -17,8 +17,9 @@ kill "$(cat /tmp/smoke-cliA.pid /tmp/smoke-cliB.pid /tmp/smoke-cliC.pid \
 
 pkill -f 'com.tubetoast.tether.*\.jar' 2>/dev/null
 
+rm -rf /tmp/smoke-cliB-config
 rm -f /tmp/smoke-cli*-in /tmp/smoke-cli*.log /tmp/smoke-cli*.pid /tmp/smoke-cli*-keeper.pid \
-  /tmp/smoke-send.txt /tmp/smoke-android.txt
+  /tmp/smoke-cli*.exit /tmp/smoke-send.txt /tmp/smoke-android.txt
 
 # Remove scratch files created by block-2 scenarios (by exported names if available, else glob).
 for VAR in SEND1_NAME M1 M2 M3 RETRY_NAME; do

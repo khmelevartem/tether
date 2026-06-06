@@ -1,13 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# TODO #367: this scenario cannot pass with the CLI's per-process ephemeral fingerprint — a
-# restarted peer is a new PeerIdentity, so the failed transfer leaves no terminal state for
-# `retry <name>` to resume from. Skipped until stable-across-restart identity (#367) lands; the
-# logic below is kept as the re-enable target.
-echo "SKIP: retry — blocked by #367 (restarted CLI gets a fresh fingerprint, no terminal state to retry from)"
-exit 0
-
 # Requires: block-1 already executed (CLI A alive at $LOG_A / $JPID_A / fifo /tmp/smoke-cliA-in).
 # Requires: CLI B was alive (this script stops and restarts it).
 
@@ -46,8 +39,8 @@ done
 PREV_HELLO=$(grep -cE "hello from SmokeMacB@" "$LOG_A" 2>/dev/null || true)
 PREV_HELLO=${PREV_HELLO:-0}
 
-# Restart B with the same name so the engine's PeerIdentity resolves again.
-TETHER_LOG_DEBUG=true nohup java -jar "$JAR" --name SmokeMacB --port 0 < /tmp/smoke-cliB-in > "$LOG_B" 2>&1 &
+# Restart B with the same name and config dir — preserves the PeerIdentity so `retry` finds the terminal state.
+TETHER_LOG_DEBUG=true nohup java -jar "$JAR" --name SmokeMacB --port 0 --config-dir "${CONFIG_DIR_B:-/tmp/smoke-cliB-config}" < /tmp/smoke-cliB-in > "$LOG_B" 2>&1 &
 JPID_B=$!; disown $JPID_B
 echo $JPID_B > /tmp/smoke-cliB.pid
 
