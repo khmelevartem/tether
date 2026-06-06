@@ -49,5 +49,5 @@ open class DesktopAppContainer(
 
     val windowHolder: WindowHolder = WindowHolder()
     val desktopFilePicker: DesktopFilePicker = DesktopFilePicker(windowHolder)
-    override val filePicker: FilePicker = desktopFilePicker
+    open override val filePicker: FilePicker = desktopFilePicker
 }

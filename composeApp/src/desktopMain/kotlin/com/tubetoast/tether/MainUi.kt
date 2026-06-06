@@ -98,7 +98,15 @@ fun main() = runBlocking {
                             if (uris.isEmpty()) return false
                             scope.launch {
                                 val sources = withContext(Dispatchers.IO) {
-                                    resolveDroppedSources(uris)
+                                    uris.flatMap { uri ->
+                                        val path = runCatching { Path.of(URI(uri)) }.getOrNull()
+                                            ?: return@flatMap emptyList()
+                                        when {
+                                            Files.isDirectory(path) -> JvmFolderWalker().walk(path.toFile())
+                                            Files.isRegularFile(path) -> listOf(JvmPathFileSource(path))
+                                            else -> emptyList()
+                                        }
+                                    }
                                 }
                                 component.onFilesDropped(sources)
                             }
@@ -120,13 +128,3 @@ fun main() = runBlocking {
         }
     }
 }
-
-private fun resolveDroppedSources(uris: List<String>) =
-    uris.flatMap { uri ->
-        val path = runCatching { Path.of(URI(uri)) }.getOrNull() ?: return@flatMap emptyList()
-        when {
-            Files.isDirectory(path) -> JvmFolderWalker().walk(path.toFile())
-            Files.isRegularFile(path) -> listOf(JvmPathFileSource(path))
-            else -> emptyList()
-        }
-    }
