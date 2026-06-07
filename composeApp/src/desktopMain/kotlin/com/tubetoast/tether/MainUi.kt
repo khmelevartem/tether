@@ -30,6 +30,7 @@ import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.painterResource
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.info
+import ru.pocketbyte.kydra.log.warn
 import ru.pocketbyte.kydra.log.wrapper.withTag
 import tether.composeapp.generated.resources.Res
 import tether.composeapp.generated.resources.icon
@@ -97,7 +98,9 @@ fun main() = runBlocking {
                                     uris.flatMap { uri ->
                                         val path = runCatching { Path.of(URI(uri)) }.getOrNull()
                                             ?: return@flatMap emptyList()
-                                        path.toFile().toFileSources()
+                                        runCatching { path.toFile().toFileSources() }
+                                            .onFailure { log.warn { "onDrop: skipping $uri — ${it.message}" } }
+                                            .getOrElse { emptyList() }
                                     }
                                 }
                                 component.onFilesDropped(sources)
