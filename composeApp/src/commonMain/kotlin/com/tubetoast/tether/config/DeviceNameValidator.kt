@@ -1,8 +1,10 @@
 package com.tubetoast.tether.config
 
-internal const val DEVICE_NAME_MAX_CODEPOINTS = 50
+enum class DeviceNameViolation { Empty, TooLong }
 
-internal fun deviceNameCodepointCount(s: String): Int {
+private const val DEVICE_NAME_MAX_CODEPOINTS = 50
+
+private fun deviceNameCodepointCount(s: String): Int {
     var count = 0
     var i = 0
     while (i < s.length) {
@@ -18,14 +20,23 @@ internal fun deviceNameCodepointCount(s: String): Int {
 }
 
 internal object DeviceNameValidator {
+    fun violationOf(raw: String): DeviceNameViolation? {
+        val trimmed = raw.trim()
+        return when {
+            trimmed.isEmpty() -> DeviceNameViolation.Empty
+            deviceNameCodepointCount(trimmed) > DEVICE_NAME_MAX_CODEPOINTS -> DeviceNameViolation.TooLong
+            else -> null
+        }
+    }
+
     fun validate(raw: String): Result<String> {
         val trimmed = raw.trim()
-        if (trimmed.isEmpty()) return Result.failure(IllegalArgumentException("Name must not be empty"))
-        if (deviceNameCodepointCount(trimmed) > DEVICE_NAME_MAX_CODEPOINTS) {
-            return Result.failure(
+        return when (violationOf(raw)) {
+            DeviceNameViolation.Empty -> Result.failure(IllegalArgumentException("Name must not be empty"))
+            DeviceNameViolation.TooLong -> Result.failure(
                 IllegalArgumentException("Name must be at most $DEVICE_NAME_MAX_CODEPOINTS characters"),
             )
+            null -> Result.success(trimmed)
         }
-        return Result.success(trimmed)
     }
 }

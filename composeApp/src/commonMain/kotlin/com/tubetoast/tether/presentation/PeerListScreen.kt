@@ -31,6 +31,7 @@ import com.tubetoast.tether.peer.Peer
 import com.tubetoast.tether.presentation.banners.BannersSection
 import com.tubetoast.tether.presentation.banners.PendingOutboundBanner
 import com.tubetoast.tether.presentation.banners.PendingOutboundBannerState
+import com.tubetoast.tether.presentation.devicename.ThisDeviceStripContent
 import com.tubetoast.tether.presentation.devicename.ThisDeviceStripScreen
 import com.tubetoast.tether.presentation.dialogs.LargeSelectionConfirmDialog
 import com.tubetoast.tether.presentation.peercard.PeerCard
@@ -238,6 +239,14 @@ private fun PeerListContentPreview(
     val spacing = TetherTheme.spacing
 
     Column(modifier = Modifier.fillMaxSize()) {
+        ThisDeviceStripContent(
+            state = PreviewFixtures.DeviceName.display,
+            onEditClick = {},
+            onDraftChange = {},
+            onConfirm = {},
+            onCancel = {},
+            modifier = Modifier.fillMaxWidth(),
+        )
         if (hasPendingOutbound) {
             PendingOutboundBanner(
                 state = PendingOutboundBannerState.Default(

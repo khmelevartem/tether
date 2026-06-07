@@ -1,5 +1,7 @@
 package com.tubetoast.tether.presentation.devicename
 
+import com.tubetoast.tether.config.DeviceNameViolation
+
 sealed interface DeviceNameState {
     data class Display(
         val name: String,
@@ -7,12 +9,7 @@ sealed interface DeviceNameState {
 
     data class Editing(
         val draft: String,
-        val error: DeviceNameError?,
+        val violation: DeviceNameViolation?,
+        val saveFailed: Boolean,
     ) : DeviceNameState
-}
-
-enum class DeviceNameError {
-    EmptyName,
-    TooLong,
-    SaveFailed,
 }

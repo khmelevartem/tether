@@ -1,16 +1,15 @@
 package com.tubetoast.tether.presentation.devicename
 
 import com.arkivanov.decompose.ComponentContext
+import com.arkivanov.decompose.value.MutableValue
+import com.arkivanov.decompose.value.Value
+import com.arkivanov.decompose.value.update
 import com.arkivanov.essenty.lifecycle.coroutines.coroutineScope
-import com.tubetoast.tether.config.DEVICE_NAME_MAX_CODEPOINTS
 import com.tubetoast.tether.config.DeviceNameStore
-import com.tubetoast.tether.config.deviceNameCodepointCount
+import com.tubetoast.tether.config.DeviceNameValidator
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class DeviceNameComponent(
@@ -20,15 +19,12 @@ class DeviceNameComponent(
 ) : ComponentContext by componentContext {
     private val scope = coroutineScope
 
-    private val _state = MutableStateFlow<DeviceNameState>(DeviceNameState.Display(""))
-    val state: StateFlow<DeviceNameState> = _state
-
-    private var committedName = ""
+    private val _state = MutableValue<DeviceNameState>(DeviceNameState.Display(""))
+    val state: Value<DeviceNameState> = _state
 
     init {
         nameStore.name
             .onEach { name ->
-                committedName = name
                 _state.update { current ->
                     if (current is DeviceNameState.Display) DeviceNameState.Display(name) else current
                 }
@@ -36,16 +32,19 @@ class DeviceNameComponent(
     }
 
     fun onEditClick() {
-        val current = _state.value
-        if (current is DeviceNameState.Display) {
-            _state.update { DeviceNameState.Editing(draft = current.name, error = null) }
+        _state.update { current ->
+            if (current is DeviceNameState.Display) {
+                DeviceNameState.Editing(draft = current.name, violation = null, saveFailed = false)
+            } else {
+                current
+            }
         }
     }
 
     fun onDraftChange(text: String) {
         _state.update { current ->
             if (current is DeviceNameState.Editing) {
-                current.copy(draft = text, error = liveError(text))
+                current.copy(draft = text, violation = DeviceNameValidator.violationOf(text), saveFailed = false)
             } else {
                 current
             }
@@ -54,37 +53,26 @@ class DeviceNameComponent(
 
     fun onConfirm() {
         val current = _state.value as? DeviceNameState.Editing ?: return
-        val error = liveError(current.draft)
-        if (error != null) {
-            _state.update { current.copy(error = error) }
+        val violation = DeviceNameValidator.violationOf(current.draft)
+        if (violation != null) {
+            _state.update { (it as? DeviceNameState.Editing)?.copy(violation = violation) ?: it }
             return
         }
         scope.launch {
+            val editingAtStart = current
             val result = nameStore.setName(current.draft)
             result.fold(
                 onSuccess = { saved ->
-                    _state.update { DeviceNameState.Display(saved) }
+                    _state.update { if (it === editingAtStart) DeviceNameState.Display(saved) else it }
                 },
                 onFailure = {
-                    _state.update {
-                        (_state.value as? DeviceNameState.Editing)?.copy(error = DeviceNameError.SaveFailed)
-                            ?: current.copy(error = DeviceNameError.SaveFailed)
-                    }
+                    _state.update { (it as? DeviceNameState.Editing)?.copy(saveFailed = true) ?: it }
                 },
             )
         }
     }
 
     fun onCancel() {
-        _state.update { DeviceNameState.Display(committedName) }
-    }
-
-    private fun liveError(draft: String): DeviceNameError? {
-        val trimmed = draft.trim()
-        return when {
-            trimmed.isEmpty() -> DeviceNameError.EmptyName
-            deviceNameCodepointCount(trimmed) > DEVICE_NAME_MAX_CODEPOINTS -> DeviceNameError.TooLong
-            else -> null
-        }
+        _state.update { DeviceNameState.Display(nameStore.currentName) }
     }
 }

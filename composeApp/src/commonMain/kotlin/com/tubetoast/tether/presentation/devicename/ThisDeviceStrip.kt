@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,6 +35,8 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
+import com.arkivanov.decompose.extensions.compose.subscribeAsState
+import com.tubetoast.tether.config.DeviceNameViolation
 import com.tubetoast.tether.ui.designsystem.BodyText
 import com.tubetoast.tether.ui.designsystem.LabelText
 import com.tubetoast.tether.ui.designsystem.TetherTextField
@@ -53,7 +54,7 @@ private val IconSize = 20.dp
 
 @Composable
 fun ThisDeviceStripScreen(component: DeviceNameComponent, modifier: Modifier = Modifier) {
-    val state by component.state.collectAsState()
+    val state by component.state.subscribeAsState()
     ThisDeviceStripContent(
         state = state,
         onEditClick = component::onEditClick,
@@ -145,10 +146,9 @@ private fun EditingMode(
 ) {
     val colors = TetherTheme.colors
     val spacing = TetherTheme.spacing
-    val isValid = state.error == null
+    val confirmEnabled = state.violation == null
     val focusRequester = remember { FocusRequester() }
 
-    // Pre-fill with all text selected when entering edit mode.
     // fieldValue is local to this composable; drift from state.draft is intentional
     // (the field owns the cursor while the component owns the committed text).
     var fieldValue by remember {
@@ -159,11 +159,11 @@ private fun EditingMode(
         focusRequester.requestFocus()
     }
 
-    val errorMessage = when (state.error) {
-        DeviceNameError.EmptyName -> "Enter a name."
-        DeviceNameError.TooLong -> "Use 50 characters or fewer."
-        DeviceNameError.SaveFailed -> "Couldn't save the name. Try again."
-        null -> null
+    val errorMessage = when {
+        state.violation == DeviceNameViolation.Empty -> "Enter a name."
+        state.violation == DeviceNameViolation.TooLong -> "Use 50 characters or fewer."
+        state.saveFailed -> "Couldn't save the name. Try again."
+        else -> null
     }
 
     Row(
@@ -197,11 +197,11 @@ private fun EditingMode(
         Box(
             modifier = Modifier
                 .tetherMinTouchTarget()
-                .clickable(enabled = isValid, onClick = onConfirm)
+                .clickable(enabled = confirmEnabled, onClick = onConfirm)
                 .semantics {
                     contentDescription = "Save name"
                     role = Role.Button
-                    if (!isValid) disabled()
+                    if (!confirmEnabled) disabled()
                 },
             contentAlignment = Alignment.Center,
         ) {
@@ -209,9 +209,9 @@ private fun EditingMode(
                 painter = rememberVectorPainter(TablerIcons.Check),
                 contentDescription = null,
                 colorFilter = ColorFilter.tint(
-                    if (isValid) colors.accent else colors.textMuted,
+                    if (confirmEnabled) colors.accent else colors.textMuted,
                 ),
-                alpha = if (isValid) 1f else 0.38f,
+                alpha = if (confirmEnabled) 1f else 0.38f,
                 modifier = Modifier.size(IconSize),
             )
         }
@@ -292,7 +292,7 @@ private fun PreviewEditingTooLong(@PreviewParameter(Themes::class) dark: Boolean
         )
     }
 
-@Preview(name = "ThisDeviceStrip — Editing (save failed)")
+@Preview(name = "ThisDeviceStrip — Editing (save failed, confirm enabled)")
 @Composable
 private fun PreviewEditingSaveFailed(@PreviewParameter(Themes::class) dark: Boolean) =
     PreviewSurface(darkTheme = dark) {
