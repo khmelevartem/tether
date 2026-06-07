@@ -2,6 +2,8 @@
 
 ADRs in this folder record one-time architectural choices: context, options considered, decision, and consequences. Each ADR is append-only history. Current state and conventions live in the parent [`docs/engineering/`](..) folder (architecture-principles, dependency-injection, modules, presentation-layer, ...).
 
+**Append-only begins at merge.** While an ADR's introducing PR is still open, the ADR is an ordinary file under review — refine it by editing the body in place, not by appending an amendment. The amendment and reversal conventions below apply only to ADRs already in `main`, where the original text is the record that makes a later change legible.
+
 Operational artefacts — agent definitions in `.claude/agents/` and skills in `.claude/skills/` — reference the living docs in `docs/engineering/`, not the ADRs. The ADR carries the *why* for human readers; the living doc carries the *what is currently true* that agents enforce.
 
 Start a new ADR from [`_template.md`](_template.md) — it captures the canonical shape used across the existing ADRs (Context / Decision drivers / Considered options / Decision / Costs accepted / Consequences / Revisit if / References) with one-line guidance per section. Optional sections (Decision drivers, Comparison, Revisit if, References) are marked — drop them when the decision is narrow. For broader background on the format, see [adr.github.io](https://adr.github.io/) and [Joel Parker Henderson's collection](https://github.com/joelparkerhenderson/architecture-decision-record).
