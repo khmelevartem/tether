@@ -22,15 +22,15 @@ Screens touched: device list screen (owned by [device list](../device-list/ux-br
 
 **Entry points.** Present whenever the device list screen is shown; no separate entry.
 
-**Layout.** A single horizontal strip pinned above the device list, visually subordinate to a list row (a label, not a tappable peer). Left: a fixed "This device" label and the current name. Right: the edit affordance. In edit mode the name region is replaced in place by an editable field plus confirm and cancel controls; the strip keeps its position and the list below does not move.
+**Layout.** An elevated band pinned above the device list, with a leading vertical accent marker on its left edge (signalling "this device" / "me") and a divider separating it from the list below. The current name is the hero line — the prominent element — with a small "This device" caption beneath it. The edit affordance sits at the trailing edge. In edit mode the name line is replaced in place by an editable field; the "This device" caption stays beneath it; discard and confirm controls sit at the trailing edge (discard then confirm, with confirm emphasised as the primary action). The band keeps its position and the list below does not move.
 
 **States.**
 
 #### 1. Display
-Shows "This device: <name>" with the edit affordance. Default resting state.
+Shows the current name as the hero line with the "This device" caption beneath it and the edit affordance at the trailing edge. Default resting state.
 
 #### 2. Editing
-Entered by activating the edit affordance. The name region becomes an editable field pre-filled with the current name and selected for immediate overtype. Confirm and cancel controls are shown. Confirm is unavailable while the input is invalid (empty after trim, or over 50 codepoints). Typing past the limit is not blocked but flags the input as invalid.
+Entered by activating the edit affordance. The hero name line becomes an editable field pre-filled with the current name and selected for immediate overtype; the "This device" caption stays beneath it. Discard and confirm controls are shown at the trailing edge, confirm emphasised as primary. Confirm is unavailable while the input is invalid (empty after trim, or over 50 codepoints). Typing past the limit is not blocked but flags the input as invalid.
 
 #### 3. Editing — invalid input
 A subordinate inline error sits with the field; confirm stays unavailable. Triggered by empty/whitespace-only input or input over 50 codepoints. Leaving the field invalid and cancelling restores the previous name unchanged.
@@ -57,10 +57,10 @@ After a confirm whose persist fails, the surface stays in edit mode with the typ
 **Per-platform deltas.** Default (one shared Compose surface). Confirm and cancel are available both as visible controls and via the platform's native text-entry conventions — keyboard done/return confirms, back/escape cancels — so each platform's habitual gesture works without a per-platform layout change.
 
 **Accessibility.**
-- The strip is not a list item or button in Display mode; it is a static labelled value with one nested button (the edit affordance). The affordance carries the label `Rename this device`, not a bare icon.
+- The band is not a list item or button in Display mode; it is a static labelled value with one nested button (the edit affordance). The affordance carries the label `Rename this device`, not a bare icon.
 - Entering Editing moves focus to the field and announces it as an editable name field with the current value.
 - Inline errors are announced via a live region when they appear, so the reason a confirm did nothing is spoken, not silent.
-- Confirm and cancel are labelled controls reachable by keyboard; on Desktop, focus order runs field → confirm → cancel, and escape cancels.
+- Confirm and cancel are labelled controls reachable by keyboard; on Desktop, focus order runs field → discard → confirm, and escape cancels.
 
 ---
 
@@ -103,7 +103,7 @@ A successful rename causes peers in the list below to briefly disappear and reap
 
 ## Conceptual components
 
-1. **This-device strip** — persistent labelled value above the device list with display/edit modes; the surface this feature owns.
+1. **This-device strip** — persistent elevated band above the device list with a leading accent marker and a divider below; hero name line over a "This device" caption, with display/edit modes; the surface this feature owns.
 2. **Inline name field** — single-line editable text field with trim-and-length validation surfaced as a subordinate inline error and a confirm-availability gate.
 3. **Subordinate inline error** — a short, low-emphasis message bound to the field, announced to screen readers when it appears.
 

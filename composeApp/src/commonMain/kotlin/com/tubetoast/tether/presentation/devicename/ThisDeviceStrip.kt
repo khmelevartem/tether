@@ -1,8 +1,10 @@
 package com.tubetoast.tether.presentation.devicename
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -15,8 +17,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.key.Key
@@ -24,22 +29,24 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
-import com.tubetoast.tether.ui.designsystem.BodyText
+import com.tubetoast.tether.ui.designsystem.CaptionText
 import com.tubetoast.tether.ui.designsystem.DismissCloseButton
-import com.tubetoast.tether.ui.designsystem.LabelText
+import com.tubetoast.tether.ui.designsystem.PrimaryActionIconButton
 import com.tubetoast.tether.ui.designsystem.TetherTextField
+import com.tubetoast.tether.ui.designsystem.TitleText
 import com.tubetoast.tether.ui.preview.PreviewFixtures
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
@@ -50,6 +57,7 @@ import compose.icons.tablericons.Check
 import compose.icons.tablericons.Pencil
 
 private val IconSize = 20.dp
+private val AccentBarWidth = 3.dp
 
 @Composable
 fun ThisDeviceStripScreen(component: DeviceNameComponent, modifier: Modifier = Modifier) {
@@ -73,24 +81,43 @@ internal fun ThisDeviceStripContent(
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val colors = TetherTheme.colors
     val spacing = TetherTheme.spacing
+    val density = LocalDensity.current
+    val borderWidthPx = with(density) { spacing.borderWidth.toPx() }
+    val accentBarWidthPx = with(density) { AccentBarWidth.toPx() }
+    val borderColor = colors.border
+    val accentColor = colors.accent
 
-    val contentModifier = modifier
+    val shellModifier = modifier
         .fillMaxWidth()
-        .padding(horizontal = spacing.lg, vertical = spacing.sm)
+        .background(colors.surfaceRaised)
+        .drawBehind {
+            drawLine(
+                color = borderColor,
+                start = Offset(0f, size.height - borderWidthPx / 2f),
+                end = Offset(size.width, size.height - borderWidthPx / 2f),
+                strokeWidth = borderWidthPx,
+            )
+            drawRect(
+                color = accentColor,
+                topLeft = Offset.Zero,
+                size = Size(accentBarWidthPx, size.height),
+            )
+        }.padding(horizontal = spacing.lg, vertical = spacing.sm)
 
     when (state) {
         is DeviceNameState.Display -> DisplayMode(
             name = state.name,
             onEditClick = onEditClick,
-            modifier = contentModifier,
+            modifier = shellModifier,
         )
         is DeviceNameState.Editing -> EditingMode(
             state = state,
             onDraftChange = onDraftChange,
             onConfirm = onConfirm,
             onCancel = onCancel,
-            modifier = contentModifier,
+            modifier = shellModifier,
         )
     }
 }
@@ -107,14 +134,15 @@ private fun DisplayMode(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        LabelText(text = "This device", modifier = Modifier.alignByBaseline())
-        BodyText(
-            text = ": $name",
-            modifier = Modifier
-                .weight(1f)
-                .padding(start = TetherTheme.spacing.xs)
-                .alignByBaseline(),
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            TitleText(
+                text = name,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            CaptionText(text = "This device")
+        }
+
         Box(
             modifier = Modifier
                 .tetherMinTouchTarget()
@@ -143,7 +171,6 @@ private fun EditingMode(
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = TetherTheme.colors
     val focusRequester = remember { FocusRequester() }
 
     var fieldValue by remember {
@@ -166,45 +193,36 @@ private fun EditingMode(
             },
         verticalAlignment = Alignment.Top,
     ) {
-        TetherTextField(
-            value = fieldValue,
-            onValueChange = { newValue ->
-                fieldValue = newValue
-                onDraftChange(newValue.text)
-            },
-            placeholder = "Device name",
-            errorMessage = state.errorMessage,
-            contentDescription = "Device name field",
-            imeAction = ImeAction.Done,
-            onImeAction = onConfirm,
-            modifier = Modifier
-                .weight(1f)
-                .focusRequester(focusRequester),
-        )
-
-        Box(
-            modifier = Modifier
-                .tetherMinTouchTarget()
-                .clickable(enabled = state.confirmEnabled, onClick = onConfirm)
-                .semantics {
-                    contentDescription = "Save name"
-                    role = Role.Button
-                    if (!state.confirmEnabled) disabled()
+        Column(modifier = Modifier.weight(1f)) {
+            TetherTextField(
+                value = fieldValue,
+                onValueChange = { newValue ->
+                    fieldValue = newValue
+                    onDraftChange(newValue.text)
                 },
-            contentAlignment = Alignment.Center,
-        ) {
-            Image(
-                painter = rememberVectorPainter(TablerIcons.Check),
-                contentDescription = null,
-                colorFilter = ColorFilter.tint(
-                    if (state.confirmEnabled) colors.accent else colors.textMuted,
-                ),
-                alpha = if (state.confirmEnabled) 1f else 0.38f,
-                modifier = Modifier.size(IconSize),
+                placeholder = "Device name",
+                errorMessage = state.errorMessage,
+                contentDescription = "Device name field",
+                imeAction = ImeAction.Done,
+                onImeAction = onConfirm,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(focusRequester),
+            )
+            CaptionText(
+                text = "This device",
+                modifier = Modifier.padding(top = TetherTheme.spacing.xs),
             )
         }
 
         DismissCloseButton(onClick = onCancel, contentDescription = "Cancel rename")
+
+        PrimaryActionIconButton(
+            onClick = onConfirm,
+            contentDescription = "Save name",
+            icon = TablerIcons.Check,
+            enabled = state.confirmEnabled,
+        )
     }
 }
 

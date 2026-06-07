@@ -2,6 +2,8 @@ package com.tubetoast.tether.ui.designsystem
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -43,7 +45,13 @@ fun TetherTextField(
     val shapes = TetherTheme.shapes
     val typography = TetherTheme.typography
 
-    val borderColor = if (errorMessage != null) colors.error else colors.border
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+    val borderColor = when {
+        errorMessage != null -> colors.error
+        isFocused -> colors.accent
+        else -> colors.border
+    }
 
     Column(modifier = modifier) {
         BasicTextField(
@@ -58,6 +66,7 @@ fun TetherTextField(
                 onSearch = { onImeAction() },
                 onSend = { onImeAction() },
             ),
+            interactionSource = interactionSource,
             modifier = Modifier
                 .fillMaxWidth()
                 .semantics { this.contentDescription = contentDescription },
