@@ -32,19 +32,14 @@ import java.io.File
 private val log = KydraLog.withTag(default = "WindowsFilePicker")
 
 internal class WindowsFilePicker(
-    private val windowHolder: WindowHolder,
-) : FilePicker {
+    windowHolder: WindowHolder,
+) : DesktopFilePicker(windowHolder) {
     override suspend fun pickFiles(): List<FileSource> =
         runCatching { pickViaComDialog() }
             .getOrElse { e ->
                 log.warn { "Native Windows picker failed; falling back to AWT dialog — ${e.message}" }
                 awtPickFiles(windowHolder)
             }
-
-    override suspend fun pickFolder(): List<FileSource> = jvmPickFolder(windowHolder)
-
-    override suspend fun pickPhotos(): List<FileSource> =
-        throw UnsupportedOperationException("pickPhotos is mobile-only")
 
     private suspend fun pickViaComDialog(): List<FileSource> = withContext(Dispatchers.IO) {
         var dialog: FileOpenDialog? = null

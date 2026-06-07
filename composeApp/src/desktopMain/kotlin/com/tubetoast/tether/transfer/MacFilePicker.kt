@@ -11,8 +11,8 @@ import java.io.File
 private val log = KydraLog.withTag(default = "MacFilePicker")
 
 internal class MacFilePicker(
-    private val windowHolder: WindowHolder,
-) : FilePicker {
+    windowHolder: WindowHolder,
+) : DesktopFilePicker(windowHolder) {
     override suspend fun pickFiles(): List<FileSource> {
         val selected = pickFilesAndFolders()
         log.info { "pickFiles (mac): ${selected.size} item(s) selected" }
@@ -20,11 +20,6 @@ internal class MacFilePicker(
             selected.flatMap { it.toFileSources() }
         }
     }
-
-    override suspend fun pickFolder(): List<FileSource> = jvmPickFolder(windowHolder)
-
-    override suspend fun pickPhotos(): List<FileSource> =
-        throw UnsupportedOperationException("pickPhotos is mobile-only")
 
     private companion object {
         private const val NS_MODAL_RESPONSE_OK = 1
