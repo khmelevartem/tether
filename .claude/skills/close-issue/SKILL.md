@@ -70,7 +70,7 @@ One question to the user to check understanding of principles actually applied i
 **After the user's answer:**
 - Assess correctness: what is right, what is missing, what is imprecise or wrong. Without leniency and without aggression — like a technical interviewer giving honest feedback.
 - If the answer was based on an item from the checklist — mark it as completed (`- [ ]` → `- [x]`) directly in `docs/interview-prep-checklist.md` via Edit. If the question was your own (not from the checklist) — add it to the "Additional questions from tasks" section at the end of the checklist as `- [x] <question>` via Edit.
-- **Commit the checklist edit into the current PR branch and push, before Step 6 merge.**
+- **Commit the checklist edit into the current PR branch and push, before the Step 7 merge.**
 
 **This is not a stop-point based on the content of the answer** — a weak answer does not block the merge. The user decides themselves whether to proceed or explore the topic further. The stop-point is only the fact that the question was asked and an answer was received.
 
@@ -136,20 +136,24 @@ Do not let a decision live only in the chat: sessions are lost, and the next con
 
 ---
 
-## Step 6 — Merge
+## Step 6 — Post-factum size label
 
-**Before merging: reconcile the `size:*` label against the actual cost to the user.** 
+**Reconcile the `size:*` label against the actual cost to the user.** 
 Size means the user's effort — not diff size, and not agent wall-clock: time spent waiting on an agent is free to the user and never counts toward size. 
 
 Two axes carry the cost. 
 **(1) Review rounds — the primary signal:** the count of ROOT (top-level) review findings and the number of rounds they cluster into (gaps > 60 min). 
 **(2) Depth of engagement:** how far the user had to dive into the task — decisions they had to make, explanations they had to read, implementation directions they had to choose. 
 
-**Merge by taking the heavier of the two axes, not the average — a task is as big as its costliest axis.** The bands calibrate only the review-rounds axis: read it against the current per-size means in [`.claude/sizing-bands.json`](../../sizing-bands.json). The engagement axis has no separate bands — place it on the same S/M/L ladder by analogy ("this cost about as much as a typical M") and let it raise the size above what the comment count alone implies, which is what happens when an agent absorbs the review and few comments surface. Take the larger of the two, then update via `gh issue edit <N> --remove-label size:S --add-label size:L`. 
+**Combine by taking the heavier of the two axes, not the average — a task is as big as its costliest axis.** The bands calibrate only the review-rounds axis: read it against the current per-size means in [`.claude/sizing-bands.json`](../../sizing-bands.json). The engagement axis has no separate bands — place it on the same S/M/L ladder by analogy ("this cost about as much as a typical M") and let it raise the size above what the comment count alone implies, which is what happens when an agent absorbs the review and few comments surface. Take the larger of the two, then update via `gh issue edit <N> --remove-label size:S --add-label size:L`. 
 
 Don't size by lines changed or commit count — a large but mechanical diff stays small. The label must reflect actual effort, otherwise the analytics and the `progress` task cost drift.
 
 Don't treat this as "a poor estimate" — scope often grows along the way due to additions by the user or external conditions. Just record the fact.
+
+---
+
+## Step 7 — Merge
 
 ```bash
 gh pr merge <PR> --squash --delete-branch
@@ -159,7 +163,7 @@ Use squash unless otherwise specified. After merging, verify that the PR is clos
 
 ---
 
-## Step 7 — Next tasks
+## Step 8 — Next tasks
 
 Look in the issue for a "Consequences" section and in the PR — are there TODOs, unresolved questions, things moved out of scope.
 
@@ -168,7 +172,7 @@ If there is nothing — say so explicitly.
 
 ---
 
-## Step 8 — Retro
+## Step 9 — Retro
 
 Were there any systemic signals during the task? Triggers for `/retro`:
 
