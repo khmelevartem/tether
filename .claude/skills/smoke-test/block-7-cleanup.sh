@@ -11,9 +11,11 @@ set +e
 # missing ios.udid (any run without the iOS block) must not abort cleanup.
 UDID="${UDID:-$(cat "$IOS_UDID_FILE" 2>/dev/null)}"
 
-echo "quit" > "$FIFO_A" 2>/dev/null || true
-echo "quit" > "$FIFO_B" 2>/dev/null || true
-echo "quit" > "$FIFO_C" 2>/dev/null || true
+# Backgrounded: a FIFO with no reader (dead CLI) would block the write forever and wedge
+# cleanup; smoke_reset below kills any such stuck writer.
+echo "quit" > "$FIFO_A" 2>/dev/null &
+echo "quit" > "$FIFO_B" 2>/dev/null &
+echo "quit" > "$FIFO_C" 2>/dev/null &
 sleep 2
 
 smoke_reset

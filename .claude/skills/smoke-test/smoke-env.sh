@@ -17,7 +17,6 @@ SMOKE_JAR="${JAR:-$(ls "$TETHER_ROOT"/composeApp/build/libs/tether-cli-*.jar \
   "$TETHER_ROOT"/composeApp/build/libs/tether-cli.jar 2>/dev/null | head -1 || true)}"
 JAR="$SMOKE_JAR"
 
-# Per-instance paths — fifo / log / pid / fifo-keeper-pid.
 FIFO_A="$SMOKE_DIR/cliA-in"; LOG_A="$SMOKE_DIR/cliA.log"; PID_A="$SMOKE_DIR/cliA.pid"; KEEPER_A="$SMOKE_DIR/cliA-keeper.pid"
 FIFO_B="$SMOKE_DIR/cliB-in"; LOG_B="$SMOKE_DIR/cliB.log"; PID_B="$SMOKE_DIR/cliB.pid"; KEEPER_B="$SMOKE_DIR/cliB-keeper.pid"
 FIFO_C="$SMOKE_DIR/cliC-in"; LOG_C="$SMOKE_DIR/cliC.log"; PID_C="$SMOKE_DIR/cliC.pid"; KEEPER_C="$SMOKE_DIR/cliC-keeper.pid"
@@ -47,7 +46,7 @@ smoke_instances_alive() {
 smoke_reset() {
   if [ -d "$SMOKE_DIR" ]; then
     local holders
-    holders=$(lsof -t +D "$SMOKE_DIR" 2>/dev/null | grep -v "^$$\$")
+    holders=$(lsof -t +D "$SMOKE_DIR" 2>/dev/null | grep -v "^$$\$" || true)
     [ -n "$holders" ] && kill -9 $holders 2>/dev/null
   fi
   smoke_kill_instances
