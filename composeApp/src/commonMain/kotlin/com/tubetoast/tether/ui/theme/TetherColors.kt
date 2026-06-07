@@ -12,6 +12,8 @@ data class TetherColors(
     val textPrimary: Color,
     val textMuted: Color,
     val accent: Color,
+    /** Foreground color for content rendered on top of [accent] backgrounds (e.g. filled buttons). */
+    val onAccent: Color,
     val error: Color,
     val peerIdentity: Color,
 )
@@ -23,6 +25,7 @@ val LightColors = TetherColors(
     textPrimary = Color(0xFF1A1A1F),
     textMuted = Color(0xFF6B6B73),
     accent = Color(0xFF2F7D6B),
+    onAccent = Color(0xFFFFFFFF),
     error = Color(0xFFB4423A),
     peerIdentity = Color(0xFFC77E47),
 )
@@ -34,6 +37,7 @@ val DarkColors = TetherColors(
     textPrimary = Color(0xFFECECEE),
     textMuted = Color(0xFF9A9DA3),
     accent = Color(0xFF3FA08A),
+    onAccent = Color(0xFFFFFFFF),
     error = Color(0xFFE26A60),
     peerIdentity = Color(0xFFD89968),
 )

@@ -5,12 +5,15 @@ import com.arkivanov.essenty.backhandler.BackDispatcher
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.resume
 import com.arkivanov.essenty.statekeeper.StateKeeperDispatcher
+import com.tubetoast.tether.config.DeviceNameStore
+import com.tubetoast.tether.config.EphemeralDeviceNamePersistence
 import com.tubetoast.tether.discovery.FakeDeviceDiscovery
 import com.tubetoast.tether.peer.PeersRepository
 import com.tubetoast.tether.preferences.FakeFileTransferPreferences
 import com.tubetoast.tether.preferences.FakePeerPreferencesStore
 import com.tubetoast.tether.presentation.banners.BannersComponent
 import com.tubetoast.tether.presentation.banners.PeerConflictRelay
+import com.tubetoast.tether.presentation.devicename.DeviceNameComponent
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.FakeFilePicker
@@ -351,6 +354,13 @@ class RootComponentTest {
                             peersRepository = peersRepository,
                             engineRegistry = fakePeerTransferEngineRegistry(coroutineScope),
                             conflictRelay = PeerConflictRelay(),
+                            coroutineScope = coroutineScope,
+                        )
+                    },
+                    deviceNameComponentFactory = { deviceNameCtx ->
+                        DeviceNameComponent(
+                            componentContext = deviceNameCtx,
+                            nameStore = DeviceNameStore(EphemeralDeviceNamePersistence()),
                             coroutineScope = coroutineScope,
                         )
                     },

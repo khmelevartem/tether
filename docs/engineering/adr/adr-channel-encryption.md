@@ -7,9 +7,9 @@
 
 ## Context
 
-Until this ADR landed, [docs/product/security.md](../../product/security.md) listed three options for the transport between paired Tether devices as an open question: (A) TLS with self-signed certificates pinned to paired keys, (B) plain HTTP relying solely on pairing for authentication, (C) application-level encryption (Noise / libsodium-style payload encryption above HTTP). The default in-tree behaviour was effectively B, but it was never chosen — only deferred. Resolving it became urgent because:
+Until this ADR landed, [docs/security/README.md](../../security/README.md) listed three options for the transport between paired Tether devices as an open question: (A) TLS with self-signed certificates pinned to paired keys, (B) plain HTTP relying solely on pairing for authentication, (C) application-level encryption (Noise / libsodium-style payload encryption above HTTP). The default in-tree behaviour was effectively B, but it was never chosen — only deferred. Resolving it became urgent because:
 
-- [#10](https://github.com/khmelevartem/tether/issues/10) (PIN handshake) and [#116](https://github.com/khmelevartem/tether/issues/116) (real EC P-256 keys via Apple Keychain with X.509 wire format) were converging on the same crypto material that any of A / C would consume. Without a fixed channel-encryption decision, neither could finalise the shape of the keys it produces.
+- [#10](https://github.com/khmelevartem/tether/issues/10) (SAS handshake) and [#116](https://github.com/khmelevartem/tether/issues/116) (real EC P-256 keys via Apple Keychain with X.509 wire format) were converging on the same crypto material that any of A / C would consume. Without a fixed channel-encryption decision, neither could finalise the shape of the keys it produces.
 - [#119](https://github.com/khmelevartem/tether/issues/119) (transport reliability hardening — CIO timeouts, `Expect: 100-continue`, large files) was about to settle plain-HTTP transport behaviour. Adding TLS on top later would re-open everything it touched.
 
 [adr-apple-fileserver-engine.md](adr-apple-fileserver-engine.md) explicitly deferred the Apple-side transport choice to "when TLS lands" — that is this ADR.
@@ -19,7 +19,7 @@ Until this ADR landed, [docs/product/security.md](../../product/security.md) lis
 | Criterion | A — TLS pinned | B — Plain HTTP | C — App-level (Noise / libsodium) |
 |---|---|---|---|
 | MITM on hostile Wi-Fi (passive / active) | both defeated | neither defeated | both defeated |
-| Match with [threat model](../../product/security.md) priority 2 ("passive eavesdropper on open Wi-Fi") | yes | **no** | yes |
+| Match with [threat model](../../security/README.md) priority 2 ("passive eavesdropper on open Wi-Fi") | yes | **no** | yes |
 | Implementation across 4 targets | standard on JVM/Android; bespoke on Apple Native (POC-verified, see below) | nothing | no mature KMP-wide Noise/libsodium binding — would need per-target wrapper |
 | Crypto correctness risk | low — battle-tested TLS implementations on every target | trivial — there is no crypto | **high** — streaming AEAD framing, replay, rekey are subtle and permanent maintenance |
 | Throughput on 1 GB (target ≤15% vs plain) | ≤5% expected with hardware AES on all targets | baseline | unverified; framing layer adds variability |
@@ -222,7 +222,7 @@ These errors were missed at original ADR-acceptance time. The cause was scoping 
 
 - [#123](https://github.com/khmelevartem/tether/issues/123) — DOCS issue that closes the open question.
 - [#138](https://github.com/khmelevartem/tether/pull/138) — closed POC PR with the decision-history narrative and the spike code.
-- [docs/product/security.md](../../product/security.md) — product-side statement of the decision.
+- [docs/security/README.md](../../security/README.md) — product-side statement of the decision.
 - [docs/product/vision.md](../../product/vision.md) — principle 4 ("Local-first, no cloud"), the load-bearing privacy positioning.
 - [adr-apple-fileserver-engine.md](adr-apple-fileserver-engine.md) — prior choice of Ktor CIO Native for the Apple FileServer; this ADR updates its "revisit if TLS lands" trigger.
 - [#10](https://github.com/khmelevartem/tether/issues/10), [#116](https://github.com/khmelevartem/tether/issues/116), [#119](https://github.com/khmelevartem/tether/issues/119) — adjacent issues whose contracts this decision pins down.

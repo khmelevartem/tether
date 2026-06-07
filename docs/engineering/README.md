@@ -19,6 +19,7 @@ Product-side docs (vision, audience, features) live in [`docs/product/`](../prod
 - [Logging](logging.md) — KydraLog as the single KMP façade; `Tether.<Subsystem>` naming, levels, per-platform DEBUG gating, test silence, sensitive-data policy.
 - [Persistence](persistence.md) — key-value store contract and DataStore backend.
 - [Device identity](device-identity.md) — per-install keypair, the root of trust for pairing and TLS.
+- [Security analysis](../security/README.md) — threat model, attack tree, and pentest suite; the per-component STRIDE attack surface and the SAS pairing correctness conditions.
 - [Platform concerns](platform-concerns.md) — recurring stumbling points for PRs touching platform source sets; checklist used by `review-platform`.
 - [Glossary discipline](glossary-discipline.md) — `docs/glossary.md` as the single dictionary (product / technical); `review-glossary` as a subagent that catches drift and undocumented terms in a PR diff.
 - [Long-lived artifacts](long-lived-artifacts.md) — writing discipline for prose that outlives the task. Applies to `CLAUDE.md`, `docs/`, `.claude/`, KDoc, comments, error messages.
@@ -50,4 +51,5 @@ ADRs in [`adr/`](adr/) capture the *why* behind one-time architectural choices. 
 - [Screenshot testing](adr/adr-screenshot-testing.md) — chose Roborazzi + ComposablePreviewScanner on the Android target via Robolectric for headless `@Preview`-to-PNG rendering in the agent loop.
 - [Key-value persistence — DataStore](adr/adr-persistence-key-value.md) — chose `androidx.datastore-preferences-core` direct over wrapper libraries and per-store actuals.
 - [Sheet and modal primitives](adr/adr-sheet-modal-primitives.md) — chose Compose Unstyled over ad-hoc Compose Foundation overlay, Material 3, and Android-only sheet libraries.
+- [SAS pairing protocol](adr/adr-sas-pairing-protocol.md) — chose to authenticate the static identity keys (SAS over the full transcript, contributory co-committed nonce) over app-level ephemeral ECDH in pairing; session confidentiality comes from the pinned TLS channel.
 

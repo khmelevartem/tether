@@ -2,10 +2,12 @@ package com.tubetoast.tether.presentation
 
 import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.essenty.lifecycle.coroutines.withLifecycle
+import com.tubetoast.tether.config.DeviceNameStore
 import com.tubetoast.tether.peer.PeersRepository
 import com.tubetoast.tether.preferences.FileTransferPreferences
 import com.tubetoast.tether.presentation.banners.BannersComponent
 import com.tubetoast.tether.presentation.banners.PeerConflictRelay
+import com.tubetoast.tether.presentation.devicename.DeviceNameComponent
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.transfer.FilePicker
 import com.tubetoast.tether.transfer.PeerTransferEngineRegistry
@@ -20,6 +22,7 @@ class RootComponentFactory(
     private val peerConflictRelay: PeerConflictRelay,
     private val filePicker: FilePicker,
     private val fileTransferPreferences: FileTransferPreferences,
+    private val nameStore: DeviceNameStore,
 ) {
     fun create(componentContext: ComponentContext): RootComponent =
         RootComponent(
@@ -52,6 +55,12 @@ class RootComponentFactory(
                             peersRepository = peersRepository,
                             engineRegistry = peerTransferEngineRegistry,
                             conflictRelay = peerConflictRelay,
+                        )
+                    },
+                    deviceNameComponentFactory = { deviceNameCtx ->
+                        DeviceNameComponent(
+                            componentContext = deviceNameCtx,
+                            nameStore = nameStore,
                         )
                     },
                 )

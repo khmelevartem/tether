@@ -12,6 +12,7 @@ import com.arkivanov.essenty.lifecycle.resume
 import com.tubetoast.tether.peer.Peer
 import com.tubetoast.tether.peer.PeersRepository
 import com.tubetoast.tether.presentation.banners.BannersComponent
+import com.tubetoast.tether.presentation.devicename.DeviceNameComponent
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.transfer.PeerIdentity
 import kotlinx.coroutines.CoroutineScope
@@ -23,9 +24,11 @@ class PeerListComponent(
     private val peersRepository: PeersRepository,
     private val peerTransferComponentFactory: (ComponentContext, LifecycleRegistry, Peer) -> PeerTransferComponent,
     bannersComponentFactory: (ComponentContext) -> BannersComponent,
+    deviceNameComponentFactory: (ComponentContext) -> DeviceNameComponent,
     coroutineScope: CoroutineScope = componentContext.coroutineScope(),
 ) : ComponentContext by componentContext {
     val bannersComponent: BannersComponent = bannersComponentFactory(childContext("banners"))
+    val deviceNameComponent: DeviceNameComponent = deviceNameComponentFactory(childContext("deviceName"))
     private val _state = MutableValue(PeerListState.empty())
     val state: Value<PeerListState> = _state
 

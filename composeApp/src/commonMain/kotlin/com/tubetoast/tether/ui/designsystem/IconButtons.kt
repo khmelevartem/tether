@@ -1,9 +1,10 @@
 package com.tubetoast.tether.ui.designsystem
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -25,6 +26,7 @@ import com.tubetoast.tether.ui.preview.Themes
 import com.tubetoast.tether.ui.theme.TetherTheme
 import com.tubetoast.tether.ui.theme.tetherMinTouchTarget
 import compose.icons.TablerIcons
+import compose.icons.tablericons.Check
 import compose.icons.tablericons.ChevronDown
 import compose.icons.tablericons.ChevronLeft
 import compose.icons.tablericons.ChevronUp
@@ -165,11 +167,44 @@ fun BackChevronButton(
     }
 }
 
+/**
+ * Use for primary confirmation actions (e.g. save, confirm). When [enabled] is false
+ * the button renders with a muted background and icon and exposes the disabled semantic.
+ */
+@Composable
+fun PrimaryActionIconButton(
+    onClick: () -> Unit,
+    contentDescription: String,
+    icon: ImageVector,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    val colors = TetherTheme.colors
+    val shapes = TetherTheme.shapes
+    val bgColor = if (enabled) colors.accent else colors.border
+    val iconTint = if (enabled) colors.onAccent else colors.textMuted
+
+    Box(
+        modifier = modifier
+            .tetherMinTouchTarget()
+            .background(bgColor, shapes.sm)
+            .clickable(enabled = enabled, onClick = onClick)
+            .semantics {
+                this.contentDescription = contentDescription
+                this.role = Role.Button
+                if (!enabled) disabled()
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        TetherIcon(imageVector = icon, tint = iconTint)
+    }
+}
+
 @Preview(name = "Icon buttons")
 @Composable
 private fun PreviewIconButtons(@PreviewParameter(Themes::class) dark: Boolean) =
     PreviewSurface(darkTheme = dark) {
-        Row {
+        FlowRow {
             BackChevronButton(onClick = {}, contentDescription = "Back")
             ChevronToggleIcon(expanded = false, onClick = {}, contentDescription = "Expand")
             ChevronToggleIcon(expanded = true, onClick = {}, contentDescription = "Collapse")
@@ -177,5 +212,12 @@ private fun PreviewIconButtons(@PreviewParameter(Themes::class) dark: Boolean) =
             DismissCloseButton(onClick = {}, contentDescription = "Dismiss")
             RowCancelButton(onClick = {}, contentDescription = "Cancel")
             RowCancelButton(onClick = {}, contentDescription = "Cancel", enabled = false)
+            PrimaryActionIconButton(onClick = {}, contentDescription = "Save", icon = TablerIcons.Check)
+            PrimaryActionIconButton(
+                onClick = {},
+                contentDescription = "Save",
+                icon = TablerIcons.Check,
+                enabled = false,
+            )
         }
     }

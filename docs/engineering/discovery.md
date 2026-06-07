@@ -155,7 +155,7 @@ Any combination of failure modes Layers 1–3 cannot overcome, the user works ar
 
 ## Identity and self-suppression
 
-The `fingerprint` field in `/hello` and `PeerAnnouncement` carries a stable device identity. Its target is the EC P-256 public key fingerprint produced by [Pairing (#11)](https://github.com/khmelevartem/tether/issues/11) — the same identity used by [channel encryption](../product/security.md#channel-encryption) and pairing.
+The `fingerprint` field in `/hello` and `PeerAnnouncement` carries a stable device identity. Its target is the EC P-256 public key fingerprint produced by [Pairing (#11)](https://github.com/khmelevartem/tether/issues/11) — the same identity used by [channel encryption](../security/README.md#channel-encryption) and pairing.
 
 Until pairing identity lands, the field carries a random opaque string sufficient for self-suppression but not for trust. No code path treats it as authentication; trust gating remains pairing.
 
@@ -178,7 +178,7 @@ The idle window is intentionally generous — peers reappear cheaply, and stale 
 
 Discovery is unauthenticated by design across every layer. Any device on a reachable subnet can announce itself over mDNS today; rendezvous, subnet-scan, and broadcast do not widen this surface — they only diversify how an announcement reaches us.
 
-Trust is established exclusively at [pairing](../product/security.md#pairing-flow) time, with the PIN comparison and SPKI-pinned TLS handshake that follow. No file moves between two devices until they have completed pairing. Discovery's job is to populate the device list; the list itself is not a trust claim.
+Trust is established exclusively at [pairing](../security/README.md#pairing-flow) time, with the SAS comparison and SPKI-pinned TLS handshake that follow. No file moves between two devices until they have completed pairing. Discovery's job is to populate the device list; the list itself is not a trust claim. A device announcing under another's name authenticates nothing — discovery's threats (announce spoofing, TXT disclosure, list flooding) and their mitigations are analysed in [`threat-model.md` §Discovery](../security/threat-model.md#discovery-mdns).
 
 ## Cross-layer concerns
 
