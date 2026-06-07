@@ -259,4 +259,26 @@ class DeviceNameComponentTest {
         assertEquals("Enter a name.", editing.errorMessage)
         assertFalse(editing.confirmEnabled)
     }
+
+    @Test
+    fun `onDraftChange to too-long draft clears saveFailed message and shows too-long error`() = runTest {
+        val component = buildComponent(
+            InMemoryDeviceNamePersistence(stored = "Original", writeError = RuntimeException("disk full")),
+        )
+        advanceUntilIdle()
+
+        component.onEditClick()
+        component.onDraftChange("New Name")
+        component.onConfirm()
+        advanceUntilIdle()
+
+        val afterSaveFailed = assertIs<DeviceNameState.Editing>(component.state.value)
+        assertEquals("Couldn't save the name. Try again.", afterSaveFailed.errorMessage)
+
+        component.onDraftChange("A".repeat(51))
+
+        val editing = assertIs<DeviceNameState.Editing>(component.state.value)
+        assertEquals("Use 50 characters or fewer.", editing.errorMessage)
+        assertFalse(editing.confirmEnabled)
+    }
 }
