@@ -4,7 +4,7 @@
 
 Снять два архитектурных блокера MVP, разнести Desktop entry points под будущий UI и закрыть структурный класс багов в discovery. Спринт целенаправленно tilted в сторону продуктовой проработки — после него следующий спринт сможет быть implementation-heavy. К концу спринта:
 
-- решение по channel encryption принято и зафиксировано в [security.md](../product/security.md); снят последний архитектурный блокер pairing и transport;
+- решение по channel encryption принято и зафиксировано в [security.md](../security/README.md); снят последний архитектурный блокер pairing и transport;
 - permissions strategy переведена в статус `scoped` — разблокированы все UI-задачи, требующие Local Network, FGS / `POST_NOTIFICATIONS`, firewall prompt;
 - Desktop-таргет имеет две точки входа (CLI и UI), дистрибутив указывает на UI — следующий спринт может писать Desktop device list / send screen;
 - discovery работает через единое common-first хранилище peer'ов — закрыт системно класс «два устройства с одинаковым именем», не точечно для одной платформы;
@@ -53,7 +53,7 @@
 
 | Issue | Спека                                                                                                |
 | ----- | ---------------------------------------------------------------------------------------------------- |
-| #123  | правит [security.md](../product/security.md) (закрыт channel encryption open question) + новый [adr-channel-encryption.md](../engineering/adr/adr-channel-encryption.md) |
+| #123  | правит [security.md](../security/README.md) (закрыт channel encryption open question) + новый [adr-channel-encryption.md](../engineering/adr/adr-channel-encryption.md) |
 | #122  | правит [system/permissions/spec.md](../product/features/system/permissions/spec.md) (`idea` → `scoped`) |
 | #55   | без продуктовой спеки — рефактор entry points                                                        |
 | #111  | без продуктовой спеки — рефактор discovery layer                                                     |

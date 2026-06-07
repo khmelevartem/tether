@@ -167,7 +167,7 @@ The same Tether JVM binary ships on Windows, Linux, and macOS. The macOS host is
 ## Not in this feature
 
 - **Wi-Fi availability** — detecting whether the device is on a Wi-Fi network is a separate system surface. See [wifi-availability.md](../wifi-availability/spec.md).
-- **Channel encryption** — pinned TLS between paired devices is settled, not a permission question. See [security.md](../../../security.md).
+- **Channel encryption** — pinned TLS between paired devices is settled, not a permission question. See [security.md](../../../../security/README.md).
 - **Localisation of rationale strings.** Translating Info.plist descriptions and Tether-owned dialog copy is out of scope.
 - **Implementation issues for the permissions flow** — per-platform code is scoped in separate feature issues created after this spec.
 

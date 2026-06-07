@@ -13,7 +13,6 @@ docs/product/
   competitors.md   — comparison with AirDrop, LocalSend, messengers, etc.
   design.md        — UX/UI principles, key screens
   tech-stack.md    — stack and architecture decisions
-  security.md      — threat model, pairing, encryption
   monetization.md  — free vs. paid, working hypothesis
   roadmap.md       — MVP / Post-MVP / Later
   features/
@@ -31,7 +30,7 @@ docs/product/
 - [Competitors](competitors.md) — AirDrop, LocalSend, messengers — how Tether differs
 - [Design](design.md) — visual language, key screens, tone of voice
 - [Tech Stack](tech-stack.md) — platform choices, libraries, architecture rationale
-- [Security & Privacy](security.md) — threat model, pairing flow, channel encryption
+- [Security & Privacy](../security/README.md) — threat model, pairing flow, channel encryption
 - [Monetization](monetization.md) — free tier, Pro candidates, open questions
 - [Roadmap](roadmap.md) — what ships in MVP, what comes next, what's deferred
 - [Features](features/README.md) — all features, their status and links to specs

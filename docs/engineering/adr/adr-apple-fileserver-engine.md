@@ -33,7 +33,7 @@ The server listens on port 0 (OS-assigned ephemeral) and writes received files t
 
 1. **No HTTP parser to maintain.** The JVM impl gets HTTP/1.1 framing, query parsing, status codes, and chunked transfer encoding from Ktor. A hand-rolled NSStream or POSIX listener would need all of that — large surface for protocol bugs, every one of which would also have a JVM-side counterpart written differently.
 2. **One mental model, two actuals.** The JVM and Apple `FileServer.actual`s now read the same: `embeddedServer(CIO, port) { routing { get("/health"); post("/upload") } }`. Reviewers and future contributors don't context-switch between two server architectures when changing the protocol.
-3. **TLS later is cheaper.** When channel encryption lands ([security.md](../../product/security.md)), Ktor's engine already understands TLS. With a hand-rolled listener we'd be writing TLS handling ourselves on Native.
+3. **TLS later is cheaper.** When channel encryption lands ([security.md](../../security/README.md)), Ktor's engine already understands TLS. With a hand-rolled listener we'd be writing TLS handling ourselves on Native.
 
 ### Costs accepted
 
@@ -43,7 +43,7 @@ The server listens on port 0 (OS-assigned ephemeral) and writes received files t
 ## Considered alternatives
 
 - **Hand-rolled NSStream + ad-hoc HTTP parser.** Rejected: writing a correct HTTP/1.1 parser and chunked-TE decoder is high-effort high-risk, and we would maintain two protocol implementations. Acceptable only as fallback if CIO Native turns out to be unviable.
-- **Apple `Network.framework` (`nw_listener_t`).** Rejected for now: also requires writing the HTTP layer ourselves; the wins (TLS, native flow control) are real but only matter once we add TLS. Reasonable revisit when [security.md](../../product/security.md) lands.
+- **Apple `Network.framework` (`nw_listener_t`).** Rejected for now: also requires writing the HTTP layer ourselves; the wins (TLS, native flow control) are real but only matter once we add TLS. Reasonable revisit when [security.md](../../security/README.md) lands.
 - **`kotlinx-io` `SystemFileSystem` for the file sink.** Rejected for this iteration: fine API, but currently brings no advantage over POSIX while widening the dependency footprint. Worth revisiting if the JVM `FileServer.actual` is also migrated off `java.io` for cross-platform parity.
 
 ## Revisit if
