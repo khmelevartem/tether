@@ -18,7 +18,6 @@ import com.tubetoast.tether.di.DesktopAppContainer
 import com.tubetoast.tether.logging.initTetherLogging
 import com.tubetoast.tether.logging.isDebugEnabled
 import com.tubetoast.tether.presentation.RootScreen
-import com.tubetoast.tether.transfer.WindowDropHandler
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.compose.resources.painterResource
 import tether.composeapp.generated.resources.Res

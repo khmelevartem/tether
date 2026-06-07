@@ -1,12 +1,13 @@
 @file:OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 
-package com.tubetoast.tether.transfer
+package com.tubetoast.tether
 
 import androidx.compose.ui.draganddrop.DragAndDropEvent
 import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.DragData
 import androidx.compose.ui.draganddrop.dragData
 import com.tubetoast.tether.presentation.RootComponent
+import com.tubetoast.tether.transfer.toFileSources
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

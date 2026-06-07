@@ -158,12 +158,13 @@ fun DeviceList(component: DeviceListComponent) {
     // render state, forward events to component
 }
 
-// platform entry point (jvmMain / androidMain / iosMain / macosMain)
+// platform entry point (jvmMain / androidMain / iosMain / macosMain) —
+// calls the root component's screen composable (see "two-composable" rule):
 val rootComponent = RootComponent(
     componentContext = defaultComponentContext(),
     appGraph = appGraph,
 )
-setContent { AppRootScreen(rootComponent) }
+setContent { <RootScreenComposable>(rootComponent) }
 ```
 
 Shape rules:
