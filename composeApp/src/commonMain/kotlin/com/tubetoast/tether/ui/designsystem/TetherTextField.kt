@@ -29,67 +29,6 @@ import com.tubetoast.tether.ui.theme.TetherTheme
 
 @Composable
 fun TetherTextField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    modifier: Modifier = Modifier,
-    placeholder: String = "",
-    errorMessage: String? = null,
-    contentDescription: String = "",
-    imeAction: ImeAction = ImeAction.Done,
-    onImeAction: () -> Unit = {},
-) {
-    val colors = TetherTheme.colors
-    val spacing = TetherTheme.spacing
-    val shapes = TetherTheme.shapes
-    val typography = TetherTheme.typography
-
-    val borderColor = if (errorMessage != null) colors.error else colors.border
-
-    Column(modifier = modifier) {
-        BasicTextField(
-            value = value,
-            onValueChange = onValueChange,
-            singleLine = true,
-            textStyle = typography.bodyMedium.copy(color = colors.textPrimary),
-            keyboardOptions = KeyboardOptions(imeAction = imeAction),
-            keyboardActions = KeyboardActions(
-                onDone = { onImeAction() },
-                onGo = { onImeAction() },
-                onSearch = { onImeAction() },
-                onSend = { onImeAction() },
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .semantics { this.contentDescription = contentDescription },
-            decorationBox = { innerTextField ->
-                Box(
-                    modifier = Modifier
-                        .background(colors.surfaceRaised, shapes.sm)
-                        .border(spacing.borderWidth, borderColor, shapes.sm)
-                        .padding(horizontal = spacing.md, vertical = spacing.sm),
-                ) {
-                    if (value.isEmpty() && placeholder.isNotEmpty()) {
-                        BodyText(text = placeholder, color = colors.textMuted)
-                    }
-                    innerTextField()
-                }
-            },
-        )
-
-        if (errorMessage != null) {
-            CaptionText(
-                text = errorMessage,
-                color = colors.error,
-                modifier = Modifier
-                    .padding(top = spacing.xs)
-                    .semantics { liveRegion = LiveRegionMode.Polite },
-            )
-        }
-    }
-}
-
-@Composable
-fun TetherTextField(
     value: TextFieldValue,
     onValueChange: (TextFieldValue) -> Unit,
     modifier: Modifier = Modifier,
@@ -153,10 +92,10 @@ fun TetherTextField(
 @Composable
 private fun PreviewTetherTextFieldNormal(@PreviewParameter(Themes::class) dark: Boolean) =
     PreviewSurface(darkTheme = dark) {
-        var text by remember { mutableStateOf("Alice's MacBook") }
+        var value by remember { mutableStateOf(TextFieldValue("Alice's MacBook")) }
         TetherTextField(
-            value = text,
-            onValueChange = { text = it },
+            value = value,
+            onValueChange = { value = it },
             contentDescription = "Device name",
             modifier = Modifier
                 .fillMaxWidth()
@@ -168,10 +107,10 @@ private fun PreviewTetherTextFieldNormal(@PreviewParameter(Themes::class) dark: 
 @Composable
 private fun PreviewTetherTextFieldError(@PreviewParameter(Themes::class) dark: Boolean) =
     PreviewSurface(darkTheme = dark) {
-        var text by remember { mutableStateOf("") }
+        var value by remember { mutableStateOf(TextFieldValue("")) }
         TetherTextField(
-            value = text,
-            onValueChange = { text = it },
+            value = value,
+            onValueChange = { value = it },
             placeholder = "Device name",
             errorMessage = "Enter a name.",
             contentDescription = "Device name",
@@ -185,10 +124,14 @@ private fun PreviewTetherTextFieldError(@PreviewParameter(Themes::class) dark: B
 @Composable
 private fun PreviewTetherTextFieldTooLong(@PreviewParameter(Themes::class) dark: Boolean) =
     PreviewSurface(darkTheme = dark) {
-        var text by remember { mutableStateOf("A name that exceeds the fifty codepoint limit of this field") }
+        var value by remember {
+            mutableStateOf(
+                TextFieldValue("A name that exceeds the fifty codepoint limit of this field"),
+            )
+        }
         TetherTextField(
-            value = text,
-            onValueChange = { text = it },
+            value = value,
+            onValueChange = { value = it },
             errorMessage = "Use 50 characters or fewer.",
             contentDescription = "Device name",
             modifier = Modifier

@@ -24,10 +24,6 @@ Screens touched: device list screen (owned by [device list](../device-list/ux-br
 
 **Layout.** A single horizontal strip pinned above the device list, visually subordinate to a list row (a label, not a tappable peer). Left: a fixed "This device" label and the current name. Right: the edit affordance. In edit mode the name region is replaced in place by an editable field plus confirm and cancel controls; the strip keeps its position and the list below does not move.
 
-**Decisions resolved (the spec's two open product questions).**
-- *Surface form:* a persistent strip above the list, chosen over a banner or card so it reads as "this is you" without competing with peer rows or implying a dismissible notice.
-- *Affordance form:* an explicit pencil-glyph button that expands the name into an inline field, chosen over a dotted-underline or a separate dialog — the glyph is self-evidently discoverable and inline editing matches the spec's "edit it inline" intent without a modal hop.
-
 **States.**
 
 #### 1. Display
@@ -108,11 +104,11 @@ A successful rename tears down and re-establishes the local discovery session, s
 ## Conceptual components
 
 1. **This-device strip** — persistent labelled value above the device list with display/edit modes; the surface this feature owns.
-2. **Inline name field** — single-line editable text field with trim-and-length validation surfaced as a subordinate inline error and a confirm-availability gate. No design-system text-input primitive exists yet; its behaviour and appearance are specified here as the contract for that primitive.
+2. **Inline name field** — single-line editable text field with trim-and-length validation surfaced as a subordinate inline error and a confirm-availability gate.
 3. **Subordinate inline error** — a short, low-emphasis message bound to the field, announced to screen readers when it appears.
 
 ---
 
 ## Open UX questions
 
-- The spec's republish-failure state (spec line 52) is out of scope for this issue because the backend republishes fire-and-forget with no failure signal to observe. The brief therefore does not design a republish-retry affordance. If a future change exposes a republish-failure signal to the UI, this surface will need a state for it — flagged here so it is not silently lost.
+- Republish-failure is out of scope: the backend republishes fire-and-forget with no failure signal to observe. If a future change exposes a republish-failure signal to the UI, this surface will need a state for it.
