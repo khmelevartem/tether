@@ -17,11 +17,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.key.Key
@@ -29,7 +26,6 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
@@ -47,6 +43,7 @@ import com.tubetoast.tether.ui.designsystem.DismissCloseButton
 import com.tubetoast.tether.ui.designsystem.PrimaryActionIconButton
 import com.tubetoast.tether.ui.designsystem.TetherTextField
 import com.tubetoast.tether.ui.designsystem.TitleText
+import com.tubetoast.tether.ui.designsystem.tetherRowDecoration
 import com.tubetoast.tether.ui.preview.PreviewFixtures
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
@@ -57,10 +54,9 @@ import compose.icons.tablericons.Check
 import compose.icons.tablericons.Pencil
 
 private val IconSize = 20.dp
-private val AccentBarWidth = 3.dp
 
 @Composable
-fun ThisDeviceStripScreen(component: DeviceNameComponent, modifier: Modifier = Modifier) {
+internal fun ThisDeviceStripScreen(component: DeviceNameComponent, modifier: Modifier = Modifier) {
     val state by component.state.subscribeAsState()
     ThisDeviceStripContent(
         state = state,
@@ -83,28 +79,12 @@ internal fun ThisDeviceStripContent(
 ) {
     val colors = TetherTheme.colors
     val spacing = TetherTheme.spacing
-    val density = LocalDensity.current
-    val borderWidthPx = with(density) { spacing.borderWidth.toPx() }
-    val accentBarWidthPx = with(density) { AccentBarWidth.toPx() }
-    val borderColor = colors.border
-    val accentColor = colors.accent
 
     val shellModifier = modifier
         .fillMaxWidth()
         .background(colors.surfaceRaised)
-        .drawBehind {
-            drawLine(
-                color = borderColor,
-                start = Offset(0f, size.height - borderWidthPx / 2f),
-                end = Offset(size.width, size.height - borderWidthPx / 2f),
-                strokeWidth = borderWidthPx,
-            )
-            drawRect(
-                color = accentColor,
-                topLeft = Offset.Zero,
-                size = Size(accentBarWidthPx, size.height),
-            )
-        }.padding(horizontal = spacing.lg, vertical = spacing.sm)
+        .tetherRowDecoration(leadingAccent = colors.accent)
+        .padding(horizontal = spacing.lg, vertical = spacing.sm)
 
     when (state) {
         is DeviceNameState.Display -> DisplayMode(
@@ -202,7 +182,6 @@ private fun EditingMode(
                 },
                 placeholder = "Device name",
                 errorMessage = state.errorMessage,
-                contentDescription = "Device name field",
                 imeAction = ImeAction.Done,
                 onImeAction = onConfirm,
                 modifier = Modifier

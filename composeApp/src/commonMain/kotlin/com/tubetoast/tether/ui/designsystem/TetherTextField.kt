@@ -36,7 +36,7 @@ fun TetherTextField(
     modifier: Modifier = Modifier,
     placeholder: String = "",
     errorMessage: String? = null,
-    contentDescription: String = "",
+    contentDescription: String = placeholder,
     imeAction: ImeAction = ImeAction.Done,
     onImeAction: () -> Unit = {},
 ) {
@@ -69,7 +69,13 @@ fun TetherTextField(
             interactionSource = interactionSource,
             modifier = Modifier
                 .fillMaxWidth()
-                .semantics { this.contentDescription = contentDescription },
+                .semantics {
+                    this.contentDescription = if (value.text.isEmpty()) {
+                        contentDescription
+                    } else {
+                        "$contentDescription, ${value.text}"
+                    }
+                },
             decorationBox = { innerTextField ->
                 Box(
                     modifier = Modifier

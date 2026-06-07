@@ -68,7 +68,7 @@ After a confirm whose persist fails, the surface stays in edit mode with the typ
 
 ### Flow 1 — first launch (no rename)
 1. App opens to the device list.
-2. The This-device strip shows "This device: <OS-derived default>".
+2. The This-device strip shows the OS-derived default name as the hero line, with the "This device" caption beneath it.
 3. User proceeds to discover and send. Nothing blocks them.
 
 ### Flow 2 — rename (success)

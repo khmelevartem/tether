@@ -4,7 +4,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -168,7 +168,6 @@ fun BackChevronButton(
 }
 
 /**
- * A filled-accent icon button: teal background with an [onAccent]-tinted icon.
  * Use for primary confirmation actions (e.g. save, confirm). When [enabled] is false
  * the button renders with a muted background and icon and exposes the disabled semantic.
  */
@@ -205,7 +204,7 @@ fun PrimaryActionIconButton(
 @Composable
 private fun PreviewIconButtons(@PreviewParameter(Themes::class) dark: Boolean) =
     PreviewSurface(darkTheme = dark) {
-        Row {
+        FlowRow {
             BackChevronButton(onClick = {}, contentDescription = "Back")
             ChevronToggleIcon(expanded = false, onClick = {}, contentDescription = "Expand")
             ChevronToggleIcon(expanded = true, onClick = {}, contentDescription = "Collapse")
