@@ -1,21 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Requires: block-1 already executed (CLI A alive at $LOG_A / $JPID_A / fifo /tmp/smoke-cliA-in).
+# Requires: block-1 already executed (CLI A alive at $LOG_A / fifo $FIFO_A).
 # Requires: CLI B alive with name SmokeMacB.
 
-LOG_A="${LOG_A:-/tmp/smoke-cliA.log}"
+. "$(dirname "${BASH_SOURCE[0]}")/smoke-env.sh"
+
 DOWNLOADS_B="${DOWNLOADS_B:-$HOME/Downloads/Tether}"
 
 TS=$(date +%s)
-M1="/tmp/smoke-multi-${TS}-1.txt"; echo "m1-$TS" > "$M1"
-M2="/tmp/smoke-multi-${TS}-2.txt"; echo "m2-$TS" > "$M2"
-M3="/tmp/smoke-multi-${TS}-3.txt"; echo "m3-$TS" > "$M3"
+M1="$SMOKE_DIR/${SMOKE_SEND_PREFIX}-multi-${TS}-1.txt"; echo "m1-$TS" > "$M1"
+M2="$SMOKE_DIR/${SMOKE_SEND_PREFIX}-multi-${TS}-2.txt"; echo "m2-$TS" > "$M2"
+M3="$SMOKE_DIR/${SMOKE_SEND_PREFIX}-multi-${TS}-3.txt"; echo "m3-$TS" > "$M3"
 
 PREV_DONE=$(grep -cE "^\[send\] done" "$LOG_A" 2>/dev/null || true)
 PREV_DONE=${PREV_DONE:-0}
 
-echo "send SmokeMacB $M1 $M2 $M3" > /tmp/smoke-cliA-in &
+echo "send SmokeMacB $M1 $M2 $M3" > "$FIFO_A" &
 
 for i in $(seq 1 20); do
   NOW_DONE=$(grep -cE "^\[send\] done" "$LOG_A" 2>/dev/null || true)

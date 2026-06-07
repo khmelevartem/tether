@@ -1,23 +1,23 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Requires: block-0 already executed (JAR env var set, or re-derive below).
+# Requires: block-0 already executed (cli jar built).
 
-cd "$(git rev-parse --show-toplevel)"
+. "$(dirname "${BASH_SOURCE[0]}")/smoke-env.sh"
 
-JAR="${JAR:-$(ls composeApp/build/libs/tether-cli-*.jar composeApp/build/libs/tether-cli.jar 2>/dev/null | head -1 || true)}"
+cd "$TETHER_ROOT"
+
 [ -z "$JAR" ] && { echo "FAIL: cli jar not found — run block-0 first"; exit 1; }
 
-LOG_A=/tmp/smoke-cliA.log
-rm -f /tmp/smoke-cliA-in
-mkfifo /tmp/smoke-cliA-in
-sleep 600 > /tmp/smoke-cliA-in &
-KEEPER_A=$!; disown $KEEPER_A
-echo $KEEPER_A > /tmp/smoke-cliA-keeper.pid
+rm -f "$FIFO_A"
+mkfifo "$FIFO_A"
+sleep 600 > "$FIFO_A" &
+KEEPER_PID=$!; disown $KEEPER_PID
+echo $KEEPER_PID > "$KEEPER_A"
 
-TETHER_LOG_DEBUG=true nohup java -jar "$JAR" --name SmokeMacA --port 0 < /tmp/smoke-cliA-in > "$LOG_A" 2>&1 &
+TETHER_LOG_DEBUG=true nohup java -jar "$JAR" --name SmokeMacA --port 0 < "$FIFO_A" > "$LOG_A" 2>&1 &
 JPID_A=$!; disown $JPID_A
-echo $JPID_A > /tmp/smoke-cliA.pid
+echo $JPID_A > "$PID_A"
 
 echo "Waiting for FileServer to start..."
 for i in $(seq 1 30); do
@@ -65,7 +65,7 @@ else
 fi
 
 # stdin list
-echo "list" > /tmp/smoke-cliA-in &
+echo "list" > "$FIFO_A" &
 sleep 1
 set +e; tail "$LOG_A" | grep -qE "\[list\]|\[peers\]"; RC=$?; set -e
 [ $RC -eq 0 ] && echo "PASS: stdin list" || echo "FAIL: no [list] or [peers] line in log"

@@ -9,9 +9,7 @@ set -euo pipefail
 #
 # Assertion: in each CLI's last [peers] line, no two peers share the same host:port.
 
-LOG_A="${LOG_A:-/tmp/smoke-cliA.log}"
-LOG_B="${LOG_B:-/tmp/smoke-cliB.log}"
-LOG_C="${LOG_C:-/tmp/smoke-cliC.log}"
+. "$(dirname "${BASH_SOURCE[0]}")/smoke-env.sh"
 
 collisions() {
     local log="$1"
@@ -29,9 +27,9 @@ collisions() {
 
 # Give peers up to 20s to converge after the third CLI joined.
 for i in $(seq 1 20); do
-    echo "list" > /tmp/smoke-cliA-in &
-    echo "list" > /tmp/smoke-cliB-in &
-    echo "list" > /tmp/smoke-cliC-in &
+    echo "list" > "$FIFO_A" &
+    echo "list" > "$FIFO_B" &
+    echo "list" > "$FIFO_C" &
     sleep 1
     A=$(collisions "$LOG_A")
     B=$(collisions "$LOG_B")

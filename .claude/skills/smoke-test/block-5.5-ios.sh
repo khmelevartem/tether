@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Requires: block-1 already executed (CLI A alive, LOG_A set or /tmp/smoke-cliA.log present).
+# Requires: block-1 already executed (CLI A alive, log at $LOG_A).
 
-LOG_A="${LOG_A:-/tmp/smoke-cliA.log}"
+. "$(dirname "${BASH_SOURCE[0]}")/smoke-env.sh"
 
-cd "$(git rev-parse --show-toplevel)"
+cd "$TETHER_ROOT"
 
 IOS_DEVICE="${IOS_DEVICE:-iPhone 17}"
 UDID=$(xcrun simctl list devices available \
@@ -22,13 +22,13 @@ xcodebuild -project iosApp/iosApp.xcodeproj -scheme iosApp \
   -configuration Debug \
   -destination "platform=iOS Simulator,id=$UDID" \
   -derivedDataPath "$IOS_DERIVED" \
-  build > /tmp/smoke-ios-build.log 2>&1
+  build > "$IOS_BUILD_LOG" 2>&1
 echo "PASS: xcodebuild"
 
 xcrun simctl install "$UDID" "$IOS_APP"
 echo "PASS: install"
 
-xcrun simctl launch "$UDID" "$IOS_BUNDLE_ID" > /tmp/smoke-ios-launch.log 2>&1
+xcrun simctl launch "$UDID" "$IOS_BUNDLE_ID" > "$IOS_LAUNCH_LOG" 2>&1
 echo "PASS: launch"
 
 # mDNS publish

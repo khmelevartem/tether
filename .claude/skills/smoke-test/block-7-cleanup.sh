@@ -3,39 +3,36 @@ set -euo pipefail
 
 # Always run this block — even after earlier FAILs.
 
+. "$(dirname "${BASH_SOURCE[0]}")/smoke-env.sh"
+
 DOWNLOADS_B="${DOWNLOADS_B:-$HOME/Downloads/Tether}"
 
 set +e
 
-echo "quit" > /tmp/smoke-cliA-in 2>/dev/null || true
-echo "quit" > /tmp/smoke-cliB-in 2>/dev/null || true
-echo "quit" > /tmp/smoke-cliC-in 2>/dev/null || true
+echo "quit" > "$FIFO_A" 2>/dev/null || true
+echo "quit" > "$FIFO_B" 2>/dev/null || true
+echo "quit" > "$FIFO_C" 2>/dev/null || true
 sleep 2
 
-kill "$(cat /tmp/smoke-cliA.pid /tmp/smoke-cliB.pid /tmp/smoke-cliC.pid \
-  /tmp/smoke-cliA-keeper.pid /tmp/smoke-cliB-keeper.pid /tmp/smoke-cliC-keeper.pid 2>/dev/null)" 2>/dev/null
+# Kill exactly this worktree's CLI instances (by its jar path) plus the FIFO keepers — never
+# another worktree's concurrent run.
+smoke_kill_instances
 
-pkill -f 'com.tubetoast.tether.*\.jar' 2>/dev/null
+# Drop this run's scratch dir (fifos, logs, pids, sent source files) — scoped to this worktree.
+rm -rf "$SMOKE_DIR" 2>/dev/null
 
-rm -f /tmp/smoke-cli*-in /tmp/smoke-cli*.log /tmp/smoke-cli*.pid /tmp/smoke-cli*-keeper.pid \
-  /tmp/smoke-send.txt /tmp/smoke-android.txt
+# Received files in the shared downloads dir are named with this run's prefix, so the glob
+# targets only this run and leaves a concurrent run's downloads intact.
+rm -f "$DOWNLOADS_B/${SMOKE_SEND_PREFIX}-"*.txt 2>/dev/null
 
-# Remove scratch files created by block-2 scenarios (by exported names if available, else glob).
-for VAR in SEND1_NAME M1 M2 M3 RETRY_NAME; do
-  FILE="${!VAR:-}"
-  [ -n "$FILE" ] && rm -f "$DOWNLOADS_B/$FILE" "$DOWNLOADS_B/$(basename "$FILE")" 2>/dev/null
-done
-# Safety glob for any leftover smoke files in the downloads dir.
-rm -f "$DOWNLOADS_B"/smoke-*.txt 2>/dev/null
-
-adb shell rm -f /sdcard/Android/data/com.tubetoast.tether/files/Tether/smoke-android*.txt 2>/dev/null
+adb shell rm -f "/sdcard/Android/data/com.tubetoast.tether/files/Tether/${SMOKE_SEND_PREFIX}-android"*.txt 2>/dev/null
 adb shell am force-stop com.tubetoast.tether 2>/dev/null
 
 UDID="${UDID:-}"
 if [ -n "$UDID" ]; then
   xcrun simctl terminate "$UDID" com.tubetoast.tether.Tether 2>/dev/null || true
 fi
-rm -f /tmp/smoke-ios-build.log /tmp/smoke-ios-launch.log
+# iOS build/launch logs live under $SMOKE_DIR, already removed above.
 
 set -e
 echo "Cleanup done."

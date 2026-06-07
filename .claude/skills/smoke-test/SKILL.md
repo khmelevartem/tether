@@ -23,9 +23,26 @@ At the start of the run **tell the user** — coverage boundaries:
 
 All these items must appear in the **"Manual verification required"** section of the report.
 
+## Shared environment (`smoke-env.sh`)
+
+Blocks run in separate shells and coordinate only through fixed filesystem paths, so every block sources `smoke-env.sh` at the top to re-derive identical values:
+
+```bash
+. "$(dirname "${BASH_SOURCE[0]}")/smoke-env.sh"
+```
+
+It provides:
+
+- `SMOKE_DIR=/tmp/smoke-<id>` — a per-worktree scratch dir (`<id>` is a `cksum` of the worktree root), holding all fifos, logs, PID files, and sent source files. Two smoke runs in different worktrees never share these, so they don't overwrite each other's PID bookkeeping or race the cleanup `kill`.
+- Per-instance path vars: `FIFO_A/B/C`, `LOG_A/B/C`, `PID_A/B/C`, `KEEPER_A/B/C`, plus `IOS_BUILD_LOG` / `IOS_LAUNCH_LOG`.
+- `JAR` / `SMOKE_JAR` — this worktree's cli jar.
+- `SMOKE_SEND_PREFIX` — basename prefix for files this run sends, so receiver-dir cleanup (`$HOME/Downloads/Tether`, shared across worktrees) targets exactly this run.
+- `smoke_kill_instances` — kills exactly this worktree's CLI java processes (matched by the jar path) plus the FIFO keepers. **Do not** `pkill` by package name: the real command line is `java -jar .../tether-cli.jar`, which contains no `com.tubetoast.tether…jar` substring.
+- `smoke_instances_alive` — true if any CLI from this worktree is still running.
+
 ## Starting the CLI
 
-The FIFO keeps stdin open for `list`, `send`, `quit` commands. All blocks that launch a CLI instance follow this pattern — see `block-1-desktop-cli-a.sh` for the canonical form.
+The FIFO (`$FIFO_A` etc.) keeps stdin open for `list`, `send`, `quit` commands. All blocks that launch a CLI instance follow this pattern — see `block-1-desktop-cli-a.sh` for the canonical form.
 
 Desktop CLI instances are launched with `TETHER_LOG_DEBUG=true` so subsystem logger lines are captured in the log and available for assertions and diagnostics. Product output (the bracketed `[…]` status lines and the startup banner) is echoed regardless of this flag.
 
@@ -170,7 +187,7 @@ Checks exit code = 0 (last send was AllSent after the retry scenario). If the pr
 
 Run: `./block-7-cleanup.sh` — **always**.
 
-Kills all CLI instances and keepers, removes FIFOs, logs, PIDs, scratch files in `$HOME/Downloads/Tether/`, Android device files, iOS simulator app, and build logs.
+Kills this worktree's CLI instances and keepers (via `smoke_kill_instances`), removes the per-run `$SMOKE_DIR` (fifos, logs, PIDs, sent source files, iOS build/launch logs), this run's received files in `$HOME/Downloads/Tether/` (matched by `$SMOKE_SEND_PREFIX`), Android device files, and terminates the iOS simulator app. Scoped to this worktree, so a concurrent smoke run in another worktree is left untouched.
 
 ## Report format
 

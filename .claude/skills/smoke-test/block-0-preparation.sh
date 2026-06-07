@@ -1,13 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Kill any lingering CLI instances to avoid mDNS interference.
+. "$(dirname "${BASH_SOURCE[0]}")/smoke-env.sh"
+
+# Kill any lingering CLI instances from a previous run of THIS worktree (scoped to its jar path,
+# so a concurrent smoke run in another worktree is untouched).
 set +e
-pgrep -fl 'com.tubetoast.tether-.*\.jar|composeApp:run' || echo "clean"
-pkill -f 'com.tubetoast.tether.*\.jar' 2>/dev/null
+if smoke_instances_alive; then
+  echo "killing lingering instances from previous run"
+  smoke_kill_instances
+else
+  echo "clean"
+fi
+rm -f "$SMOKE_DIR"/cli* 2>/dev/null
 set -e
 
-cd "$(git rev-parse --show-toplevel)"
+cd "$TETHER_ROOT"
 
 ./gradlew :composeApp:cliJar -q
 
