@@ -7,7 +7,9 @@ import com.arkivanov.decompose.router.stack.StackNavigation
 import com.arkivanov.decompose.router.stack.childStack
 import com.arkivanov.decompose.router.stack.pop
 import com.arkivanov.decompose.router.stack.pushNew
+import com.arkivanov.decompose.value.MutableValue
 import com.arkivanov.decompose.value.Value
+import com.arkivanov.decompose.value.update
 import com.tubetoast.tether.presentation.transfer.TransferDetailsComponent
 import com.tubetoast.tether.transfer.FileSource
 import com.tubetoast.tether.transfer.PeerIdentity
@@ -27,6 +29,9 @@ class RootComponent(
     }
 
     private val navigation = StackNavigation<Config>()
+
+    private val _dragActive = MutableValue(false)
+    val dragActive: Value<Boolean> = _dragActive
 
     val peerListComponent: PeerListComponent =
         peerListFactory(childContext("peer_list"), ::showTransferDetails)
@@ -59,7 +64,16 @@ class RootComponent(
             }
         }
 
+    fun onDragEntered() {
+        _dragActive.update { true }
+    }
+
+    fun onDragExited() {
+        _dragActive.update { false }
+    }
+
     fun onFilesDropped(sources: List<FileSource>) {
+        _dragActive.update { false }
         if (sources.isEmpty()) return
         pendingFilesRepository.setPending(sources)
     }

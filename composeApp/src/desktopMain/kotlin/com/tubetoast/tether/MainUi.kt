@@ -4,11 +4,8 @@ package com.tubetoast.tether
 
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draganddrop.DragAndDropEvent
 import androidx.compose.ui.draganddrop.DragAndDropTarget
@@ -24,7 +21,7 @@ import com.tubetoast.tether.di.DefaultDesktopAppConfig
 import com.tubetoast.tether.di.DesktopAppContainer
 import com.tubetoast.tether.logging.initTetherLogging
 import com.tubetoast.tether.logging.isDebugEnabled
-import com.tubetoast.tether.presentation.RootContent
+import com.tubetoast.tether.presentation.RootScreen
 import com.tubetoast.tether.transfer.toFileSources
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -68,7 +65,6 @@ fun main() = runBlocking {
                 icon = painterResource(Res.drawable.icon),
             ) {
                 val scope = rememberCoroutineScope()
-                var dragActive by remember { mutableStateOf(false) }
 
                 LaunchedEffect(window) {
                     container.windowHolder.window = window
@@ -77,23 +73,25 @@ fun main() = runBlocking {
                 val dropTarget = remember(component) {
                     object : DragAndDropTarget {
                         override fun onEntered(event: DragAndDropEvent) {
-                            dragActive = true
+                            component.onDragEntered()
                         }
 
                         override fun onExited(event: DragAndDropEvent) {
-                            dragActive = false
+                            component.onDragExited()
                         }
 
                         override fun onEnded(event: DragAndDropEvent) {
-                            dragActive = false
+                            component.onDragExited()
                         }
 
                         override fun onDrop(event: DragAndDropEvent): Boolean {
-                            dragActive = false
                             val uris = (event.dragData() as? DragData.FilesList)
                                 ?.readFiles()
                                 .orEmpty()
-                            if (uris.isEmpty()) return false
+                            if (uris.isEmpty()) {
+                                component.onDragExited()
+                                return false
+                            }
                             scope.launch {
                                 val sources = withContext(Dispatchers.IO) {
                                     uris.flatMap { uri ->
@@ -110,13 +108,12 @@ fun main() = runBlocking {
                     }
                 }
 
-                RootContent(
+                RootScreen(
                     component = component,
                     modifier = Modifier.dragAndDropTarget(
                         shouldStartDragAndDrop = { true },
                         target = dropTarget,
                     ),
-                    isDragActive = dragActive,
                 )
             }
         }

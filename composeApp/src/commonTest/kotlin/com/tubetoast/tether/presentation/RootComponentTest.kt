@@ -222,6 +222,51 @@ class RootComponentTest {
     }
 
     @Test
+    fun `onDragEntered sets dragActive true`() = runTest {
+        val component = buildComponent(coroutineScope = backgroundScope)
+
+        component.onDragEntered()
+
+        assertTrue(component.dragActive.value)
+    }
+
+    @Test
+    fun `onDragExited sets dragActive false`() = runTest {
+        val component = buildComponent(coroutineScope = backgroundScope)
+        component.onDragEntered()
+
+        component.onDragExited()
+
+        assertEquals(false, component.dragActive.value)
+    }
+
+    @Test
+    fun `onFilesDropped resets dragActive to false`() = runTest {
+        val component = buildComponent(coroutineScope = backgroundScope)
+        component.onDragEntered()
+        val sources = listOf(FakeFileSource("x.txt", 50L))
+
+        component.onFilesDropped(sources)
+
+        assertEquals(false, component.dragActive.value)
+    }
+
+    @Test
+    fun `onFilesDropped replaces prior pending with new sources`() = runTest {
+        val repo = PendingFilesRepository()
+        val initial = listOf(FakeFileSource("old.txt", 100L))
+        repo.setPending(initial)
+        val component = buildComponent(pendingFilesRepository = repo, coroutineScope = backgroundScope)
+        val newSources = listOf(FakeFileSource("new.txt", 200L), FakeFileSource("new2.txt", 300L))
+
+        component.onFilesDropped(newSources)
+
+        val pending = repo.pending.value
+        assertNotNull(pending)
+        assertEquals(PendingFilesSummary.from(newSources), pending.summary)
+    }
+
+    @Test
     fun `peerTransferComponent onShowDetails pushes TransferDetailsChild`() = runTest {
         val devices = MutableStateFlow(listOf(deviceA))
         val component = buildComponent(devices = devices, coroutineScope = backgroundScope)

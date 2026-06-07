@@ -99,7 +99,7 @@ DeviceListScreen is owned by [device-list/ux-brief.md](../device-list/ux-brief.m
 
 - Android: share-sheet entry sets pending state and shows banner.
 - iOS: persistent iOS foreground constraint banner during any transfer. Share-sheet entry sets pending state.
-- macOS: drag-and-drop onto the Tether window sets pending state and shows banner. System file dialog replaces MobilePickerChooserSheet. No foreground constraint banner.
+- macOS: drag-and-drop onto the Tether window sets pending state and shows banner; the drop is accepted at the window root on any screen, and the banner surfaces on DeviceListScreen beneath whatever screen is on top. System file dialog replaces MobilePickerChooserSheet. No foreground constraint banner.
 - Desktop JVM: same as macOS for drag-and-drop and file dialog. No share-sheet. No foreground constraint banner.
 
 **Accessibility contributed by file-transfer.**
@@ -678,6 +678,8 @@ Auto-send is configured per-peer via the expanded PeerCard (see PeerCard § Idle
 6. Sender's PeerCard transitions to Error state: "\<peer\> is no longer reachable. Try again."
 
 ### Flow 10 — Drag-and-drop onto Tether window (macOS / Desktop)
+
+The drop is accepted at the window root — on any screen, not only DeviceListScreen. A drop while TransferDetailsScreen is on top still stages the pending-outbound files; the pending-outbound banner surfaces on DeviceListScreen, which is always beneath any pushed screen.
 
 1. User drags file(s) from Finder / File Explorer onto the Tether window.
 2. DeviceListScreen shows pending-outbound banner: "Ready to send \<N\> files (\<size\>). Pick a device below."

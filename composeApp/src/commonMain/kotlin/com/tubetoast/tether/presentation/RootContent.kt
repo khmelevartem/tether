@@ -9,13 +9,21 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import com.arkivanov.decompose.extensions.compose.stack.Children
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
+import com.arkivanov.decompose.router.stack.ChildStack
 import com.tubetoast.tether.ui.theme.TetherTheme
 
 @Composable
-fun RootContent(
-    component: RootComponent,
+fun RootScreen(component: RootComponent, modifier: Modifier = Modifier) {
+    val stack by component.stack.subscribeAsState()
+    val isDragActive by component.dragActive.subscribeAsState()
+    RootContent(stack = stack, isDragActive = isDragActive, modifier = modifier)
+}
+
+@Composable
+internal fun RootContent(
+    stack: ChildStack<*, RootComponent.Child>,
+    isDragActive: Boolean,
     modifier: Modifier = Modifier,
-    isDragActive: Boolean = false,
 ) {
     TetherTheme {
         Box(
@@ -24,8 +32,6 @@ fun RootContent(
                 .background(TetherTheme.colors.surface)
                 .safeContentPadding(),
         ) {
-            val stack by component.stack.subscribeAsState()
-
             Children(stack = stack) { child ->
                 when (val instance = child.instance) {
                     is RootComponent.Child.PeerListChild ->

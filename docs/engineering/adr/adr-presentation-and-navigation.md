@@ -163,7 +163,7 @@ val root = RootComponent(
     componentContext = defaultComponentContext(),
     appGraph = appGraph,
 )
-setContent { RootContent(root) }
+setContent { RootScreen(root) }
 ```
 
 Shape rules:
