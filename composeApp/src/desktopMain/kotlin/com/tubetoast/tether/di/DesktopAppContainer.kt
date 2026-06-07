@@ -7,14 +7,18 @@ import com.tubetoast.tether.config.DefaultDeviceNamePersistence
 import com.tubetoast.tether.config.DeviceNamePersistence
 import com.tubetoast.tether.discovery.DiscoveredDevicesStore
 import com.tubetoast.tether.discovery.MdnsDiscovery
+import com.tubetoast.tether.foundation.DesktopHostOs
+import com.tubetoast.tether.foundation.currentHostOs
 import com.tubetoast.tether.identity.DataStoreFingerprintPersistence
 import com.tubetoast.tether.identity.FingerprintPersistence
 import com.tubetoast.tether.preferences.DefaultFileTransferPreferences
 import com.tubetoast.tether.preferences.FileTransferPreferences
 import com.tubetoast.tether.protocol.DeviceType
 import com.tubetoast.tether.transfer.FilePicker
+import com.tubetoast.tether.transfer.LinuxFilePicker
+import com.tubetoast.tether.transfer.MacFilePicker
 import com.tubetoast.tether.transfer.WindowHolder
-import com.tubetoast.tether.transfer.desktopFilePicker
+import com.tubetoast.tether.transfer.WindowsFilePicker
 import okio.Path.Companion.toPath
 import java.io.File
 
@@ -48,5 +52,9 @@ open class DesktopAppContainer(
     )
 
     open val windowHolder: WindowHolder = WindowHolder()
-    open override val filePicker: FilePicker = desktopFilePicker(windowHolder)
+    open override val filePicker: FilePicker = when (currentHostOs) {
+        DesktopHostOs.MacOs -> MacFilePicker(windowHolder)
+        DesktopHostOs.Windows -> WindowsFilePicker(windowHolder)
+        DesktopHostOs.Linux -> LinuxFilePicker(windowHolder)
+    }
 }

@@ -7,10 +7,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draganddrop.DragAndDropEvent
-import androidx.compose.ui.draganddrop.DragAndDropTarget
-import androidx.compose.ui.draganddrop.DragData
-import androidx.compose.ui.draganddrop.dragData
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import com.arkivanov.decompose.DefaultComponentContext
@@ -22,22 +18,11 @@ import com.tubetoast.tether.di.DesktopAppContainer
 import com.tubetoast.tether.logging.initTetherLogging
 import com.tubetoast.tether.logging.isDebugEnabled
 import com.tubetoast.tether.presentation.RootScreen
-import com.tubetoast.tether.transfer.toFileSources
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import com.tubetoast.tether.transfer.WindowDropHandler
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.painterResource
-import ru.pocketbyte.kydra.log.KydraLog
-import ru.pocketbyte.kydra.log.info
-import ru.pocketbyte.kydra.log.warn
-import ru.pocketbyte.kydra.log.wrapper.withTag
 import tether.composeapp.generated.resources.Res
 import tether.composeapp.generated.resources.icon
-import java.net.URI
-import java.nio.file.Path
-
-private val log = KydraLog.withTag(default = "MainUi")
 
 fun main() = runBlocking {
     // see docs/knowledge/desktop-system-theme.md — must be set before any Swing/AWT class loads
@@ -71,51 +56,13 @@ fun main() = runBlocking {
                     container.windowHolder.window = window
                 }
 
-                val dropTarget = remember(component) {
-                    object : DragAndDropTarget {
-                        override fun onEntered(event: DragAndDropEvent) {
-                            component.onDragEntered()
-                        }
-
-                        override fun onExited(event: DragAndDropEvent) {
-                            component.onDragExited()
-                        }
-
-                        override fun onEnded(event: DragAndDropEvent) {
-                            component.onDragExited()
-                        }
-
-                        override fun onDrop(event: DragAndDropEvent): Boolean {
-                            val uris = (event.dragData() as? DragData.FilesList)
-                                ?.readFiles()
-                                .orEmpty()
-                            if (uris.isEmpty()) {
-                                component.onDragExited()
-                                return false
-                            }
-                            scope.launch {
-                                val sources = withContext(Dispatchers.IO) {
-                                    uris.flatMap { uri ->
-                                        val path = runCatching { Path.of(URI(uri)) }.getOrNull()
-                                            ?: return@flatMap emptyList()
-                                        runCatching { path.toFile().toFileSources() }
-                                            .onFailure { log.warn { "onDrop: skipping $uri — ${it.message}" } }
-                                            .getOrElse { emptyList() }
-                                    }
-                                }
-                                component.onFilesDropped(sources)
-                            }
-                            log.info { "onDrop: accepted ${uris.size} URI(s)" }
-                            return true
-                        }
-                    }
-                }
+                val dropHandler = remember(component) { WindowDropHandler(component, scope) }
 
                 RootScreen(
                     component = component,
                     modifier = Modifier.dragAndDropTarget(
                         shouldStartDragAndDrop = { true },
-                        target = dropTarget,
+                        target = dropHandler.target,
                     ),
                 )
             }

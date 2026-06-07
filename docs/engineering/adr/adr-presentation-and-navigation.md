@@ -159,11 +159,11 @@ fun DeviceList(component: DeviceListComponent) {
 }
 
 // platform entry point (jvmMain / androidMain / iosMain / macosMain)
-val root = RootComponent(
+val rootComponent = RootComponent(
     componentContext = defaultComponentContext(),
     appGraph = appGraph,
 )
-setContent { RootScreen(root) }
+setContent { AppRootScreen(rootComponent) }
 ```
 
 Shape rules:

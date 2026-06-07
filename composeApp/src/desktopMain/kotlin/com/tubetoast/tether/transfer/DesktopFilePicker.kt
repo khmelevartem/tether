@@ -1,8 +1,5 @@
 package com.tubetoast.tether.transfer
 
-import com.tubetoast.tether.foundation.DesktopHostOs
-import com.tubetoast.tether.foundation.currentHostOs
-
 internal abstract class DesktopFilePicker(
     protected val windowHolder: WindowHolder,
 ) : FilePicker {
@@ -13,10 +10,4 @@ internal abstract class DesktopFilePicker(
 
     final override suspend fun pickPhotos(): List<FileSource> =
         throw UnsupportedOperationException("pickPhotos is mobile-only")
-}
-
-internal fun desktopFilePicker(windowHolder: WindowHolder): FilePicker = when (currentHostOs) {
-    DesktopHostOs.MacOs -> MacFilePicker(windowHolder)
-    DesktopHostOs.Windows -> WindowsFilePicker(windowHolder)
-    DesktopHostOs.Linux -> LinuxFilePicker(windowHolder)
 }
