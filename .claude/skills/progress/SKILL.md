@@ -133,7 +133,7 @@ Sum of "valour" of quests closed on a given day:
 valor(task) = base(size) + 0.3·comments + LOC/200 + cycleHours/24
 ```
 
-- `base(size)` — `assets/palette.json#valor_size` (S=1, M=3, L=8, no label=2). Mapped to `size:S` / `size:M` / `size:L` labels on the issue closed by the PR.
+- `base(size)` — `S`/`M`/`L` from [`.claude/sizing-bands.json`](../../sizing-bands.json) (mean review burden per size; regenerate with `python3 .claude/scripts/review-burden.py --write`); `unlabeled`/`retro` from `assets/palette.json#valor_size`. Mapped via the `size:` label on the issue closed by the PR.
 - `comments` = `comments.totalCount + reviewThreads.totalCount` of the PR.
 - `LOC` = `additions + deletions` of the PR.
 - `cycleHours` — hours between the first PR commit and `mergedAt`.

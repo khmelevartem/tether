@@ -9,6 +9,15 @@
             "command": "bash .claude/hooks/pre-git-checklist.sh"
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/block-cross-worktree-writes.sh"
+          }
+        ]
       }
     ],
     "Stop": [

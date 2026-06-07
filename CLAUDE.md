@@ -36,6 +36,8 @@ Before committing, make sure the issue exists. If it does not — ask the user t
 
 To pull main into the branch — `/pull-main` (merges fresh main and shows what came in). It runs from both `/close-issue` and mid-flight.
 
+Writes to files inside the repo but outside the active worktree are blocked by a PreToolUse hook (`.claude/hooks/block-cross-worktree-writes.sh`); for a deliberate cross-worktree write set `TETHER_SKIP_WORKTREE_HOOK=1`.
+
 ## Common commands
 
 Run all Gradle commands with `-q`. Do not run KtLint manually — the git hook does it automatically on commit; do not fix style errors by hand either. Do not clean up unused imports by hand either — KtLint removes them on commit.
