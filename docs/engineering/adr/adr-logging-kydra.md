@@ -117,7 +117,7 @@ The full present-tense rules are in [logging.md](../logging.md) §Desktop stream
 
 - [logging.md](../logging.md) — the living doc this ADR underpins.
 - [KydraLog README & skill](https://github.com/PocketByte/kotlin-kydra-log/blob/master/.claude/skills/kydra-log/SKILL.md) — initialisation API, writer list, decorator chain.
-- [SLF4J 2.0 provider mechanism](https://www.slf4j.org/manual.html#swapping) — context for the `slf4j-simple` choice.
+- SLF4J 2.0 provider mechanism — context for the `slf4j-simple` choice.
 - Related ADRs: [adr-network-stack.md](adr-network-stack.md) (Ktor framework that owns the SLF4J slot we fill), [adr-presentation-and-navigation.md](adr-presentation-and-navigation.md) (future Decompose components inherit this façade).
 - Issue [#74](https://github.com/khmelevartem/tether/issues/74) — full call-site inventory and DoD.
 
