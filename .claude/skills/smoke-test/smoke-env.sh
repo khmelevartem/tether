@@ -23,6 +23,7 @@ FIFO_B="$SMOKE_DIR/cliB-in"; LOG_B="$SMOKE_DIR/cliB.log"; PID_B="$SMOKE_DIR/cliB
 FIFO_C="$SMOKE_DIR/cliC-in"; LOG_C="$SMOKE_DIR/cliC.log"; PID_C="$SMOKE_DIR/cliC.pid"; KEEPER_C="$SMOKE_DIR/cliC-keeper.pid"
 IOS_BUILD_LOG="$SMOKE_DIR/ios-build.log"
 IOS_LAUNCH_LOG="$SMOKE_DIR/ios-launch.log"
+IOS_UDID_FILE="$SMOKE_DIR/ios.udid"
 
 # Basename prefix for files this run sends — lets receiver-dir cleanup target exactly this run.
 SMOKE_SEND_PREFIX="smoke-$SMOKE_ID"

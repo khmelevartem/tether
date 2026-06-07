@@ -10,6 +10,7 @@ cd "$TETHER_ROOT"
 IOS_DEVICE="${IOS_DEVICE:-iPhone 17}"
 UDID=$(xcrun simctl list devices available \
   | awk -F '[()]' -v n="$IOS_DEVICE" '$0 ~ n && $0 !~ /unavailable/ { print $2; exit }')
+echo "$UDID" > "$IOS_UDID_FILE"
 
 set +e; xcrun simctl boot "$UDID" 2>/dev/null; set -e
 open -a Simulator
@@ -101,4 +102,3 @@ if [ -n "$PAIR_RESP" ]; then
     || echo "FAIL: publicKey changed across cold launches"
 fi
 
-export UDID

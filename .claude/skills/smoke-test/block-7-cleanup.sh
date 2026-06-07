@@ -5,6 +5,8 @@ set -euo pipefail
 
 . "$(dirname "${BASH_SOURCE[0]}")/smoke-env.sh"
 
+UDID="${UDID:-$(cat "$IOS_UDID_FILE" 2>/dev/null)}"
+
 set +e
 
 echo "quit" > "$FIFO_A" 2>/dev/null || true
@@ -23,7 +25,6 @@ rm -f "$DOWNLOADS_B/${SMOKE_SEND_PREFIX}-"*.txt 2>/dev/null
 adb shell rm -f "/sdcard/Android/data/com.tubetoast.tether/files/Tether/${SMOKE_SEND_PREFIX}-android"*.txt 2>/dev/null
 adb shell am force-stop com.tubetoast.tether 2>/dev/null
 
-UDID="${UDID:-}"
 if [ -n "$UDID" ]; then
   xcrun simctl terminate "$UDID" com.tubetoast.tether.Tether 2>/dev/null || true
 fi
