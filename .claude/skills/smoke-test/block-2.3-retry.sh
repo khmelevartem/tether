@@ -13,8 +13,6 @@ exit 0
 
 . "$(dirname "${BASH_SOURCE[0]}")/smoke-env.sh"
 
-DOWNLOADS_B="${DOWNLOADS_B:-$HOME/Downloads/Tether}"
-
 # Stop B and immediately send — A's registry still holds the stale peer entry, so the
 # engine begins a transfer that fails mid-flight (connection refused) instead of erroring
 # synchronously with "peer not found". The latter is unretryable: no engine state was created.

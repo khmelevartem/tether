@@ -7,8 +7,6 @@ set -euo pipefail
 
 . "$(dirname "${BASH_SOURCE[0]}")/smoke-env.sh"
 
-DOWNLOADS_B="${DOWNLOADS_B:-$HOME/Downloads/Tether}"
-
 rm -f "$FIFO_B"
 mkfifo "$FIFO_B"
 sleep 600 > "$FIFO_B" &

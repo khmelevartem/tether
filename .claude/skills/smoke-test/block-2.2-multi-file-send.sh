@@ -6,8 +6,6 @@ set -euo pipefail
 
 . "$(dirname "${BASH_SOURCE[0]}")/smoke-env.sh"
 
-DOWNLOADS_B="${DOWNLOADS_B:-$HOME/Downloads/Tether}"
-
 TS=$(date +%s)
 M1="$SMOKE_DIR/${SMOKE_SEND_PREFIX}-multi-${TS}-1.txt"; echo "m1-$TS" > "$M1"
 M2="$SMOKE_DIR/${SMOKE_SEND_PREFIX}-multi-${TS}-2.txt"; echo "m2-$TS" > "$M2"

@@ -26,10 +26,10 @@ IOS_LAUNCH_LOG="$SMOKE_DIR/ios-launch.log"
 
 # Basename prefix for files this run sends — lets receiver-dir cleanup target exactly this run.
 SMOKE_SEND_PREFIX="smoke-$SMOKE_ID"
+DOWNLOADS_B="${DOWNLOADS_B:-$HOME/Downloads/Tether}"
 
 # Kill every smoke CLI java process launched from THIS worktree's jar, plus the FIFO keepers.
 # Scoped to the worktree jar path, so a concurrent run in another worktree is left untouched.
-# (The previous `pkill -f 'com.tubetoast.tether.*\.jar'` never matched `java -jar .../tether-cli.jar`.)
 smoke_kill_instances() {
   [ -n "$SMOKE_JAR" ] && pkill -9 -f "$SMOKE_JAR" 2>/dev/null
   for f in "$KEEPER_A" "$KEEPER_B" "$KEEPER_C"; do
@@ -38,7 +38,6 @@ smoke_kill_instances() {
   return 0
 }
 
-# True if any smoke CLI java process from this worktree is currently alive.
 smoke_instances_alive() {
   [ -n "$SMOKE_JAR" ] && pgrep -f "$SMOKE_JAR" >/dev/null 2>&1
 }

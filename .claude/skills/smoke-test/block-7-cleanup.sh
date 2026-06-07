@@ -5,8 +5,6 @@ set -euo pipefail
 
 . "$(dirname "${BASH_SOURCE[0]}")/smoke-env.sh"
 
-DOWNLOADS_B="${DOWNLOADS_B:-$HOME/Downloads/Tether}"
-
 set +e
 
 echo "quit" > "$FIFO_A" 2>/dev/null || true
@@ -14,11 +12,8 @@ echo "quit" > "$FIFO_B" 2>/dev/null || true
 echo "quit" > "$FIFO_C" 2>/dev/null || true
 sleep 2
 
-# Kill exactly this worktree's CLI instances (by its jar path) plus the FIFO keepers — never
-# another worktree's concurrent run.
 smoke_kill_instances
 
-# Drop this run's scratch dir (fifos, logs, pids, sent source files) — scoped to this worktree.
 rm -rf "$SMOKE_DIR" 2>/dev/null
 
 # Received files in the shared downloads dir are named with this run's prefix, so the glob

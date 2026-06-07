@@ -23,4 +23,3 @@ JAR=$(ls composeApp/build/libs/tether-cli-*.jar composeApp/build/libs/tether-cli
 [ -z "$JAR" ] && { echo "FAIL: cli jar not found after build"; exit 1; }
 
 echo "JAR=$JAR"
-export JAR
