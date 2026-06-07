@@ -31,6 +31,7 @@ import com.tubetoast.tether.peer.Peer
 import com.tubetoast.tether.presentation.banners.BannersSection
 import com.tubetoast.tether.presentation.banners.PendingOutboundBanner
 import com.tubetoast.tether.presentation.banners.PendingOutboundBannerState
+import com.tubetoast.tether.presentation.devicename.ThisDeviceStripScreen
 import com.tubetoast.tether.presentation.dialogs.LargeSelectionConfirmDialog
 import com.tubetoast.tether.presentation.peercard.PeerCard
 import com.tubetoast.tether.presentation.peercard.PeerCardCallbacks
@@ -60,6 +61,10 @@ fun PeerListScreen(component: PeerListComponent, modifier: Modifier = Modifier) 
     Column(modifier = modifier.fillMaxSize()) {
         BannersSection(
             component = component.bannersComponent,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        ThisDeviceStripScreen(
+            component = component.deviceNameComponent,
             modifier = Modifier.fillMaxWidth(),
         )
         PeerListContent(rows = state.rows, hasPendingOutbound = hasPendingOutbound)

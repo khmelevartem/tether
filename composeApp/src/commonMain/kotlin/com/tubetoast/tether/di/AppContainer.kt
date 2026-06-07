@@ -130,6 +130,7 @@ abstract class AppContainer {
             peerConflictRelay = peerConflictRelay,
             filePicker = filePicker,
             fileTransferPreferences = fileTransferPreferences,
+            nameStore = nameStore,
         )
     }
 }
