@@ -1,4 +1,4 @@
-package com.tubetoast.tether.transfer.win
+package com.tubetoast.tether.platform.win
 
 import com.sun.jna.platform.win32.COM.COMUtils
 import com.sun.jna.platform.win32.Ole32

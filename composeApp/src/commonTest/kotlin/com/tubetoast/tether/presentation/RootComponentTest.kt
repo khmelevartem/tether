@@ -252,6 +252,18 @@ class RootComponentTest {
     }
 
     @Test
+    fun `onFilesDropped with empty list resets dragActive and stages nothing`() = runTest {
+        val repo = PendingFilesRepository()
+        val component = buildComponent(pendingFilesRepository = repo, coroutineScope = backgroundScope)
+        component.onDragEntered()
+
+        component.onFilesDropped(emptyList())
+
+        assertEquals(false, component.dragActive.value)
+        assertNull(repo.pending.value)
+    }
+
+    @Test
     fun `onFilesDropped replaces prior pending with new sources`() = runTest {
         val repo = PendingFilesRepository()
         val initial = listOf(FakeFileSource("old.txt", 100L))

@@ -1,4 +1,4 @@
-package com.tubetoast.tether.transfer.mac
+package com.tubetoast.tether.platform.mac
 
 import com.tubetoast.tether.platform.mac.Foundation
 import org.junit.Assume
