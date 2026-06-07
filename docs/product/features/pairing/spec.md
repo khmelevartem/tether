@@ -14,7 +14,7 @@ Today any device on the same Wi-Fi can send a file to any other Tether device �
 
 ## What it does
 
-The first time two devices meet, both show the same SAS — a short code of 5–6 digits. The user compares the SAS on both screens and confirms on each — two taps. From that moment on the two devices recognise each other: every subsequent connection between them happens silently, no further prompt, no repeated check.
+The first time two devices meet, both show the same SAS — a short 6-digit code. The user compares the SAS on both screens and confirms on each — two taps. From that moment on the two devices recognise each other: every subsequent connection between them happens silently, no further prompt, no repeated check.
 
 A device that has never paired with this one is always treated as a first encounter, regardless of who initiates. Reinstalling Tether on either device gives that device a new identity, so the next encounter starts over from the SAS screen — which matches what a user would expect after wiping and reinstalling an app.
 

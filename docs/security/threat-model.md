@@ -36,7 +36,7 @@ Components that listen on the network and accept external input:
 
 Trust is established by **SAS comparison** (Short Authentication String), not by entry of a secret. The two devices exchange their **static long-term identity public keys** under commit-before-reveal, each side also contributing a per-handshake nonce share committed in the same phase as its key. Each device independently derives a short human-readable value over the **full transcript** — both commitments, both full identity public keys, both nonce shares, and the role tags — and displays it. The user compares the values on the two screens and confirms they match. The peer's identity key is committed to the trust store only after **bilateral confirmation** on both sides.
 
-The SAS authenticates the static identity keypair — the per-install root of trust ([`device-identity.md`](../engineering/device-identity.md)) that the TLS channel pins to. Pairing derives no session key and provides no forward secrecy of its own: it carries only public keys. Per-session confidentiality, forward secrecy, and proof of private-key possession on every later connection come from the **pinned TLS channel** ([#140](https://github.com/khmelevartem/tether/issues/140)), not from a pairing-time key exchange. The nonce is **contributory** — neither side nor a relaying MITM fixes or predicts it unilaterally — and **co-committed with the key**, so the whole SAS input is unpredictable until the reveal; this keeps the SAS unpredictable on each attempt and closes offline precomputation against the static, reused identity keys. Binding the role tags into the transcript fixes the direction of each side's view. Why static identity over an app-level ephemeral key exchange — see [adr-sas-pairing-protocol.md](../engineering/adr/adr-sas-pairing-protocol.md); the normative message ordering and the SAS-over-transcript formula live in its [2026-06-06 amendment](../engineering/adr/adr-sas-pairing-protocol.md#amendment--2026-06-06--nonce-establishment-and-transcript-binding).
+The SAS authenticates the static identity keypair — the per-install root of trust ([`device-identity.md`](../engineering/device-identity.md)) that the TLS channel pins to. Pairing derives no session key and provides no forward secrecy of its own: it carries only public keys. Per-session confidentiality, forward secrecy, and proof of private-key possession on every later connection come from the **pinned TLS channel** ([#140](https://github.com/khmelevartem/tether/issues/140)), not from a pairing-time key exchange. The nonce is **contributory** — neither side nor a relaying MITM fixes or predicts it unilaterally — and **co-committed with the key**, so the whole SAS input is unpredictable until the reveal; this keeps the SAS unpredictable on each attempt and closes offline precomputation against the static, reused identity keys. Binding the role tags into the transcript fixes the direction of each side's view. Why static identity over an app-level ephemeral key exchange, the SAS-over-transcript formula, and the [normative message ordering](../engineering/adr/adr-sas-pairing-protocol.md#protocol-ordering-normative) — see [adr-sas-pairing-protocol.md](../engineering/adr/adr-sas-pairing-protocol.md).
 
 Security consequences:
 
@@ -49,7 +49,7 @@ Security consequences:
 The SAS scheme is sound only when all five hold. Each is load-bearing; removing any one opens the corresponding attack.
 
 1. **The whole transcript is covered.** The SAS is derived from the whole agreed material — both commitments, both public keys in full, both nonce shares, and the role tags. Otherwise a MITM fits its own pair to a matching SAS by varying an uncovered part, or precomputes a collision against the parts it can predict.
-2. **Length is 5–6 decimal digits (~17–20 bits).** SAS defends probabilistically: the chance a MITM hits a collision is about one in the number of possible values. A 4-digit code (one in 10,000) is insufficient.
+2. **Length is 6 decimal digits (~20 bits).** SAS defends probabilistically: the chance a MITM hits a collision is about one in the number of possible values. A 4-digit code (one in 10,000) is insufficient.
 3. **Commit-before-reveal.** A side first sends a hash commitment of its key and reveals the key only after receiving the other side's commitment. Without this, an active MITM sees the victim's key before fixing its own and fits a collision. This is the critical step — without it the scheme is broken at any SAS length.
 4. **Session is bound to the SAS.** After confirmation, traffic runs under the key from this exchange; every subsequent request is authenticated by it.
 5. **Defence against blind confirmation.** If the user habitually taps "yes", the protection is nil. Mitigations: prominent display, no single-button confirmation without looking, choosing the correct value among several on one device.
@@ -70,7 +70,7 @@ STRIDE letters and what each violates: see [legend](#stride-legend).
 
 | Threat | Category | Scenario | Mitigation |
 |--------|----------|----------|------------|
-| SAS collision fitting | S / T | An active MITM fits its own key to a matching SAS | Commit-before-reveal plus SAS length of 5–6 decimal digits (~17–20 bits) |
+| SAS collision fitting | S / T | An active MITM fits its own key to a matching SAS | Commit-before-reveal plus SAS length of 6 decimal digits (~20 bits) |
 | MITM in key exchange | S / I / T | Wedging between the devices, a separate exchange with each | Human SAS comparison catches the mismatch; the commitment makes fitting impossible |
 | Blind confirmation | S | The user taps "yes" without looking | Prominent display, choice among options, no one-tap confirmation |
 | TOFU hijack | S | The attacker spoofs first and entrenches as trusted | SAS verification is mandatory on first contact; visible fingerprint |
@@ -129,7 +129,7 @@ Accepted risk: malware running as the same user on the same machine can ask the 
 
 By probability × impact:
 
-1. **SAS with commit-before-reveal plus length of 5–6 decimal digits (~17–20 bits).** Closes MITM in pairing. If only one thing is done, this is it.
+1. **SAS with commit-before-reveal plus length of 6 decimal digits (~20 bits).** Closes MITM in pairing. If only one thing is done, this is it.
 2. **TLS plus pinning on the LAN.** Without it, "original bytes" means someone else's data on the air.
 3. **Authorisation on every request.** Do not trust "already paired at the start of the session".
 4. **Server protection: path traversal plus limits.** The server runs on someone else's device.
@@ -164,7 +164,6 @@ Repudiation is not given its own rows: for disposable P2P transfer without accou
 
 ## What this doc does *not* commit to
 
-- Exact SAS length within the "5–6 decimal digits (~17–20 bits)" band — the implementation issue picks the digit count.
 - The on-wire framing of the commit, reveal, nonce, and confirmation messages, and the function combining the two nonce shares — the byte-level protocol detail lives with the pairing implementation; this doc states that commit-before-reveal over the static identity keys with a contributory, co-committed nonce and a SAS over the full transcript is required, not its framing. The key the SAS authenticates and the absence of a pairing-time session-key exchange are decided — see [adr-sas-pairing-protocol.md](../engineering/adr/adr-sas-pairing-protocol.md).
 - Concrete rate-limit, connection-cap, and size-limit constants — implementation choices that live in code.
 - The application-tag and attribute recipe for each platform secret store — owned by [`device-identity.md`](../engineering/device-identity.md).

@@ -2,7 +2,7 @@
 
 Tether moves files between devices on the same local network with no cloud and no accounts. This doc captures the trust model, the pairing flow, and channel encryption at the product level. The engineering-layer STRIDE analysis — per-component attack surface and the conditions each mitigation depends on — lives in [`threat-model.md`](threat-model.md), with the SAS-pairing attack tree and pentest suite in [`sas-pairing-pentest.md`](sas-pairing-pentest.md).
 
-> **Status.** This describes the **target** security model. The SAS pairing apparatus (commit-before-reveal, SAS derivation, trust stored only after mutual confirmation) and channel encryption are the model the implementation is built toward, not the current behaviour of every endpoint. Open gaps are tracked in [#10](https://github.com/khmelevartem/tether/issues/10) (SAS handshake), [#361](https://github.com/khmelevartem/tether/issues/361) (mutual confirmation before trust is stored), and [#140](https://github.com/khmelevartem/tether/issues/140) (pinned-TLS channel encryption).
+> This describes the **target** security model. The SAS pairing apparatus (commit-before-reveal, SAS derivation, trust stored only after mutual confirmation) and channel encryption are the model the implementation is built toward, not the current behaviour of every endpoint. Related work building toward it: [#10](https://github.com/khmelevartem/tether/issues/10) (SAS pairing handshake), [#11](https://github.com/khmelevartem/tether/issues/11) (confirmation UI), and [#140](https://github.com/khmelevartem/tether/issues/140) (pinned-TLS channel encryption).
 
 ## Threat Model
 
@@ -36,7 +36,7 @@ Manual IP entry has the same trust properties: it adds a peer to the device list
 First-time connection between two devices uses **SAS comparison** — a Short Authentication String each device derives independently and shows the user to verify by eye.
 
 1. Device A initiates a connection to Device B (selected from the discovered list).
-2. The two devices exchange keys, each commits to its own key before the peer reveals theirs (**commit-before-reveal**), and each independently derives the **same SAS** from the full agreed material — both public keys.
+2. The two devices exchange keys, each commits to its own key before the peer reveals theirs (**commit-before-reveal**), and each independently derives the **same SAS** from the full handshake transcript — binding both devices' keys and fresh per-handshake values. Exact inputs: [`threat-model.md` §SAS pairing model](threat-model.md#sas-pairing-model).
 3. Both devices display the SAS; the user confirms it matches on both screens.
 4. Public keys are committed to the trust store on both sides only after that confirmation. A user who sees a mismatch and rejects leaves both trust stores unchanged.
 5. Subsequent connections between the two devices recognise each other automatically — no re-pairing.
