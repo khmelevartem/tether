@@ -42,3 +42,15 @@ smoke_kill_instances() {
 smoke_instances_alive() {
   [ -n "$SMOKE_JAR" ] && pgrep -f "$SMOKE_JAR" >/dev/null 2>&1
 }
+
+# Guarantees $SMOKE_DIR and all processes holding files under it are gone, scoped to this worktree.
+smoke_reset() {
+  if [ -d "$SMOKE_DIR" ]; then
+    local holders
+    holders=$(lsof -t +D "$SMOKE_DIR" 2>/dev/null | grep -v "^$$\$")
+    [ -n "$holders" ] && kill -9 $holders 2>/dev/null
+  fi
+  smoke_kill_instances
+  rm -rf "$SMOKE_DIR" 2>/dev/null
+  return 0
+}

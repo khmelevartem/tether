@@ -5,18 +5,18 @@ set -euo pipefail
 
 . "$(dirname "${BASH_SOURCE[0]}")/smoke-env.sh"
 
-UDID="${UDID:-$(cat "$IOS_UDID_FILE" 2>/dev/null)}"
-
 set +e
+
+# Capture UDID before smoke_reset removes the scratch dir. Kept under `set +e` because a
+# missing ios.udid (any run without the iOS block) must not abort cleanup.
+UDID="${UDID:-$(cat "$IOS_UDID_FILE" 2>/dev/null)}"
 
 echo "quit" > "$FIFO_A" 2>/dev/null || true
 echo "quit" > "$FIFO_B" 2>/dev/null || true
 echo "quit" > "$FIFO_C" 2>/dev/null || true
 sleep 2
 
-smoke_kill_instances
-
-rm -rf "$SMOKE_DIR" 2>/dev/null
+smoke_reset
 
 # Received files in the shared downloads dir are named with this run's prefix, so the glob
 # targets only this run and leaves a concurrent run's downloads intact.
