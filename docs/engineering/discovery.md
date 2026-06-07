@@ -157,7 +157,7 @@ Any combination of failure modes Layers 1–3 cannot overcome, the user works ar
 
 The `fingerprint` field in `/hello` and `PeerAnnouncement` carries a stable device identity. Its target is the EC P-256 public key fingerprint produced by [Pairing (#11)](https://github.com/khmelevartem/tether/issues/11) — the same identity used by [channel encryption](../product/security.md#channel-encryption) and pairing.
 
-Peer identity keys on the device fingerprint, not on the transport address (`host:port`, which can change across restarts). A peer that reappears on a new port with the same fingerprint is the same identity — its transfer engine and terminal state survive the reconnect.
+A peer is identified by its fingerprint, not by its transport address (`host:port`, which changes across restart) — so a peer that reappears on a new port resolves to the same identity, and its in-progress transfer and pending retry state survive the reconnect.
 
 Until pairing identity lands, the field carries a random opaque string sufficient for self-suppression but not for trust. No code path treats it as authentication; trust gating remains pairing.
 

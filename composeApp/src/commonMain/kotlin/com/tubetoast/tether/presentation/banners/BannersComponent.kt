@@ -95,7 +95,7 @@ class BannersComponent(
             .value
             .firstOrNull { it.id == peerId }
             ?.device
-            ?.name ?: peerId.id
+            ?.name ?: "the device"
 
     private fun conflictPeerEngineStateFlow(peerId: PeerIdentity?) =
         if (peerId != null) {

@@ -19,6 +19,32 @@ class PeerCardCopyTest {
     }
 
     @Test
+    fun sentCardCopyUsesPeerNameNotPeerId() {
+        val fingerprintPeer = PeerIdentity("fp-abc")
+        val state = PeerTransferState.Sent(
+            fingerprintPeer,
+            sent = 3,
+            total = 3,
+            perFile = emptyList(),
+            partialReason = null,
+        )
+        val result = sentCardCopy(state, "Alice")
+        assertEquals("Sent 3 files to Alice", result)
+    }
+
+    @Test
+    fun sentSenderCancelledCopy() {
+        val state = PeerTransferState.Sent(
+            peer,
+            sent = 3,
+            total = 5,
+            perFile = emptyList(),
+            partialReason = PartialOutcome.SenderCancelled,
+        )
+        assertEquals("Sent 3 of 5 files to Alice (transfer was cancelled)", sentCardCopy(state, peerName))
+    }
+
+    @Test
     fun sentReceiverCancelledCopy() {
         val state = PeerTransferState.Sent(
             peer,
