@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -123,8 +123,8 @@ private fun TransferDetailsContent(
                 .padding(horizontal = spacing.lg),
             verticalArrangement = Arrangement.spacedBy(spacing.xs),
         ) {
-            items(perFile, key = { it.name }) { fileStatus ->
-                val isFirst = perFile.first() == fileStatus
+            itemsIndexed(perFile, key = { index, _ -> index }) { index, fileStatus ->
+                val isFirst = index == 0
                 PerFileRow(
                     status = fileStatus,
                     isSenderSide = isSenderSide,
