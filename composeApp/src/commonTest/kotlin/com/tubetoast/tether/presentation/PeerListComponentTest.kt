@@ -1,5 +1,6 @@
 package com.tubetoast.tether.presentation
 
+import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.resume
@@ -326,6 +327,15 @@ class PeerListComponentTest {
         )
     }
 
+    private fun fakeDeviceNameComponentFactory(scope: CoroutineScope): (ComponentContext) -> DeviceNameComponent =
+        { deviceNameCtx ->
+            DeviceNameComponent(
+                componentContext = deviceNameCtx,
+                nameStore = DeviceNameStore(EphemeralDeviceNamePersistence()),
+                coroutineScope = scope,
+            )
+        }
+
     private fun buildComponent(
         initial: List<Device> = emptyList(),
         flow: MutableStateFlow<List<Device>> = MutableStateFlow(initial),
@@ -379,13 +389,7 @@ class PeerListComponentTest {
                     coroutineScope = coroutineScope,
                 )
             },
-            deviceNameComponentFactory = { deviceNameCtx ->
-                DeviceNameComponent(
-                    componentContext = deviceNameCtx,
-                    nameStore = DeviceNameStore(EphemeralDeviceNamePersistence()),
-                    coroutineScope = coroutineScope,
-                )
-            },
+            deviceNameComponentFactory = fakeDeviceNameComponentFactory(coroutineScope),
             coroutineScope = coroutineScope,
         )
     }
@@ -438,13 +442,7 @@ class PeerListComponentTest {
                     coroutineScope = coroutineScope,
                 )
             },
-            deviceNameComponentFactory = { deviceNameCtx ->
-                DeviceNameComponent(
-                    componentContext = deviceNameCtx,
-                    nameStore = DeviceNameStore(EphemeralDeviceNamePersistence()),
-                    coroutineScope = coroutineScope,
-                )
-            },
+            deviceNameComponentFactory = fakeDeviceNameComponentFactory(coroutineScope),
             coroutineScope = coroutineScope,
         )
     }
