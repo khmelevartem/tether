@@ -5,6 +5,8 @@ import com.sun.jna.platform.win32.Ole32
 import com.sun.jna.platform.win32.Ole32.COINIT_APARTMENTTHREADED
 import com.sun.jna.platform.win32.WTypes
 import com.sun.jna.ptr.PointerByReference
+import com.tubetoast.tether.platform.win.FileOpenDialog
+import com.tubetoast.tether.platform.win.IFileOpenDialog
 import org.junit.Assume
 import kotlin.test.Test
 import kotlin.test.assertTrue

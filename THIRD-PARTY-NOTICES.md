@@ -5,9 +5,9 @@ original notices.
 
 ## FileKit
 
-`composeApp/src/desktopMain/kotlin/com/tubetoast/tether/transfer/mac/` (the JNA Objective-C
-bridge and the native `NSOpenPanel` picker) and
-`composeApp/src/desktopMain/kotlin/com/tubetoast/tether/transfer/win/` (the JNA COM
+`composeApp/src/desktopMain/kotlin/com/tubetoast/tether/platform/mac/` (the JNA Objective-C
+bridge) and
+`composeApp/src/desktopMain/kotlin/com/tubetoast/tether/platform/win/` (the JNA COM
 `IFileOpenDialog` bridge) are adapted from [FileKit](https://github.com/vinceglb/FileKit).
 
 ```
@@ -37,7 +37,7 @@ SOFTWARE.
 ## IntelliJ Community (JetBrains)
 
 FileKit's `Foundation` Objective-C bridge — and therefore the `Foundation.kt` /
-`FoundationLibrary.kt` / `ID.kt` adaptation in this project — derives from the
+`FoundationLibrary.kt` / `ID.kt` adaptation in `platform/mac/` — derives from the
 `com.intellij.ui.mac.foundation` package of
 [IntelliJ Community](https://github.com/JetBrains/intellij-community), licensed under the
 Apache License, Version 2.0.

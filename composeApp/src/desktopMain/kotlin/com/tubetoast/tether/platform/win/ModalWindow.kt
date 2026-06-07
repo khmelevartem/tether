@@ -6,7 +6,7 @@
     "ConstPropertyName",
 )
 
-package com.tubetoast.tether.transfer.win
+package com.tubetoast.tether.platform.win
 
 import com.sun.jna.Pointer
 import com.sun.jna.platform.win32.COM.Unknown

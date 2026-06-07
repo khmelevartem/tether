@@ -16,7 +16,6 @@ import com.tubetoast.tether.transfer.PeerTransferEngine
 import com.tubetoast.tether.transfer.PeerTransferEngineRegistry
 import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.PendingFilesRepository
-import com.tubetoast.tether.transfer.PendingFilesSummary
 import com.tubetoast.tether.transfer.PickKind
 import com.tubetoast.tether.transfer.fakeBatchSender
 import kotlinx.coroutines.CompletableDeferred
@@ -128,7 +127,7 @@ class PeerTransferComponentTest {
         )
 
         val sources = listOf(FakeFileSource("file.txt", 100L))
-        repo.setPending(PendingFilesSummary(1, 100L), sources)
+        repo.setPending(sources)
 
         component.onCardClick()
         runCurrent()
@@ -185,7 +184,7 @@ class PeerTransferComponentTest {
         assertIs<PeerTransferState.ActiveOutbound>(component.state.value.transfer)
 
         val shareSource = listOf(FakeFileSource("share.txt", 100L))
-        repo.setPending(PendingFilesSummary(1, 100L), shareSource)
+        repo.setPending(shareSource)
 
         val emitted = mutableListOf<PeerIdentity>()
         val collectJob = backgroundScope.launch { relay.busyTaps.collect { emitted.add(it) } }
@@ -415,7 +414,7 @@ class PeerTransferComponentTest {
     fun `large selection confirm also fires for onCardClick with pending sources`() = runTest {
         val repo = PendingFilesRepository()
         val bigSources = (1..501).map { FakeFileSource("f$it.txt", 100L) }
-        repo.setPending(PendingFilesSummary(bigSources.size, bigSources.sumOf { it.sizeBytes ?: 0L }), bigSources)
+        repo.setPending(bigSources)
         val (component) = buildComponent(
             pendingFilesRepository = repo,
             scope = backgroundScope,

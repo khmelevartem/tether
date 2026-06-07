@@ -4,8 +4,6 @@ import com.tubetoast.tether.network.FileServer
 import com.tubetoast.tether.network.FileUploadStorage
 import com.tubetoast.tether.network.JvmUploadStorageBackend
 import com.tubetoast.tether.network.UploadStorage
-import com.tubetoast.tether.transfer.FilePicker
-import com.tubetoast.tether.transfer.NoOpFilePicker
 import java.io.File
 
 abstract class JvmAppContainer(
@@ -29,6 +27,4 @@ abstract class JvmAppContainer(
             discoveredDevicesStore = discoveredDevicesStore,
         )
     }
-
-    override val filePicker: FilePicker = NoOpFilePicker
 }

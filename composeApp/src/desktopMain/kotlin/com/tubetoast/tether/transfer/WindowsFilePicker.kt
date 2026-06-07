@@ -1,4 +1,4 @@
-package com.tubetoast.tether.transfer.win
+package com.tubetoast.tether.transfer
 
 import com.sun.jna.Native
 import com.sun.jna.platform.win32.COM.COMUtils.FAILED
@@ -12,11 +12,16 @@ import com.sun.jna.platform.win32.WinError.ERROR_CANCELLED
 import com.sun.jna.platform.win32.WinNT.HRESULT
 import com.sun.jna.ptr.IntByReference
 import com.sun.jna.ptr.PointerByReference
-import com.tubetoast.tether.transfer.WindowHolder
-import com.tubetoast.tether.transfer.win.ShTypes.FILEOPENDIALOGOPTIONS.Companion.FOS_ALLOWMULTISELECT
-import com.tubetoast.tether.transfer.win.ShTypes.FILEOPENDIALOGOPTIONS.Companion.FOS_FORCEFILESYSTEM
-import com.tubetoast.tether.transfer.win.ShTypes.SIGDN.Companion.SIGDN_FILESYSPATH
+import com.tubetoast.tether.platform.win.FileDialog
+import com.tubetoast.tether.platform.win.FileOpenDialog
+import com.tubetoast.tether.platform.win.IFileOpenDialog
+import com.tubetoast.tether.platform.win.ShTypes.FILEOPENDIALOGOPTIONS.Companion.FOS_ALLOWMULTISELECT
+import com.tubetoast.tether.platform.win.ShTypes.FILEOPENDIALOGOPTIONS.Companion.FOS_FORCEFILESYSTEM
+import com.tubetoast.tether.platform.win.ShTypes.SIGDN.Companion.SIGDN_FILESYSPATH
+import com.tubetoast.tether.platform.win.ShellItem
+import com.tubetoast.tether.platform.win.ShellItemArray
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.swing.Swing
 import kotlinx.coroutines.withContext
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.info
@@ -24,14 +29,40 @@ import ru.pocketbyte.kydra.log.warn
 import ru.pocketbyte.kydra.log.wrapper.withTag
 import java.awt.Window
 import java.io.File
+import javax.swing.JFileChooser
 
-private val log = KydraLog.withTag(default = "WindowsNativeFilePicker")
+private val log = KydraLog.withTag(default = "WindowsFilePicker")
 
-internal class WindowsNativeFilePicker(
+internal class WindowsFilePicker(
     private val windowHolder: WindowHolder,
-) {
-    /** Native modern Windows (Vista+) multi-file open dialog. Empty list on cancel. Runs COM on a dedicated STA IO thread. */
-    suspend fun pickFiles(): List<File> = withContext(Dispatchers.IO) {
+) : FilePicker {
+    override suspend fun pickFiles(): List<FileSource> =
+        runCatching { pickViaComDialog() }
+            .getOrElse { e ->
+                log.warn { "Native Windows picker failed; falling back to AWT dialog — ${e.message}" }
+                awtPickFiles(windowHolder)
+            }
+
+    override suspend fun pickFolder(): List<FileSource> {
+        val dir = withContext(Dispatchers.Swing) {
+            val chooser = JFileChooser()
+            chooser.fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
+            val result = chooser.showOpenDialog(windowHolder.window)
+            if (result == JFileChooser.APPROVE_OPTION) chooser.selectedFile else null
+        }
+        if (dir == null) {
+            log.info { "pickFolder (windows): cancelled" }
+            return emptyList()
+        }
+        val sources = withContext(Dispatchers.IO) { JvmFolderWalker().walk(dir) }
+        log.info { "pickFolder (windows): ${sources.size} file(s) from ${dir.name}" }
+        return sources
+    }
+
+    override suspend fun pickPhotos(): List<FileSource> =
+        throw UnsupportedOperationException("pickPhotos is mobile-only")
+
+    private suspend fun pickViaComDialog(): List<FileSource> = withContext(Dispatchers.IO) {
         var dialog: FileOpenDialog? = null
         var comInitialized = false
         try {
@@ -67,7 +98,7 @@ internal class WindowsNativeFilePicker(
 
             val files = dialog.getResults()
             log.info { "pickFiles (windows): ${files.size} file(s) selected" }
-            files
+            files.flatMap { it.toFileSources() }
         } catch (e: Exception) {
             log.warn { "pickFiles (windows): failed — ${e.message}" }
             throw e

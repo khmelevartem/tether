@@ -1,7 +1,7 @@
 // Adapted from FileKit (MIT, github.com/vinceglb/FileKit), whose Foundation bridge derives from IntelliJ Community (Apache-2.0).
 @file:Suppress("ktlint:standard:function-naming", "FunctionName", "ktlint:standard:property-naming")
 
-package com.tubetoast.tether.transfer.mac
+package com.tubetoast.tether.platform.mac
 
 import com.sun.jna.Callback
 import com.sun.jna.Function

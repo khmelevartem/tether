@@ -16,7 +16,6 @@ import com.tubetoast.tether.di.AndroidAppContainer
 import com.tubetoast.tether.di.AppContainerProvider
 import com.tubetoast.tether.network.TetherForegroundService
 import com.tubetoast.tether.presentation.RootContent
-import com.tubetoast.tether.transfer.PendingFilesSummary
 import com.tubetoast.tether.transfer.ShareIntentParser
 import kotlinx.coroutines.launch
 import ru.pocketbyte.kydra.log.KydraLog
@@ -112,7 +111,7 @@ class MainActivity : ComponentActivity() {
         container.appScope.launch {
             val sources = ShareIntentParser.parse(intent, contentResolver)
             if (sources.isEmpty()) return@launch
-            container.pendingFilesRepository.setPending(PendingFilesSummary.from(sources), sources)
+            container.pendingFilesRepository.setPending(sources)
         }
     }
 

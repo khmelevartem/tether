@@ -12,9 +12,9 @@ import com.tubetoast.tether.identity.FingerprintPersistence
 import com.tubetoast.tether.preferences.DefaultFileTransferPreferences
 import com.tubetoast.tether.preferences.FileTransferPreferences
 import com.tubetoast.tether.protocol.DeviceType
-import com.tubetoast.tether.transfer.DesktopFilePicker
 import com.tubetoast.tether.transfer.FilePicker
 import com.tubetoast.tether.transfer.WindowHolder
+import com.tubetoast.tether.transfer.desktopFilePicker
 import okio.Path.Companion.toPath
 import java.io.File
 
@@ -48,6 +48,5 @@ open class DesktopAppContainer(
     )
 
     open val windowHolder: WindowHolder = WindowHolder()
-    open val desktopFilePicker: DesktopFilePicker = DesktopFilePicker(windowHolder)
-    open override val filePicker: FilePicker = desktopFilePicker
+    open override val filePicker: FilePicker = desktopFilePicker(windowHolder)
 }

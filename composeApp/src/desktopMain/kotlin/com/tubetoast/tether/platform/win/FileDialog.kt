@@ -6,7 +6,7 @@
     "ConstPropertyName",
 )
 
-package com.tubetoast.tether.transfer.win
+package com.tubetoast.tether.platform.win
 
 import com.sun.jna.Pointer
 import com.sun.jna.WString
@@ -14,7 +14,7 @@ import com.sun.jna.platform.win32.Guid
 import com.sun.jna.platform.win32.WinNT
 import com.sun.jna.ptr.IntByReference
 import com.sun.jna.ptr.PointerByReference
-import com.tubetoast.tether.transfer.win.ShTypes.COMDLG_FILTERSPEC
+import com.tubetoast.tether.platform.win.ShTypes.COMDLG_FILTERSPEC
 
 internal open class FileDialog :
     ModalWindow,

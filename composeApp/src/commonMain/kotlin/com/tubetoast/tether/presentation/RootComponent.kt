@@ -12,7 +12,6 @@ import com.tubetoast.tether.presentation.transfer.TransferDetailsComponent
 import com.tubetoast.tether.transfer.FileSource
 import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PendingFilesRepository
-import com.tubetoast.tether.transfer.PendingFilesSummary
 
 class RootComponent(
     componentContext: ComponentContext,
@@ -62,7 +61,7 @@ class RootComponent(
 
     fun onFilesDropped(sources: List<FileSource>) {
         if (sources.isEmpty()) return
-        pendingFilesRepository.setPending(PendingFilesSummary.from(sources), sources)
+        pendingFilesRepository.setPending(sources)
     }
 
     fun showTransferDetails(peer: PeerIdentity) {

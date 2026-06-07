@@ -1,6 +1,8 @@
 package com.tubetoast.tether.discovery
 
 import com.tubetoast.tether.discovery.bonjour.MdnsDiscoveryBonjour
+import com.tubetoast.tether.foundation.DesktopHostOs
+import com.tubetoast.tether.foundation.currentHostOs
 import com.tubetoast.tether.identity.DeviceIdentityStore
 import com.tubetoast.tether.protocol.Device
 import kotlinx.coroutines.Dispatchers
@@ -15,7 +17,7 @@ actual class MdnsDiscovery(
     deviceIdentityStore: DeviceIdentityStore,
 ) : DeviceDiscovery {
     private val delegate: DeviceDiscovery =
-        if (isMacOsHost()) {
+        if (currentHostOs == DesktopHostOs.MacOs) {
             MdnsDiscoveryBonjour(store, deviceIdentityStore)
         } else {
             MdnsDiscoveryJmdns(store, Dispatchers.IO, deviceIdentityStore)
@@ -29,10 +31,3 @@ actual class MdnsDiscovery(
 
     actual override suspend fun republish(name: String) = delegate.republish(name)
 }
-
-private fun isMacOsHost(): Boolean =
-    System
-        .getProperty("os.name")
-        .orEmpty()
-        .lowercase()
-        .startsWith("mac")

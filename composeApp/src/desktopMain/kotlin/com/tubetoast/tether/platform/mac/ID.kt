@@ -1,5 +1,5 @@
 // Adapted from FileKit (MIT, github.com/vinceglb/FileKit), whose Foundation bridge derives from IntelliJ Community (Apache-2.0).
-package com.tubetoast.tether.transfer.mac
+package com.tubetoast.tether.platform.mac
 
 import com.sun.jna.NativeLong
 

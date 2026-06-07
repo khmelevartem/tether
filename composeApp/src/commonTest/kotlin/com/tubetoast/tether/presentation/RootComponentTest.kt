@@ -110,10 +110,10 @@ class RootComponentTest {
 
         assertNull(repo.pending.value?.summary)
 
-        val summary = PendingFilesSummary(fileCount = 2, totalBytes = 1024L)
-        repo.setPending(summary, emptyList())
+        val sources = listOf(FakeFileSource("a.txt", 512L), FakeFileSource("b.txt", 512L))
+        repo.setPending(sources)
 
-        assertEquals(summary, repo.pending.value?.summary)
+        assertEquals(PendingFilesSummary.from(sources), repo.pending.value?.summary)
         assertNotEquals(null, repo.pending.value?.summary)
 
         repo.clear()
@@ -136,7 +136,7 @@ class RootComponentTest {
         assertNotNull(peerComponent)
 
         val sources = listOf(FakeFileSource("file.txt", 100L))
-        repo.setPending(PendingFilesSummary(1, 100L), sources)
+        repo.setPending(sources)
         peerComponent.onCardClick()
         runCurrent()
 

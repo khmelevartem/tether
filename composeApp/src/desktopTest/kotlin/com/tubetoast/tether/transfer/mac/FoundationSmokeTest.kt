@@ -1,5 +1,6 @@
 package com.tubetoast.tether.transfer.mac
 
+import com.tubetoast.tether.platform.mac.Foundation
 import org.junit.Assume
 import kotlin.test.Test
 import kotlin.test.assertFalse

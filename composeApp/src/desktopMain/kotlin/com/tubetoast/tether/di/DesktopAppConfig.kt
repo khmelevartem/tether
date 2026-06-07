@@ -1,6 +1,8 @@
 package com.tubetoast.tether.di
 
 import com.tubetoast.tether.config.DeviceNamePersistence
+import com.tubetoast.tether.foundation.DesktopHostOs
+import com.tubetoast.tether.foundation.currentHostOs
 import com.tubetoast.tether.identity.FingerprintPersistence
 import com.tubetoast.tether.security.DeviceKeyPair
 import java.io.File
@@ -23,9 +25,8 @@ class DefaultDesktopAppConfig(
 
 private fun resolvePreferencesFilePath(): String {
     val home = System.getProperty("user.home")
-    val os = System.getProperty("os.name", "").lowercase()
-    val dir = when {
-        os.contains("win") -> {
+    val dir = when (currentHostOs) {
+        DesktopHostOs.Windows -> {
             val appData = System.getenv("APPDATA") ?: "$home\\AppData\\Roaming"
             File(appData, "Tether")
         }

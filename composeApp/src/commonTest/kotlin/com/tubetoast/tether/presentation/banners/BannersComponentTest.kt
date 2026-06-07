@@ -78,7 +78,7 @@ class BannersComponentTest {
         val repo = PendingFilesRepository()
         val component = buildComponent(repo, coroutineScope = backgroundScope)
 
-        repo.setPending(PendingFilesSummary(1, 100L), emptyList())
+        repo.setPending(listOf(FakeFileSource("f.txt", 100L)))
         component.onCancelPending()
 
         assertNull(repo.pending.value?.summary)
@@ -128,13 +128,13 @@ class BannersComponentTest {
     fun `pendingBanner is Default when pending files exist and no conflict`() = runTest {
         val repo = PendingFilesRepository()
         val component = buildComponent(repo, coroutineScope = backgroundScope)
-        val summary = PendingFilesSummary(2, 1024L)
-        repo.setPending(summary, emptyList())
+        val sources = listOf(FakeFileSource("a.txt", 512L), FakeFileSource("b.txt", 512L))
+        repo.setPending(sources)
 
         runCurrent()
 
         val state = assertIs<PendingOutboundBannerState.Default>(component.pendingBanner.value)
-        assertEquals(summary, state.summary)
+        assertEquals(PendingFilesSummary.from(sources), state.summary)
     }
 
     @Test
@@ -158,12 +158,11 @@ class BannersComponentTest {
         relay.reportBusyTap(peerId)
         runCurrent()
 
-        val summary = PendingFilesSummary(1, 100L)
-        repo.setPending(summary, listOf(FakeFileSource("share.txt", 100L)))
+        repo.setPending(listOf(FakeFileSource("share.txt", 100L)))
         runCurrent()
 
         val state = assertIs<PendingOutboundBannerState.Default>(component.pendingBanner.value)
-        assertEquals(summary, state.summary)
+        assertEquals(PendingFilesSummary(1, 100L), state.summary)
     }
 
     @Test
@@ -179,8 +178,7 @@ class BannersComponentTest {
             conflictRelay = relay,
             coroutineScope = backgroundScope,
         )
-        val summary = PendingFilesSummary(1, 100L)
-        repo.setPending(summary, listOf(FakeFileSource("f.txt", 100L)))
+        repo.setPending(listOf(FakeFileSource("f.txt", 100L)))
 
         registry.engineFor(peerId).startOutbound(listOf(FakeFileSource("in-flight.txt", 50L)))
         runCurrent()
@@ -192,7 +190,7 @@ class BannersComponentTest {
         runCurrent()
 
         val state = assertIs<PendingOutboundBannerState.BusyPeer>(component.pendingBanner.value)
-        assertEquals(summary, state.summary)
+        assertEquals(PendingFilesSummary(1, 100L), state.summary)
         assertEquals(peerName, state.peerName)
     }
 
@@ -209,8 +207,7 @@ class BannersComponentTest {
             conflictRelay = relay,
             coroutineScope = backgroundScope,
         )
-        val summary = PendingFilesSummary(1, 100L)
-        repo.setPending(summary, listOf(FakeFileSource("f.txt", 100L)))
+        repo.setPending(listOf(FakeFileSource("f.txt", 100L)))
 
         registry.engineFor(peerId)
         runCurrent()
@@ -224,7 +221,7 @@ class BannersComponentTest {
         runCurrent()
 
         val state = assertIs<PendingOutboundBannerState.BusyPeer>(component.pendingBanner.value)
-        assertEquals(summary, state.summary)
+        assertEquals(PendingFilesSummary(1, 100L), state.summary)
         assertEquals(peerName, state.peerName)
     }
 
@@ -241,8 +238,7 @@ class BannersComponentTest {
             conflictRelay = relay,
             coroutineScope = backgroundScope,
         )
-        val summary = PendingFilesSummary(1, 100L)
-        repo.setPending(summary, listOf(FakeFileSource("f.txt", 100L)))
+        repo.setPending(listOf(FakeFileSource("f.txt", 100L)))
 
         registry.engineFor(peerId)
         runCurrent()
@@ -272,7 +268,7 @@ class BannersComponentTest {
             conflictRelay = relay,
             coroutineScope = backgroundScope,
         )
-        repo.setPending(PendingFilesSummary(1, 100L), listOf(FakeFileSource("f.txt", 100L)))
+        repo.setPending(listOf(FakeFileSource("f.txt", 100L)))
         registry.engineFor(peerId).startOutbound(listOf(FakeFileSource("in-flight.txt", 50L)))
         runCurrent()
         relay.reportBusyTap(peerId)
@@ -301,7 +297,7 @@ class BannersComponentTest {
             conflictRelay = relay,
             coroutineScope = backgroundScope,
         )
-        repo.setPending(PendingFilesSummary(1, 100L), listOf(FakeFileSource("f.txt", 100L)))
+        repo.setPending(listOf(FakeFileSource("f.txt", 100L)))
         registry.engineFor(peerId).startOutbound(listOf(FakeFileSource("in-flight.txt", 50L)))
         runCurrent()
         relay.reportBusyTap(peerId)
@@ -338,7 +334,7 @@ class BannersComponentTest {
             conflictRelay = relay,
             coroutineScope = backgroundScope,
         )
-        repo.setPending(PendingFilesSummary(1, 100L), listOf(FakeFileSource("f.txt", 100L)))
+        repo.setPending(listOf(FakeFileSource("f.txt", 100L)))
 
         registry.engineFor(peerId).startOutbound(listOf(FakeFileSource("sent.txt", 50L)))
         runCurrent()
@@ -367,7 +363,7 @@ class BannersComponentTest {
             conflictRelay = relay,
             coroutineScope = backgroundScope,
         )
-        repo.setPending(PendingFilesSummary(1, 100L), listOf(FakeFileSource("f.txt", 100L)))
+        repo.setPending(listOf(FakeFileSource("f.txt", 100L)))
 
         registry.engineFor(peerId)
         runCurrent()
@@ -397,7 +393,7 @@ class BannersComponentTest {
             conflictRelay = relay,
             coroutineScope = backgroundScope,
         )
-        repo.setPending(PendingFilesSummary(1, 100L), listOf(FakeFileSource("f.txt", 100L)))
+        repo.setPending(listOf(FakeFileSource("f.txt", 100L)))
 
         registry.engineFor(peerId)
         runCurrent()
@@ -427,7 +423,7 @@ class BannersComponentTest {
             conflictRelay = relay,
             coroutineScope = backgroundScope,
         )
-        repo.setPending(PendingFilesSummary(1, 100L), listOf(FakeFileSource("f.txt", 100L)))
+        repo.setPending(listOf(FakeFileSource("f.txt", 100L)))
         registry.engineFor(peerId).startOutbound(listOf(FakeFileSource("in-flight.txt", 50L)))
         runCurrent()
 
