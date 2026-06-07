@@ -76,10 +76,7 @@ private fun TransferDetailsContent(
     val firstItemFocusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) {
         if (perFile.isNotEmpty()) {
-            runCatching {
-                firstItemFocusRequester.requestFocus()
-                Unit
-            }
+            runCatching { firstItemFocusRequester.requestFocus() }
         }
     }
 
