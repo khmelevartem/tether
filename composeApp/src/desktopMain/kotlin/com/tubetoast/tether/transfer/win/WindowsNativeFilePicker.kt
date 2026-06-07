@@ -2,6 +2,7 @@ package com.tubetoast.tether.transfer.win
 
 import com.sun.jna.Native
 import com.sun.jna.platform.win32.COM.COMUtils.FAILED
+import com.sun.jna.platform.win32.COM.COMUtils.SUCCEEDED
 import com.sun.jna.platform.win32.Ole32
 import com.sun.jna.platform.win32.Ole32.COINIT_APARTMENTTHREADED
 import com.sun.jna.platform.win32.WTypes
@@ -31,8 +32,14 @@ internal class WindowsNativeFilePicker(
     /** Native modern Windows (Vista+) multi-file open dialog. Empty list on cancel. Runs COM on a dedicated STA IO thread. */
     suspend fun pickFiles(): List<File> = withContext(Dispatchers.IO) {
         var dialog: FileOpenDialog? = null
+        var comInitialized = false
         try {
-            initCom()
+            val hr = Ole32.INSTANCE.CoInitializeEx(null, COINIT_APARTMENTTHREADED or Ole32.COINIT_DISABLE_OLE1DDE)
+            if (SUCCEEDED(hr)) {
+                comInitialized = true
+            } else {
+                throw RuntimeException("CoInitializeEx failed: 0x${hr.toInt().toString(16)}")
+            }
 
             val pbrDialog = PointerByReference()
             Ole32.INSTANCE
@@ -65,16 +72,8 @@ internal class WindowsNativeFilePicker(
             throw e
         } finally {
             dialog?.Release()
-            Ole32.INSTANCE.CoUninitialize()
+            if (comInitialized) Ole32.INSTANCE.CoUninitialize()
         }
-    }
-
-    private fun initCom() {
-        Ole32.INSTANCE
-            .CoInitializeEx(
-                null,
-                COINIT_APARTMENTTHREADED or Ole32.COINIT_DISABLE_OLE1DDE,
-            ).verify("CoInitializeEx failed")
     }
 
     private fun FileDialog.setFlag(flag: Int) {
@@ -98,12 +97,15 @@ internal class WindowsNativeFilePicker(
                 val pbrItem = PointerByReference()
                 itemArray.GetItemAt(i, pbrItem).verify("GetItemAt failed")
                 val item = ShellItem(pbrItem.value)
-                val pbrDisplayName = PointerByReference()
-                item.GetDisplayName(SIGDN_FILESYSPATH, pbrDisplayName).verify("GetDisplayName failed")
-                val path = pbrDisplayName.value.getWideString(0)
-                files.add(File(path))
-                Ole32.INSTANCE.CoTaskMemFree(pbrDisplayName.value)
-                item.Release()
+                try {
+                    val pbrDisplayName = PointerByReference()
+                    item.GetDisplayName(SIGDN_FILESYSPATH, pbrDisplayName).verify("GetDisplayName failed")
+                    val path = pbrDisplayName.value.getWideString(0)
+                    files.add(File(path))
+                    Ole32.INSTANCE.CoTaskMemFree(pbrDisplayName.value)
+                } finally {
+                    item.Release()
+                }
             }
             return files
         } finally {
