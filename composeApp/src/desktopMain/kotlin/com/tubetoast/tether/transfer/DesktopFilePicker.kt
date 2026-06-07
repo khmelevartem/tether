@@ -7,6 +7,7 @@ import kotlinx.coroutines.swing.Swing
 import kotlinx.coroutines.withContext
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.info
+import ru.pocketbyte.kydra.log.warn
 import ru.pocketbyte.kydra.log.wrapper.withTag
 import java.awt.FileDialog
 import javax.swing.JFileChooser
@@ -22,7 +23,11 @@ class DesktopFilePicker(
 
     override suspend fun pickFiles(): List<FileSource> = when {
         isMac -> pickViaNativePanel()
-        isWindows -> WindowsNativeFilePicker(windowHolder).pickFiles().flatMap { it.toFileSources() }
+        isWindows -> runCatching { WindowsNativeFilePicker(windowHolder).pickFiles().flatMap { it.toFileSources() } }
+            .getOrElse { e ->
+                log.warn { "Native Windows picker failed; falling back to AWT dialog — ${e.message}" }
+                pickViaAwtDialog()
+            }
         else -> pickViaAwtDialog()
     }
 

@@ -14,6 +14,7 @@ import com.sun.jna.ptr.IntByReference
 import com.sun.jna.ptr.PointerByReference
 import com.tubetoast.tether.transfer.WindowHolder
 import com.tubetoast.tether.transfer.win.ShTypes.FILEOPENDIALOGOPTIONS.Companion.FOS_ALLOWMULTISELECT
+import com.tubetoast.tether.transfer.win.ShTypes.FILEOPENDIALOGOPTIONS.Companion.FOS_FORCEFILESYSTEM
 import com.tubetoast.tether.transfer.win.ShTypes.SIGDN.Companion.SIGDN_FILESYSPATH
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -52,7 +53,7 @@ internal class WindowsNativeFilePicker(
                 ).verify("CoCreateInstance failed")
             dialog = FileOpenDialog(pbrDialog.value)
 
-            dialog.setFlag(FOS_ALLOWMULTISELECT)
+            dialog.setFlag(FOS_ALLOWMULTISELECT or FOS_FORCEFILESYSTEM)
 
             val showResult = dialog.Show(windowHolder.window.toHwnd())
             val canceledException = Win32Exception(ERROR_CANCELLED)
