@@ -36,7 +36,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
-import com.tubetoast.tether.config.DeviceNameViolation
 import com.tubetoast.tether.ui.designsystem.BodyText
 import com.tubetoast.tether.ui.designsystem.LabelText
 import com.tubetoast.tether.ui.designsystem.TetherTextField
@@ -145,25 +144,14 @@ private fun EditingMode(
     modifier: Modifier = Modifier,
 ) {
     val colors = TetherTheme.colors
-    val spacing = TetherTheme.spacing
-    val confirmEnabled = state.violation == null
     val focusRequester = remember { FocusRequester() }
 
-    // fieldValue is local to this composable; drift from state.draft is intentional
-    // (the field owns the cursor while the component owns the committed text).
     var fieldValue by remember {
         mutableStateOf(TextFieldValue(text = state.draft, selection = TextRange(0, state.draft.length)))
     }
 
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
-    }
-
-    val errorMessage = when {
-        state.violation == DeviceNameViolation.Empty -> "Enter a name."
-        state.violation == DeviceNameViolation.TooLong -> "Use 50 characters or fewer."
-        state.saveFailed -> "Couldn't save the name. Try again."
-        else -> null
     }
 
     Row(
@@ -185,7 +173,7 @@ private fun EditingMode(
                 onDraftChange(newValue.text)
             },
             placeholder = "Device name",
-            errorMessage = errorMessage,
+            errorMessage = state.errorMessage,
             contentDescription = "Device name field",
             imeAction = ImeAction.Done,
             onImeAction = onConfirm,
@@ -197,11 +185,11 @@ private fun EditingMode(
         Box(
             modifier = Modifier
                 .tetherMinTouchTarget()
-                .clickable(enabled = confirmEnabled, onClick = onConfirm)
+                .clickable(enabled = state.confirmEnabled, onClick = onConfirm)
                 .semantics {
                     contentDescription = "Save name"
                     role = Role.Button
-                    if (!confirmEnabled) disabled()
+                    if (!state.confirmEnabled) disabled()
                 },
             contentAlignment = Alignment.Center,
         ) {
@@ -209,9 +197,9 @@ private fun EditingMode(
                 painter = rememberVectorPainter(TablerIcons.Check),
                 contentDescription = null,
                 colorFilter = ColorFilter.tint(
-                    if (confirmEnabled) colors.accent else colors.textMuted,
+                    if (state.confirmEnabled) colors.accent else colors.textMuted,
                 ),
-                alpha = if (confirmEnabled) 1f else 0.38f,
+                alpha = if (state.confirmEnabled) 1f else 0.38f,
                 modifier = Modifier.size(IconSize),
             )
         }

@@ -5,7 +5,6 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.tubetoast.tether.config.DeviceNameViolation
 import com.tubetoast.tether.presentation.devicename.DeviceNameState
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.ui.theme.TetherTheme
@@ -25,21 +24,21 @@ object PreviewFixtures {
 
     object DeviceName {
         val display = DeviceNameState.Display("Alice's MacBook")
-        val editing = DeviceNameState.Editing(draft = "Alice's MacBook", violation = null, saveFailed = false)
+        val editing = DeviceNameState.Editing(draft = "Alice's MacBook", errorMessage = null, confirmEnabled = true)
         val editingEmptyError = DeviceNameState.Editing(
             draft = "",
-            violation = DeviceNameViolation.Empty,
-            saveFailed = false,
+            errorMessage = "Enter a name.",
+            confirmEnabled = false,
         )
         val editingTooLongError = DeviceNameState.Editing(
             draft = "A name that is too long and exceeds the fifty codepoint limit",
-            violation = DeviceNameViolation.TooLong,
-            saveFailed = false,
+            errorMessage = "Use 50 characters or fewer.",
+            confirmEnabled = false,
         )
         val editingSaveFailed = DeviceNameState.Editing(
             draft = "Alice's MacBook",
-            violation = null,
-            saveFailed = true,
+            errorMessage = "Couldn't save the name. Try again.",
+            confirmEnabled = true,
         )
     }
 }
