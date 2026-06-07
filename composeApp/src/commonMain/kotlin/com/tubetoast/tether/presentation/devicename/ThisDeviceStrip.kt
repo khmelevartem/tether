@@ -37,6 +37,7 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.tubetoast.tether.ui.designsystem.BodyText
+import com.tubetoast.tether.ui.designsystem.DismissCloseButton
 import com.tubetoast.tether.ui.designsystem.LabelText
 import com.tubetoast.tether.ui.designsystem.TetherTextField
 import com.tubetoast.tether.ui.preview.PreviewFixtures
@@ -47,7 +48,6 @@ import com.tubetoast.tether.ui.theme.tetherMinTouchTarget
 import compose.icons.TablerIcons
 import compose.icons.tablericons.Check
 import compose.icons.tablericons.Pencil
-import compose.icons.tablericons.X
 
 private val IconSize = 20.dp
 
@@ -204,23 +204,7 @@ private fun EditingMode(
             )
         }
 
-        Box(
-            modifier = Modifier
-                .tetherMinTouchTarget()
-                .clickable(onClick = onCancel)
-                .semantics {
-                    contentDescription = "Cancel rename"
-                    role = Role.Button
-                },
-            contentAlignment = Alignment.Center,
-        ) {
-            Image(
-                painter = rememberVectorPainter(TablerIcons.X),
-                contentDescription = null,
-                colorFilter = ColorFilter.tint(colors.textMuted),
-                modifier = Modifier.size(IconSize),
-            )
-        }
+        DismissCloseButton(onClick = onCancel, contentDescription = "Cancel rename")
     }
 }
 

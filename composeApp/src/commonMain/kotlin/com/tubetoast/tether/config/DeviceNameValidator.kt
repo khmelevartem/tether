@@ -1,6 +1,6 @@
 package com.tubetoast.tether.config
 
-enum class DeviceNameViolation { Empty, TooLong }
+internal enum class DeviceNameViolation { Empty, TooLong }
 
 private const val DEVICE_NAME_MAX_CODEPOINTS = 50
 

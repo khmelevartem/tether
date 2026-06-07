@@ -97,7 +97,7 @@ This feature introduces no screen, modal, or navigation step. The This-device st
 
 ## Note — post-confirm list flicker
 
-A successful rename tears down and re-establishes the local discovery session, so the device list below the strip may briefly clear and repopulate within a second or two of confirm. Treat this as the expected visual signature of a successful rename, not a fault: do not surface an error, spinner-blocking overlay, or empty-state warning for it. The strip itself stays in Display with the new name throughout.
+A successful rename causes peers in the list below to briefly disappear and reappear as the device is re-announced under its new name. Treat this as the expected visual signature of a successful rename, not a fault: do not surface an error, spinner-blocking overlay, or empty-state warning for it. The strip itself stays in Display with the new name throughout.
 
 ---
 
