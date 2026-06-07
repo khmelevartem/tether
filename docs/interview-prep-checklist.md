@@ -140,7 +140,7 @@
 - [ ] `derivedStateOf` — когда использовать вместо `remember`
 
 ### Side-effects
-- [ ] `LaunchedEffect` / `SideEffect` / `DisposableEffect` — когда что
+- [x] `LaunchedEffect` / `SideEffect` / `DisposableEffect` — когда что
 - [ ] `rememberCoroutineScope` — зачем, когда vs `LaunchedEffect`
 - [ ] `produceState` — bridge от non-Compose к State
 

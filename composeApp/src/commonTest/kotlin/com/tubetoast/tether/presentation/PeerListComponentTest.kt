@@ -1,8 +1,11 @@
 package com.tubetoast.tether.presentation
 
+import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.resume
+import com.tubetoast.tether.config.DeviceNameStore
+import com.tubetoast.tether.config.EphemeralDeviceNamePersistence
 import com.tubetoast.tether.discovery.FakeDeviceDiscovery
 import com.tubetoast.tether.peer.FakePeersRepository
 import com.tubetoast.tether.peer.Peer
@@ -11,6 +14,7 @@ import com.tubetoast.tether.preferences.FakeFileTransferPreferences
 import com.tubetoast.tether.preferences.FakePeerPreferencesStore
 import com.tubetoast.tether.presentation.banners.BannersComponent
 import com.tubetoast.tether.presentation.banners.PeerConflictRelay
+import com.tubetoast.tether.presentation.devicename.DeviceNameComponent
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.FakeFilePicker
@@ -323,6 +327,15 @@ class PeerListComponentTest {
         )
     }
 
+    private fun fakeDeviceNameComponentFactory(scope: CoroutineScope): (ComponentContext) -> DeviceNameComponent =
+        { deviceNameCtx ->
+            DeviceNameComponent(
+                componentContext = deviceNameCtx,
+                nameStore = DeviceNameStore(EphemeralDeviceNamePersistence()),
+                coroutineScope = scope,
+            )
+        }
+
     private fun buildComponent(
         initial: List<Device> = emptyList(),
         flow: MutableStateFlow<List<Device>> = MutableStateFlow(initial),
@@ -376,6 +389,7 @@ class PeerListComponentTest {
                     coroutineScope = coroutineScope,
                 )
             },
+            deviceNameComponentFactory = fakeDeviceNameComponentFactory(coroutineScope),
             coroutineScope = coroutineScope,
         )
     }
@@ -428,6 +442,7 @@ class PeerListComponentTest {
                     coroutineScope = coroutineScope,
                 )
             },
+            deviceNameComponentFactory = fakeDeviceNameComponentFactory(coroutineScope),
             coroutineScope = coroutineScope,
         )
     }
