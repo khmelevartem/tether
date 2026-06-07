@@ -19,6 +19,7 @@ import com.tubetoast.tether.transfer.PendingFilesRepository
 import com.tubetoast.tether.transfer.PendingFilesSummary
 import com.tubetoast.tether.transfer.PickKind
 import com.tubetoast.tether.transfer.fakeBatchSender
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
@@ -425,6 +426,29 @@ class PeerTransferComponentTest {
 
         assertIs<PeerTransferState.Idle>(component.state.value.transfer)
         assertNotNull(component.state.value.largeConfirm, "large-confirm must fire for onCardClick too")
+    }
+
+    @Test
+    fun `concurrent double onPick invokes picker only once while first is in flight`() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        val picker = FakeFilePicker(result = listOf(FakeFileSource("a.txt", 100L)), gate = gate)
+        val (component) = buildComponent(filePicker = picker, scope = backgroundScope)
+
+        component.onPick(PickKind.Files)
+        component.onPick(PickKind.Files)
+        runCurrent()
+
+        assertEquals(1, picker.pickFilesCallCount, "second onPick while first is in flight must be ignored")
+
+        gate.complete(Unit)
+        runCurrent()
+
+        assertIs<PeerTransferState.Sent>(component.state.value.transfer)
+
+        component.onPick(PickKind.Files)
+        runCurrent()
+
+        assertEquals(2, picker.pickFilesCallCount, "onPick must work again after flag is reset")
     }
 
     @Test
