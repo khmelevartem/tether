@@ -56,7 +56,7 @@ Blocks run under `set -euo pipefail`. Commands that exit nonzero as a *normal* r
 
 ## Run plan
 
-Execute blocks sequentially. A block failure does not prevent subsequent blocks from running. Run cleanup (`block-7-cleanup.sh`) **always**, even after earlier FAILs.
+Execute blocks sequentially and **back-to-back** — each CLI's FIFO keeper is `sleep 600`, so a CLI dies ~10 min after its block started. If wall-clock from Block 1 to the last block needing CLI A (Block 4) exceeds that, A's stdin closes mid-run and later blocks FAIL against a dead instance. Don't interleave long manual waits or per-block monitoring; run the whole sequence as one pass (e.g. a single driver script). A block failure does not prevent subsequent blocks from running. Run cleanup (`block-7-cleanup.sh`) **always**, even after earlier FAILs.
 
 All scripts live in `.claude/skills/smoke-test/` and are self-contained — run them from that directory or the repo root.
 
@@ -286,7 +286,7 @@ Don't ask the user for clarification — the skill must be "zero-question": ever
 - **Jar name may contain version** — determine dynamically via glob. Don't hardcode the filename.
 - **`dns-sd` not on macOS** — unavailable on Linux; secondary mDNS check SKIP with reason "dns-sd not available". Primary check (grep CLI log for `mDNS started`) still works.
 - **`timeout` absent on macOS** — use pattern `( cmd & PID=$!; sleep N; kill $PID )` instead of `timeout`.
-- **FIFO writer keeper died early** — readLine() returns null, CLI exits; check `ps -p $KEEPER`.
+- **FIFO writer keeper died early** — readLine() returns null, CLI exits; check `ps -p $KEEPER`. The keeper is `sleep 600`, so a CLI also self-exits ~10 min after launch; a send/discovery FAIL against a CLI that was alive earlier usually means the run dragged past that window (see Run plan — run back-to-back).
 - **Android emulator in NAT (10.0.2.x)** — cross-discovery works both ways (multicast passes). QEMU user-mode NAT does not proxy host→guest TCP payload: handshake passes, data doesn't arrive. Send block — SKIP at `10.0.2.x`, not FAIL. Health is accessible via `adb forward`. See `docs/knowledge/android-emulator-networking.md`.
 - **`ip route` unreliable on some vendors** (ColorOS, MIUI return subnet instead of src) — use `ip addr show wlan0`.
 - **Multiple adb devices** — pick the first or fail with a clarification. Don't hang the skill on a specific serial.
