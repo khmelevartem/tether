@@ -41,6 +41,8 @@ rg "<changed symbol>" docs/ README.md
 
 Flag every doc location that references the old shape and is not updated.
 
+**Enumeration drift is a delete signal, not a sync signal.** When the drifted reference is a list of code symbols mirroring a source folder (component names, file names), the finding is to remove the enumeration and link the folder — per `long-lived-artifacts.md` (code does not belong in long-lived docs) — not to add the missing entry. Syncing the list re-entrenches the anti-pattern. A single load-bearing reference to one renamed symbol is synced normally; a folder-mirroring list is removed.
+
 ### 2a. Doc-vs-issue-state drift
 
 If the diff adds or modifies references to GitHub issues by `#N` in any markdown under `docs/`, `.claude/`, or `*.md` at repo root, **verify the cited state matches reality**. A frequent failure mode: a new doc says "fix pending in #N" or "blocked on #N" when #N is already closed (often by a sibling PR landed days earlier).

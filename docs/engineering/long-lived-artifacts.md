@@ -18,6 +18,8 @@ If you find a code symbol in a long-lived artifact, check whether the surroundin
 
 This applies to interfaces the same artifact is defining right now. A Rules section that says «`X.openOutput` throws on path traversal» locks the rule to a name that is one rename away from invalidating the doc. State what the seam *guarantees* — «the storage seam rejects path traversal at the boundary» — and let the code carry the verb. Same trap as runtime claims (§Runtime claims are snapshots), applied at the moment of writing rather than after drift.
 
+An enumeration of code symbols mirroring a source folder is the same leakage at scale: link the folder and say what it holds by role; do not list its contents. Such a list desynchronises on every symbol added or removed, and the drift tempts a reader into syncing the list rather than deleting it — which re-entrenches the anti-pattern. When the list drifts, the fix is to remove it and link the folder, never to add the missing entry.
+
 ## Inline examples must be synthetic, not incident-rooted
 
 Either generalise the *shape* of the error (contrast «principle catches this, but not this other thing that looks similar») so the example is synthetic and covers the class — or leave the example out entirely.
