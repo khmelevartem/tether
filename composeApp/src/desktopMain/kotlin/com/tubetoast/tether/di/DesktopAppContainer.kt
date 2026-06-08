@@ -5,11 +5,15 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import com.tubetoast.tether.config.DefaultDeviceNamePersistence
 import com.tubetoast.tether.config.DeviceNamePersistence
+import com.tubetoast.tether.discovery.DeviceDiscovery
 import com.tubetoast.tether.discovery.DiscoveredDevicesStore
 import com.tubetoast.tether.discovery.MdnsDiscovery
+import com.tubetoast.tether.discovery.MdnsDiscoveryJmdns
+import com.tubetoast.tether.discovery.bonjour.MdnsDiscoveryBonjour
 import com.tubetoast.tether.foundation.DesktopHostOs
 import com.tubetoast.tether.foundation.currentHostOs
 import com.tubetoast.tether.identity.DataStoreFingerprintPersistence
+import com.tubetoast.tether.identity.DeviceIdentityStore
 import com.tubetoast.tether.identity.FingerprintPersistence
 import com.tubetoast.tether.preferences.DefaultFileTransferPreferences
 import com.tubetoast.tether.preferences.FileTransferPreferences
@@ -19,6 +23,7 @@ import com.tubetoast.tether.transfer.LinuxFilePicker
 import com.tubetoast.tether.transfer.MacFilePicker
 import com.tubetoast.tether.transfer.WindowHolder
 import com.tubetoast.tether.transfer.WindowsFilePicker
+import kotlinx.coroutines.Dispatchers
 import okio.Path.Companion.toPath
 import java.io.File
 
@@ -43,7 +48,7 @@ open class DesktopAppContainer(
         ?: DataStoreFingerprintPersistence(dataStore)
     override val discoveredDevicesStore: DiscoveredDevicesStore = DiscoveredDevicesStore()
     override val mdnsDiscovery: MdnsDiscovery by lazy {
-        MdnsDiscovery(discoveredDevicesStore, deviceIdentityStore)
+        MdnsDiscovery(desktopMdnsDelegate(discoveredDevicesStore, deviceIdentityStore))
     }
     override val fileTransferPreferences: FileTransferPreferences = DefaultFileTransferPreferences(
         dataStore = dataStore,
@@ -57,4 +62,18 @@ open class DesktopAppContainer(
         DesktopHostOs.Windows -> WindowsFilePicker(windowHolder)
         DesktopHostOs.Linux -> LinuxFilePicker(windowHolder)
     }
+}
+
+/**
+ * macOS → [MdnsDiscoveryBonjour] (DNS-SD IPC; JmDNS can't see external WiFi peers on macOS).
+ * Linux/Windows → [MdnsDiscoveryJmdns].
+ */
+internal fun desktopMdnsDelegate(
+    store: DiscoveredDevicesStore,
+    deviceIdentityStore: DeviceIdentityStore,
+): DeviceDiscovery = when (currentHostOs) {
+    DesktopHostOs.MacOs -> MdnsDiscoveryBonjour(store, deviceIdentityStore)
+    DesktopHostOs.Windows,
+    DesktopHostOs.Linux,
+    -> MdnsDiscoveryJmdns(store, Dispatchers.IO, deviceIdentityStore)
 }
