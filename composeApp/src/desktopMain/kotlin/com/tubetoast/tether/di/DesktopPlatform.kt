@@ -13,11 +13,7 @@ import com.tubetoast.tether.transfer.WindowsFilePicker
 import kotlinx.coroutines.Dispatchers
 import java.io.File
 
-/**
- * The single point where the desktop host OS is resolved into concrete delegates.
- * Selecting a [DesktopPlatform] is the only OS branch in the codebase; everything
- * else depends on the delegates it hands back.
- */
+/** Selecting a [DesktopPlatform] is the only OS branch in the codebase. */
 internal sealed interface DesktopPlatform {
     fun guiFilePicker(windowHolder: WindowHolder): FilePicker
 
