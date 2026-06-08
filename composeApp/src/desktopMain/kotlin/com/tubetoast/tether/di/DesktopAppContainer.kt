@@ -64,10 +64,6 @@ open class DesktopAppContainer(
     }
 }
 
-/**
- * macOS → [MdnsDiscoveryBonjour] (DNS-SD IPC; JmDNS can't see external WiFi peers on macOS).
- * Linux/Windows → [MdnsDiscoveryJmdns].
- */
 internal fun desktopMdnsDelegate(
     store: DiscoveredDevicesStore,
     deviceIdentityStore: DeviceIdentityStore,

@@ -3,7 +3,6 @@ package com.tubetoast.tether.discovery
 import com.tubetoast.tether.protocol.Device
 import kotlinx.coroutines.flow.StateFlow
 
-/** Backend chosen by the composition root; see `DesktopAppContainer.mdnsDiscovery`. */
 actual class MdnsDiscovery(
     private val delegate: DeviceDiscovery,
 ) : DeviceDiscovery {
