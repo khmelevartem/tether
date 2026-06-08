@@ -135,36 +135,43 @@ The pattern:
 
 ```kotlin
 // commonMain — pure presentation, no Compose
-class DeviceListComponent(
+class XxxComponent(
     componentContext: ComponentContext,
-    private val discovery: MdnsDiscovery,
+    private val collaborator: XxxCollaborator,
     coroutineScope: CoroutineScope = componentContext.coroutineScope(),
 ) : ComponentContext by componentContext {
 
-    private val _state = MutableValue(DeviceListState.empty())
-    val state: Value<DeviceListState> = _state
+    private val _state = MutableValue(XxxState.empty())
+    val state: Value<XxxState> = _state
 
     init {
-        coroutineScope.launch { discovery.devices.collect { _state.update { ... } } }
+        coroutineScope.launch { collaborator.observe().collect { _state.update { ... } } }
     }
 
-    fun onDeviceClicked(id: DeviceId) { /* ... */ }
+    fun onEvent(event: XxxEvent) { /* ... */ }
 }
 
-// commonMain — Compose UI, thin
+// commonMain — Compose UI, two composables (the "two-composable" rule):
+// 1) stateless, takes only primitives — convenient for previews
 @Composable
-fun DeviceList(component: DeviceListComponent) {
+fun XxxContent(state: XxxState, onEvent: (XxxEvent) -> Unit, modifier: Modifier = Modifier) {
+    // render state, forward events
+}
+
+// 2) production, takes the component — subscribes and delegates to the stateless one
+@Composable
+fun XxxScreen(component: XxxComponent, modifier: Modifier = Modifier) {
     val state by component.state.subscribeAsState()
-    // render state, forward events to component
+    XxxContent(state, component::onEvent, modifier)
 }
 
 // platform entry point (jvmMain / androidMain / iosMain / macosMain) —
-// calls the root component's screen composable (see "two-composable" rule):
+// builds the root component and calls its screen composable:
 val rootComponent = RootComponent(
     componentContext = defaultComponentContext(),
     appGraph = appGraph,
 )
-setContent { <RootScreenComposable>(rootComponent) }
+setContent { RootScreen(rootComponent) }
 ```
 
 Shape rules:

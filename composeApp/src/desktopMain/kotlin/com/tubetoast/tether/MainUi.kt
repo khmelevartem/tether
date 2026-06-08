@@ -15,6 +15,7 @@ import com.arkivanov.essenty.lifecycle.destroy
 import com.arkivanov.essenty.lifecycle.resume
 import com.tubetoast.tether.di.DefaultDesktopAppConfig
 import com.tubetoast.tether.di.DesktopAppContainer
+import com.tubetoast.tether.draganddrop.WindowDropHandler
 import com.tubetoast.tether.logging.initTetherLogging
 import com.tubetoast.tether.logging.isDebugEnabled
 import com.tubetoast.tether.presentation.RootScreen
@@ -61,7 +62,7 @@ fun main() = runBlocking {
                     component = component,
                     modifier = Modifier.dragAndDropTarget(
                         shouldStartDragAndDrop = { true },
-                        target = dropHandler.target,
+                        target = dropHandler,
                     ),
                 )
             }
