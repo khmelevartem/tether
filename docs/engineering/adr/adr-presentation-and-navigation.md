@@ -165,8 +165,7 @@ fun XxxScreen(component: XxxComponent, modifier: Modifier = Modifier) {
     XxxContent(state, component::onEvent, modifier)
 }
 
-// platform entry point (jvmMain / androidMain / iosMain / macosMain) —
-// builds the root component and calls its screen composable:
+// platform entry point — builds the root component and calls its screen composable:
 val rootComponent = RootComponent(
     componentContext = defaultComponentContext(),
     appGraph = appGraph,

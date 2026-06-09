@@ -17,11 +17,10 @@ class DefaultDesktopAppConfig(
     override val deviceKeyPair: DeviceKeyPair = DeviceKeyPair(),
     override val namePersistenceOverride: DeviceNamePersistence? = null,
     override val fingerprintPersistenceOverride: FingerprintPersistence? = null,
-) : DesktopAppConfig {
-    override val preferencesFilePath: String = resolvePreferencesFilePath()
-}
+    override val preferencesFilePath: String = resolvePreferencesFilePath(desktopPlatform),
+) : DesktopAppConfig
 
-private fun resolvePreferencesFilePath(): String {
+private fun resolvePreferencesFilePath(desktopPlatform: DesktopPlatform): String {
     val dir = desktopPlatform.preferencesDir(System.getProperty("user.home"))
     return File(dir, "preferences.preferences_pb").absolutePath
 }

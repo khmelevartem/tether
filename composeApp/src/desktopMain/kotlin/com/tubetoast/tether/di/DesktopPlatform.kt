@@ -24,7 +24,7 @@ internal sealed interface DesktopPlatform {
     object MacOs : DesktopPlatform {
         override fun guiFilePicker(windowHolder: WindowHolder): FilePicker = MacFilePicker(windowHolder)
 
-        // JmDNS can't see external WiFi peers on macOS; Bonjour talks to the system DNS-SD daemon.
+        // JmDNS can't see external Wi-Fi peers on macOS; Bonjour talks to the system DNS-SD daemon.
         override fun mdnsDelegate(store: DiscoveredDevicesStore, identity: DeviceIdentityStore): DeviceDiscovery =
             MdnsDiscoveryBonjour(store, identity)
 
@@ -57,5 +57,6 @@ internal fun desktopPlatformFrom(osName: String): DesktopPlatform = when {
     else -> DesktopPlatform.Linux
 }
 
-internal val desktopPlatform: DesktopPlatform =
+internal val desktopPlatform: DesktopPlatform by lazy {
     desktopPlatformFrom(System.getProperty("os.name").orEmpty())
+}
