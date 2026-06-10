@@ -70,7 +70,7 @@ One question to the user to check understanding of principles actually applied i
 **After the user's answer:**
 - Assess correctness: what is right, what is missing, what is imprecise or wrong. Without leniency and without aggression — like a technical interviewer giving honest feedback.
 - If the answer was based on an item from the checklist — mark it as completed (`- [ ]` → `- [x]`) directly in `docs/interview-prep-checklist.md` via Edit. If the question was your own (not from the checklist) — add it to the "Additional questions from tasks" section at the end of the checklist as `- [x] <question>` via Edit.
-- **Commit the checklist edit into the current PR branch and push, before the Step 7 merge.**
+- **Commit the checklist edit into the current PR branch and push, before the Step 8 merge.**
 
 **This is not a stop-point based on the content of the answer** — a weak answer does not block the merge. The user decides themselves whether to proceed or explore the topic further. The stop-point is only the fact that the question was asked and an answer was received.
 
@@ -153,22 +153,27 @@ Don't treat this as "a poor estimate" — scope often grows along the way due to
 
 ---
 
-## Step 7 — Merge
+## Step 7 — Known issues & next tasks (pre-merge gate)
+
+Before merging — while the PR can still absorb a fix — surface every loose end. Sources: the issue's "Consequences" / "Out of scope", TODO/FIXME in the diff, anything deferred or scoped out during the work, and any cheap fix you spotted in a file you already touched.
+
+State **each** item as: **"\<known problem / unfinished item\>. Can do now because … / Can't do now because …"** — your honest read of whether it belongs in this PR (cheap and in files already touched → lean do-now; a separate surface / new target / large change → defer). Then ask the user **"What do you disagree with?"** and **stop**.
+
+Hard stop-point: the user redirects do-now-vs-defer here, while the merge is still reversible — not after, when a cheap in-file fix can no longer ride along.
+
+- "Do now" items → implement in this PR (back through the inner loop if non-trivial), re-run the relevant review/runtime checks, then merge.
+- Confirmed defers → file via the `create-issue` skill (here, or right after merge).
+- No loose ends — say so explicitly and proceed.
+
+---
+
+## Step 8 — Merge
 
 ```bash
 gh pr merge <PR> --squash --delete-branch
 ```
 
-Use squash unless otherwise specified. After merging, verify that the PR is closed and the branch is deleted.
-
----
-
-## Step 8 — Next tasks
-
-Look in the issue for a "Consequences" section and in the PR — are there TODOs, unresolved questions, things moved out of scope.
-
-If there are explicit next steps — offer to create issues (use the `create-issue` skill).
-If there is nothing — say so explicitly.
+Use squash unless otherwise specified. After merging, confirm the PR actually merged: `gh pr merge` can print a local-sync error (e.g. "Could not read from remote", "not possible to fast-forward") even when the server-side merge succeeded — leaving the worktree switched to `main` with pre-PR file content, which looks like a failed merge or lost work. Verify via `gh pr view <PR> --json state,mergedAt` (`state == MERGED`) before treating any local CLI error as failure; then confirm the branch is deleted.
 
 ---
 
