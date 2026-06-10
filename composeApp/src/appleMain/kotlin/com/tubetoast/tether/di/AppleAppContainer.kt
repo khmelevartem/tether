@@ -76,7 +76,7 @@ open class AppleAppContainer(
     override val ownDeviceType: DeviceType = DeviceType.Ios
 
     override val transferActivityTracker: TransferActivityTracker = DefaultTransferActivityTracker()
-    override val transferActiveForBanner: StateFlow<Boolean> get() = transferActivityTracker.active
+    override val transferActiveForBanner: StateFlow<Boolean> = transferActivityTracker.active
 
     override val filePicker: FilePicker = IosFilePicker(
         viewControllerProvider = {

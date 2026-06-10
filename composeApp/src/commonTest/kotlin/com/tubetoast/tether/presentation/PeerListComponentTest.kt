@@ -386,6 +386,7 @@ class PeerListComponentTest {
                     peersRepository = FakePeersRepository(),
                     engineRegistry = fakePeerTransferEngineRegistry(coroutineScope),
                     conflictRelay = PeerConflictRelay(),
+                    transferActive = MutableStateFlow(false),
                     coroutineScope = coroutineScope,
                 )
             },
@@ -439,6 +440,7 @@ class PeerListComponentTest {
                     peersRepository = FakePeersRepository(),
                     engineRegistry = fakePeerTransferEngineRegistry(coroutineScope),
                     conflictRelay = PeerConflictRelay(),
+                    transferActive = MutableStateFlow(false),
                     coroutineScope = coroutineScope,
                 )
             },
