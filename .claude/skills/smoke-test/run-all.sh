@@ -4,8 +4,8 @@
 # log to stdout and /tmp/smoke-results-<id>.log; report synthesis stays the caller's job.
 # Cleanup (block-7) runs unconditionally via the EXIT/INT/TERM trap. A watchdog aborts the run
 # after SMOKE_DEADLINE seconds (default 540, under the keeper window). It bounds the run at block
-# boundaries — the TERM is delivered between blocks / during the interruptible sleep loops; it
-# cannot interrupt a wedged foreground gradle/xcodebuild (those rely on their own tooling timeouts).
+# boundaries — the TERM is acted on only between blocks, when the current block's pipeline returns;
+# it cannot interrupt a wedged foreground gradle/xcodebuild (those rely on their own tooling timeouts).
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 . ./smoke-env.sh
