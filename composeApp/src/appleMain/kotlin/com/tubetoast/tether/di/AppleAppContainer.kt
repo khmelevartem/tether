@@ -10,20 +10,24 @@ import com.tubetoast.tether.discovery.MdnsDiscovery
 import com.tubetoast.tether.identity.DataStoreFingerprintPersistence
 import com.tubetoast.tether.identity.FingerprintPersistence
 import com.tubetoast.tether.network.AppleUploadStorageBackend
+import com.tubetoast.tether.network.DefaultTransferActivityTracker
 import com.tubetoast.tether.network.FileServer
 import com.tubetoast.tether.network.FileUploadStorage
+import com.tubetoast.tether.network.TransferActivityTracker
 import com.tubetoast.tether.network.UploadStorage
 import com.tubetoast.tether.preferences.DefaultFileTransferPreferences
 import com.tubetoast.tether.preferences.FileTransferPreferences
 import com.tubetoast.tether.protocol.DeviceType
 import com.tubetoast.tether.transfer.FilePicker
-import com.tubetoast.tether.transfer.NoOpFilePicker
+import com.tubetoast.tether.transfer.IosFilePicker
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.ObjCObjectVar
 import kotlinx.cinterop.alloc
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.value
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import okio.Path.Companion.toPath
 import platform.Foundation.NSApplicationSupportDirectory
 import platform.Foundation.NSDocumentDirectory
@@ -31,6 +35,9 @@ import platform.Foundation.NSError
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSUserDomainMask
+import platform.UIKit.UIApplication
+import platform.UIKit.UIWindow
+import platform.UIKit.UIWindowScene
 
 open class AppleAppContainer(
     private val config: AppleAppConfig,
@@ -69,8 +76,24 @@ open class AppleAppContainer(
     )
     override val ownDeviceType: DeviceType = DeviceType.Ios
 
-    // TODO(#194): replace with real iOS file picker
-    override val filePicker: FilePicker = NoOpFilePicker
+    private val _transferActiveForBanner = MutableStateFlow(false)
+    override val transferActiveForBanner: StateFlow<Boolean> = _transferActiveForBanner
+
+    override val transferActivityTracker: TransferActivityTracker = DefaultTransferActivityTracker(
+        onFirstEnter = { _transferActiveForBanner.value = true },
+        onLastExit = { _transferActiveForBanner.value = false },
+    )
+
+    override val filePicker: FilePicker = IosFilePicker(
+        viewControllerProvider = {
+            UIApplication.sharedApplication.connectedScenes
+                .filterIsInstance<UIWindowScene>()
+                .flatMap { it.windows }
+                .filterIsInstance<UIWindow>()
+                .firstOrNull { it.isKeyWindow() }
+                ?.rootViewController
+        },
+    )
 }
 
 @OptIn(ExperimentalForeignApi::class, kotlinx.cinterop.BetaInteropApi::class)

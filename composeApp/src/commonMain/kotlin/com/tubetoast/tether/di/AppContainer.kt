@@ -39,6 +39,8 @@ import com.tubetoast.tether.transfer.ReconnectionTimeout
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
 abstract class AppContainer {
     protected abstract val dataStore: DataStore<Preferences>
@@ -69,6 +71,8 @@ abstract class AppContainer {
     open val peerConflictRelay: PeerConflictRelay by lazy { PeerConflictRelay() }
 
     abstract val filePicker: FilePicker
+
+    open val transferActiveForBanner: StateFlow<Boolean> = MutableStateFlow(false)
 
     open val connectionMonitor: ConnectionMonitor = NoOpConnectionMonitor
 
@@ -131,6 +135,7 @@ abstract class AppContainer {
             filePicker = filePicker,
             fileTransferPreferences = fileTransferPreferences,
             nameStore = nameStore,
+            transferActiveForBanner = transferActiveForBanner,
         )
     }
 }

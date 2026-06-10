@@ -29,6 +29,7 @@ class BannersComponent(
     private val peersRepository: PeersRepository,
     private val engineRegistry: PeerTransferEngineRegistry,
     private val conflictRelay: PeerConflictRelay,
+    transferActive: StateFlow<Boolean> = MutableStateFlow(false),
     coroutineScope: CoroutineScope = componentContext.coroutineScope(),
 ) : ComponentContext by componentContext {
     private val scope = coroutineScope
@@ -36,9 +37,7 @@ class BannersComponent(
     val dropFeedback: StateFlow<Boolean> get() = _dropFeedback
     private val _dropFeedback = MutableStateFlow(false)
 
-    // TODO(#194): wire visible = true while any transfer is active on iOS (UIApplication foreground state observer)
-    val showForegroundConstraint: StateFlow<Boolean> get() = _showForegroundConstraint
-    private val _showForegroundConstraint = MutableStateFlow(false)
+    val showForegroundConstraint: StateFlow<Boolean> = transferActive
 
     private val selectedConflictPeer = MutableStateFlow<PeerIdentity?>(null)
 

@@ -14,6 +14,8 @@ import com.tubetoast.tether.transfer.PeerTransferEngineRegistry
 import com.tubetoast.tether.transfer.PendingFilesRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
 class RootComponentFactory(
     private val peersRepository: PeersRepository,
@@ -23,6 +25,7 @@ class RootComponentFactory(
     private val filePicker: FilePicker,
     private val fileTransferPreferences: FileTransferPreferences,
     private val nameStore: DeviceNameStore,
+    private val transferActiveForBanner: StateFlow<Boolean> = MutableStateFlow(false),
 ) {
     fun create(componentContext: ComponentContext): RootComponent =
         RootComponent(
@@ -55,6 +58,7 @@ class RootComponentFactory(
                             peersRepository = peersRepository,
                             engineRegistry = peerTransferEngineRegistry,
                             conflictRelay = peerConflictRelay,
+                            transferActive = transferActiveForBanner,
                         )
                     },
                     deviceNameComponentFactory = { deviceNameCtx ->
