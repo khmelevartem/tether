@@ -16,6 +16,7 @@ import platform.posix.fopen
 import platform.posix.fwrite
 import kotlin.test.AfterTest
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -88,5 +89,72 @@ class IosFilePickerWalkTest {
 
         val paths = sources.map { it.relativePath }.toSet()
         assertFalse(paths.any { it.contains("external.txt") }, "symlink target must not be traversed: $paths")
+    }
+
+    @Test
+    fun `walkFolder excludes symlink to file`() = runTest {
+        val root = tempDirs.newDir()
+        val folderPath = "$root/WithFileSymlink"
+        val externalDir = tempDirs.newDir()
+        createDir(folderPath)
+        createFile("$externalDir/target.txt")
+        createFile("$folderPath/real.txt")
+        // Symlink inside folder pointing to an external file — must be excluded.
+        createSymlink("$folderPath/link-to-file.txt", "$externalDir/target.txt")
+
+        val folderUrl = NSURL.fileURLWithPath(folderPath)
+        val picker = IosFilePicker(viewControllerProvider = { null })
+        val sources = withContext(Dispatchers.IO) { picker.walkFolderInternal(folderUrl) }
+
+        val paths = sources.map { it.relativePath }.toSet()
+        assertTrue(paths.contains("WithFileSymlink/real.txt"), "real file must be included: $paths")
+        assertFalse(paths.any { it.contains("link-to-file.txt") }, "symlink to file must be excluded: $paths")
+    }
+
+    @Test
+    fun `walkFolder returns correct sizeBytes for each file`() = runTest {
+        val root = tempDirs.newDir()
+        val folderPath = "$root/SizedFiles"
+        createDir(folderPath)
+        val smallBytes = ByteArray(42) { it.toByte() }
+        val largeBytes = ByteArray(1024) { (it % 127).toByte() }
+        createFile("$folderPath/small.bin", smallBytes)
+        createFile("$folderPath/large.bin", largeBytes)
+
+        val folderUrl = NSURL.fileURLWithPath(folderPath)
+        val picker = IosFilePicker(viewControllerProvider = { null })
+        val sources = withContext(Dispatchers.IO) { picker.walkFolderInternal(folderUrl) }
+
+        val sizeMap = sources.associate { it.relativePath to it.sizeBytes }
+        assertEquals(42L, sizeMap["SizedFiles/small.bin"], "small.bin size must match: $sizeMap")
+        assertEquals(1024L, sizeMap["SizedFiles/large.bin"], "large.bin size must match: $sizeMap")
+    }
+
+    @Test
+    fun `walkFolder on empty folder returns emptyList`() = runTest {
+        val root = tempDirs.newDir()
+        val folderPath = "$root/Empty"
+        createDir(folderPath)
+
+        val folderUrl = NSURL.fileURLWithPath(folderPath)
+        val picker = IosFilePicker(viewControllerProvider = { null })
+        val sources = withContext(Dispatchers.IO) { picker.walkFolderInternal(folderUrl) }
+
+        assertTrue(sources.isEmpty(), "empty folder must yield empty list: $sources")
+    }
+
+    @Test
+    fun `walkFolder on folder with only hidden files returns emptyList`() = runTest {
+        val root = tempDirs.newDir()
+        val folderPath = "$root/OnlyHidden"
+        createDir(folderPath)
+        createFile("$folderPath/.hidden")
+        createFile("$folderPath/.DS_Store")
+
+        val folderUrl = NSURL.fileURLWithPath(folderPath)
+        val picker = IosFilePicker(viewControllerProvider = { null })
+        val sources = withContext(Dispatchers.IO) { picker.walkFolderInternal(folderUrl) }
+
+        assertTrue(sources.isEmpty(), "folder with only hidden files must yield empty list: $sources")
     }
 }

@@ -16,6 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
 import platform.Foundation.NSFileManager
+import platform.Foundation.NSLock
 import platform.Foundation.NSNumber
 import platform.Foundation.NSTemporaryDirectory
 import platform.Foundation.NSURL
@@ -51,26 +52,23 @@ internal class IosFilePicker(
 ) : FilePicker {
     // Strong references: UIDocumentPickerViewController and PHPickerViewController hold
     // their delegates weakly; these fields keep the delegates alive until the pick completes.
-    private var activeDocDelegate: DocumentPickerDelegate? = null
+    private var activeDocDelegate: NSObject? = null
     private var activePhotoDelegate: PhotoPickerDelegate? = null
 
     override suspend fun pickFiles(): List<FileSource> =
-        presentDocumentPicker(contentTypes = listOf(UTTypeItem), resolveAsFolder = false)
+        presentFilePicker(contentTypes = listOf(UTTypeItem))
 
     override suspend fun pickFolder(): List<FileSource> {
-        val folderUrls = presentDocumentPicker(contentTypes = listOf(UTTypeFolder), resolveAsFolder = true)
+        val folderUrls = presentFolderPicker()
         if (folderUrls.isEmpty()) return emptyList()
         return withContext(Dispatchers.IO) {
-            folderUrls.flatMap { walkFolderInternal((it as RawUrlHolder).url) }
+            folderUrls.flatMap { walkFolderInternal(it) }
         }
     }
 
     override suspend fun pickPhotos(): List<FileSource> = presentPhotoPicker()
 
-    private suspend fun presentDocumentPicker(
-        contentTypes: List<UTType>,
-        resolveAsFolder: Boolean,
-    ): List<FileSource> {
+    private suspend fun presentFilePicker(contentTypes: List<UTType>): List<FileSource> {
         val deferred = CompletableDeferred<List<FileSource>>()
         withContext(Dispatchers.Main) {
             val vc = resolveRootViewController() ?: run {
@@ -82,14 +80,43 @@ internal class IosFilePicker(
                 asCopy = false,
             )
             picker.allowsMultipleSelection = true
-            val delegate = DocumentPickerDelegate(deferred, resolveAsFolder)
+            val delegate = FilePickerDelegate(deferred)
             activeDocDelegate = delegate
             picker.delegate = delegate
             vc.presentViewController(picker, animated = true, completion = null)
         }
-        return deferred.await().also { sources ->
+        return try {
+            deferred.await()
+        } finally {
             activeDocDelegate = null
+        }.also { sources ->
             log.info { "document picker resolved: ${sources.size} item(s)" }
+        }
+    }
+
+    private suspend fun presentFolderPicker(): List<NSURL> {
+        val deferred = CompletableDeferred<List<NSURL>>()
+        withContext(Dispatchers.Main) {
+            val vc = resolveRootViewController() ?: run {
+                deferred.complete(emptyList())
+                return@withContext
+            }
+            val picker = UIDocumentPickerViewController(
+                forOpeningContentTypes = listOf(UTTypeFolder),
+                asCopy = false,
+            )
+            picker.allowsMultipleSelection = true
+            val delegate = FolderPickerDelegate(deferred)
+            activeDocDelegate = delegate
+            picker.delegate = delegate
+            vc.presentViewController(picker, animated = true, completion = null)
+        }
+        return try {
+            deferred.await()
+        } finally {
+            activeDocDelegate = null
+        }.also { urls ->
+            log.info { "folder picker resolved: ${urls.size} folder(s)" }
         }
     }
 
@@ -111,8 +138,11 @@ internal class IosFilePicker(
             picker.delegate = delegate
             vc.presentViewController(picker, animated = true, completion = null)
         }
-        return deferred.await().also { sources ->
+        return try {
+            deferred.await()
+        } finally {
             activePhotoDelegate = null
+        }.also { sources ->
             log.info { "photo picker resolved: ${sources.size} item(s)" }
         }
     }
@@ -123,13 +153,21 @@ internal class IosFilePicker(
         return vc
     }
 
+    @OptIn(ExperimentalAtomicApi::class)
     internal fun walkFolderInternal(folderUrl: NSURL): List<FileSource> {
+        // Start the security scope on the picker-vended folder URL before enumeration.
+        // On a real device the file-provider grants access while the scope is held; closing
+        // it early (or never starting it) causes enumeratorAtURL to return nothing silently.
+        folderUrl.startAccessingSecurityScopedResource()
         val folderName = folderUrl.lastPathComponent ?: "folder"
         // realpath resolves symlinks so itemUrl.path and folderPath share the same root on
         // macOS/iOS simulator, where NSTemporaryDirectory() may return /var while the
         // enumerator resolves item paths via /private/var.
-        val resolvedFolderPath =
-            realpathOf(folderUrl.path ?: return emptyList()) ?: (folderUrl.path ?: return emptyList())
+        val rawPath = folderUrl.path ?: run {
+            folderUrl.stopAccessingSecurityScopedResource()
+            return emptyList()
+        }
+        val resolvedFolderPath = realpathOf(rawPath) ?: rawPath
         val resolvedFolderUrl = NSURL.fileURLWithPath(resolvedFolderPath)
         val fm = NSFileManager.defaultManager
         val keys = listOf(NSURLIsDirectoryKey, NSURLIsSymbolicLinkKey, NSURLFileSizeKey)
@@ -141,9 +179,12 @@ internal class IosFilePicker(
                 log.warn { "folder walk error at ${url?.path}: ${error?.localizedDescription}" }
                 true
             },
-        ) ?: return emptyList()
+        ) ?: run {
+            folderUrl.stopAccessingSecurityScopedResource()
+            return emptyList()
+        }
 
-        val result = mutableListOf<FileSource>()
+        val result = mutableListOf<IosFileSource>()
         while (true) {
             val itemUrl = enumerator.nextObject() as? NSURL ?: break
             val resourceValues = memScoped {
@@ -166,47 +207,66 @@ internal class IosFilePicker(
             val folderPath = resolvedFolderUrl.path ?: continue
             val relativeSuffix = itemPath.removePrefix(folderPath).trimStart('/')
             val relativePath = "$folderName/$relativeSuffix"
-            val source = securityScopedFileSource(
+            // Child items are NOT independently security-scoped — the folder scope covers them.
+            // securityScoped=false prevents double start/stop on individual child URLs.
+            val source = IosFileSource(
                 url = itemUrl,
                 relativePath = relativePath,
                 sizeBytes = (resourceValues[NSURLFileSizeKey] as? NSNumber)?.longLongValue,
+                securityScoped = false,
+                onClose = null,
             )
             if (!HiddenFileFilter.isVisible(source)) continue
             result += source
         }
-        return result
+
+        if (result.isEmpty()) {
+            folderUrl.stopAccessingSecurityScopedResource()
+            return emptyList()
+        }
+
+        // Ref-count the folder scope: release exactly once when the last child is closed.
+        val remaining = AtomicInt(result.size)
+        return result.map { child ->
+            FolderChildFileSource(child, onLastClose = {
+                if (remaining.addAndFetch(-1) == 0) {
+                    folderUrl.stopAccessingSecurityScopedResource()
+                }
+            })
+        }
     }
 }
 
-private class RawUrlHolder(
-    val url: NSURL,
-) : FileSource {
-    override val name: String = url.lastPathComponent ?: ""
-    override val relativePath: String = name
-    override val sizeBytes: Long? = null
+/**
+ * Wraps a child [IosFileSource] from a folder walk. Delegates all reads to the wrapped source
+ * and fires [onLastClose] exactly once on [close], allowing a ref-count caller to track
+ * when all sibling children have been closed.
+ */
+private class FolderChildFileSource(
+    private val delegate: IosFileSource,
+    private val onLastClose: () -> Unit,
+) : FileSource by delegate {
+    private var closed = false
 
-    override suspend fun openReadChannel() = throw UnsupportedOperationException("RawUrlHolder is not readable")
-
-    override fun close() = Unit
+    override fun close() {
+        if (closed) return
+        closed = true
+        delegate.close()
+        onLastClose()
+    }
 }
 
-private class DocumentPickerDelegate(
+private class FilePickerDelegate(
     private val deferred: CompletableDeferred<List<FileSource>>,
-    private val returnRawUrls: Boolean,
 ) : NSObject(),
     UIDocumentPickerDelegateProtocol {
     override fun documentPicker(controller: UIDocumentPickerViewController, didPickDocumentsAtURLs: List<*>) {
-        val urls = didPickDocumentsAtURLs.filterIsInstance<NSURL>()
-        val sources: List<FileSource> = if (returnRawUrls) {
-            urls.map { RawUrlHolder(it) }
-        } else {
-            urls.map { url ->
-                securityScopedFileSource(
-                    url = url,
-                    relativePath = url.lastPathComponent ?: url.absoluteString ?: "",
-                    sizeBytes = fileSizeOf(url),
-                )
-            }
+        val sources = didPickDocumentsAtURLs.filterIsInstance<NSURL>().map { url ->
+            securityScopedFileSource(
+                url = url,
+                relativePath = url.lastPathComponent ?: url.absoluteString ?: "",
+                sizeBytes = fileSizeOf(url),
+            )
         }
         deferred.complete(sources)
     }
@@ -219,6 +279,19 @@ private class DocumentPickerDelegate(
         val errorPtr = alloc<ObjCObjectVar<platform.Foundation.NSError?>>()
         val values = url.resourceValuesForKeys(listOf(NSURLFileSizeKey), errorPtr.ptr)
         (values?.get(NSURLFileSizeKey) as? NSNumber)?.longLongValue
+    }
+}
+
+private class FolderPickerDelegate(
+    private val deferred: CompletableDeferred<List<NSURL>>,
+) : NSObject(),
+    UIDocumentPickerDelegateProtocol {
+    override fun documentPicker(controller: UIDocumentPickerViewController, didPickDocumentsAtURLs: List<*>) {
+        deferred.complete(didPickDocumentsAtURLs.filterIsInstance<NSURL>())
+    }
+
+    override fun documentPickerWasCancelled(controller: UIDocumentPickerViewController) {
+        deferred.complete(emptyList())
     }
 }
 
@@ -238,15 +311,13 @@ private class PhotoPickerDelegate(
     }
 
     private fun loadPhotoResults(results: List<PHPickerResult>) {
-        val collected = ArrayDeque<FileSource>()
+        val lock = NSLock()
+        val collected = mutableListOf<FileSource>()
         val remaining = AtomicInt(results.size)
 
         for (result in results) {
             val provider = result.itemProvider
-            val typeId = if (provider.hasItemConformingToTypeIdentifier(
-                    "public.movie",
-                )
-            ) {
+            val typeId = if (provider.hasItemConformingToTypeIdentifier("public.movie")) {
                 "public.movie"
             } else {
                 "public.image"
@@ -262,8 +333,16 @@ private class PhotoPickerDelegate(
                     val ext = url.pathExtension?.let { ".$it" } ?: ""
                     val destPath = "${NSTemporaryDirectory()}tether-photo-${NSUUID().UUIDString}$ext"
                     val destUrl = NSURL.fileURLWithPath(destPath)
-                    val copied = NSFileManager.defaultManager.copyItemAtURL(url, toURL = destUrl, error = null)
-                    if (copied) {
+                    val copyError = memScoped {
+                        val errorPtr = alloc<ObjCObjectVar<platform.Foundation.NSError?>>()
+                        val copied = NSFileManager.defaultManager.copyItemAtURL(
+                            url,
+                            toURL = destUrl,
+                            error = errorPtr.ptr,
+                        )
+                        if (copied) null else errorPtr.value
+                    }
+                    if (copyError == null) {
                         val sizeBytes = memScoped {
                             val errorPtr = alloc<ObjCObjectVar<platform.Foundation.NSError?>>()
                             val values = destUrl.resourceValuesForKeys(listOf(NSURLFileSizeKey), errorPtr.ptr)
@@ -275,11 +354,15 @@ private class PhotoPickerDelegate(
                             sizeBytes = sizeBytes,
                         )
                     } else {
-                        log.warn { "failed to copy temp photo for $displayName" }
+                        log.warn { "failed to copy temp photo for $displayName: ${copyError.localizedDescription}" }
                     }
                 }
-
-                if (source != null) collected.addLast(source)
+                lock.lock()
+                try {
+                    if (source != null) collected.add(source)
+                } finally {
+                    lock.unlock()
+                }
                 if (remaining.addAndFetch(-1) == 0) {
                     deferred.complete(collected.toList())
                 }

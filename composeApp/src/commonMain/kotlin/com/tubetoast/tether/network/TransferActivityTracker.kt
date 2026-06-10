@@ -1,9 +1,15 @@
 package com.tubetoast.tether.network
 
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 interface TransferActivityTracker {
+    val active: StateFlow<Boolean>
+
     suspend fun <T> withActiveTransfer(block: suspend () -> T): T
 
     fun releaseAll()
@@ -30,6 +36,9 @@ class DefaultTransferActivityTracker(
 
     private val state = AtomicReference(State(0, false))
 
+    private val _active = MutableStateFlow(false)
+    override val active: StateFlow<Boolean> = _active.asStateFlow()
+
     override suspend fun <T> withActiveTransfer(block: suspend () -> T): T {
         enter()
         try {
@@ -43,7 +52,10 @@ class DefaultTransferActivityTracker(
         while (true) {
             val old = state.load()
             if (state.compareAndSet(old, State(0, false))) {
-                if (old.held) onLastExit()
+                if (old.held) {
+                    _active.update { false }
+                    onLastExit()
+                }
                 return
             }
         }
@@ -55,7 +67,10 @@ class DefaultTransferActivityTracker(
             val acquireNow = old.count == 0 && !old.held
             val new = State(old.count + 1, if (acquireNow) true else old.held)
             if (state.compareAndSet(old, new)) {
-                if (acquireNow) onFirstEnter()
+                if (acquireNow) {
+                    _active.update { true }
+                    onFirstEnter()
+                }
                 return
             }
         }
@@ -68,7 +83,10 @@ class DefaultTransferActivityTracker(
             val releaseNow = newCount == 0 && old.held
             val new = State(newCount, if (releaseNow) false else old.held)
             if (state.compareAndSet(old, new)) {
-                if (releaseNow) onLastExit()
+                if (releaseNow) {
+                    _active.update { false }
+                    onLastExit()
+                }
                 return
             }
         }

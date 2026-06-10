@@ -116,3 +116,32 @@ CFRelease(dict)
 **Detectability:** unit tests using `simctl spawn` (no app bundle) hit `errSecNotAvailable` regardless of dict backing, so they can't catch this regression. The bug surfaces only in a real signed app bundle. Smoke on a launched iOS simulator app is the only gate; treat it as the load-bearing test for `SecItem*` paths.
 
 **Reference:** `Keychain.apple.kt` — `buildQuery`, `QueryBuilder`.
+
+---
+
+## `/var` vs `/private/var` path mismatch (NSTemporaryDirectory + folder enumeration)
+
+**Symptom:** relative paths computed by stripping a folder's own path from enumerated child paths produce wrong results or empty strings. Paths look correct in logs but prefix-stripping silently fails.
+
+**Root cause:** `NSTemporaryDirectory()` and `UIDocumentPickerViewController` vend folder URLs whose `.path` resolves through the `/var` symlink (e.g. `/var/folders/…`). `NSFileManager.enumeratorAtURL` returns child URLs whose `.path` resolves through `/private/var`. The two paths share no common string prefix, so a naive `removePrefix(folderPath)` on a child path produces the full path unchanged instead of a relative suffix.
+
+**Fix:** call `realpath()` on the folder's `.path` before creating the enumeration root URL, and use the realpath-derived URL as the strip prefix. `realpath()` resolves the symlink on both sides to `/private/var/…`, making the prefix strip work correctly.
+
+```kotlin
+val resolvedFolderPath = realpathOf(folderUrl.path ?: return emptyList())
+    ?: folderUrl.path ?: return emptyList()
+val resolvedFolderUrl = NSURL.fileURLWithPath(resolvedFolderPath)
+// enumerate against resolvedFolderUrl; strip resolvedFolderUrl.path from child paths
+```
+
+**Scope:** simulator reproduces this (in-sandbox paths go through `/var`). Real device also affected for picker-vended folder URLs.
+
+---
+
+## Security-scoped resource access for picker-vended folder URLs
+
+**Symptom:** `NSFileManager.enumeratorAtURL` on a folder URL returned by `UIDocumentPickerViewController` returns nothing on a real device even though the folder is non-empty. Simulator and in-sandbox paths work because they don't require a scope grant.
+
+**Root cause:** the system file provider grants access to the folder only while a security scope is held via `startAccessingSecurityScopedResource()`. Once the picker dismisses, access is revoked unless the scope is explicitly started. Failing to call `start` before enumerating yields an empty result with no error.
+
+**Fix:** call `startAccessingSecurityScopedResource()` on the **original picker-vended folder URL** (not the realpath-derived one) before enumeration, and balance it with a matching `stopAccessingSecurityScopedResource()` call after all child sources derived from the enumeration are closed. Child item URLs produced by the enumerator are covered by the folder's scope — they must NOT each call start/stop independently.

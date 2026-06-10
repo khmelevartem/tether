@@ -26,7 +26,6 @@ import kotlinx.cinterop.alloc
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.value
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import okio.Path.Companion.toPath
 import platform.Foundation.NSApplicationSupportDirectory
@@ -76,22 +75,17 @@ open class AppleAppContainer(
     )
     override val ownDeviceType: DeviceType = DeviceType.Ios
 
-    private val _transferActiveForBanner = MutableStateFlow(false)
-    override val transferActiveForBanner: StateFlow<Boolean> = _transferActiveForBanner
-
-    override val transferActivityTracker: TransferActivityTracker = DefaultTransferActivityTracker(
-        onFirstEnter = { _transferActiveForBanner.value = true },
-        onLastExit = { _transferActiveForBanner.value = false },
-    )
+    override val transferActivityTracker: TransferActivityTracker = DefaultTransferActivityTracker()
+    override val transferActiveForBanner: StateFlow<Boolean> get() = transferActivityTracker.active
 
     override val filePicker: FilePicker = IosFilePicker(
         viewControllerProvider = {
             UIApplication.sharedApplication.connectedScenes
                 .filterIsInstance<UIWindowScene>()
-                .flatMap { it.windows }
-                .filterIsInstance<UIWindow>()
-                .firstOrNull { it.isKeyWindow() }
-                ?.rootViewController
+                .firstNotNullOfOrNull { scene ->
+                    scene.keyWindow
+                        ?: scene.windows.filterIsInstance<UIWindow>().firstOrNull { it.isKeyWindow() }
+                }?.rootViewController
         },
     )
 }

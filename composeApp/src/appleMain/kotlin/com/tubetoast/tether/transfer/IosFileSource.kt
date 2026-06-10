@@ -14,7 +14,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -47,21 +46,20 @@ internal class IosFileSource(
     private val onClose: (() -> Unit)? = null,
 ) : FileSource {
     override val name: String = relativePath.substringAfterLast('/')
+    private var accessStarted = false
 
     override suspend fun openReadChannel(): ByteReadChannel {
         if (securityScoped) {
             url.startAccessingSecurityScopedResource()
+            accessStarted = true
         }
         return try {
             buildReadChannel()
         } catch (e: CancellationException) {
-            if (securityScoped) url.stopAccessingSecurityScopedResource()
             throw e
         } catch (e: UnreadableSourceException) {
-            if (securityScoped) url.stopAccessingSecurityScopedResource()
             throw e
         } catch (e: Exception) {
-            if (securityScoped) url.stopAccessingSecurityScopedResource()
             throw UnreadableSourceException(name, e)
         }
     }
@@ -73,7 +71,7 @@ internal class IosFileSource(
             fopen(path, "rb") ?: throw UnreadableSourceException(name, IllegalStateException("fopen failed for $path"))
         }
         val channel = ByteChannel(autoFlush = true)
-        val readerScope = CoroutineScope(currentCoroutineContext() + Job() + Dispatchers.IO)
+        val readerScope = CoroutineScope(currentCoroutineContext() + Dispatchers.IO)
         readerScope.launch {
             try {
                 memScoped {
@@ -102,8 +100,9 @@ internal class IosFileSource(
     }
 
     override fun close() {
-        if (securityScoped) {
+        if (accessStarted) {
             url.stopAccessingSecurityScopedResource()
+            accessStarted = false
         }
         try {
             onClose?.invoke()
