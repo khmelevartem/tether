@@ -45,7 +45,7 @@ Blocks run under `set -euo pipefail`. Commands that exit nonzero as a *normal* r
 
 ## Run plan
 
-**Primary invocation — `./run-all.sh`.** It drives every block back-to-back in one pass, tees a greppable consolidated log (`===== BLOCK<n> =====` headers) to stdout and `/tmp/smoke-results-<id>.log`, guards the iOS block when Xcode/simulator is absent, and runs cleanup via an `EXIT` trap. Launch it as **one** task and read the result log to synthesise the report — do not invoke blocks one-by-one with waits in between: each CLI's FIFO keeper is `sleep 600`, so a CLI dies ~10 min after its block started, and a spread-out run kills CLI A mid-flight (later blocks then FAIL against a dead instance).
+**Primary invocation — `./run-all.sh`.** It drives every block back-to-back in one pass, tees a greppable consolidated log (`===== BLOCK<n> =====` headers) to stdout and `/tmp/smoke-results-<id>.log`, guards the iOS block when Xcode/simulator is absent, and runs cleanup via an `EXIT` trap. Launch it as **one** task and read the result log to synthesise the report — do not invoke blocks one-by-one with waits in between: each CLI's FIFO keeper is `sleep 600`, so a CLI dies ~10 min after its block started, and a spread-out run kills CLI A mid-flight (later blocks then FAIL against a dead instance). A watchdog aborts the run (and still cleans up) after `SMOKE_DEADLINE` seconds — default 540, override via the env var for a slower machine.
 
 The individual `block-*.sh` scripts below remain runnable on their own for targeted re-runs and debugging. A block failure does not prevent subsequent blocks from running. Cleanup (`block-7-cleanup.sh`) runs **always** — `run-all.sh` triggers it on `EXIT`; if you run blocks by hand, invoke it yourself even after earlier FAILs.
 
