@@ -17,19 +17,10 @@ class DefaultDesktopAppConfig(
     override val deviceKeyPair: DeviceKeyPair = DeviceKeyPair(),
     override val namePersistenceOverride: DeviceNamePersistence? = null,
     override val fingerprintPersistenceOverride: FingerprintPersistence? = null,
-) : DesktopAppConfig {
-    override val preferencesFilePath: String = resolvePreferencesFilePath()
-}
+    override val preferencesFilePath: String = resolvePreferencesFilePath(desktopPlatform),
+) : DesktopAppConfig
 
-private fun resolvePreferencesFilePath(): String {
-    val home = System.getProperty("user.home")
-    val os = System.getProperty("os.name", "").lowercase()
-    val dir = when {
-        os.contains("win") -> {
-            val appData = System.getenv("APPDATA") ?: "$home\\AppData\\Roaming"
-            File(appData, "Tether")
-        }
-        else -> File(home, ".config/tether")
-    }
+private fun resolvePreferencesFilePath(desktopPlatform: DesktopPlatform): String {
+    val dir = desktopPlatform.preferencesDir(System.getProperty("user.home"))
     return File(dir, "preferences.preferences_pb").absolutePath
 }

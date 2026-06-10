@@ -113,10 +113,10 @@ class RootComponentTest {
 
         assertNull(repo.pending.value?.summary)
 
-        val summary = PendingFilesSummary(fileCount = 2, totalBytes = 1024L)
-        repo.setPending(summary, emptyList())
+        val sources = listOf(FakeFileSource("a.txt", 512L), FakeFileSource("b.txt", 512L))
+        repo.setPending(sources)
 
-        assertEquals(summary, repo.pending.value?.summary)
+        assertEquals(PendingFilesSummary.from(sources), repo.pending.value?.summary)
         assertNotEquals(null, repo.pending.value?.summary)
 
         repo.clear()
@@ -139,7 +139,7 @@ class RootComponentTest {
         assertNotNull(peerComponent)
 
         val sources = listOf(FakeFileSource("file.txt", 100L))
-        repo.setPending(PendingFilesSummary(1, 100L), sources)
+        repo.setPending(sources)
         peerComponent.onCardClick()
         runCurrent()
 
@@ -201,6 +201,87 @@ class RootComponentTest {
     }
 
     @Test
+    fun `onFilesDropped with empty list does not call setPending`() = runTest {
+        val repo = PendingFilesRepository()
+        val component = buildComponent(pendingFilesRepository = repo, coroutineScope = backgroundScope)
+
+        component.onFilesDropped(emptyList())
+
+        assertNull(repo.pending.value)
+    }
+
+    @Test
+    fun `onFilesDropped with non-empty list calls setPending with correct summary`() = runTest {
+        val repo = PendingFilesRepository()
+        val component = buildComponent(pendingFilesRepository = repo, coroutineScope = backgroundScope)
+        val sources = listOf(FakeFileSource("a.txt", 100L), FakeFileSource("b.txt", 200L))
+
+        component.onFilesDropped(sources)
+
+        val pending = repo.pending.value
+        assertNotNull(pending)
+        assertEquals(2, pending.summary.fileCount)
+        assertEquals(300L, pending.summary.totalBytes)
+    }
+
+    @Test
+    fun `onDragEntered sets dragActive true`() = runTest {
+        val component = buildComponent(coroutineScope = backgroundScope)
+
+        component.onDragEntered()
+
+        assertTrue(component.dragActive.value)
+    }
+
+    @Test
+    fun `onDragExited sets dragActive false`() = runTest {
+        val component = buildComponent(coroutineScope = backgroundScope)
+        component.onDragEntered()
+
+        component.onDragExited()
+
+        assertEquals(false, component.dragActive.value)
+    }
+
+    @Test
+    fun `onFilesDropped resets dragActive to false`() = runTest {
+        val component = buildComponent(coroutineScope = backgroundScope)
+        component.onDragEntered()
+        val sources = listOf(FakeFileSource("x.txt", 50L))
+
+        component.onFilesDropped(sources)
+
+        assertEquals(false, component.dragActive.value)
+    }
+
+    @Test
+    fun `onFilesDropped with empty list resets dragActive and stages nothing`() = runTest {
+        val repo = PendingFilesRepository()
+        val component = buildComponent(pendingFilesRepository = repo, coroutineScope = backgroundScope)
+        component.onDragEntered()
+
+        component.onFilesDropped(emptyList())
+
+        assertEquals(false, component.dragActive.value)
+        assertNull(repo.pending.value)
+    }
+
+    @Test
+    fun `onFilesDropped replaces prior pending with new sources`() = runTest {
+        val repo = PendingFilesRepository()
+        val initial = listOf(FakeFileSource("old.txt", 100L))
+        repo.setPending(initial)
+        val component = buildComponent(pendingFilesRepository = repo, coroutineScope = backgroundScope)
+        val newSources = listOf(FakeFileSource("new.txt", 200L), FakeFileSource("new2.txt", 300L))
+
+        component.onFilesDropped(newSources)
+
+        val pending = repo.pending.value
+        assertNotNull(pending)
+        assertEquals(PendingFilesSummary.from(newSources), pending.summary)
+    }
+
+    @Test
     fun `peerTransferComponent onShowDetails pushes TransferDetailsChild`() = runTest {
         val devices = MutableStateFlow(listOf(deviceA))
         val component = buildComponent(devices = devices, coroutineScope = backgroundScope)
@@ -240,6 +321,7 @@ class RootComponentTest {
         )
         return RootComponent(
             componentContext = ctx,
+            pendingFilesRepository = pendingFilesRepository,
             peerListFactory = { childCtx, onShowDetails ->
                 PeerListComponent(
                     componentContext = childCtx,

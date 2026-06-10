@@ -17,8 +17,8 @@ class PendingFilesRepository {
     private val _pending = MutableStateFlow<Pending?>(null)
     val pending: StateFlow<Pending?> = _pending.asStateFlow()
 
-    fun setPending(summary: PendingFilesSummary, sources: List<FileSource>) {
-        _pending.value = Pending(summary, sources)
+    fun setPending(sources: List<FileSource>) {
+        _pending.value = Pending(PendingFilesSummary.from(sources), sources)
     }
 
     /** Unconditional clear — for paths where the user explicitly dismisses pending. */

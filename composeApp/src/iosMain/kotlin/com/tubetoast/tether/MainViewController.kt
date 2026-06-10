@@ -10,7 +10,7 @@ import com.arkivanov.essenty.lifecycle.stop
 import com.tubetoast.tether.di.DefaultIosAppConfig
 import com.tubetoast.tether.di.IosAppContainer
 import com.tubetoast.tether.logging.initLogging
-import com.tubetoast.tether.presentation.RootContent
+import com.tubetoast.tether.presentation.RootScreen
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -60,6 +60,6 @@ fun MainViewController() = run {
                 lifecycle.destroy()
             }
         }
-        RootContent(component)
+        RootScreen(component)
     }
 }

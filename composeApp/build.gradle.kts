@@ -145,6 +145,7 @@ kotlin {
                 implementation(libs.kotlinx.coroutinesSwing)
                 implementation(libs.jmdns)
                 implementation(libs.jna)
+                implementation(libs.jna.platform)
             }
         }
 

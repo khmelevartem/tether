@@ -27,6 +27,7 @@ class RootComponentFactory(
     fun create(componentContext: ComponentContext): RootComponent =
         RootComponent(
             componentContext = componentContext,
+            pendingFilesRepository = pendingFilesRepository,
             peerListFactory = { ctx, onShowDetails ->
                 PeerListComponent(
                     componentContext = ctx,

@@ -71,7 +71,7 @@ class AutoSendDispatcherTest {
         buildDispatcher(peersRepo, pendingRepo, store, registry, backgroundScope).start()
         runCurrent()
 
-        pendingRepo.setPending(PendingFilesSummary(1, 100L), listOf(FakeFileSource("a.txt", 100L)))
+        pendingRepo.setPending(listOf(FakeFileSource("a.txt", 100L)))
         repeat(4) { runCurrent() }
 
         assertIs<PeerTransferState.Idle>(registry.engineFor(peerA.id).state.value)
@@ -88,7 +88,7 @@ class AutoSendDispatcherTest {
         buildDispatcher(peersRepo, pendingRepo, store, registry, backgroundScope).start()
         runCurrent()
 
-        pendingRepo.setPending(PendingFilesSummary(1, 100L), listOf(FakeFileSource("a.txt", 100L)))
+        pendingRepo.setPending(listOf(FakeFileSource("a.txt", 100L)))
         repeat(4) { runCurrent() }
 
         assertIs<PeerTransferState.Sent>(registry.engineFor(peerA.id).state.value)
@@ -104,7 +104,7 @@ class AutoSendDispatcherTest {
         buildDispatcher(peersRepo, pendingRepo, store, registry, backgroundScope).start()
         runCurrent()
 
-        pendingRepo.setPending(PendingFilesSummary(1, 100L), listOf(FakeFileSource("a.txt", 100L)))
+        pendingRepo.setPending(listOf(FakeFileSource("a.txt", 100L)))
         repeat(4) { runCurrent() }
 
         assertIs<PeerTransferState.Idle>(registry.engineFor(peerA.id).state.value)
@@ -133,7 +133,7 @@ class AutoSendDispatcherTest {
         buildDispatcher(peersRepo, pendingRepo, store, registry, backgroundScope).start()
         runCurrent()
 
-        pendingRepo.setPending(PendingFilesSummary(1, 100L), listOf(FakeFileSource("a.txt", 100L)))
+        pendingRepo.setPending(listOf(FakeFileSource("a.txt", 100L)))
         repeat(4) { runCurrent() }
 
         assertEquals(0, factoryCallCount)
@@ -153,7 +153,7 @@ class AutoSendDispatcherTest {
         buildDispatcher(peersRepo, pendingRepo, gatedStore, registry, backgroundScope).start()
         runCurrent()
 
-        pendingRepo.setPending(PendingFilesSummary(1, 100L), listOf(FakeFileSource("a.txt", 100L)))
+        pendingRepo.setPending(listOf(FakeFileSource("a.txt", 100L)))
         runCurrent()
 
         peersFlow.value = listOf(peerA, peerB)
@@ -176,7 +176,7 @@ class AutoSendDispatcherTest {
         buildDispatcher(peersRepo, pendingRepo, gatedStore, registry, backgroundScope).start()
         runCurrent()
 
-        pendingRepo.setPending(PendingFilesSummary(1, 100L), listOf(FakeFileSource("a.txt", 100L)))
+        pendingRepo.setPending(listOf(FakeFileSource("a.txt", 100L)))
         runCurrent()
 
         pendingRepo.clear()
@@ -200,7 +200,7 @@ class AutoSendDispatcherTest {
         runCurrent()
 
         val otherSources = listOf(FakeFileSource("other.txt", 50L))
-        pendingRepo.setPending(PendingFilesSummary(1, 100L), listOf(FakeFileSource("a.txt", 100L)))
+        pendingRepo.setPending(listOf(FakeFileSource("a.txt", 100L)))
         runCurrent()
 
         registry.engineFor(peerA.id).startOutbound(otherSources)
@@ -236,14 +236,14 @@ class AutoSendDispatcherTest {
         buildDispatcher(peersRepo, pendingRepo, failOnceStore, registry, backgroundScope).start()
         runCurrent()
 
-        pendingRepo.setPending(PendingFilesSummary(1, 100L), listOf(FakeFileSource("a.txt", 100L)))
+        pendingRepo.setPending(listOf(FakeFileSource("a.txt", 100L)))
         repeat(4) { runCurrent() }
 
         assertIs<PeerTransferState.Idle>(registry.engineFor(peerA.id).state.value)
         assertNotNull(pendingRepo.pending.value?.summary)
 
         pendingRepo.clear()
-        pendingRepo.setPending(PendingFilesSummary(1, 100L), listOf(FakeFileSource("a.txt", 100L)))
+        pendingRepo.setPending(listOf(FakeFileSource("a.txt", 100L)))
         repeat(4) { runCurrent() }
 
         assertIs<PeerTransferState.Sent>(registry.engineFor(peerA.id).state.value)

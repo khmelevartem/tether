@@ -93,12 +93,10 @@ When state is **per-peer** (or per any other stable domain identity), the `AppCo
 
 ## Screens and previews
 
-A screen is two composables in the same file:
+Every screen MUST be two composables in the same file:
 
-- **`XxxScreen(component, modifier)`** — thin wrapper that subscribes to the Component's `Value<State>` and forwards events as callbacks. The only call site of the real Component.
-- **`XxxContent(state, callbacks, modifier)`** — stateless. Renders the UI given a plain state object. No Decompose, no DI, no coroutines.
-
-Every `@Preview` targets `XxxContent` — never `XxxScreen`. Previews live in `commonMain` next to the screen (`androidx.compose.ui.tooling.preview.Preview`, the unified CMP annotation). Build fake state from `PreviewFixtures` and wrap content in `PreviewSurface { }`, both under `com.tubetoast.tether.ui.preview`. This split is what lets Roborazzi render previews headlessly under Robolectric (the Decompose lifecycle does not boot in that environment) and lets `review-visual` consume the resulting PNGs against the UX brief — see [testing.md §Screenshot tests](testing.md#screenshot-tests).
+- **The production entry point** takes only `(component, modifier)`. It subscribes to the component's state and forwards events as callbacks — nothing else.
+- **The stateless content composable** takes plain state and callbacks. No Decompose, no DI, no coroutines. This is what `@Preview` targets — never the production entry point. Previews live in `commonMain` next to the screen (`androidx.compose.ui.tooling.preview.Preview`, the unified CMP annotation). Build fake state from `PreviewFixtures` and wrap content in `PreviewSurface { }`, both under `com.tubetoast.tether.ui.preview`. This split is what lets Roborazzi render previews headlessly under Robolectric (the Decompose lifecycle does not boot in that environment) and lets `review-visual` consume the resulting PNGs against the UX brief — see [testing.md §Screenshot tests](testing.md#screenshot-tests).
 
 **Visibility — tightest by default.** Composable visibility tracks call-site reach. Public is reserved for entry points consumed across packages. Internal is for composables whose only callers live in the same package. Private is for composables whose only callers live in the same file — including layout-only helpers and preview-only wrappers.
 
@@ -113,7 +111,7 @@ New primitives go to `designsystem/` by default; demote to `feature/` only when 
 
 ## Navigation
 
-The presentation tree is rooted in a single `RootComponent` (a concrete class) that owns a Decompose `ChildStack`. Composables render it via a single entry point — `RootContent(component)` — which carries the app theme and the `Children { ... }` switch. There is no separate theme wrapper above it.
+The presentation tree is rooted in a single `RootComponent` (a concrete class) that owns a Decompose `ChildStack`. Composables render it via a single entry point — `RootScreen(component)` — which carries the app theme and the `Children { ... }` switch. There is no separate theme wrapper above it.
 
 Decompose navigation primitives are introduced one at a time as flows require them:
 
