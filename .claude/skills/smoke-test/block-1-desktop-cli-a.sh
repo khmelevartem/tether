@@ -11,7 +11,7 @@ cd "$TETHER_ROOT"
 
 rm -f "$FIFO_A"
 mkfifo "$FIFO_A"
-sleep 600 > "$FIFO_A" &
+sleep 600 > "$FIFO_A" 2>/dev/null &
 KEEPER_PID=$!; disown $KEEPER_PID
 echo $KEEPER_PID > "$KEEPER_A"
 

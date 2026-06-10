@@ -56,7 +56,9 @@ Blocks run under `set -euo pipefail`. Commands that exit nonzero as a *normal* r
 
 ## Run plan
 
-Execute blocks sequentially and **back-to-back** — each CLI's FIFO keeper is `sleep 600`, so a CLI dies ~10 min after its block started. If wall-clock from Block 1 to the last block needing CLI A (Block 4) exceeds that, A's stdin closes mid-run and later blocks FAIL against a dead instance. Don't interleave long manual waits or per-block monitoring; run the whole sequence as one pass (e.g. a single driver script). A block failure does not prevent subsequent blocks from running. Run cleanup (`block-7-cleanup.sh`) **always**, even after earlier FAILs.
+**Primary invocation — `./run-all.sh`.** It drives every block back-to-back in one pass, tees a greppable consolidated log (`===== BLOCK<n> =====` headers) to stdout and `/tmp/smoke-results-<id>.log`, guards the iOS block when Xcode/simulator is absent, and runs cleanup via an `EXIT` trap. Launch it as **one** task and read the result log to synthesise the report — do not invoke blocks one-by-one with waits in between: each CLI's FIFO keeper is `sleep 600`, so a CLI dies ~10 min after its block started, and a spread-out run kills CLI A mid-flight (later blocks then FAIL against a dead instance).
+
+The individual `block-*.sh` scripts below remain runnable on their own for targeted re-runs and debugging. A block failure does not prevent subsequent blocks from running. Cleanup (`block-7-cleanup.sh`) runs **always** — `run-all.sh` triggers it on `EXIT`; if you run blocks by hand, invoke it yourself even after earlier FAILs.
 
 All scripts live in `.claude/skills/smoke-test/` and are self-contained — run them from that directory or the repo root.
 
@@ -82,7 +84,7 @@ Launches CLI A (`SmokeMacA`, random port), then checks:
 6. **mDNS publish (dns-sd, optional)** — `dns-sd -B` browse. SKIP if `dns-sd` unavailable (Linux).
 7. **stdin `list`** — must produce a `[list]` or `[peers]` line.
 
-CLI A stays alive through the Android and iOS blocks (they need it for cross-discovery). Graceful quit — Block 4, deferred to just before cleanup.
+CLI A stays alive through the Android and iOS blocks (they need it for cross-discovery). Graceful quit — Block 6, deferred to just before cleanup.
 
 ### Block 2: Desktop ↔ Desktop send (via CLI)
 
@@ -110,7 +112,7 @@ Stops B to provoke `[send] error`, restarts B, then issues `retry SmokeMacB`. **
 
 #### Scenario 2.4 — exit code on `quit`
 
-Verified in Block 4 — `lastExit` accumulates per `send`/`retry`; the last successful send was AllSent → expected exit code 0.
+Verified in Block 6 — `lastExit` accumulates per `send`/`retry`; the last successful send was AllSent → expected exit code 0.
 
 ### Block 3: Same-name discovery
 
@@ -144,9 +146,9 @@ Run: `./block-3.5-rename.sh`
 
 Sends `name RenamedA` to A via stdin; B must see the new name via mDNS republish within 15 s.
 
-### Block 5: Android (conditional)
+### Block 4: Android (conditional)
 
-Run: `./block-5-android.sh`
+Run: `./block-4-android.sh`
 
 SKIP if no adb device connected. If present:
 
@@ -158,9 +160,9 @@ SKIP if no adb device connected. If present:
 6. Send Desktop → Android via CLI `send`. SKIP if emulator with QEMU NAT (`10.0.2.x`) or Android peer not discovered.
 7. `force-stop`.
 
-### Block 5.5: iOS simulator runtime
+### Block 5: iOS simulator runtime
 
-Run: `./block-5.5-ios.sh`
+Run: `./block-5-ios.sh`
 
 1. Resolve + boot simulator (default `iPhone 17`; override via `IOS_DEVICE` env var).
 2. `xcodebuild`, install, launch.
@@ -173,9 +175,9 @@ Run: `./block-5.5-ios.sh`
 
 iOS cleanup — in Block 7.
 
-### Block 4: Graceful quit of instance A — and `lastExit` propagation
+### Block 6: Graceful quit of instance A — and `lastExit` propagation
 
-Run: `./block-4-graceful-quit.sh`
+Run: `./block-6-graceful-quit.sh`
 
 Runs after the Android and iOS blocks — both need instance A alive for cross-discovery, so A's graceful quit is deferred to just before cleanup.
 
@@ -273,8 +275,8 @@ At the end of the run print a markdown report:
 When the user asks to "run smoke":
 
 1. Print a short plan (1–2 lines): "I'll run Desktop CLI via cli jar, Desktop↔Desktop send, Android if a device is connected, native compile. What I don't check — see the report."
-2. Run the blocks.
-3. Print the report.
+2. Run `./run-all.sh` as one task, then read `/tmp/smoke-results-<id>.log` (or the task output).
+3. Synthesise and print the report from the result log.
 4. If verdict is 🔴 — give a recommendation: which block failed and where to look.
 
 Don't ask the user for clarification — the skill must be "zero-question": everything non-automatable goes into Manual verification.

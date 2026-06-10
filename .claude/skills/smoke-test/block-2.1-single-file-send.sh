@@ -9,7 +9,7 @@ set -euo pipefail
 
 rm -f "$FIFO_B"
 mkfifo "$FIFO_B"
-sleep 600 > "$FIFO_B" &
+sleep 600 > "$FIFO_B" 2>/dev/null &
 KEEPER_PID=$!; disown $KEEPER_PID
 echo $KEEPER_PID > "$KEEPER_B"
 
