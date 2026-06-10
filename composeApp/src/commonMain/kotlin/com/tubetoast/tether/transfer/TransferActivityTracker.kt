@@ -25,13 +25,8 @@ object NoOpTransferActivityTracker : TransferActivityTracker {
 }
 
 /**
- * State transitions (`enter`/`exit`/`releaseAll`) run as CAS retry loops over `atomicState`:
- * read the current state, compute the next one, and try to swap atomically. If another thread
- * won the swap between read and write, the loop retries with the fresh state.
- *
- * `active` is a derived projection of `atomicState.held`, so it cannot desync from the committed
- * state — `atomicState` is the single linearization point. Callbacks (`onFirstEnter`/`onLastExit`)
- * fire once per held↔unheld edge, gated on the winning CAS.
+ * `active` is a derived projection of the single `atomicState` source, so it cannot desync from the
+ * committed state — do not reintroduce a separately-written boolean flag.
  *
  * Lock-free — `synchronized` is unavailable in commonMain, and a coroutine `Mutex` cannot guard
  * `releaseAll` (non-suspend, called from `onDestroy`).
