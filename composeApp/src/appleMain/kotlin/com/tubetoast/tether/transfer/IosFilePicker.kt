@@ -45,7 +45,7 @@ import ru.pocketbyte.kydra.log.wrapper.withTag
 import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
-private val log = KydraLog.withTag(default = "Tether.IosFilePicker")
+private val log = KydraLog.withTag(default = "IosFilePicker")
 
 internal class IosFilePicker(
     private val viewControllerProvider: () -> UIViewController?,

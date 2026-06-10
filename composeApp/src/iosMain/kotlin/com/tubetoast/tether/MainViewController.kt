@@ -61,5 +61,5 @@ fun MainViewController() = run {
             }
         }
         RootScreen(component)
-    }.also { container.attachHostViewController(it) }
+    }.also { container.iosViewControllerHolder.attach(it) }
 }

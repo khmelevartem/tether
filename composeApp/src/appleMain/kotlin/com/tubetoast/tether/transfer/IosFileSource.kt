@@ -28,7 +28,7 @@ import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.warn
 import ru.pocketbyte.kydra.log.wrapper.withTag
 
-private val log = KydraLog.withTag(default = "Tether.IosFileSource")
+private val log = KydraLog.withTag(default = "IosFileSource")
 
 private const val READ_BUFFER_SIZE = 65_536
 

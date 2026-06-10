@@ -3,18 +3,19 @@ package com.tubetoast.tether.presentation
 import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.essenty.lifecycle.coroutines.withLifecycle
 import com.tubetoast.tether.config.DeviceNameStore
+import com.tubetoast.tether.network.TransferActivityTracker
 import com.tubetoast.tether.peer.PeersRepository
 import com.tubetoast.tether.preferences.FileTransferPreferences
 import com.tubetoast.tether.presentation.banners.BannersComponent
 import com.tubetoast.tether.presentation.banners.PeerConflictRelay
 import com.tubetoast.tether.presentation.devicename.DeviceNameComponent
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
+import com.tubetoast.tether.protocol.DeviceType
 import com.tubetoast.tether.transfer.FilePicker
 import com.tubetoast.tether.transfer.PeerTransferEngineRegistry
 import com.tubetoast.tether.transfer.PendingFilesRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.StateFlow
 
 class RootComponentFactory(
     private val peersRepository: PeersRepository,
@@ -24,7 +25,8 @@ class RootComponentFactory(
     private val filePicker: FilePicker,
     private val fileTransferPreferences: FileTransferPreferences,
     private val nameStore: DeviceNameStore,
-    private val transferActiveForBanner: StateFlow<Boolean>,
+    private val transferActivityTracker: TransferActivityTracker,
+    private val ownDeviceType: DeviceType,
 ) {
     fun create(componentContext: ComponentContext): RootComponent =
         RootComponent(
@@ -57,7 +59,8 @@ class RootComponentFactory(
                             peersRepository = peersRepository,
                             engineRegistry = peerTransferEngineRegistry,
                             conflictRelay = peerConflictRelay,
-                            transferActive = transferActiveForBanner,
+                            transferActivityTracker = transferActivityTracker,
+                            ownDeviceType = ownDeviceType,
                         )
                     },
                     deviceNameComponentFactory = { deviceNameCtx ->

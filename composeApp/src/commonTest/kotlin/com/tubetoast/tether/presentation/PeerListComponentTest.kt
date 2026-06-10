@@ -7,6 +7,7 @@ import com.arkivanov.essenty.lifecycle.resume
 import com.tubetoast.tether.config.DeviceNameStore
 import com.tubetoast.tether.config.EphemeralDeviceNamePersistence
 import com.tubetoast.tether.discovery.FakeDeviceDiscovery
+import com.tubetoast.tether.network.NoOpTransferActivityTracker
 import com.tubetoast.tether.peer.FakePeersRepository
 import com.tubetoast.tether.peer.Peer
 import com.tubetoast.tether.peer.PeersRepository
@@ -17,6 +18,7 @@ import com.tubetoast.tether.presentation.banners.PeerConflictRelay
 import com.tubetoast.tether.presentation.devicename.DeviceNameComponent
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.protocol.Device
+import com.tubetoast.tether.protocol.DeviceType
 import com.tubetoast.tether.transfer.FakeFilePicker
 import com.tubetoast.tether.transfer.FakeFileSource
 import com.tubetoast.tether.transfer.PeerTransferEngine
@@ -386,7 +388,8 @@ class PeerListComponentTest {
                     peersRepository = FakePeersRepository(),
                     engineRegistry = fakePeerTransferEngineRegistry(coroutineScope),
                     conflictRelay = PeerConflictRelay(),
-                    transferActive = MutableStateFlow(false),
+                    transferActivityTracker = NoOpTransferActivityTracker,
+                    ownDeviceType = DeviceType.Android,
                     coroutineScope = coroutineScope,
                 )
             },
@@ -440,7 +443,8 @@ class PeerListComponentTest {
                     peersRepository = FakePeersRepository(),
                     engineRegistry = fakePeerTransferEngineRegistry(coroutineScope),
                     conflictRelay = PeerConflictRelay(),
-                    transferActive = MutableStateFlow(false),
+                    transferActivityTracker = NoOpTransferActivityTracker,
+                    ownDeviceType = DeviceType.Android,
                     coroutineScope = coroutineScope,
                 )
             },

@@ -3,10 +3,12 @@ package com.tubetoast.tether.presentation.banners
 import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.resume
+import com.tubetoast.tether.network.NoOpTransferActivityTracker
 import com.tubetoast.tether.peer.FakePeersRepository
 import com.tubetoast.tether.peer.Peer
 import com.tubetoast.tether.preferences.FakePeerPreferencesStore
 import com.tubetoast.tether.protocol.Device
+import com.tubetoast.tether.protocol.DeviceType
 import com.tubetoast.tether.transfer.FakeFileSource
 import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PeerTransferEngine
@@ -22,7 +24,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -43,7 +44,6 @@ class BannersComponentTest {
         peersRepository: FakePeersRepository = FakePeersRepository(),
         engineRegistry: PeerTransferEngineRegistry? = null,
         conflictRelay: PeerConflictRelay = PeerConflictRelay(),
-        transferActive: StateFlow<Boolean> = MutableStateFlow(false),
         coroutineScope: CoroutineScope,
     ): BannersComponent {
         val lifecycle = LifecycleRegistry().also { it.resume() }
@@ -53,7 +53,8 @@ class BannersComponentTest {
             peersRepository = peersRepository,
             engineRegistry = engineRegistry ?: fakePeerTransferEngineRegistry(coroutineScope),
             conflictRelay = conflictRelay,
-            transferActive = transferActive,
+            transferActivityTracker = NoOpTransferActivityTracker,
+            ownDeviceType = DeviceType.Android,
             coroutineScope = coroutineScope,
         )
     }
