@@ -26,6 +26,8 @@ Either generalise the *shape* of the error (contrast «principle catches this, b
 
 An incident-rooted example (a string lifted from the task that birthed the rule) is matched literally by the next agent, which then skips structurally identical neighbouring cases. If the rule isn't readable without an example, rewrite the formulation; do not prop it up with a quote from the incident.
 
+A fenced code block that illustrates a pattern follows the same rule: name its participants with synthetic placeholders (`SomeService`, `XxxComponent`), never real project classes or methods. A real symbol in a teaching example is corrupted silently by a mechanical rename of that symbol, and it reads as concrete API a reader may import rather than as a shape to copy.
+
 ## Runtime claims are snapshots, not rules
 
 A long-lived artifact stating «component X currently does Y» is a snapshot — it may have drifted since written.
