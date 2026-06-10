@@ -13,6 +13,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 
 RESULTS="/tmp/smoke-results-$SMOKE_ID.log"
 : > "$RESULTS"
+SECONDS=0   # bash builtin — wall-clock of the whole run, reported in finish()
 log() { echo "$@" | tee -a "$RESULTS"; }
 run() { log "===== $1 ====="; shift; "$@" 2>&1 | tee -a "$RESULTS"; }
 
@@ -35,6 +36,7 @@ finish() {
     [ -d "$SMOKE_DIR" ] && leak=1
     [ "$leak" = 0 ] && log "PASS: teardown — no instances or scratch left" \
       || log "FAIL: teardown — LEAK (CLI processes or $SMOKE_DIR remain after cleanup)"
+    log "TOTAL: $((SECONDS / 60))m$((SECONDS % 60))s (${SECONDS}s)"
     log "ALLDONE"
   fi
   exit 0
