@@ -2,8 +2,10 @@
 # Drives the smoke blocks back-to-back in one pass so the run stays inside each CLI's 600s
 # keeper window (spreading the blocks out kills CLI A mid-run). Tees a greppable consolidated
 # log to stdout and /tmp/smoke-results-<id>.log; report synthesis stays the caller's job.
-# Cleanup (block-7) runs unconditionally via the EXIT/INT/TERM trap. A watchdog aborts the
-# run after SMOKE_DEADLINE seconds (default 540, under the keeper window) so it can never hang.
+# Cleanup (block-7) runs unconditionally via the EXIT/INT/TERM trap. A watchdog aborts the run
+# after SMOKE_DEADLINE seconds (default 540, under the keeper window). It bounds the run at block
+# boundaries — the TERM is delivered between blocks / during the interruptible sleep loops; it
+# cannot interrupt a wedged foreground gradle/xcodebuild (those rely on their own tooling timeouts).
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 . ./smoke-env.sh

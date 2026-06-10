@@ -25,20 +25,15 @@ All these items must appear in the **"Manual verification required"** section of
 
 ## Shared environment (`smoke-env.sh`)
 
-Blocks run in separate shells and coordinate only through fixed filesystem paths, so every block sources `smoke-env.sh` at the top to re-derive identical values:
+Blocks run in separate shells and coordinate only through fixed filesystem paths, so every block sources `smoke-env.sh` at the top to re-derive identical, worktree-scoped values:
 
 ```bash
 . "$(dirname "${BASH_SOURCE[0]}")/smoke-env.sh"
 ```
 
-It provides:
+It derives a per-worktree scratch dir `SMOKE_DIR=/tmp/smoke-<cksum-of-worktree-root>` and, under it, the per-instance fifo / log / pid / keeper paths, the iOS build/launch logs, and the resolved cli jar. Because the namespace is keyed on the worktree, two runs in different worktrees never share scratch state, PID bookkeeping, or kill scope. It also exposes a basename prefix for sent files (so receiver-dir cleanup under the shared `$HOME/Downloads/Tether` targets only this run) and helpers to kill / detect this worktree's CLI instances.
 
-- `SMOKE_DIR=/tmp/smoke-<id>` — a per-worktree scratch dir (`<id>` is a `cksum` of the worktree root), holding all fifos, logs, PID files, and sent source files. Two smoke runs in different worktrees never share these, so they don't overwrite each other's PID bookkeeping or race the cleanup `kill`.
-- Per-instance path vars: `FIFO_A/B/C`, `LOG_A/B/C`, `PID_A/B/C`, `KEEPER_A/B/C`, plus `IOS_BUILD_LOG` / `IOS_LAUNCH_LOG`.
-- `JAR` / `SMOKE_JAR` — this worktree's cli jar.
-- `SMOKE_SEND_PREFIX` — basename prefix for files this run sends, so receiver-dir cleanup (`$HOME/Downloads/Tether`, shared across worktrees) targets exactly this run.
-- `smoke_kill_instances` — kills exactly this worktree's CLI java processes (matched by the jar path) plus the FIFO keepers. **Do not** `pkill` by package name: the real command line is `java -jar .../tether-cli.jar`, which contains no `com.tubetoast.tether…jar` substring.
-- `smoke_instances_alive` — true if any CLI from this worktree is still running.
+Kill is matched by the worktree's **jar path**, not by a package-name substring — the CLI runs as `java -jar …/tether-cli.jar`, so a package-name pattern never matches it.
 
 ## Starting the CLI
 
