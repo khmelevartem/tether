@@ -51,6 +51,25 @@ The individual `block-*.sh` scripts below remain runnable on their own for targe
 
 All scripts live in `.claude/skills/smoke-test/` and are self-contained — run them from that directory or the repo root.
 
+### Running blocks selectively
+
+To re-run or debug part of the suite, run the `block-*.sh` scripts directly — but a block depends on the **live CLI instances** earlier blocks left running, not just on those scripts having executed. So run the target's prerequisite prefix first, then the target. Prerequisites:
+
+| Target block | Needs alive first | Minimal prefix |
+|---|---|---|
+| 1 (CLI A) | jar built | `0 → 1` |
+| 2.1, 4 (Android), 5 (iOS), 6 (quit) | CLI A | `0 → 1 → <target>` |
+| 2.2, 2.3, 3.5 | CLI A + B | `0 → 1 → 2.1 → <target>` |
+| 3 (same-name) | CLI A + B | `0 → 1 → 2.1 → 3` |
+| 3.1, 3.2 | CLI A + B + C | `0 → 1 → 2.1 → 3 → <target>` |
+
+Two constraints when running by hand:
+
+- **Keeper window.** Each CLI's FIFO keeper is `sleep 600`, so an instance self-exits ~10 min after its block started. Finish the selective sequence well inside that window, or a later block FAILs against a dead instance.
+- **Cleanup is yours.** The `EXIT`-trap cleanup and the watchdog live only in `run-all.sh`. When running blocks by hand, end with `./block-7-cleanup.sh` (it kills this worktree's instances and removes the scratch dir) even after a FAIL, or instances and `$SMOKE_DIR` leak until the next `block-0`.
+
+Leaving the instances up between hand-run blocks is the point of this mode — keep CLI A (and B/C) alive and poke at successive scenario blocks, then clean up once.
+
 ### Block 0: Preparation
 
 Run: `./block-0-preparation.sh`
