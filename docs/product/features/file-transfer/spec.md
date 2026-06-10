@@ -8,7 +8,7 @@
 
 ## Why
 
-After picking a peer on the [device list](../device-list/spec.md) (and confirming a [pairing](../pairing/spec.md) PIN if it's a first encounter), the user has to actually move bytes and see what is happening on both ends. Discovery and pairing without a transfer surface are an unfinished bridge.
+After picking a peer on the [device list](../device-list/spec.md) (and comparing a [pairing](../pairing/spec.md) SAS if it's a first encounter), the user has to actually move bytes and see what is happening on both ends. Discovery and pairing without a transfer surface are an unfinished bridge.
 
 This feature is also where Tether's two transport promises from [vision.md](../../vision.md) have to land in user-visible behaviour: **original bytes, untouched** (no compression, no conversion, no resizing) and **any size, any number** (no in-memory buffering, no silent size caps, N≥1 files in one send). They apply to every direction and every platform.
 
@@ -29,7 +29,7 @@ Sending N files is the same surface as sending one. Sending a folder is N files 
 
 1. User taps Send on a peer from the device list.
 2. System file picker opens. User selects one or more files (or a folder).
-3. If this is a first encounter with that peer, the [pairing](../pairing/spec.md) PIN dialog appears on both sides; user confirms.
+3. If this is a first encounter with that peer, the [pairing](../pairing/spec.md) SAS dialog appears on both sides; user confirms.
 4. Progress screen shows current file name, byte progress across the whole batch, and current speed.
 5. On the receiver, a matching incoming-transfer surface appears with the same information.
 6. On completion, sender shows "Sent N files to <peer>". Receiver shows an OS notification; tapping it opens the saved folder (or — where the OS forbids that — Tether's own "Received" screen with the path).
@@ -48,7 +48,7 @@ Sending N files is the same surface as sending one. Sending a folder is N files 
 - **Cancel by receiver.** Receiver taps Cancel on their incoming card. Both sides stop. Same partial-file rule.
 - **Concurrent incoming from different peers.** Two paired peers send to the receiver at the same time. Both transfers proceed in parallel; the receiver UI stacks the two incoming cards.
 - **Name collision on the receiver.** A file with the same name already exists in the destination. The incoming file is saved as `name (1).ext`, `name (2).ext`, etc. The sender's bytes are never silently overwritten and never refused.
-- **Untrusted (not paired) peer attempts to send.** Tether routes through the pairing PIN flow first — surface owned by [pairing](../pairing/spec.md). The file-transfer surface only appears after PIN confirmation on both sides.
+- **Untrusted (not paired) peer attempts to send.** Tether routes through the pairing SAS flow first — surface owned by [pairing](../pairing/spec.md). The file-transfer surface only appears after SAS confirmation on both sides.
 
 **Failure surfaces (what the user sees, what they can do)**
 
@@ -107,7 +107,7 @@ Sending N files is the same surface as sending one. Sending a folder is N files 
 
 - **Resume after interrupted transfer.** Post-MVP, see [roadmap.md](../../roadmap.md).
 - **iOS background sending or receiving.** Architecturally constrained by iOS; see [ios-background-networking.md](../../../knowledge/ios-background-networking.md). A sender-only URLSession-background path remains a conditional Post-MVP option.
-- **Pairing PIN dialog.** Owned by [pairing](../pairing/spec.md). File-transfer surface only appears after PIN confirmation.
+- **Pairing SAS dialog.** Owned by [pairing](../pairing/spec.md). File-transfer surface only appears after SAS confirmation.
 - **Permission prompts** (media permissions on Android, Local Network on iOS, etc.). Owned by [permissions strategy](../system/permissions/spec.md).
 - **Fan-out: one file → N different peers in one action.** Different mechanism, per-peer pairing state, per-peer failure surfaces. Separate feature, Post-MVP — and a candidate for [monetization](../../monetization.md).
 - **Folder sync** (watched, continuous). Different product surface, Post-MVP and Pro candidate per [monetization](../../monetization.md).

@@ -63,8 +63,8 @@ Hotspot transfer does not introduce platform permissions of its own — the OS p
 - **Transfer with no Wi-Fi at all** — no router *and* no hotspot. That would require a different transport (Wi-Fi Direct or Wi-Fi Aware), and Apple does not expose a public API for either; it is recorded as an Android-only Pro hypothesis in [monetization.md](../../monetization.md), not part of this feature.
 - **Sharing the hotspot password.** Tether does not help the user broadcast their hotspot SSID or password; that is the OS's job. Tether picks up only after the user has joined the network through the normal Wi-Fi UI.
 - **Cross-subnet discovery.** If the two devices are connected to the same logical network but through a routed boundary (corporate VLANs, mesh repeaters configured as separate subnets), Tether does not bridge that. Manual entry remains the user's escape hatch.
-- **Pairing changes.** Pairing is unchanged — first encounter still shows the 4-digit PIN, regardless of how the two devices found each other.
-- **Trust changes.** Discovery still does not imply trust; pairing remains the gate. See [security.md](../../security.md).
+- **Pairing changes.** Pairing is unchanged — first encounter still shows the SAS to compare, regardless of how the two devices found each other.
+- **Trust changes.** Discovery still does not imply trust; pairing remains the gate. See [security.md](../../../security/README.md).
 
 ## Open product questions
 

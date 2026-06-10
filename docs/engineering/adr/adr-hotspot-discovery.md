@@ -86,7 +86,7 @@ Wired into LocalSend's API split (upload mode vs download mode). Rejected: the s
 - Permissions surface on all platforms is unchanged from what mDNS already requires; final permission inventory and rationale flow live in [permissions/spec.md](../../product/features/system/permissions/spec.md).
 
 **Neutral**
-- Trust model is unchanged. Any device on a reachable subnet could already announce itself over mDNS; subnet-scan and broadcast do not widen this surface. Pairing remains the trust gate before any file moves. See [security.md](../../product/security.md).
+- Trust model is unchanged. Any device on a reachable subnet could already announce itself over mDNS; subnet-scan and broadcast do not widen this surface. Pairing remains the trust gate before any file moves. See [security.md](../../security/README.md).
 
 ## When to revisit
 

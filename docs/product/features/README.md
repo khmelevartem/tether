@@ -20,7 +20,7 @@ Overview of all features. Click a feature to see its full spec.
 
 - **Platform.** "Android device list" and "iOS device list" are not two features — they are one feature shipping on multiple platforms. Per-platform user-visible quirks live in the spec's `Platform notes` section.
 - **Implementation layer.** "File send UI" and "streaming server" are not two features — they are two halves of one transfer experience. The user does not see the seam.
-- **Implementation milestone.** "Pairing — key exchange", "PIN computation", "PIN UI" are not three features — they are three milestones of one pairing experience. None of them ships user value alone.
+- **Implementation milestone.** "Pairing — key exchange", "SAS computation", "SAS UI" are not three features — they are three milestones of one pairing experience. None of them ships user value alone.
 - **Quantity / scale.** "Single-file send" and "multi-file send" are not two features — they are N≥1 of the same surface. Behaviour-under-conditions (parallel vs sequential, batch failure semantics) lives in `Open product questions`.
 
 **Quick test:** can the milestone / piece you are tempted to extract ship user-visible value on its own, *without* the rest? If no, it is a milestone, not a feature.
@@ -35,10 +35,10 @@ Note on `Status` here vs. GitHub Issues: an issue can exist (and even be in prog
 |---------|------|--------|-----|--------|
 | mDNS peer discovery | Discovery | done | _tbd_ | #6 (iOS/macOS) |
 | Hotspot transfer | Discovery / Transfer | scoped | [hotspot-transfer/spec.md](hotspot-transfer/spec.md) | [#170](https://github.com/khmelevartem/tether/issues/170) (design); implementation _tbd_ |
-| Pairing | Pairing / Security | scoped | [pairing/spec.md](pairing/spec.md) | #9 (key exchange), #10 (PIN + CLI), #11 (Android UI); iOS, Desktop UI _tbd_ |
+| Pairing | Pairing / Security | scoped | [pairing/spec.md](pairing/spec.md) | #9 (key exchange), #10 (SAS + CLI), #11 (Android UI); iOS, Desktop UI _tbd_ |
 | Device list screen | UI | in progress | [device-list/spec.md](device-list/spec.md) | #7 — Android + iOS done; Desktop _tbd_ |
 | File transfer | Transfer / UI | scoped | [file-transfer/spec.md](file-transfer/spec.md) | #8 (Android send UI), #81 (iOS FileServer receive); iOS UI, Desktop send UI, receive-side UI _tbd_ |
-| Device name bootstrapping | Onboarding | scoped | [device-name-bootstrapping/spec.md](device-name-bootstrapping/spec.md) | _tbd_ |
+| Device name bootstrapping | Onboarding | done | [device-name-bootstrapping/spec.md](device-name-bootstrapping/spec.md) | #147 (backend), #148 (UI) |
 
 ### System integration
 

@@ -31,8 +31,9 @@ import com.tubetoast.tether.ui.designsystem.BodyText
 import com.tubetoast.tether.ui.designsystem.LabelText
 import com.tubetoast.tether.ui.designsystem.NumericText
 import com.tubetoast.tether.ui.designsystem.ProgressBar
+import com.tubetoast.tether.ui.designsystem.RowAccentBarWidth
 import com.tubetoast.tether.ui.designsystem.RowCancelButton
-import com.tubetoast.tether.ui.feature.PeerIdentityAccent
+import com.tubetoast.tether.ui.designsystem.tetherRowDecoration
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
 import com.tubetoast.tether.ui.preview.TransferPreviewFixtures
@@ -42,7 +43,6 @@ import compose.icons.tablericons.AlertCircle
 import compose.icons.tablericons.Check
 import compose.icons.tablericons.Clock
 
-private val PeerIdentityStripWidth = 3.dp
 private val StatusIconSize = 20.dp
 private val TrailingSlotSize = 28.dp
 private val ProgressBarHeight = 3.dp
@@ -61,6 +61,7 @@ fun PerFileRow(
 ) {
     val colors = TetherTheme.colors
     val spacing = TetherTheme.spacing
+    val accent = if (identityColor != Color.Unspecified) identityColor else null
 
     val rowModifier = if (status is PerFileStatus.Failed && isSenderSide) {
         val semanticLabel = failedRowSemanticLabel(status, peerName, isOnline)
@@ -69,6 +70,7 @@ fun PerFileRow(
             modifier
                 .fillMaxWidth()
                 .height(RowHeight)
+                .tetherRowDecoration(leadingAccent = accent, bottomDivider = false)
                 .semantics {
                     role = Role.Button
                     contentDescription = semanticLabel
@@ -77,6 +79,7 @@ fun PerFileRow(
             modifier
                 .fillMaxWidth()
                 .height(RowHeight)
+                .tetherRowDecoration(leadingAccent = accent, bottomDivider = false)
                 .clickable(onClick = { onRetryFile(status.name) })
                 .semantics {
                     role = Role.Button
@@ -87,19 +90,20 @@ fun PerFileRow(
         modifier
             .fillMaxWidth()
             .height(RowHeight)
+            .tetherRowDecoration(leadingAccent = accent, bottomDivider = false)
     }
 
     Row(
         modifier = rowModifier,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (identityColor != Color.Unspecified) {
-            PeerIdentityAccent(identityColor = identityColor, width = PeerIdentityStripWidth)
-        }
         Row(
             modifier = Modifier
                 .weight(1f)
-                .padding(horizontal = spacing.sm),
+                .padding(
+                    start = if (accent != null) spacing.sm + RowAccentBarWidth else spacing.sm,
+                    end = spacing.sm,
+                ),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(spacing.sm),
         ) {

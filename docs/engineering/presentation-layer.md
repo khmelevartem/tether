@@ -106,8 +106,8 @@ Every `@Preview` targets `XxxContent` — never `XxxScreen`. Previews live in `c
 
 Reusable composables live in two sibling folders under `composeApp/src/commonMain/kotlin/com/tubetoast/tether/ui/`:
 
-- `designsystem/` — domain-agnostic primitives: `Toggle`, `Checkbox`, `Button` + `ButtonVariant`, `Banner` + `BannerSeverity`, `ProgressBar`, `ConfirmDialog`, `EllipsizedText`, `BodyText`/`TitleText`/`LabelText`/`NumericText`/`CaptionText`/`BodyLargeText`, `IconButtons`, `BrandMark`. No transfer/peer/file vocabulary. Litmus test: if the primitive could land in a generic Compose library, it lives here.
-- `feature/` — domain-bound composables built on top of design-system primitives: `AutoSendToggle`, `PeerIdentityAccent`, `CurrentFileLabel`, `ByteProgressRow`, `SkipCountBadge`. Each carries transfer/peer semantics in its name, copy, or content description.
+- `designsystem/` — domain-agnostic primitives. No transfer/peer/file vocabulary. Litmus test: if the primitive could land in a generic Compose library, it lives here.
+- `feature/` — domain-bound composables built on top of design-system primitives. Each carries transfer/peer semantics in its name, copy, or content description.
 
 New primitives go to `designsystem/` by default; demote to `feature/` only when the primitive references domain types or hardcodes domain copy.
 

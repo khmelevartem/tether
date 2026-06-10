@@ -24,12 +24,14 @@ Token values for both themes:
 | `textPrimary` | `#1A1A1F` | `#ECECEE` | Body text, device names, primary labels |
 | `textMuted` | `#6B6B73` | `#9A9DA3` | Secondary labels, captions, timestamps |
 | `accent` | `#2F7D6B` | `#3FA08A` | Active state, progress fills, interactive accents |
+| `onAccent` | `#FFFFFF` | `#FFFFFF` | Content (icon/label) rendered on a filled `accent` surface |
 | `error` | `#B4423A` | `#E26A60` | Error text, destructive action labels |
 | `peerIdentity` | `#C77E47` | `#D89968` | Peer device identity — peer-device rows, transfer receiver chip, pairing confirmation, and similar identity-display surfaces. Never as an interactive accent. |
 
 ### Color rules
 
 - **`accent` is the only interactive color.** Buttons, progress fills, focus rings, checked states — all use `accent`. No other color takes an interactive meaning.
+- **Filled-accent controls are allowed for a primary action.** A primary action may render as a solid `accent` fill with its icon/label in `onAccent` (e.g. the confirm control in an inline editor), instead of accent-on-surface. Emphasis comes from the fill, never a shadow; `accent` remains the sole interactive color whether tinted or filled.
 - **`peerIdentity` identifies a peer device or the far end of the tether.** Legal contexts: peer-device rows in device list, transfer receiver chip, pairing confirmation, and similar identity-display surfaces. Never as an interactive accent — that role belongs to `accent` (teal).
 - **Never hardcode color literals** outside the color token definitions. Read all colors from the current `TetherColors` instance via its composition local.
 - **Elevation is expressed by surface tiers and `border`.** Use `surfaceRaised` + a 1dp `border`-colored outline for cards/sheets instead of shadow effects. This avoids the iOS Skia blur-shadow performance cost.
