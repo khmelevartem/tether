@@ -21,16 +21,10 @@ class PeerCardCopyTest {
 
     @Test
     fun sentCardCopyUsesDeviceNameNotFingerprint() {
-        val namedDevice = Device(name = "Alice", host = "h", port = 1, fingerprint = "fp-abc")
-        val state = PeerTransferState.Sent(
-            namedDevice.toPeerIdentity(),
-            sent = 3,
-            total = 3,
-            perFile = emptyList(),
-            partialReason = null,
-        )
-        val result = sentCardCopy(state, namedDevice)
-        assertEquals("Sent 3 files to Alice", result)
+        // device.name ("Alice") differs from its fingerprint ("fp-abc") that backs the PeerIdentity,
+        // so the copy must read the name from the device, not from state.peer.
+        val state = PeerTransferState.Sent(peer, sent = 3, total = 3, perFile = emptyList(), partialReason = null)
+        assertEquals("Sent 3 files to Alice", sentCardCopy(state, device))
     }
 
     @Test

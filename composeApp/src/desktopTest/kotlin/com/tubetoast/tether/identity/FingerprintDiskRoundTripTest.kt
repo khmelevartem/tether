@@ -29,6 +29,9 @@ class FingerprintDiskRoundTripTest {
         prefsFile.delete()
     }
 
+    // UnconfinedTestDispatcher runs each coroutine eagerly on the calling thread, so the suspending
+    // DataStore read/write resolve inline under runTest; a StandardTestDispatcher (plain TestScope)
+    // would queue the DataStore actor's work behind virtual time that this test never advances.
     @Test
     fun `fingerprint written by first DataStore is readable by second DataStore at same path`() = runTest {
         val job1 = SupervisorJob()
