@@ -3,6 +3,9 @@ package com.tubetoast.tether.network
 import com.tubetoast.tether.preferences.TempDataStore
 import com.tubetoast.tether.security.DefaultTrustedDeviceStore
 import com.tubetoast.tether.security.DeviceKeyPair
+import com.tubetoast.tether.transfer.DefaultTransferActivityTracker
+import com.tubetoast.tether.transfer.NoOpTransferActivityTracker
+import com.tubetoast.tether.transfer.TransferActivityTracker
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO

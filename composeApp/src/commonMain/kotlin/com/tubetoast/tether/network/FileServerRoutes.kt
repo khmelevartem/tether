@@ -8,6 +8,8 @@ import com.tubetoast.tether.protocol.PairResponse
 import com.tubetoast.tether.protocol.PeerAnnouncement
 import com.tubetoast.tether.security.TrustedDeviceStore
 import com.tubetoast.tether.security.deviceIdFromPublicKey
+import com.tubetoast.tether.transfer.NoOpTransferActivityTracker
+import com.tubetoast.tether.transfer.TransferActivityTracker
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application

@@ -12,15 +12,15 @@ import com.tubetoast.tether.identity.DataStoreFingerprintPersistence
 import com.tubetoast.tether.identity.FingerprintPersistence
 import com.tubetoast.tether.network.AndroidMediaStoreUploadStorage
 import com.tubetoast.tether.network.AndroidTransferLockHolder
-import com.tubetoast.tether.network.DefaultTransferActivityTracker
-import com.tubetoast.tether.network.TransferActivityTracker
 import com.tubetoast.tether.network.UploadStorage
 import com.tubetoast.tether.preferences.DefaultFileTransferPreferences
 import com.tubetoast.tether.preferences.FileTransferPreferences
 import com.tubetoast.tether.protocol.DeviceType
 import com.tubetoast.tether.transfer.AndroidFilePicker
 import com.tubetoast.tether.transfer.AndroidPickerCoordinator
+import com.tubetoast.tether.transfer.DefaultTransferActivityTracker
 import com.tubetoast.tether.transfer.FilePicker
+import com.tubetoast.tether.transfer.TransferActivityTracker
 import okio.Path.Companion.toOkioPath
 
 class AndroidAppContainer(

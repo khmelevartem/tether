@@ -1,4 +1,4 @@
-package com.tubetoast.tether.network
+package com.tubetoast.tether.transfer
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async

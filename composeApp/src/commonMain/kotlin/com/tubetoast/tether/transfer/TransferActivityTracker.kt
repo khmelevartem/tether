@@ -1,4 +1,4 @@
-package com.tubetoast.tether.network
+package com.tubetoast.tether.transfer
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow

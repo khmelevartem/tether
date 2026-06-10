@@ -12,11 +12,9 @@ import com.tubetoast.tether.discovery.RendezvousAnnouncer
 import com.tubetoast.tether.discovery.SelfAnnouncementProvider
 import com.tubetoast.tether.identity.DeviceIdentityStore
 import com.tubetoast.tether.identity.FingerprintPersistence
-import com.tubetoast.tether.network.DefaultTransferActivityTracker
 import com.tubetoast.tether.network.FileClient
 import com.tubetoast.tether.network.FileServer
 import com.tubetoast.tether.network.PeerFileSender
-import com.tubetoast.tether.network.TransferActivityTracker
 import com.tubetoast.tether.peer.PeersRepository
 import com.tubetoast.tether.preferences.DefaultPeerPreferencesStore
 import com.tubetoast.tether.preferences.FileTransferPreferences
@@ -29,6 +27,7 @@ import com.tubetoast.tether.security.TrustedDeviceStore
 import com.tubetoast.tether.transfer.AutoSendDispatcher
 import com.tubetoast.tether.transfer.BatchSender
 import com.tubetoast.tether.transfer.ConnectionMonitor
+import com.tubetoast.tether.transfer.DefaultTransferActivityTracker
 import com.tubetoast.tether.transfer.FilePicker
 import com.tubetoast.tether.transfer.NoOpConnectionMonitor
 import com.tubetoast.tether.transfer.PeerIdentity
@@ -36,6 +35,7 @@ import com.tubetoast.tether.transfer.PeerTransferEngine
 import com.tubetoast.tether.transfer.PeerTransferEngineRegistry
 import com.tubetoast.tether.transfer.PendingFilesRepository
 import com.tubetoast.tether.transfer.ReconnectionTimeout
+import com.tubetoast.tether.transfer.TransferActivityTracker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

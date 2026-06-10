@@ -2,13 +2,13 @@ package com.tubetoast.tether.presentation.banners
 
 import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.essenty.lifecycle.coroutines.coroutineScope
-import com.tubetoast.tether.network.TransferActivityTracker
 import com.tubetoast.tether.peer.PeersRepository
 import com.tubetoast.tether.protocol.DeviceType
 import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PeerTransferEngineRegistry
 import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.PendingFilesRepository
+import com.tubetoast.tether.transfer.TransferActivityTracker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job

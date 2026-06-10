@@ -3,13 +3,14 @@ package com.tubetoast.tether.presentation.banners
 import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.resume
-import com.tubetoast.tether.network.NoOpTransferActivityTracker
 import com.tubetoast.tether.peer.FakePeersRepository
 import com.tubetoast.tether.peer.Peer
 import com.tubetoast.tether.preferences.FakePeerPreferencesStore
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.protocol.DeviceType
+import com.tubetoast.tether.transfer.DefaultTransferActivityTracker
 import com.tubetoast.tether.transfer.FakeFileSource
+import com.tubetoast.tether.transfer.NoOpTransferActivityTracker
 import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PeerTransferEngine
 import com.tubetoast.tether.transfer.PeerTransferEngineRegistry
@@ -17,6 +18,7 @@ import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.PendingFilesRepository
 import com.tubetoast.tether.transfer.PendingFilesSummary
 import com.tubetoast.tether.transfer.ReceiveEvent
+import com.tubetoast.tether.transfer.TransferActivityTracker
 import com.tubetoast.tether.transfer.fakeBatchSender
 import com.tubetoast.tether.transfer.fakePeerTransferEngineRegistry
 import kotlinx.coroutines.CoroutineScope
@@ -24,6 +26,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -44,6 +47,8 @@ class BannersComponentTest {
         peersRepository: FakePeersRepository = FakePeersRepository(),
         engineRegistry: PeerTransferEngineRegistry? = null,
         conflictRelay: PeerConflictRelay = PeerConflictRelay(),
+        transferActivityTracker: TransferActivityTracker = NoOpTransferActivityTracker,
+        ownDeviceType: DeviceType = DeviceType.Android,
         coroutineScope: CoroutineScope,
     ): BannersComponent {
         val lifecycle = LifecycleRegistry().also { it.resume() }
@@ -53,8 +58,8 @@ class BannersComponentTest {
             peersRepository = peersRepository,
             engineRegistry = engineRegistry ?: fakePeerTransferEngineRegistry(coroutineScope),
             conflictRelay = conflictRelay,
-            transferActivityTracker = NoOpTransferActivityTracker,
-            ownDeviceType = DeviceType.Android,
+            transferActivityTracker = transferActivityTracker,
+            ownDeviceType = ownDeviceType,
             coroutineScope = coroutineScope,
         )
     }
@@ -86,6 +91,43 @@ class BannersComponentTest {
         component.onCancelPending()
 
         assertNull(repo.pending.value?.summary)
+    }
+
+    @Test
+    fun `showForegroundConstraint is true when active and device is iOS`() = runTest(UnconfinedTestDispatcher()) {
+        val tracker = DefaultTransferActivityTracker(backgroundScope)
+        val component = buildComponent(
+            transferActivityTracker = tracker,
+            ownDeviceType = DeviceType.Ios,
+            coroutineScope = backgroundScope,
+        )
+        tracker.withActiveTransfer {
+            assertTrue(component.showForegroundConstraint.value)
+        }
+    }
+
+    @Test
+    fun `showForegroundConstraint is false when active but device is not iOS`() = runTest(UnconfinedTestDispatcher()) {
+        val tracker = DefaultTransferActivityTracker(backgroundScope)
+        val component = buildComponent(
+            transferActivityTracker = tracker,
+            ownDeviceType = DeviceType.Android,
+            coroutineScope = backgroundScope,
+        )
+        tracker.withActiveTransfer {
+            assertFalse(component.showForegroundConstraint.value)
+        }
+    }
+
+    @Test
+    fun `showForegroundConstraint is false when inactive and device is iOS`() = runTest(UnconfinedTestDispatcher()) {
+        val tracker = DefaultTransferActivityTracker(backgroundScope)
+        val component = buildComponent(
+            transferActivityTracker = tracker,
+            ownDeviceType = DeviceType.Ios,
+            coroutineScope = backgroundScope,
+        )
+        assertFalse(component.showForegroundConstraint.value)
     }
 
     @Test

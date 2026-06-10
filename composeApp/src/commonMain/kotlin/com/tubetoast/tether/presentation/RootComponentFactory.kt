@@ -3,7 +3,6 @@ package com.tubetoast.tether.presentation
 import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.essenty.lifecycle.coroutines.withLifecycle
 import com.tubetoast.tether.config.DeviceNameStore
-import com.tubetoast.tether.network.TransferActivityTracker
 import com.tubetoast.tether.peer.PeersRepository
 import com.tubetoast.tether.preferences.FileTransferPreferences
 import com.tubetoast.tether.presentation.banners.BannersComponent
@@ -14,6 +13,7 @@ import com.tubetoast.tether.protocol.DeviceType
 import com.tubetoast.tether.transfer.FilePicker
 import com.tubetoast.tether.transfer.PeerTransferEngineRegistry
 import com.tubetoast.tether.transfer.PendingFilesRepository
+import com.tubetoast.tether.transfer.TransferActivityTracker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 
