@@ -22,7 +22,7 @@ actual class FileServer internal constructor(
     private val uploadStorage: UploadStorage,
     private val trustedDeviceStore: TrustedDeviceStore,
     private val deviceKeyPair: DeviceKeyPair,
-    private val tracker: TransferActivityTracker = DefaultTransferActivityTracker(),
+    private val tracker: TransferActivityTracker = NoOpTransferActivityTracker,
     private val deviceIdentityStore: DeviceIdentityStore? = null,
     private val discoveredDevicesStore: DiscoveredDevicesStore? = null,
 ) {

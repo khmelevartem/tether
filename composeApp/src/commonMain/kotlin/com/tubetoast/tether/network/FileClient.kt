@@ -42,12 +42,12 @@ private val log = KydraLog.withTag(default = "FileClient")
 
 open class FileClient(
     private val client: HttpClient,
-    private val tracker: TransferActivityTracker = DefaultTransferActivityTracker(),
+    private val tracker: TransferActivityTracker = NoOpTransferActivityTracker,
     private val noProgressTimeout: Duration = DEFAULT_NO_PROGRESS_TIMEOUT,
 ) : Closeable {
     companion object {
         fun default(
-            tracker: TransferActivityTracker = DefaultTransferActivityTracker(),
+            tracker: TransferActivityTracker = NoOpTransferActivityTracker,
         ): FileClient = FileClient(
             client = HttpClient(CIO) {
                 install(ContentNegotiation) { json() }

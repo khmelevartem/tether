@@ -68,7 +68,7 @@ internal fun Application.installFileServerRoutes(
     storage: UploadStorage,
     trustedDeviceStore: TrustedDeviceStore,
     serverPublicKey: ByteArray,
-    tracker: TransferActivityTracker = DefaultTransferActivityTracker(),
+    tracker: TransferActivityTracker = NoOpTransferActivityTracker,
     deviceIdentityStore: DeviceIdentityStore? = null,
     discoveredDevicesStore: DiscoveredDevicesStore? = null,
 ) {

@@ -28,10 +28,13 @@ class AndroidAppContainer(
 ) : JvmAppContainer(config) {
     val application = config.application
     private val lockHolder = AndroidTransferLockHolder(application)
-    override val transferActivityTracker: TransferActivityTracker = DefaultTransferActivityTracker(
-        onFirstEnter = lockHolder::acquire,
-        onLastExit = lockHolder::release,
-    )
+    override val transferActivityTracker: TransferActivityTracker by lazy {
+        DefaultTransferActivityTracker(
+            scope = appScope,
+            onFirstEnter = lockHolder::acquire,
+            onLastExit = lockHolder::release,
+        )
+    }
     override val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.createWithPath {
         application.filesDir
             .resolve("datastore/tether_preferences.preferences_pb")

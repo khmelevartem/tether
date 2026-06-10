@@ -54,6 +54,7 @@ class AndroidTransferLockHolderTest {
     @Test
     fun `tracker callbacks drive both locks end-to-end`() = kotlinx.coroutines.test.runTest {
         val tracker = DefaultTransferActivityTracker(
+            scope = backgroundScope,
             onFirstEnter = holder::acquire,
             onLastExit = holder::release,
         )

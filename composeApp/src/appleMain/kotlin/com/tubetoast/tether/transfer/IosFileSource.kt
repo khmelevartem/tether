@@ -14,6 +14,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -47,6 +48,8 @@ internal class IosFileSource(
 ) : FileSource {
     override val name: String = relativePath.substringAfterLast('/')
     private var accessStarted = false
+    private var readerJob: Job? = null
+    private var closed = false
 
     override suspend fun openReadChannel(): ByteReadChannel {
         if (securityScoped) {
@@ -72,7 +75,7 @@ internal class IosFileSource(
         }
         val channel = ByteChannel(autoFlush = true)
         val readerScope = CoroutineScope(currentCoroutineContext() + Dispatchers.IO)
-        readerScope.launch {
+        readerJob = readerScope.launch {
             try {
                 memScoped {
                     val buf = allocArray<ByteVar>(READ_BUFFER_SIZE)
@@ -100,6 +103,9 @@ internal class IosFileSource(
     }
 
     override fun close() {
+        if (closed) return
+        closed = true
+        readerJob?.cancel()
         if (accessStarted) {
             url.stopAccessingSecurityScopedResource()
             accessStarted = false
