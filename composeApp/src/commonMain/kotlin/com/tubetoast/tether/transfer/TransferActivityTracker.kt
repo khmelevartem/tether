@@ -28,8 +28,8 @@ object NoOpTransferActivityTracker : TransferActivityTracker {
  * `active` is a derived projection of the single `atomicState` source, so it cannot desync from the
  * committed state — do not reintroduce a separately-written boolean flag.
  *
- * Lock-free — `synchronized` is unavailable in commonMain, and a coroutine `Mutex` cannot guard
- * `releaseAll` (non-suspend, called from `onDestroy`).
+ * Transitions use `MutableStateFlow.compareAndSet` retry loops — `synchronized` is unavailable in
+ * commonMain, and a coroutine `Mutex` cannot guard `releaseAll` (non-suspend, called from `onDestroy`).
  */
 class DefaultTransferActivityTracker(
     private val scope: CoroutineScope,
