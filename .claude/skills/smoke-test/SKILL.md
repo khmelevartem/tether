@@ -23,9 +23,15 @@ At the start of the run **tell the user** — coverage boundaries:
 
 All these items must appear in the **"Manual verification required"** section of the report.
 
+## Shared environment (`smoke-env.sh`)
+
+Blocks run in separate shells and coordinate only through fixed filesystem paths, so every block sources `smoke-env.sh` at the top to re-derive identical, worktree-scoped values. From the worktree root it derives a per-worktree scratch dir under `/tmp` and, beneath it, the per-instance fifo / log / pid / keeper paths, the iOS build/launch logs, and the resolved cli jar. Because the namespace is keyed on the worktree, two runs in different worktrees never share scratch state, PID bookkeeping, or kill scope. It also exposes a basename prefix for sent files (so receiver-dir cleanup under the shared `$HOME/Downloads/Tether` targets only this run) and helpers to kill / detect this worktree's CLI instances.
+
+Kill is matched by the worktree's **jar path**, not by a package-name substring — the CLI runs as `java -jar …/tether-cli.jar`, so a package-name pattern never matches it.
+
 ## Starting the CLI
 
-The FIFO keeps stdin open for `list`, `send`, `quit` commands. All blocks that launch a CLI instance follow this pattern — see `block-1-desktop-cli-a.sh` for the canonical form.
+The FIFO (`$FIFO_A` etc.) keeps stdin open for `list`, `send`, `quit` commands. All blocks that launch a CLI instance follow this pattern — see `block-1-desktop-cli-a.sh` for the canonical form.
 
 Desktop CLI instances are launched with `TETHER_LOG_DEBUG=true` so subsystem logger lines are captured in the log and available for assertions and diagnostics. Product output (the bracketed `[…]` status lines and the startup banner) is echoed regardless of this flag.
 
@@ -39,7 +45,9 @@ Blocks run under `set -euo pipefail`. Commands that exit nonzero as a *normal* r
 
 ## Run plan
 
-Execute blocks sequentially. A block failure does not prevent subsequent blocks from running. Run cleanup (`block-7-cleanup.sh`) **always**, even after earlier FAILs.
+**Primary invocation — `./run-all.sh`.** It drives every block back-to-back in one pass, tees a greppable consolidated log (`===== BLOCK<n> =====` headers) to stdout and `/tmp/smoke-results-<id>.log`, guards the iOS block when Xcode/simulator is absent, and runs cleanup via an `EXIT` trap. Launch it as **one** task and read the result log to synthesise the report — do not invoke blocks one-by-one with waits in between: each CLI's FIFO keeper is `sleep 600`, so a CLI dies ~10 min after its block started, and a spread-out run kills CLI A mid-flight (later blocks then FAIL against a dead instance). A watchdog aborts the run (and still cleans up) after `SMOKE_DEADLINE` seconds — default 540, override via the env var for a slower machine.
+
+The individual `block-*.sh` scripts below remain runnable on their own for targeted re-runs and debugging. A block failure does not prevent subsequent blocks from running. Cleanup (`block-7-cleanup.sh`) runs **always** — `run-all.sh` triggers it on `EXIT`; if you run blocks by hand, invoke it yourself even after earlier FAILs.
 
 All scripts live in `.claude/skills/smoke-test/` and are self-contained — run them from that directory or the repo root.
 
@@ -47,7 +55,7 @@ All scripts live in `.claude/skills/smoke-test/` and are self-contained — run 
 
 Run: `./block-0-preparation.sh`
 
-Kills lingering CLI instances, builds the CLI jar, and sets `$JAR`.
+Kills lingering CLI instances (scoped to this worktree) and builds the CLI jar; subsequent blocks derive `$JAR` via smoke-env.sh.
 
 FAIL → all remaining blocks SKIP with reason "cli jar build failed".
 
@@ -65,7 +73,7 @@ Launches CLI A (`SmokeMacA`, random port), then checks:
 6. **mDNS publish (dns-sd, optional)** — `dns-sd -B` browse. SKIP if `dns-sd` unavailable (Linux).
 7. **stdin `list`** — must produce a `[list]` or `[peers]` line.
 
-CLI A stays alive through the Android and iOS blocks (they need it for cross-discovery). Graceful quit — Block 4, deferred to just before cleanup.
+CLI A stays alive through the Android and iOS blocks (they need it for cross-discovery). Graceful quit — Block 6, deferred to just before cleanup.
 
 ### Block 2: Desktop ↔ Desktop send (via CLI)
 
@@ -93,7 +101,7 @@ Stops B to provoke `[send] error`, restarts B, then issues `retry SmokeMacB`. **
 
 #### Scenario 2.4 — exit code on `quit`
 
-Verified in Block 4 — `lastExit` accumulates per `send`/`retry`; the last successful send was AllSent → expected exit code 0.
+Verified in Block 6 — `lastExit` accumulates per `send`/`retry`; the last successful send was AllSent → expected exit code 0.
 
 ### Block 3: Same-name discovery
 
@@ -127,9 +135,9 @@ Run: `./block-3.5-rename.sh`
 
 Sends `name RenamedA` to A via stdin; B must see the new name via mDNS republish within 15 s.
 
-### Block 5: Android (conditional)
+### Block 4: Android (conditional)
 
-Run: `./block-5-android.sh`
+Run: `./block-4-android.sh`
 
 SKIP if no adb device connected. If present:
 
@@ -141,14 +149,14 @@ SKIP if no adb device connected. If present:
 6. Send Desktop → Android via CLI `send`. SKIP if emulator with QEMU NAT (`10.0.2.x`) or Android peer not discovered.
 7. `force-stop`.
 
-### Block 5.5: iOS simulator runtime
+### Block 5: iOS simulator runtime
 
-Run: `./block-5.5-ios.sh`
+Run: `./block-5-ios.sh`
 
 1. Resolve + boot simulator (default `iPhone 17`; override via `IOS_DEVICE` env var).
 2. `xcodebuild`, install, launch.
 3. mDNS publish — `dns-sd -B` for up to 30 s.
-4. TXT record — must return `03 76 3D 31` (`v=1`).
+4. TXT record — must return `23 66 70 3D` (`#fp=`).
 5. Cross-discovery — iOS peer must appear in Desktop A's log within 30 s.
 6. `/health` on the real iOS bundle — port discovered via `lsof` on the host loopback.
 7. `/pair` X.509 EC P-256 SPKI shape (91 bytes, `[0]=0x30`, `[26]=0x04`). Load-bearing gate for the class of Apple-Keychain regression that unit tests cannot reach — `simctl spawn` binaries have no app identity, so `SecItem*` returns "unavailable" regardless of correctness. See `docs/knowledge/apple-platform.md`.
@@ -156,9 +164,9 @@ Run: `./block-5.5-ios.sh`
 
 iOS cleanup — in Block 7.
 
-### Block 4: Graceful quit of instance A — and `lastExit` propagation
+### Block 6: Graceful quit of instance A — and `lastExit` propagation
 
-Run: `./block-4-graceful-quit.sh`
+Run: `./block-6-graceful-quit.sh`
 
 Runs after the Android and iOS blocks — both need instance A alive for cross-discovery, so A's graceful quit is deferred to just before cleanup.
 
@@ -170,7 +178,7 @@ Checks exit code = 0 (last send was AllSent after the retry scenario). If the pr
 
 Run: `./block-7-cleanup.sh` — **always**.
 
-Kills all CLI instances and keepers, removes FIFOs, logs, PIDs, scratch files in `$HOME/Downloads/Tether/`, Android device files, iOS simulator app, and build logs.
+Kills this worktree's CLI instances and keepers (via `smoke_kill_instances`), removes the per-run `$SMOKE_DIR` (fifos, logs, PIDs, sent source files, iOS build/launch logs), this run's received files in `$HOME/Downloads/Tether/` (matched by `$SMOKE_SEND_PREFIX`), Android device files, and terminates the iOS simulator app. Scoped to this worktree, so a concurrent smoke run in another worktree is left untouched.
 
 ## Report format
 
@@ -223,7 +231,7 @@ At the end of the run print a markdown report:
 | Android | force-stop | ✓ PASS | process killed |
 | iOS | xcodebuild + install | ✓ PASS | UDID=<...>, 28s |
 | iOS | launch | ✓ PASS | pid=<...> |
-| iOS | mDNS publish | ✓ PASS | service=<IOS_NAME>, TXT=03 76 3D 31 |
+| iOS | mDNS publish | ✓ PASS | service=<IOS_NAME>, TXT=23 66 70 3D |
 | iOS | cross-discovery | ✓ PASS | seen on Desktop A in 4s |
 | iOS | /health (real bundle) | ✓ PASS | port=55171, "Tether OK" |
 | iOS | /pair X.509 EC P-256 | ✓ PASS | 91 bytes via real Keychain |
@@ -256,8 +264,8 @@ At the end of the run print a markdown report:
 When the user asks to "run smoke":
 
 1. Print a short plan (1–2 lines): "I'll run Desktop CLI via cli jar, Desktop↔Desktop send, Android if a device is connected, native compile. What I don't check — see the report."
-2. Run the blocks.
-3. Print the report.
+2. Run `./run-all.sh` as one task, then read `/tmp/smoke-results-<id>.log` (or the task output).
+3. Synthesise and print the report from the result log.
 4. If verdict is 🔴 — give a recommendation: which block failed and where to look.
 
 Don't ask the user for clarification — the skill must be "zero-question": everything non-automatable goes into Manual verification.
@@ -269,7 +277,7 @@ Don't ask the user for clarification — the skill must be "zero-question": ever
 - **Jar name may contain version** — determine dynamically via glob. Don't hardcode the filename.
 - **`dns-sd` not on macOS** — unavailable on Linux; secondary mDNS check SKIP with reason "dns-sd not available". Primary check (grep CLI log for `mDNS started`) still works.
 - **`timeout` absent on macOS** — use pattern `( cmd & PID=$!; sleep N; kill $PID )` instead of `timeout`.
-- **FIFO writer keeper died early** — readLine() returns null, CLI exits; check `ps -p $KEEPER`.
+- **FIFO writer keeper died early** — readLine() returns null, CLI exits; check `ps -p $KEEPER`. The keeper is `sleep 600`, so a CLI also self-exits ~10 min after launch; a send/discovery FAIL against a CLI that was alive earlier usually means the run dragged past that window (see Run plan — run back-to-back).
 - **Android emulator in NAT (10.0.2.x)** — cross-discovery works both ways (multicast passes). QEMU user-mode NAT does not proxy host→guest TCP payload: handshake passes, data doesn't arrive. Send block — SKIP at `10.0.2.x`, not FAIL. Health is accessible via `adb forward`. See `docs/knowledge/android-emulator-networking.md`.
 - **`ip route` unreliable on some vendors** (ColorOS, MIUI return subnet instead of src) — use `ip addr show wlan0`.
 - **Multiple adb devices** — pick the first or fail with a clarification. Don't hang the skill on a specific serial.

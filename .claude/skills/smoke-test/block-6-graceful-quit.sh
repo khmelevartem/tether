@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Requires: block-1 already executed (CLI A alive, $JPID_A known / /tmp/smoke-cliA.pid written).
+# Requires: block-1 already executed (CLI A alive, pid in $PID_A).
 # After block-2 retry scenario the last result was AllSent → expected exit code 0.
 
-JPID_A="${JPID_A:-$(cat /tmp/smoke-cliA.pid 2>/dev/null)}"
+. "$(dirname "${BASH_SOURCE[0]}")/smoke-env.sh"
+
+JPID_A="${JPID_A:-$(cat "$PID_A" 2>/dev/null)}"
 [ -z "$JPID_A" ] && { echo "FAIL: JPID_A unknown — cannot check graceful quit"; exit 1; }
 
-echo "quit" > /tmp/smoke-cliA-in &
+echo "quit" > "$FIFO_A" &
 
 EXITED=0
 for i in $(seq 1 8); do

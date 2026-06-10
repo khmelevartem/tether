@@ -48,7 +48,7 @@
 - [ ] `Continuation<T>` — интерфейс, как реализуется возобновление
 - [ ] Корутины vs потоки — почему «легковесные», как маппируются на потоки
 - [ ] `CoroutineContext` — `Job`, `Dispatcher`, `CoroutineName`, `CoroutineExceptionHandler`, наследование
-- [ ] `suspend` vs `blocking` — чем `delay` отличается от `Thread.sleep`
+- [x] `suspend` vs `blocking` — чем `delay` отличается от `Thread.sleep`
 
 ### Structured concurrency
 - [x] Что такое structured concurrency — scope, parent-child, когда parent завершается

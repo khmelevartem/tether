@@ -29,4 +29,4 @@ Emulator `wlan0` IP is in `10.0.2.0/24`. Check with `adb shell ip addr show wlan
 
 ## Smoke-test behavior
 
-The send-block (Block 5 step 8) skips when `ANDROID_IP` starts with `10.0.2.`. Cross-discovery (step 7) is not skipped — it works. See `.claude/skills/smoke-test/SKILL.md` Block 5.
+The send-block (Block 4 step 6) skips when `ANDROID_IP` starts with `10.0.2.`. Cross-discovery (step 5) is not skipped — it works. See `.claude/skills/smoke-test/SKILL.md` Block 4.
