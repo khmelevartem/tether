@@ -68,11 +68,32 @@ internal class IosFilePicker(
 
     override suspend fun pickPhotos(): List<FileSource> = presentPhotoPicker()
 
-    private suspend fun presentFilePicker(contentTypes: List<UTType>): List<FileSource> {
-        val deferred = CompletableDeferred<List<FileSource>>()
+    private suspend fun presentFilePicker(contentTypes: List<UTType>): List<FileSource> =
+        presentDocumentPicker(
+            contentTypes = contentTypes,
+            delegateFactory = ::FilePickerDelegate,
+            empty = emptyList(),
+            logLabel = { sources -> "document picker resolved: ${sources.size} item(s)" },
+        )
+
+    private suspend fun presentFolderPicker(): List<NSURL> =
+        presentDocumentPicker(
+            contentTypes = listOf(UTTypeFolder),
+            delegateFactory = ::FolderPickerDelegate,
+            empty = emptyList(),
+            logLabel = { urls -> "folder picker resolved: ${urls.size} folder(s)" },
+        )
+
+    private suspend fun <T> presentDocumentPicker(
+        contentTypes: List<UTType>,
+        delegateFactory: (CompletableDeferred<T>) -> NSObject,
+        empty: T,
+        logLabel: (T) -> String,
+    ): T {
+        val deferred = CompletableDeferred<T>()
         withContext(Dispatchers.Main) {
             val vc = resolveRootViewController() ?: run {
-                deferred.complete(emptyList())
+                deferred.complete(empty)
                 return@withContext
             }
             val picker = UIDocumentPickerViewController(
@@ -80,43 +101,17 @@ internal class IosFilePicker(
                 asCopy = false,
             )
             picker.allowsMultipleSelection = true
-            val delegate = FilePickerDelegate(deferred)
+            val delegate = delegateFactory(deferred)
             activeDocDelegate = delegate
-            picker.delegate = delegate
+            picker.delegate = delegate as? UIDocumentPickerDelegateProtocol
             vc.presentViewController(picker, animated = true, completion = null)
         }
         return try {
             deferred.await()
         } finally {
             activeDocDelegate = null
-        }.also { sources ->
-            log.info { "document picker resolved: ${sources.size} item(s)" }
-        }
-    }
-
-    private suspend fun presentFolderPicker(): List<NSURL> {
-        val deferred = CompletableDeferred<List<NSURL>>()
-        withContext(Dispatchers.Main) {
-            val vc = resolveRootViewController() ?: run {
-                deferred.complete(emptyList())
-                return@withContext
-            }
-            val picker = UIDocumentPickerViewController(
-                forOpeningContentTypes = listOf(UTTypeFolder),
-                asCopy = false,
-            )
-            picker.allowsMultipleSelection = true
-            val delegate = FolderPickerDelegate(deferred)
-            activeDocDelegate = delegate
-            picker.delegate = delegate
-            vc.presentViewController(picker, animated = true, completion = null)
-        }
-        return try {
-            deferred.await()
-        } finally {
-            activeDocDelegate = null
-        }.also { urls ->
-            log.info { "folder picker resolved: ${urls.size} folder(s)" }
+        }.also { result ->
+            log.info { logLabel(result) }
         }
     }
 
@@ -163,9 +158,9 @@ internal class IosFilePicker(
         // it early (or never starting it) causes enumeratorAtURL to return nothing silently.
         folderUrl.startAccessingSecurityScopedResource()
         val folderName = folderUrl.lastPathComponent ?: "folder"
-        // realpath resolves symlinks so itemUrl.path and folderPath share the same root on
-        // macOS/iOS simulator, where NSTemporaryDirectory() may return /var while the
-        // enumerator resolves item paths via /private/var.
+        // realpath resolves symlinks so itemUrl.path and folderPath share the same root on iOS
+        // simulator and macOS, where NSTemporaryDirectory() may return /var while the enumerator
+        // resolves item paths via /private/var. Real-device behavior is unverified.
         val rawPath = folderUrl.path ?: run {
             folderUrl.stopAccessingSecurityScopedResource()
             return emptyList()

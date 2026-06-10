@@ -127,7 +127,7 @@ CFRelease(dict)
 
 **Fix:** call `realpath()` on the folder's `.path` before creating the enumeration root URL, and use the realpath-derived URL as the strip prefix. `realpath()` resolves the symlink on both sides to `/private/var/…`, making the prefix strip work correctly.
 
-**Scope:** simulator reproduces this (in-sandbox paths go through `/var`). Real device also affected for picker-vended folder URLs.
+**Scope:** observed on iOS simulator and macOS, where `NSTemporaryDirectory()` resolves under `/var` while `NSFileManager.enumeratorAtURL` resolves item paths via `/private/var`. Real-device behavior is unverified.
 
 ---
 
