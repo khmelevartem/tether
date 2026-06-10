@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Requires: block-1 already executed (CLI A alive, $JPID_A known / /tmp/smoke-cliA.pid written).
+# Requires: block-1 already executed (CLI A alive, pid in $PID_A).
 # After block-2 retry scenario the last result was AllSent → expected exit code 0.
 
-JPID_A="${JPID_A:-$(cat /tmp/smoke-cliA.pid 2>/dev/null)}"
+. "$(dirname "${BASH_SOURCE[0]}")/smoke-env.sh"
+
+JPID_A="${JPID_A:-$(cat "$PID_A" 2>/dev/null)}"
 [ -z "$JPID_A" ] && { echo "FAIL: JPID_A unknown — cannot check graceful quit"; exit 1; }
 
-echo "quit" > /tmp/smoke-cliA-in &
+echo "quit" > "$FIFO_A" &
 
 EXITED=0
 for i in $(seq 1 8); do
@@ -28,13 +30,13 @@ else
   # Exit code is written by the launch wrapper in block-1; wait on a detached PID returns 127.
   EXIT_FILE_READY=0
   for i in $(seq 1 5); do
-    [ -f /tmp/smoke-cliA.exit ] && { EXIT_FILE_READY=1; break; }
+    [ -f "$EXIT_A" ] && { EXIT_FILE_READY=1; break; }
     sleep 1
   done
   if [ $EXIT_FILE_READY -eq 0 ]; then
-    echo "FAIL: /tmp/smoke-cliA.exit never written — exit code unknown"
+    echo "FAIL: $EXIT_A never written — exit code unknown"
   else
-    EXIT_A=$(cat /tmp/smoke-cliA.exit)
-    [ "$EXIT_A" = "0" ] && echo "PASS: exit code — exit=$EXIT_A (last send AllSent)" || echo "FAIL: exit code — exit=$EXIT_A"
+    EXIT_CODE=$(cat "$EXIT_A")
+    [ "$EXIT_CODE" = "0" ] && echo "PASS: exit code — exit=$EXIT_CODE (last send AllSent)" || echo "FAIL: exit code — exit=$EXIT_CODE"
   fi
 fi

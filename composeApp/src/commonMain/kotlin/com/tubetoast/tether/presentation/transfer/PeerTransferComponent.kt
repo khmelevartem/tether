@@ -78,15 +78,25 @@ class PeerTransferComponent(
         sendOrConfirmLarge(pending.sources, clearOnSuccess = pending)
     }
 
+    // All access is main-thread-confined: onPick is called from UI and the coroutine body
+    // + finally resume on Dispatchers.Main.immediate, so no volatile/atomic needed.
+    private var pickInFlight = false
+
     fun onPick(kind: PickKind) {
+        if (pickInFlight) return
+        pickInFlight = true
         scope.launch {
-            val sources = when (kind) {
-                PickKind.Files -> filePicker.pickFiles()
-                PickKind.Folder -> filePicker.pickFolder()
-                PickKind.Photos -> filePicker.pickPhotos()
+            try {
+                val sources = when (kind) {
+                    PickKind.Files -> filePicker.pickFiles()
+                    PickKind.Folder -> filePicker.pickFolder()
+                    PickKind.Photos -> filePicker.pickPhotos()
+                }
+                if (sources.isEmpty()) return@launch
+                sendOrConfirmLarge(sources)
+            } finally {
+                pickInFlight = false
             }
-            if (sources.isEmpty()) return@launch
-            sendOrConfirmLarge(sources)
         }
     }
 
@@ -113,10 +123,7 @@ class PeerTransferComponent(
     ) {
         scope.launch {
             val warningEnabled = fileTransferPreferences.observeLargeSelectionWarning().first()
-            val summary = PendingFilesSummary(
-                fileCount = sources.size,
-                totalBytes = sources.sumOf { it.sizeBytes ?: 0L },
-            )
+            val summary = PendingFilesSummary.from(sources)
             if (warningEnabled && summary.isLargeSelection) {
                 largeConfirm.value = PendingLargeConfirm(sources, summary)
             } else {

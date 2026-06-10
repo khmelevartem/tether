@@ -15,8 +15,7 @@ import com.arkivanov.decompose.retainedComponent
 import com.tubetoast.tether.di.AndroidAppContainer
 import com.tubetoast.tether.di.AppContainerProvider
 import com.tubetoast.tether.network.TetherForegroundService
-import com.tubetoast.tether.presentation.RootContent
-import com.tubetoast.tether.transfer.PendingFilesSummary
+import com.tubetoast.tether.presentation.RootScreen
 import com.tubetoast.tether.transfer.ShareIntentParser
 import kotlinx.coroutines.launch
 import ru.pocketbyte.kydra.log.KydraLog
@@ -81,7 +80,7 @@ class MainActivity : ComponentActivity() {
 
         val component = retainedComponent { container.rootComponentFactory.create(it) }
         setContent {
-            RootContent(component)
+            RootScreen(component)
         }
     }
 
@@ -112,11 +111,7 @@ class MainActivity : ComponentActivity() {
         container.appScope.launch {
             val sources = ShareIntentParser.parse(intent, contentResolver)
             if (sources.isEmpty()) return@launch
-            val summary = PendingFilesSummary(
-                fileCount = sources.size,
-                totalBytes = sources.sumOf { it.sizeBytes ?: 0L },
-            )
-            container.pendingFilesRepository.setPending(summary, sources)
+            container.pendingFilesRepository.setPending(sources)
         }
     }
 

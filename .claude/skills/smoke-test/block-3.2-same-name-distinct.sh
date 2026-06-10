@@ -11,9 +11,7 @@ set -euo pipefail
 # Assertion: in each CLI's last [peers] line, no two peers share the same display name.
 # (block-3.1 already guarantees no two share host:port, so a duplicate name here = the #368 collapse.)
 
-LOG_A="${LOG_A:-/tmp/smoke-cliA.log}"
-LOG_B="${LOG_B:-/tmp/smoke-cliB.log}"
-LOG_C="${LOG_C:-/tmp/smoke-cliC.log}"
+. "$(dirname "${BASH_SOURCE[0]}")/smoke-env.sh"
 
 dup_names() {
     local log="$1"
@@ -34,9 +32,9 @@ dup_names() {
 
 # Allow up to 20s for /hello to land after discovery (this is exactly when the bug used to bite).
 for i in $(seq 1 20); do
-    echo "list" > /tmp/smoke-cliA-in &
-    echo "list" > /tmp/smoke-cliB-in &
-    echo "list" > /tmp/smoke-cliC-in &
+    echo "list" > "$FIFO_A" &
+    echo "list" > "$FIFO_B" &
+    echo "list" > "$FIFO_C" &
     sleep 1
     A=$(dup_names "$LOG_A")
     B=$(dup_names "$LOG_B")

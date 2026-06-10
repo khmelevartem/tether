@@ -1,22 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Requires: block-1 already executed (CLI A alive at $LOG_A / $JPID_A / fifo /tmp/smoke-cliA-in).
+# CLI B runs with a persisted identity (--config-dir, set in block-2.1 and on the restart below),
+# so its fingerprint/PeerIdentity is stable across the stop→restart and the failed transfer's
+# terminal state is still keyed to the same peer for `retry` to resume from.
+
+# Requires: block-1 already executed (CLI A alive at $LOG_A / fifo $FIFO_A).
 # Requires: CLI B was alive (this script stops and restarts it).
 
-LOG_A="${LOG_A:-/tmp/smoke-cliA.log}"
-LOG_B="${LOG_B:-/tmp/smoke-cliB.log}"
-DOWNLOADS_B="${DOWNLOADS_B:-$HOME/Downloads/Tether}"
-JAR="${JAR:-$(ls "$(git rev-parse --show-toplevel)"/composeApp/build/libs/tether-cli-*.jar \
-  "$(git rev-parse --show-toplevel)"/composeApp/build/libs/tether-cli.jar 2>/dev/null | head -1 || true)}"
+. "$(dirname "${BASH_SOURCE[0]}")/smoke-env.sh"
 
 # Stop B and immediately send — A's registry still holds the stale peer entry, so the
 # engine begins a transfer that fails mid-flight (connection refused) instead of erroring
 # synchronously with "peer not found". The latter is unretryable: no engine state was created.
-set +e; kill "$(cat /tmp/smoke-cliB.pid 2>/dev/null)" 2>/dev/null; set -e
+set +e; kill "$(cat "$PID_B" 2>/dev/null)" 2>/dev/null; set -e
 
-RETRY_NAME="smoke-retry-$(date +%s).txt"
-RETRY_SRC="/tmp/$RETRY_NAME"
+RETRY_NAME="${SMOKE_SEND_PREFIX}-retry-$(date +%s).txt"
+RETRY_SRC="$SMOKE_DIR/$RETRY_NAME"
 echo "retry-payload-$(date +%s)" > "$RETRY_SRC"
 
 # CLI emits two error formats: `[send] error — <reason>` for transfer failures and
@@ -24,7 +24,7 @@ echo "retry-payload-$(date +%s)" > "$RETRY_SRC"
 # Match both case-insensitively.
 PREV_ERR=$(grep -ciE "^\[send\] (error|ERROR)" "$LOG_A" 2>/dev/null || true)
 PREV_ERR=${PREV_ERR:-0}
-echo "send SmokeMacB $RETRY_SRC" > /tmp/smoke-cliA-in &
+echo "send SmokeMacB $RETRY_SRC" > "$FIFO_A" &
 
 for i in $(seq 1 15); do
   NOW_ERR=$(grep -ciE "^\[send\] (error|ERROR)" "$LOG_A" 2>/dev/null || true)
@@ -39,10 +39,10 @@ done
 PREV_HELLO=$(grep -cE "hello from SmokeMacB@" "$LOG_A" 2>/dev/null || true)
 PREV_HELLO=${PREV_HELLO:-0}
 
-# Restart B with the same name and config dir — preserves the PeerIdentity so `retry` finds the terminal state.
-TETHER_LOG_DEBUG=true nohup java -jar "$JAR" --name SmokeMacB --port 0 --config-dir "${CONFIG_DIR_B:-/tmp/smoke-cliB-config}" < /tmp/smoke-cliB-in > "$LOG_B" 2>&1 &
+# Restart B with the same name and --config-dir so its persisted fingerprint/PeerIdentity resolves again.
+TETHER_LOG_DEBUG=true nohup java -jar "$JAR" --name SmokeMacB --port 0 --config-dir "$CONFIG_DIR_B" < "$FIFO_B" > "$LOG_B" 2>&1 &
 JPID_B=$!; disown $JPID_B
-echo $JPID_B > /tmp/smoke-cliB.pid
+echo $JPID_B > "$PID_B"
 
 for i in $(seq 1 30); do
   NOW_HELLO=$(grep -cE "hello from SmokeMacB@" "$LOG_A" 2>/dev/null || true)
@@ -53,7 +53,7 @@ done
 
 PREV_DONE=$(grep -cE "^\[send\] done" "$LOG_A" 2>/dev/null || true)
 PREV_DONE=${PREV_DONE:-0}
-echo "retry SmokeMacB" > /tmp/smoke-cliA-in &
+echo "retry SmokeMacB" > "$FIFO_A" &
 
 for i in $(seq 1 15); do
   NOW_DONE=$(grep -cE "^\[send\] done" "$LOG_A" 2>/dev/null || true)

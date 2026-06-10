@@ -1,42 +1,51 @@
 # Security & Privacy
 
-Tether moves files between devices on the same local network with no cloud and no accounts. This doc captures the trust model, the pairing flow, and the unresolved choice of channel encryption.
+Tether moves files between devices on the same local network with no cloud and no accounts. This doc captures the trust model, the pairing flow, and channel encryption at the product level. The engineering-layer STRIDE analysis — per-component attack surface and the conditions each mitigation depends on — lives in [`threat-model.md`](threat-model.md), with the SAS-pairing attack tree and pentest suite in [`sas-pairing-pentest.md`](sas-pairing-pentest.md).
+
+> This describes the **target** security model. The SAS pairing apparatus (commit-before-reveal, SAS derivation, trust stored only after mutual confirmation) and channel encryption are the model the implementation is built toward, not the current behaviour of every endpoint. Related work building toward it: [#10](https://github.com/khmelevartem/tether/issues/10) (SAS pairing handshake), [#11](https://github.com/khmelevartem/tether/issues/11) (confirmation UI), and [#140](https://github.com/khmelevartem/tether/issues/140) (pinned-TLS channel encryption).
 
 ## Threat Model
 
-Who we protect against, in order of priority:
+The local network is **untrusted** — not "home means safe". A hotspot, a café, a weak WPA2 network all put the attacker inside the segment. Who we protect against, in order of priority:
 
-1. **Untrusted peers on the same Wi-Fi.** Coffee shops, coworking spaces, home networks with guests. Other devices on the LAN can see mDNS announces and reach the file server port. They must not be able to send or receive files without explicit user consent (pairing).
-2. **Passive eavesdropper on an open Wi-Fi.** Someone sniffing unencrypted traffic on the same network. Mitigation depends on the channel-encryption choice (see open question).
-3. **Active MITM on an open Wi-Fi.** Someone able to intercept and modify traffic between two paired devices. Mitigation requires authenticated channel encryption.
-4. **Lost / stolen device.** Trusted-peer keys stored locally are exposed to whoever has the device. We rely entirely on OS-level device security (lock screen, disk encryption, secure storage). Tether does **not** add an app-level passcode or biometric lock — that's the OS's job, and reproducing it inside the app is duplicate work that users would expect to keep working when their phone is unlocked anyway.
+1. **Untrusted peers on the same Wi-Fi.** Coffee shops, coworking spaces, home networks with guests. Other devices on the LAN can see mDNS announces and reach the file server port. They must not be able to send or receive files without explicit user consent (pairing). Every transfer request proves pairing — being paired at the start of a session is not enough.
+2. **Passive eavesdropper on an open Wi-Fi.** Someone sniffing traffic on the same network. Closed by TLS on the LAN (see [Channel Encryption](#channel-encryption)): a sniffer sees no file bytes and no file names.
+3. **Active MITM on an open Wi-Fi.** Someone able to intercept and modify traffic — substituting keys during pairing, or wedging into the transfer stream. Closed during pairing by SAS comparison with commit-before-reveal (see [Pairing Flow](#pairing-flow)), and on transport by TLS pinned to the paired key.
 
-Out of scope:
+The mitigations do not depend on the network being honest. ARP spoofing and rogue-AP takeover are both inside the model and both closed by the same pinned-TLS property — the network is never trusted.
+
+Out of scope (accepted risks):
 - Nation-state adversaries.
-- Malicious code on the user's own device.
+- An already-paired malicious device (insider).
+- Malicious code on the user's own device. Malware running as the same user can ask the OS to decrypt a software-stored secret; only hardware-backed storage (TPM / Secure Enclave) closes this fully, which is out of MVP.
+- Advanced timing side-channels.
 - Attacks on the underlying OS / Wi-Fi router.
+
+A **lost or stolen device** is handled by OS-level security (lock screen, disk encryption, secure storage), not by Tether. Tether does **not** add an app-level passcode or biometric lock — that's the OS's job, and reproducing it inside the app is duplicate work that users would expect to keep working when their phone is unlocked anyway.
 
 ## Discovery and Trust
 
-Discovery is unauthenticated by design. Any device on a reachable subnet can announce itself — that is true today through mDNS and remains true through the additional discovery channels described in [tech-stack.md](tech-stack.md) and [`docs/engineering/discovery.md`](../engineering/discovery.md): the `/hello` rendezvous endpoint, HTTP-subnet-scan, and UDP-broadcast fallbacks. None of these widens the trust surface beyond what mDNS already exposes — they only diversify how a peer's existence reaches the device list. The list itself is not a trust claim.
+Discovery is unauthenticated by design. Any device on a reachable subnet can announce itself — that is true today through mDNS and remains true through the additional discovery channels described in [tech-stack.md](../product/tech-stack.md) and [`docs/engineering/discovery.md`](../engineering/discovery.md): the `/hello` rendezvous endpoint, HTTP-subnet-scan, and UDP-broadcast fallbacks. None of these widens the trust surface beyond what mDNS already exposes — they only diversify how a peer's existence reaches the device list. The list itself is not a trust claim.
 
-The trust gate is **pairing**. No file moves between two devices until they have completed the first-encounter PIN comparison and exchanged keys. Discovery's job is to make sure both devices see each other; pairing decides which of them they will accept files from.
+The trust gate is **pairing**. No file moves between two devices until they have completed the first-encounter SAS comparison and exchanged keys. A device announcing under another's name authenticates nothing — new devices surface as unverified, and only the SAS comparison grants trust. Discovery's job is to make sure both devices see each other; pairing decides which of them they will accept files from.
 
 Manual IP entry has the same trust properties: it adds a peer to the device list, not to the trusted-devices store. The user still goes through pairing the first time they exchange a file with a manually-entered peer.
 
 ## Pairing Flow
 
-First-time connection between two devices:
+First-time connection between two devices uses **SAS comparison** — a Short Authentication String each device derives independently and shows the user to verify by eye.
 
 1. Device A initiates a connection to Device B (selected from the discovered list).
-2. Both devices display the **same 4-digit numeric code**, derived from the handshake (see issue [#10](../../README.md)).
-3. The user confirms the code matches on both screens.
-4. Public keys are exchanged and stored locally on both devices.
-5. Subsequent connections between the two devices recognize each other automatically — no re-pairing.
+2. The two devices exchange keys, each commits to its own key before the peer reveals theirs (**commit-before-reveal**), and each independently derives the **same SAS** from the full handshake transcript — binding both devices' keys and fresh per-handshake values. Exact inputs: [`threat-model.md` §SAS pairing model](threat-model.md#sas-pairing-model).
+3. Both devices display the SAS; the user confirms it matches on both screens.
+4. Public keys are committed to the trust store on both sides only after that confirmation. A user who sees a mismatch and rejects leaves both trust stores unchanged.
+5. Subsequent connections between the two devices recognise each other automatically — no re-pairing.
 
-The 4-digit code defends against active MITM during pairing: an attacker who intercepts and substitutes their own key produces a different code on each side, and the user catches the mismatch.
+The SAS defends against active MITM during pairing: an attacker who intercepts and substitutes their own key produces a different SAS on each side, and the user catches the mismatch. This holds only when several correctness conditions all hold together — see [`threat-model.md` §SAS pairing model](threat-model.md#sas-pairing-model).
 
-Local key storage: per-platform secure storage (Keystore on Android, Keychain on Apple, OS keyring on Desktop). Specifics in implementation issues.
+The protection is only as strong as the user's attention: blind one-tap confirmation nullifies it, so the comparison is designed to require an active, deliberate match rather than a single button pressed without looking.
+
+Local key storage: per-platform secure storage (Keystore on Android, Keychain on Apple, OS-level protection on Desktop — DPAPI / Credential Manager on Windows, Keychain on macOS). The app never holds a master secret itself or encrypts with a static key baked into the binary. Specifics in [`docs/engineering/device-identity.md`](../engineering/device-identity.md) and implementation issues.
 
 ## Channel Encryption
 

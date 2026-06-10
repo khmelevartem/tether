@@ -10,14 +10,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.dp
+import com.tubetoast.tether.ui.designsystem.tetherRowDecoration
 import com.tubetoast.tether.ui.theme.TetherTheme
-
-private val PeerIdentityStripWidth = 3.dp
 
 /**
  * When [isPaired] is true, a peer-identity accent strip is painted along the card's left edge,
@@ -38,33 +32,13 @@ internal fun PeerCardShell(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = TetherTheme.colors
-    val spacing = TetherTheme.spacing
-    val borderColor = colors.border
-    val identityColor = colors.peerIdentity
-    val density = LocalDensity.current
-    val borderWidthPx = with(density) { spacing.borderWidth.toPx() }
-    val stripWidthPx = with(density) { PeerIdentityStripWidth.toPx() }
 
     Column(
         modifier = modifier
             .fillMaxWidth()
             .background(colors.surface)
-            .drawBehind {
-                val y = size.height - borderWidthPx / 2f
-                drawLine(
-                    color = borderColor,
-                    start = Offset(0f, y),
-                    end = Offset(size.width, y),
-                    strokeWidth = borderWidthPx,
-                )
-                if (isPaired) {
-                    drawRect(
-                        color = identityColor,
-                        topLeft = Offset.Zero,
-                        size = Size(stripWidthPx, size.height),
-                    )
-                }
-            }.padding(contentPadding),
+            .tetherRowDecoration(leadingAccent = if (isPaired) colors.peerIdentity else null)
+            .padding(contentPadding),
         verticalArrangement = verticalArrangement,
         horizontalAlignment = horizontalAlignment,
         content = content,

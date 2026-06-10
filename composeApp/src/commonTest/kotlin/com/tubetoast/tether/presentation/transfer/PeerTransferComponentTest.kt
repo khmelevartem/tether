@@ -16,9 +16,9 @@ import com.tubetoast.tether.transfer.PeerTransferEngine
 import com.tubetoast.tether.transfer.PeerTransferEngineRegistry
 import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.PendingFilesRepository
-import com.tubetoast.tether.transfer.PendingFilesSummary
 import com.tubetoast.tether.transfer.PickKind
 import com.tubetoast.tether.transfer.fakeBatchSender
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
@@ -127,7 +127,7 @@ class PeerTransferComponentTest {
         )
 
         val sources = listOf(FakeFileSource("file.txt", 100L))
-        repo.setPending(PendingFilesSummary(1, 100L), sources)
+        repo.setPending(sources)
 
         component.onCardClick()
         runCurrent()
@@ -184,7 +184,7 @@ class PeerTransferComponentTest {
         assertIs<PeerTransferState.ActiveOutbound>(component.state.value.transfer)
 
         val shareSource = listOf(FakeFileSource("share.txt", 100L))
-        repo.setPending(PendingFilesSummary(1, 100L), shareSource)
+        repo.setPending(shareSource)
 
         val emitted = mutableListOf<PeerIdentity>()
         val collectJob = backgroundScope.launch { relay.busyTaps.collect { emitted.add(it) } }
@@ -414,7 +414,7 @@ class PeerTransferComponentTest {
     fun `large selection confirm also fires for onCardClick with pending sources`() = runTest {
         val repo = PendingFilesRepository()
         val bigSources = (1..501).map { FakeFileSource("f$it.txt", 100L) }
-        repo.setPending(PendingFilesSummary(bigSources.size, bigSources.sumOf { it.sizeBytes ?: 0L }), bigSources)
+        repo.setPending(bigSources)
         val (component) = buildComponent(
             pendingFilesRepository = repo,
             scope = backgroundScope,
@@ -425,6 +425,29 @@ class PeerTransferComponentTest {
 
         assertIs<PeerTransferState.Idle>(component.state.value.transfer)
         assertNotNull(component.state.value.largeConfirm, "large-confirm must fire for onCardClick too")
+    }
+
+    @Test
+    fun `concurrent double onPick invokes picker only once while first is in flight`() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        val picker = FakeFilePicker(result = listOf(FakeFileSource("a.txt", 100L)), gate = gate)
+        val (component) = buildComponent(filePicker = picker, scope = backgroundScope)
+
+        component.onPick(PickKind.Files)
+        component.onPick(PickKind.Files)
+        runCurrent()
+
+        assertEquals(1, picker.pickFilesCallCount, "second onPick while first is in flight must be ignored")
+
+        gate.complete(Unit)
+        runCurrent()
+
+        assertIs<PeerTransferState.Sent>(component.state.value.transfer)
+
+        component.onPick(PickKind.Files)
+        runCurrent()
+
+        assertEquals(2, picker.pickFilesCallCount, "onPick must work again after flag is reset")
     }
 
     @Test

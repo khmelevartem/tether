@@ -14,7 +14,7 @@ P2P file transfer between devices on different OSes — over a local Wi-Fi netwo
 - [Roadmap](docs/product/roadmap.md) — what is in MVP, what comes after, what is deferred.
 - [Features](docs/product/features/README.md) — status per feature and links to specs.
 - [Tech stack](docs/product/tech-stack.md) — stack choices.
-- [Security](docs/product/security.md) — threat model, pairing, encryption.
+- [Security](docs/security/README.md) — threat model, pairing, encryption.
 - [Engineering docs](docs/engineering/README.md) — architecture, modules, DI, testing.
 
 ## Quick start

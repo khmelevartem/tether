@@ -12,12 +12,15 @@ import com.tubetoast.tether.identity.FingerprintPersistence
 import com.tubetoast.tether.preferences.DefaultFileTransferPreferences
 import com.tubetoast.tether.preferences.FileTransferPreferences
 import com.tubetoast.tether.protocol.DeviceType
+import com.tubetoast.tether.transfer.FilePicker
+import com.tubetoast.tether.transfer.WindowHolder
 import okio.Path.Companion.toPath
 import java.io.File
 
-open class DesktopAppContainer(
+open class DesktopAppContainer internal constructor(
     config: DesktopAppConfig,
     override val ownDeviceType: DeviceType = DeviceType.Desktop,
+    private val platform: DesktopPlatform = desktopPlatform,
 ) : JvmAppContainer(config) {
     override val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.createWithPath {
         File(config.preferencesFilePath).also { it.parentFile?.mkdirs() }.absolutePath.toPath()
@@ -36,11 +39,14 @@ open class DesktopAppContainer(
         ?: DataStoreFingerprintPersistence(dataStore)
     override val discoveredDevicesStore: DiscoveredDevicesStore = DiscoveredDevicesStore()
     override val mdnsDiscovery: MdnsDiscovery by lazy {
-        MdnsDiscovery(discoveredDevicesStore, deviceIdentityStore)
+        MdnsDiscovery(platform.mdnsDelegate(discoveredDevicesStore, deviceIdentityStore))
     }
     override val fileTransferPreferences: FileTransferPreferences = DefaultFileTransferPreferences(
         dataStore = dataStore,
         defaultSaveLocation = File(System.getProperty("user.home"), "Downloads").absolutePath,
         saveLocationWritable = true,
     )
+
+    open val windowHolder: WindowHolder = WindowHolder()
+    open override val filePicker: FilePicker = platform.guiFilePicker(windowHolder)
 }

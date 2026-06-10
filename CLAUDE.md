@@ -17,6 +17,7 @@ Read on demand. Match what you're touching to the corresponding canon:
   - UI → [`presentation-layer.md`](docs/engineering/presentation-layer.md)
   - New module / component → [`modules.md`](docs/engineering/modules.md) + [`architecture-principles.md`](docs/engineering/architecture-principles.md)
   - Tests → [`testing.md`](docs/engineering/testing.md)
+- **Security** — [`docs/security/`](docs/security/README.md). Threat model, attack analysis, pairing/channel-encryption security framing.
 - **Feature specs / UX briefs** — `docs/product/features/<slug>/{spec,ux-brief}.md`. New / updated: copy structure from [`_template.md`](docs/product/features/_template.md) and [`_ux-brief-template.md`](docs/product/features/_ux-brief-template.md).
 - **Solved problems / platform quirks** — [`docs/knowledge/`](docs/knowledge/). Check first when something looks weird before debugging from scratch.
 - **Domain terminology** — [`docs/glossary.md`](docs/glossary.md); `review-glossary` blocks drift in PRs.

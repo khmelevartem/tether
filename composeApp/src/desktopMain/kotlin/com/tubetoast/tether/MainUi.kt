@@ -1,5 +1,12 @@
+@file:OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
+
 package com.tubetoast.tether
 
+import androidx.compose.foundation.draganddrop.dragAndDropTarget
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import com.arkivanov.decompose.DefaultComponentContext
@@ -8,9 +15,10 @@ import com.arkivanov.essenty.lifecycle.destroy
 import com.arkivanov.essenty.lifecycle.resume
 import com.tubetoast.tether.di.DefaultDesktopAppConfig
 import com.tubetoast.tether.di.DesktopAppContainer
+import com.tubetoast.tether.draganddrop.WindowDropHandler
 import com.tubetoast.tether.logging.initTetherLogging
 import com.tubetoast.tether.logging.isDebugEnabled
-import com.tubetoast.tether.presentation.RootContent
+import com.tubetoast.tether.presentation.RootScreen
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.compose.resources.painterResource
 import tether.composeapp.generated.resources.Res
@@ -42,7 +50,21 @@ fun main() = runBlocking {
                 title = "Tether",
                 icon = painterResource(Res.drawable.icon),
             ) {
-                RootContent(component)
+                val scope = rememberCoroutineScope()
+
+                LaunchedEffect(window) {
+                    container.windowHolder.window = window
+                }
+
+                val dropHandler = remember(component) { WindowDropHandler(component, scope) }
+
+                RootScreen(
+                    component = component,
+                    modifier = Modifier.dragAndDropTarget(
+                        shouldStartDragAndDrop = { true },
+                        target = dropHandler,
+                    ),
+                )
             }
         }
     }

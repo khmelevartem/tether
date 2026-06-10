@@ -3,26 +3,22 @@ set -euo pipefail
 
 # Requires: block-1 and block-2 already executed (CLI A and B alive).
 
-LOG_A="${LOG_A:-/tmp/smoke-cliA.log}"
-LOG_B="${LOG_B:-/tmp/smoke-cliB.log}"
-JAR="${JAR:-$(ls "$(git rev-parse --show-toplevel)"/composeApp/build/libs/tether-cli-*.jar \
-  "$(git rev-parse --show-toplevel)"/composeApp/build/libs/tether-cli.jar 2>/dev/null | head -1 || true)}"
+. "$(dirname "${BASH_SOURCE[0]}")/smoke-env.sh"
 
-LOG_C=/tmp/smoke-cliC.log
-rm -f /tmp/smoke-cliC-in
-mkfifo /tmp/smoke-cliC-in
-sleep 600 > /tmp/smoke-cliC-in &
-KEEPER_C=$!; disown $KEEPER_C
-echo $KEEPER_C > /tmp/smoke-cliC-keeper.pid
+rm -f "$FIFO_C"
+mkfifo "$FIFO_C"
+sleep 600 > "$FIFO_C" 2>/dev/null &
+KEEPER_PID=$!; disown $KEEPER_PID
+echo $KEEPER_PID > "$KEEPER_C"
 
-TETHER_LOG_DEBUG=true nohup java -jar "$JAR" --name SmokeMacA --port 0 < /tmp/smoke-cliC-in > "$LOG_C" 2>&1 &
+TETHER_LOG_DEBUG=true nohup java -jar "$JAR" --name SmokeMacA --port 0 < "$FIFO_C" > "$LOG_C" 2>&1 &
 JPID_C=$!; disown $JPID_C
-echo $JPID_C > /tmp/smoke-cliC.pid
+echo $JPID_C > "$PID_C"
 
 for i in $(seq 1 20); do
-  echo "list" > /tmp/smoke-cliA-in &
-  echo "list" > /tmp/smoke-cliB-in &
-  echo "list" > /tmp/smoke-cliC-in &
+  echo "list" > "$FIFO_A" &
+  echo "list" > "$FIFO_B" &
+  echo "list" > "$FIFO_C" &
   sleep 1
   set +e
   A_OK=$(grep -aE "\[peers\]" "$LOG_A" 2>/dev/null | tail -1 | grep -oE 'SmokeMac[A-Z][^@]*' | sort -u | wc -l | tr -d ' ')

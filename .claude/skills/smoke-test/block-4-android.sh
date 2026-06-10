@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Requires: block-1 already executed (CLI A alive, LOG_A set or /tmp/smoke-cliA.log present).
+# Requires: block-1 already executed (CLI A alive, log at $LOG_A).
 
-LOG_A="${LOG_A:-/tmp/smoke-cliA.log}"
+. "$(dirname "${BASH_SOURCE[0]}")/smoke-env.sh"
 
-cd "$(git rev-parse --show-toplevel)"
+cd "$TETHER_ROOT"
 
 ADB_DEVICE=$(adb devices 2>/dev/null | awk '/device$/ && !/List/ {print $1}' | head -1)
 if [ -z "$ADB_DEVICE" ]; then
@@ -68,12 +68,12 @@ if echo "$ANDROID_IP" | grep -q "^10\.0\.2\."; then
 elif [ -z "$ANDROID_NAME" ]; then
   echo "SKIP: send Desktop→Android — cross-discovery did not surface Android peer"
 else
-  ANDROID_NAME_FILE="smoke-android-$(date +%s).txt"
-  ANDROID_SRC="/tmp/$ANDROID_NAME_FILE"
+  ANDROID_NAME_FILE="${SMOKE_SEND_PREFIX}-android-$(date +%s).txt"
+  ANDROID_SRC="$SMOKE_DIR/$ANDROID_NAME_FILE"
   echo "send-to-android-$(date +%s)" > "$ANDROID_SRC"
   PREV_DONE=$(grep -cE "^\[send\] done" "$LOG_A" 2>/dev/null || true)
   PREV_DONE=${PREV_DONE:-0}
-  echo "send $ANDROID_NAME $ANDROID_SRC" > /tmp/smoke-cliA-in &
+  echo "send $ANDROID_NAME $ANDROID_SRC" > "$FIFO_A" &
   for i in $(seq 1 15); do
     NOW_DONE=$(grep -cE "^\[send\] done" "$LOG_A" 2>/dev/null || true)
     NOW_DONE=${NOW_DONE:-0}

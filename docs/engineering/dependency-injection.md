@@ -190,6 +190,22 @@ A container field is a named object that owns or manages something — a store, 
 
 When a container field needs a per-platform implementation, the common contract states that explicitly: the field is `abstract` on the common container so every platform leaf is forced to declare a value, or the leaves declare explicit stubs that throw with `TODO(#<tracking-issue>)` referencing the issue that implements the real value. A concrete common default that throws unconditionally and works only because one platform happens to override it is the worst of both shapes: it compiles, satisfies fake-based tests, and surfaces only at runtime on the platforms that forgot to override. The `abstract` form makes the gap a compile error; the explicit-stub form makes the gap a discoverable `TODO` with an owner.
 
+### 9. Branch on the host OS once, behind a provider
+
+Within a platform that bundles several operating systems (Desktop = Windows / Linux / macOS), resolve the host OS exactly once and deliver every OS-specific dependency as a delegate. A sealed provider with one object per OS, selected at a single internal point, is the only place a `when (os)` lives; the container, config, and tests consume `provider.someDelegate(...)` and never re-read `os.name`.
+
+```kotlin
+internal sealed interface HostPlatform {
+    fun someDelegate(...): SomeCollaborator
+    object MacOs : HostPlatform { /* impl A */ }
+    object Windows : HostPlatform { /* impl B */ }
+    object Linux : HostPlatform { /* impl B */ }
+}
+internal val hostPlatform = hostPlatformFrom(System.getProperty("os.name").orEmpty())
+```
+
+A public OS enum that any call site can branch on is the anti-pattern: OS forks then scatter and drift. Keep the OS axis orthogonal to other axes (e.g. GUI-vs-CLI stays in the container hierarchy) so the provider doesn't multiply into a class-per-combination. Inject the provider into the container with a default (`platform: HostPlatform = hostPlatform`) so a test can pass any OS on any host.
+
 ## Testability
 
 The container is also the seam tests use to substitute fakes. Three levels of tests, three patterns:
