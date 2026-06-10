@@ -172,7 +172,7 @@ Runs after the Android and iOS blocks — both need instance A alive for cross-d
 
 Sends `quit` to A, waits up to 8 s, checks exit. PASS if the process exited.
 
-Checks exit code = 0 (last send was AllSent after the retry scenario). If the process had to be force-killed — exit-code check SKIP.
+Checks exit code = 0 (last send was AllSent after the retry scenario). The exit-code check SKIPs when the code is unobtainable: a force-killed process, or — the usual case — CLI A being a non-child of this block's shell (launched in Block 1), where `wait` returns 127. Graceful exit itself still PASS/FAILs normally.
 
 ### Block 7: Cleanup
 
@@ -215,7 +215,7 @@ At the end of the run print a markdown report:
 | Desktop↔Desktop | single-file send | ✓ PASS | file lands in receiver downloads, diff empty |
 | Desktop↔Desktop | multi-file send (3 files) | ✓ PASS | `[send] done — 3/3 sent`, all 3 diff empty |
 | Desktop↔Desktop | retry after error | ✓ PASS | file lands after `retry`, diff empty |
-| Desktop CLI A | exit code on `quit` | ✓ PASS | exit=0 (last send AllSent) |
+| Desktop CLI A | exit code on `quit` | ⊘ SKIP | unobtainable cross-shell (wait=127); graceful exit passed |
 | Same-name discovery | A/B/C convergence | ✓ PASS | each sees 2 SmokeMac peers in 3s |
 | Peer dedup (#346) | no host:port collisions | ✓ PASS | A=0 B=0 C=0 duplicate (host,port) entries |
 | Device name | rename via stdin | ✓ PASS | peer sees new name in <15s |
@@ -236,6 +236,7 @@ At the end of the run print a markdown report:
 | iOS | /health (real bundle) | ✓ PASS | port=55171, "Tether OK" |
 | iOS | /pair X.509 EC P-256 | ✓ PASS | 91 bytes via real Keychain |
 | iOS | Keychain persistence | ✓ PASS | publicKey identical across cold launches |
+| Cleanup | teardown self-check | ✓ PASS | no CLI processes or `$SMOKE_DIR` left after block-7 |
 
 ## Failures
 
