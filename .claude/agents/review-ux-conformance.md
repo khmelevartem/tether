@@ -1,6 +1,6 @@
 ---
-name: review-ux
-description: Reviews a PR's UI code for conformance to the feature's UX brief in `docs/product/features/<slug>/ux-brief.md`. Use as part of /code-review orchestration. Skips when the diff touches no `composeApp/src/**` files, or when no UX brief exists for the affected feature (a brief may be absent legitimately — cosmetic / refactor / micro-fix; whether one is required is the orchestrator's call, not this reviewer's). Does not judge product decisions — only verifies the implemented UI matches what an existing brief promised.
+name: review-ux-conformance
+description: Reviews a PR's UI code for conformance to the feature's UX brief in `docs/product/features/<slug>/ux-brief.md`. Use as part of /code-review orchestration. Skips when the diff touches no `composeApp/src/**` files, or when no UX brief exists for the affected feature (a brief may be absent legitimately — cosmetic / refactor / micro-fix; whether one is required is the orchestrator's call, not this reviewer's). Reviews the code against the brief — not the quality of the brief itself (that is `review-ux-brief`'s job). Does not judge product decisions — only verifies the implemented UI matches what an existing brief promised.
 tools: Bash, Read, Grep, Glob
 model: sonnet
 ---
@@ -36,7 +36,7 @@ For every screen mentioned in the brief and touched by the diff:
 
 ## What you do NOT check
 
-- **Whether the brief is correct** — `ux-expert`'s direction. If a brief decision looks wrong, output `[UNVERIFIABLE] brief says X — flagged for product owner`.
+- **Whether the brief is any good** — `review-ux-brief` judges the brief's UX-domain quality (idiom correctness, state completeness, copy voice); `ux-expert` owns the direction. If a brief decision looks wrong, output `[UNVERIFIABLE] brief says X — flagged for product owner`.
 - **Composable-level duplication** — `review-reuse`.
 - **Compose API / Material 3 / theming literals** — `review-guides`.
 - **Platform parity beyond what the brief specifies** — `review-platform`.

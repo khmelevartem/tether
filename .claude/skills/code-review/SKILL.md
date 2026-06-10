@@ -26,12 +26,13 @@ Note the PR number `<PR>` and issue number `<N>` — pass both to every agent.
 Read PR body and diff. Classify once: `FEATURE | BUGFIX | REFACTOR | INFRA | DOCS | DEPENDENCY`. Some agents skip based on type (see their frontmatter). Note which agents to skip; do not launch skipped ones.
 
 Skip matrix:
-- `DOCS` → skip `review-correctness`, `review-platform`, `review-tests`, `review-ux`, `review-design-system`, `review-visual`, `review-architecture`
+- `DOCS` → skip `review-correctness`, `review-platform`, `review-tests`, `review-ux-conformance`, `review-design-system`, `review-visual`, `review-architecture` (but a DOCS PR editing a `ux-brief.md` still runs `review-ux-brief` — see the next row)
 - `INFRA` → skip `review-tests`
 - pure `REFACTOR` → skip `review-correctness` (only behavior-preserving)
 - trivial one-call-site `BUGFIX` or cosmetic refactor (rename / extract method) with no new types / modules / seams → skip `review-architecture`
 - diff doesn't touch any platform source set → skip `review-platform`
-- diff doesn't touch `composeApp/src/**` → skip `review-ux`, `review-design-system`, and `review-visual` (when Compose is touched always dispatch all three; each agent decides skip vs. block on missing brief)
+- diff doesn't touch `composeApp/src/**` → skip `review-ux-conformance`, `review-design-system`, and `review-visual` (when Compose is touched always dispatch all three; each agent decides skip vs. block on missing brief)
+- diff doesn't touch any `docs/product/features/**/ux-brief.md` → skip `review-ux-brief` (runs regardless of PR type whenever a brief is edited; it judges the brief's UX-domain quality, independent of any Compose change)
 
 ## Step 3 — Wave 1: launch all applicable reviewers in parallel
 
@@ -48,7 +49,8 @@ Agents to launch (subject to skip matrix):
 - `review-reuse`
 - `review-correctness`
 - `review-tests`
-- `review-ux`
+- `review-ux-conformance`
+- `review-ux-brief` (if diff touches `docs/product/features/**/ux-brief.md`)
 - `review-design-system` (if diff touches `composeApp/src/**`)
 - `review-visual` (renders PNGs itself when invoked; reads them against the brief)
 
