@@ -49,7 +49,7 @@ internal fun PeerCardSent(
     val peerName = device.name
     TerminalShell(
         peerName = peerName,
-        statusCopy = sentCardCopy(state, peerName),
+        statusCopy = sentCardCopy(state, device),
         showDetails = true,
         dismissDescription = "Dismiss sent notification to $peerName",
         onDismiss = callbacks.onDismiss,
@@ -94,7 +94,7 @@ internal fun PeerCardReceived(
         }
 
         BodyText(
-            text = receivedCardCopy(state, peerName),
+            text = receivedCardCopy(state, device),
             modifier = if (state.partialReason == null) {
                 Modifier
                     .clickable { callbacks.onOpenFiles() }
@@ -176,7 +176,7 @@ internal fun PeerCardError(
             )
         }
 
-        BodyText(text = errorCardCopy(state, peerName), color = colors.error)
+        BodyText(text = errorCardCopy(state, device), color = colors.error)
 
         if (!isOnline && state.reason != TransferErrorReason.ReceiverSuspended) {
             LabelText(text = "$peerName is offline")

@@ -23,6 +23,30 @@ class DevicePeerAdapterTest {
     }
 
     @Test
+    fun `same fingerprint different host yields equal PeerIdentity`() {
+        val devA = Device(name = "MyPhone", host = "192.168.1.10", port = 9000, fingerprint = "fp-abc")
+        val devB = Device(name = "MyPhone", host = "10.0.0.5", port = 9000, fingerprint = "fp-abc")
+
+        assertEquals(devA.toPeerIdentity(), devB.toPeerIdentity())
+    }
+
+    @Test
+    fun `same fingerprint different name yields equal PeerIdentity`() {
+        val devA = Device(name = "Alice's Phone", host = "192.168.1.10", port = 9000, fingerprint = "fp-abc")
+        val devB = Device(name = "Bob's Laptop", host = "192.168.1.10", port = 9000, fingerprint = "fp-abc")
+
+        assertEquals(devA.toPeerIdentity(), devB.toPeerIdentity())
+    }
+
+    @Test
+    fun `same fingerprint different name host and port yields equal PeerIdentity`() {
+        val devA = Device(name = "Alice", host = "192.168.1.10", port = 9000, fingerprint = "fp-abc")
+        val devB = Device(name = "Bob", host = "10.0.0.5", port = 9999, fingerprint = "fp-abc")
+
+        assertEquals(devA.toPeerIdentity(), devB.toPeerIdentity())
+    }
+
+    @Test
     fun `null fingerprint falls back to id`() {
         val dev = Device(name = "MyPhone", host = "192.168.1.10", port = 9000, fingerprint = null)
 
