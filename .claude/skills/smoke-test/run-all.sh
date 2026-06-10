@@ -19,6 +19,7 @@ run() { log "===== $1 ====="; shift; "$@" 2>&1 | tee -a "$RESULTS"; }
 # fds detached so the (possibly orphaned) sleep child never holds this script's stdout open.
 ( sleep "${SMOKE_DEADLINE:-540}"; kill -TERM "$$" ) >/dev/null 2>&1 &
 WATCHDOG=$!
+disown 2>/dev/null   # so reaping it in finish() prints no job-control "Terminated" line
 
 cleaned=0
 finish() {
@@ -27,6 +28,13 @@ finish() {
     cleaned=1
     kill "$WATCHDOG" 2>/dev/null; pkill -P "$WATCHDOG" 2>/dev/null
     run BLOCK7 ./block-7-cleanup.sh
+    # Teardown self-check — the harness must leave no instances or scratch behind for this
+    # worktree; without this assertion a silently-broken cleanup leaks every run unseen.
+    local leak=0
+    { [ -n "$SMOKE_JAR" ] && pgrep -f "$SMOKE_JAR" >/dev/null 2>&1; } && leak=1
+    [ -d "$SMOKE_DIR" ] && leak=1
+    [ "$leak" = 0 ] && log "PASS: teardown — no instances or scratch left" \
+      || log "FAIL: teardown — LEAK (CLI processes or $SMOKE_DIR remain after cleanup)"
     log "ALLDONE"
   fi
   exit 0
