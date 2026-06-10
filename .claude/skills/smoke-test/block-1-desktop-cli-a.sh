@@ -16,9 +16,12 @@ KEEPER_PID=$!; disown $KEEPER_PID
 echo $KEEPER_PID > "$KEEPER_A"
 
 # Wrap the JVM in a subshell that records its real exit code — block-6 reads $EXIT_A rather than
-# `wait` on this disowned PID, which returns 127 from another shell.
+# `wait` on this disowned PID, which returns 127 from another shell. The subshell's own std fds are
+# detached (</dev/null >/dev/null 2>&1) so this long-lived background process cannot hold an
+# inherited pipe open and wedge a caller that reads this block through a pipe; the JVM keeps its
+# explicit $FIFO_A/$LOG_A redirects.
 rm -f "$EXIT_A"
-( TETHER_LOG_DEBUG=true java -jar "$JAR" --name SmokeMacA --port 0 < "$FIFO_A" > "$LOG_A" 2>&1; echo $? > "$EXIT_A" ) &
+( TETHER_LOG_DEBUG=true java -jar "$JAR" --name SmokeMacA --port 0 < "$FIFO_A" > "$LOG_A" 2>&1; echo $? > "$EXIT_A" ) </dev/null >/dev/null 2>&1 &
 JPID_A=$!; disown $JPID_A
 echo $JPID_A > "$PID_A"
 
