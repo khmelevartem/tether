@@ -104,6 +104,7 @@ internal class IosFilePicker(
             val delegate = delegateFactory(deferred)
             activeDocDelegate = delegate
             picker.delegate = delegate as? UIDocumentPickerDelegateProtocol
+            log.info { "presenting document picker" }
             vc.presentViewController(picker, animated = true, completion = null)
         }
         return try {
@@ -131,6 +132,7 @@ internal class IosFilePicker(
             val delegate = PhotoPickerDelegate(deferred)
             activePhotoDelegate = delegate
             picker.delegate = delegate
+            log.info { "presenting photo picker" }
             vc.presentViewController(picker, animated = true, completion = null)
         }
         return try {

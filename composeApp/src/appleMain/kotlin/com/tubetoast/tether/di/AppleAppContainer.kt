@@ -35,6 +35,7 @@ import platform.Foundation.NSFileManager
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSUserDomainMask
 import platform.UIKit.UIApplication
+import platform.UIKit.UIViewController
 import platform.UIKit.UIWindow
 import platform.UIKit.UIWindowScene
 
@@ -78,16 +79,37 @@ open class AppleAppContainer(
     override val transferActivityTracker: TransferActivityTracker by lazy { DefaultTransferActivityTracker(appScope) }
     override val transferActiveForBanner: StateFlow<Boolean> = transferActivityTracker.active
 
+    // The hosting ComposeUIViewController, attached by MainViewController once created. Presenting
+    // from it (via its window's root) is reliable; the connectedScenes lookup is a last resort
+    // because SwiftUI-managed scenes do not always expose a key window at pick time.
+    private var hostViewController: UIViewController? = null
+
+    fun attachHostViewController(viewController: UIViewController) {
+        hostViewController = viewController
+    }
+
     override val filePicker: FilePicker = IosFilePicker(
-        viewControllerProvider = {
-            UIApplication.sharedApplication.connectedScenes
-                .filterIsInstance<UIWindowScene>()
-                .firstNotNullOfOrNull { scene ->
-                    scene.keyWindow
-                        ?: scene.windows.filterIsInstance<UIWindow>().firstOrNull { it.isKeyWindow() }
-                }?.rootViewController
-        },
+        viewControllerProvider = { topmostPresenter() },
     )
+
+    private fun topmostPresenter(): UIViewController? {
+        val root = hostViewController?.view?.window?.rootViewController
+            ?: hostViewController
+            ?: connectedScenesRoot()
+        var top = root
+        while (top?.presentedViewController != null) {
+            top = top.presentedViewController
+        }
+        return top
+    }
+
+    private fun connectedScenesRoot(): UIViewController? =
+        UIApplication.sharedApplication.connectedScenes
+            .filterIsInstance<UIWindowScene>()
+            .firstNotNullOfOrNull { scene ->
+                scene.keyWindow
+                    ?: scene.windows.filterIsInstance<UIWindow>().firstOrNull { it.isKeyWindow() }
+            }?.rootViewController
 }
 
 @OptIn(ExperimentalForeignApi::class, kotlinx.cinterop.BetaInteropApi::class)
