@@ -29,7 +29,7 @@ class BannersComponent(
     private val peersRepository: PeersRepository,
     private val engineRegistry: PeerTransferEngineRegistry,
     private val conflictRelay: PeerConflictRelay,
-    transferActive: StateFlow<Boolean> = MutableStateFlow(false),
+    transferActive: StateFlow<Boolean>,
     coroutineScope: CoroutineScope = componentContext.coroutineScope(),
 ) : ComponentContext by componentContext {
     private val scope = coroutineScope

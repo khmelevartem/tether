@@ -354,6 +354,7 @@ class RootComponentTest {
                             peersRepository = peersRepository,
                             engineRegistry = fakePeerTransferEngineRegistry(coroutineScope),
                             conflictRelay = PeerConflictRelay(),
+                            transferActive = MutableStateFlow(false),
                             coroutineScope = coroutineScope,
                         )
                     },

@@ -127,13 +127,6 @@ CFRelease(dict)
 
 **Fix:** call `realpath()` on the folder's `.path` before creating the enumeration root URL, and use the realpath-derived URL as the strip prefix. `realpath()` resolves the symlink on both sides to `/private/var/…`, making the prefix strip work correctly.
 
-```kotlin
-val resolvedFolderPath = realpathOf(folderUrl.path ?: return emptyList())
-    ?: folderUrl.path ?: return emptyList()
-val resolvedFolderUrl = NSURL.fileURLWithPath(resolvedFolderPath)
-// enumerate against resolvedFolderUrl; strip resolvedFolderUrl.path from child paths
-```
-
 **Scope:** simulator reproduces this (in-sandbox paths go through `/var`). Real device also affected for picker-vended folder URLs.
 
 ---

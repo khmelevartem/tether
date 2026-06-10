@@ -157,4 +157,60 @@ class IosFilePickerWalkTest {
 
         assertTrue(sources.isEmpty(), "folder with only hidden files must yield empty list: $sources")
     }
+
+    @Test
+    fun `scope released exactly once after all children closed`() = runTest {
+        val root = tempDirs.newDir()
+        val folderPath = "$root/RefCountFolder"
+        createDir(folderPath)
+        createFile("$folderPath/a.txt")
+        createFile("$folderPath/b.txt")
+        createFile("$folderPath/c.txt")
+
+        val folderUrl = NSURL.fileURLWithPath(folderPath)
+        val picker = IosFilePicker(viewControllerProvider = { null })
+        var releaseCount = 0
+        val sources = withContext(Dispatchers.IO) {
+            picker.walkFolderInternal(folderUrl, onScopeReleased = { releaseCount++ })
+        }
+
+        assertEquals(3, sources.size, "expected 3 sources: ${sources.map { it.relativePath }}")
+        assertEquals(0, releaseCount, "scope must not be released before any close")
+
+        sources[0].close()
+        assertEquals(0, releaseCount, "scope must not be released after first close")
+
+        sources[1].close()
+        assertEquals(0, releaseCount, "scope must not be released after second close")
+
+        sources[2].close()
+        assertEquals(1, releaseCount, "scope must be released exactly once after last close")
+    }
+
+    @Test
+    fun `double close on one child does not double-decrement`() = runTest {
+        val root = tempDirs.newDir()
+        val folderPath = "$root/DoubleClose"
+        createDir(folderPath)
+        createFile("$folderPath/x.txt")
+        createFile("$folderPath/y.txt")
+
+        val folderUrl = NSURL.fileURLWithPath(folderPath)
+        val picker = IosFilePicker(viewControllerProvider = { null })
+        var releaseCount = 0
+        val sources = withContext(Dispatchers.IO) {
+            picker.walkFolderInternal(folderUrl, onScopeReleased = { releaseCount++ })
+        }
+
+        assertEquals(2, sources.size)
+
+        // Close one child twice — idempotent; must not double-decrement the ref-count.
+        sources[0].close()
+        sources[0].close()
+        assertEquals(0, releaseCount, "double-close must not trigger release prematurely")
+
+        // Close the remaining child — should now release exactly once.
+        sources[1].close()
+        assertEquals(1, releaseCount, "scope must be released exactly once after all unique closes")
+    }
 }

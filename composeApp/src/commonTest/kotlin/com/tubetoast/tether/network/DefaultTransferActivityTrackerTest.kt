@@ -121,14 +121,20 @@ class DefaultTransferActivityTrackerTest {
     @Test
     fun `active stays true while concurrent transfers are in flight`() = runTest(UnconfinedTestDispatcher()) {
         val tracker = DefaultTransferActivityTracker()
-        val barrier = kotlinx.coroutines.CompletableDeferred<Unit>()
-        val job1 = async { tracker.withActiveTransfer { barrier.await() } }
-        val job2 = async { tracker.withActiveTransfer { barrier.await() } }
+        val barrier1 = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val barrier2 = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val job1 = async { tracker.withActiveTransfer { barrier1.await() } }
+        val job2 = async { tracker.withActiveTransfer { barrier2.await() } }
         assertEquals(true, tracker.active.value)
-        // release one — still active because second is in flight
-        // we can't easily release one independently here; instead verify active after both complete
-        barrier.complete(Unit)
-        awaitAll(job1, job2)
+
+        // Release the first transfer; second is still in flight — active must remain true.
+        barrier1.complete(Unit)
+        job1.await()
+        assertEquals(true, tracker.active.value, "active must stay true while second transfer is in flight")
+
+        // Release the second transfer; now both are done — active must become false.
+        barrier2.complete(Unit)
+        job2.await()
         assertEquals(false, tracker.active.value)
     }
 

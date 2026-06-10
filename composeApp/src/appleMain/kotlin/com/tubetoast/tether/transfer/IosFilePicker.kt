@@ -154,7 +154,10 @@ internal class IosFilePicker(
     }
 
     @OptIn(ExperimentalAtomicApi::class)
-    internal fun walkFolderInternal(folderUrl: NSURL): List<FileSource> {
+    internal fun walkFolderInternal(
+        folderUrl: NSURL,
+        onScopeReleased: () -> Unit = { folderUrl.stopAccessingSecurityScopedResource() },
+    ): List<FileSource> {
         // Start the security scope on the picker-vended folder URL before enumeration.
         // On a real device the file-provider grants access while the scope is held; closing
         // it early (or never starting it) causes enumeratorAtURL to return nothing silently.
@@ -230,7 +233,7 @@ internal class IosFilePicker(
         return result.map { child ->
             FolderChildFileSource(child, onLastClose = {
                 if (remaining.addAndFetch(-1) == 0) {
-                    folderUrl.stopAccessingSecurityScopedResource()
+                    onScopeReleased()
                 }
             })
         }
@@ -238,9 +241,8 @@ internal class IosFilePicker(
 }
 
 /**
- * Wraps a child [IosFileSource] from a folder walk. Delegates all reads to the wrapped source
- * and fires [onLastClose] exactly once on [close], allowing a ref-count caller to track
- * when all sibling children have been closed.
+ * Fires [onLastClose] exactly once on [close], regardless of how many times [close] is called.
+ * This ensures the shared folder security scope is released exactly once when the last sibling is closed.
  */
 private class FolderChildFileSource(
     private val delegate: IosFileSource,

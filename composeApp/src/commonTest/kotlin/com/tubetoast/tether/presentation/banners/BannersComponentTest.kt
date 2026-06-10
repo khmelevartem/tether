@@ -22,6 +22,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -42,6 +43,7 @@ class BannersComponentTest {
         peersRepository: FakePeersRepository = FakePeersRepository(),
         engineRegistry: PeerTransferEngineRegistry? = null,
         conflictRelay: PeerConflictRelay = PeerConflictRelay(),
+        transferActive: StateFlow<Boolean> = MutableStateFlow(false),
         coroutineScope: CoroutineScope,
     ): BannersComponent {
         val lifecycle = LifecycleRegistry().also { it.resume() }
@@ -51,6 +53,7 @@ class BannersComponentTest {
             peersRepository = peersRepository,
             engineRegistry = engineRegistry ?: fakePeerTransferEngineRegistry(coroutineScope),
             conflictRelay = conflictRelay,
+            transferActive = transferActive,
             coroutineScope = coroutineScope,
         )
     }
