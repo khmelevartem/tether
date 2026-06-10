@@ -1,25 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Requires: block-1 already executed (CLI A alive at $LOG_A / $JPID_A / fifo /tmp/smoke-cliA-in).
+# Requires: block-1 already executed (CLI A alive at $LOG_A / fifo $FIFO_A).
 # This script starts CLI B and waits for mutual discovery before the send scenario.
 # block-2.2 and block-2.3 assume CLI B is still alive after this script.
 
-LOG_A="${LOG_A:-/tmp/smoke-cliA.log}"
-DOWNLOADS_B="${DOWNLOADS_B:-$HOME/Downloads/Tether}"
-JAR="${JAR:-$(ls "$(git rev-parse --show-toplevel)"/composeApp/build/libs/tether-cli-*.jar \
-  "$(git rev-parse --show-toplevel)"/composeApp/build/libs/tether-cli.jar 2>/dev/null | head -1 || true)}"
+. "$(dirname "${BASH_SOURCE[0]}")/smoke-env.sh"
 
-LOG_B=/tmp/smoke-cliB.log
-rm -f /tmp/smoke-cliB-in
-mkfifo /tmp/smoke-cliB-in
-sleep 600 > /tmp/smoke-cliB-in &
-KEEPER_B=$!; disown $KEEPER_B
-echo $KEEPER_B > /tmp/smoke-cliB-keeper.pid
+rm -f "$FIFO_B"
+mkfifo "$FIFO_B"
+sleep 600 > "$FIFO_B" 2>/dev/null &
+KEEPER_PID=$!; disown $KEEPER_PID
+echo $KEEPER_PID > "$KEEPER_B"
 
-TETHER_LOG_DEBUG=true nohup java -jar "$JAR" --name SmokeMacB --port 0 < /tmp/smoke-cliB-in > "$LOG_B" 2>&1 &
+TETHER_LOG_DEBUG=true nohup java -jar "$JAR" --name SmokeMacB --port 0 < "$FIFO_B" > "$LOG_B" 2>&1 &
 JPID_B=$!; disown $JPID_B
-echo $JPID_B > /tmp/smoke-cliB.pid
+echo $JPID_B > "$PID_B"
 
 echo "Waiting for mutual mDNS discovery..."
 for i in $(seq 1 30); do
@@ -32,10 +28,10 @@ for i in $(seq 1 30); do
 done
 
 # Single-file send scenario
-SEND1_NAME="smoke-send-$(date +%s).txt"
-SEND1_SRC="/tmp/$SEND1_NAME"
+SEND1_NAME="${SMOKE_SEND_PREFIX}-send-$(date +%s).txt"
+SEND1_SRC="$SMOKE_DIR/$SEND1_NAME"
 echo "send-via-cli-$(date +%s)" > "$SEND1_SRC"
-echo "send SmokeMacB $SEND1_SRC" > /tmp/smoke-cliA-in &
+echo "send SmokeMacB $SEND1_SRC" > "$FIFO_A" &
 
 for i in $(seq 1 15); do
   set +e; grep -qE "^\[send\] (done|partial|error)" "$LOG_A" 2>/dev/null; RC=$?; set -e
