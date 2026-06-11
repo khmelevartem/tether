@@ -9,7 +9,7 @@
 
 ## Information architecture
 
-This feature introduces no new top-level screen. It **extends the PeerCard** (baseline owned by [device-list/ux-brief.md](../device-list/ux-brief.md), already extended with transfer-active states and the Auto-send toggle by [file-transfer/ux-brief.md](../file-transfer/ux-brief.md)) with two per-peer clipboard controls, an inline send-feedback state, and a **per-peer Clipboard inbox section** that holds received items in Notify mode. It introduces one **receiver-side settings row** (clipboard receive mode) and one **OS notification** (notify mode) that carries an inline Copy action and opens the peer's card.
+This feature introduces no new top-level screen. It **extends the PeerCard** (baseline owned by [device-list/ux-brief.md](../device-list/ux-brief.md), already extended with transfer-active states and the Auto-send toggle by [file-transfer/ux-brief.md](../file-transfer/ux-brief.md)) with three per-peer clipboard controls (Send clipboard, Clipboard sync, and a per-peer receive mode), an inline send-feedback state, and a **per-peer Clipboard inbox section** that holds received items in Notify mode. It introduces one **OS notification** (notify mode) that carries an inline Copy action and opens the peer's card.
 
 The Clipboard inbox is **not** a separate top-level screen or nav destination: received items for a peer surface as a section inside *that peer's* expanded PeerCard, scoped per peer.
 
@@ -23,14 +23,13 @@ DeviceListScreen (root, owned by device-list)
                   ├── + Clipboard controls    ← THIS BRIEF
                   │     ├── "Send clipboard" action  → fire-and-forget toast
                   │     │     └── inline error state (empty / unsupported)
-                  │     └── "Clipboard sync" switch (Desktop only as auto-watcher)
+                  │     ├── "Clipboard sync" switch (Desktop only as auto-watcher)
+                  │     └── receive mode (Auto-apply | Notify; default Notify) — governs items from THIS peer
                   └── + Clipboard inbox section  ← THIS BRIEF (Notify-mode received items, per peer)
                         └── inbox item (masked-where-sensitive preview)
                               ├── [Copy]    → into own clipboard, item leaves section
                               ├── [Dismiss] → item leaves section
                               └── auto-apply hint (dismissible, non-nagging)
-SettingsSection
-└── + Clipboard receive mode row             ← THIS BRIEF (Auto-apply | Notify; default Notify)
 
 Receiving side (Notify mode):
   arriving item ──▶ OS notification (masked-where-sensitive preview)
@@ -39,8 +38,8 @@ Receiving side (Notify mode):
               └──▶ Clipboard inbox section of the source peer's PeerCard (masked-where-sensitive preview)
 ```
 
-Surfaces introduced: per-peer Clipboard inbox section (lives inside the PeerCard); one OS notification (clipboard-received, with Copy action); one SettingsSection row (clipboard receive mode).
-Surfaces touched: PeerCard (Idle collapsed + expanded) — owned by [file-transfer/ux-brief.md](../file-transfer/ux-brief.md) and [device-list/ux-brief.md](../device-list/ux-brief.md); SettingsSection — owned by [file-transfer/ux-brief.md](../file-transfer/ux-brief.md).
+Surfaces introduced: per-peer Clipboard inbox section (lives inside the PeerCard); one OS notification (clipboard-received, with Copy action).
+Surfaces touched: PeerCard (Idle collapsed + expanded) — owned by [file-transfer/ux-brief.md](../file-transfer/ux-brief.md) and [device-list/ux-brief.md](../device-list/ux-brief.md).
 
 ---
 
@@ -48,12 +47,12 @@ Surfaces touched: PeerCard (Idle collapsed + expanded) — owned by [file-transf
 
 **Chosen model: send-only per side.**
 
-Turning **Clipboard sync** ON for a peer expresses one direction only: "automatically send *my* clipboard to this peer as it changes." It does not pull the peer's clipboard back. What happens to what *arrives* is governed entirely by the **receiver's own** clipboard receive mode (Auto-apply or Notify), set independently on each device. A two-way mirror exists only if *both* devices independently enable sync toward each other; even then, each direction is a separate, separately-owned switch.
+Turning **Clipboard sync** ON for a peer expresses one direction only: "automatically send *my* clipboard to this peer as it changes." It does not pull the peer's clipboard back. What happens to what *arrives* is governed entirely by the **receiver's own** per-peer clipboard receive mode (Auto-apply or Notify), set independently for each peer on each device. A two-way mirror exists only if *both* devices independently enable sync toward each other; even then, each direction is a separate, separately-owned switch.
 
 **Rationale.**
 
 - **Mental-model clarity.** The switch's label and the spec's fixed intent ("automatically send my clipboard to this peer") are send-only. One switch silently changing what lands in *my* clipboard from the peer would contradict its own label.
-- **Consistency with the per-side receiver setting.** The spec already makes receiving a per-receiver choice (Auto-apply vs Notify). A bidirectional send-switch would override or duplicate that choice — two controls fighting over the same behaviour. Send-only keeps send and receive cleanly orthogonal: each device owns its outbound switch and its inbound mode.
+- **Consistency with the per-peer receiver setting.** The spec already makes receiving a per-receiver choice (Auto-apply vs Notify), and this brief scopes it per peer. A bidirectional send-switch would override or duplicate that choice — two controls fighting over the same behaviour. Send-only keeps send and receive cleanly orthogonal: each device owns its outbound switch and its inbound mode, both per peer.
 - **Privacy.** Send-only means a device never reaches out and reads/overwrites the other's clipboard on the strength of a switch flipped on the *first* device. Each side opts in to sending its own data; neither side's clipboard is touched without that side's own receive-mode consent.
 - **Loop / echo risk.** A naive bidirectional mirror risks ping-pong: device A's clipboard changes → sent to B → applied on B → B's clipboard "changes" → echoed back to A. Send-only sidesteps this by construction — auto-send fires on *local user* copy events, and an item that arrived via transfer and was auto-applied must not itself re-trigger an auto-send (an echo-suppression rule the implementer owns; see Implementer layout calls). Even with both directions enabled, the suppression rule is per-device and local, not a distributed mirror to keep consistent.
 
@@ -65,7 +64,7 @@ This is settled here; it is not left as an open question.
 
 ### PeerCard — Idle (expanded), clipboard controls
 
-**Purpose.** Give the user, on a specific trusted peer, a one-shot "Send clipboard" action and a per-peer "Clipboard sync" switch, sitting beside the existing Auto-send (file) toggle without confusing the two.
+**Purpose.** Give the user, on a specific trusted peer, a one-shot "Send clipboard" action, a per-peer "Clipboard sync" switch, and a per-peer receive mode (what happens to clipboards arriving *from this peer*), sitting beside the existing Auto-send (file) toggle without confusing the two.
 
 **Entry points.** The user expands a PeerCard (taps the chevron `▾`, owned by [file-transfer/ux-brief.md](../file-transfer/ux-brief.md)). The clipboard controls appear in the same expanded inline block, **below** the Auto-send (file) toggle, under a short divider/section label that separates "files" concerns from "clipboard" concerns.
 
@@ -74,7 +73,8 @@ The expanded block, top to bottom:
 2. Section label: **"Clipboard"** (groups the two controls below, and disambiguates from Auto-send above).
 3. **Send clipboard** action (a button, not a toggle).
 4. **Clipboard sync** switch (On/Off) with `[i]` info affordance.
-5. **Clipboard inbox** section (Notify-mode received items for *this* peer) — present only when this peer has pending items; see the [Clipboard inbox section](#peercard--clipboard-inbox-section) screen below.
+5. **Receive mode** choice — Auto-apply | Notify — governing only clipboards arriving from *this* peer; see the [receive-mode control](#peercard--receive-mode-per-peer) below.
+6. **Clipboard inbox** section (Notify-mode received items for *this* peer) — present only when this peer has pending items, and only meaningful while this peer's receive mode is Notify; see the [Clipboard inbox section](#peercard--clipboard-inbox-section) screen below.
 
 **Layout.**
 
@@ -127,8 +127,8 @@ Empty and unsupported are **inline** (anchored to the control the user just acte
 - Peer unreachable on send: "Can't reach \<peer\>."
 - Clipboard sync switch label: "Clipboard sync"
 - Clipboard sync `[i]` (Desktop/macOS): "When on, Tether sends this device's clipboard to \<peer\> as it changes. It doesn't pull \<peer\>'s clipboard back."
-- Clipboard sync `[i]` (mobile, Android/iOS): "Clipboard sync runs only while Tether is open on this phone — this system blocks reading the clipboard in the background. Use Send clipboard for a one-off."
-- Clipboard sync mobile inline note (shown beneath the switch when On, mobile): "Only sends while Tether is open."
+- Clipboard sync `[i]` (mobile, Android/iOS): "Clipboard sync runs only while Tether is on screen — this system blocks reading the clipboard in the background. Use Send clipboard for a one-off."
+- Clipboard sync mobile inline note (shown beneath the switch when On, mobile): "Only sends while Tether is on screen."
 
 **Per-platform deltas.**
 
@@ -142,36 +142,36 @@ Empty and unsupported are **inline** (anchored to the control the user just acte
 - Send clipboard: semantic role "button", label "Send clipboard to \<peer\>". Disabled state announced as "dimmed / unavailable" with reason when focused on an offline-paired peer ("\<peer\> is offline").
 - Inline errors (empty / unsupported / unreachable): announced as an alert / live-region update tied to the button, not as a transient toast (so a screen-reader user is not racing an auto-dismiss).
 - "Clipboard sent" toast: announced once, politely (not assertive) — it is confirmation, not an alert.
-- Clipboard sync switch: role "switch", label "Clipboard sync to \<peer\>, currently \<On/Off\>". On mobile, the "only while Tether is open" limitation is part of the accessible description so it is not a purely visual caveat.
+- Clipboard sync switch: role "switch", label "Clipboard sync to \<peer\>, currently \<On/Off\>". On mobile, the "only while Tether is on screen" limitation is part of the accessible description so it is not a purely visual caveat.
 - Shape contrast (button vs switch) is reinforced by role in the semantics, so a screen-reader user distinguishes one-shot from standing without seeing the shapes.
 
 ---
 
-### SettingsSection — Clipboard receive mode
+### PeerCard — receive mode (per-peer)
 
-**Purpose.** Let the user choose, once, what happens to clipboard content arriving from any trusted peer: silently applied, or surfaced for review.
+**Purpose.** Let the user choose, for a specific trusted peer, what happens to clipboard content arriving *from that peer*: silently applied, or surfaced for review. Symmetric to the per-peer Clipboard sync send switch — each peer owns both its outbound switch and its inbound mode.
 
-**Entry points.** The existing SettingsSection (owned by [file-transfer/ux-brief.md](../file-transfer/ux-brief.md)). This brief adds one row group.
+**Entry points.** The expanded PeerCard's Clipboard controls block, directly below the Clipboard sync switch (item 5 in the block list above). It governs only items from this one peer.
 
-**Layout.** A labeled choice with two mutually-exclusive options (segmented control on Desktop/macOS, two radio rows on mobile — implementer's idiom call):
-- **Auto-apply** — arriving clipboard content silently replaces this device's clipboard.
-- **Notify** — arriving content raises a notification and is held in the source peer's Clipboard inbox section until you copy or dismiss it.
+**Layout.** A labeled choice with two mutually-exclusive options (segmented control on Desktop/macOS, two radio rows on mobile — implementer's idiom call), grouped under the same "Clipboard" section label as the send controls:
+- **Auto-apply** — clipboard content arriving from this peer silently replaces this device's clipboard.
+- **Notify** — content arriving from this peer raises a notification and is held in this peer's Clipboard inbox section until you copy or dismiss it.
 
-**Default.** **Notify** ships as the out-of-box default — the receiver is never surprised by a silent clipboard replacement before opting in. Auto-apply is a deliberate switch the user flips when they want the friction-free "just paste it" path. Notify mode itself softens that friction per-peer: see the auto-apply hint on inbox items (decided below).
+**Default.** **Notify** is the default for every peer — the receiver is never surprised by a silent clipboard replacement from a peer before opting in. Auto-apply is a deliberate per-peer switch the user flips when they trust a peer enough for the friction-free "just paste it" path. Notify mode itself softens that friction: see the auto-apply hint on this peer's inbox items (decided below), which flips exactly this control.
 
 **States.**
-- **Notify selected (default):** one-line description of where items go.
+- **Notify selected (default):** one-line description of where this peer's items go.
 - **Auto-apply selected:** the choice carries a one-line caution beneath it (see Copy) so the privacy implication is visible at the point of choosing.
 
-This is a per-device receive setting, symmetric to the sender's switch and orthogonal to it (see the direction decision above).
+This is a per-peer receive setting, symmetric to that peer's send switch and orthogonal to it (see the direction decision above).
 
 **Interactions.**
-- Select Auto-apply / Notify: applies immediately, no confirm dialog.
+- Select Auto-apply / Notify for this peer: applies immediately, no confirm dialog. Switching to Auto-apply also dismisses this peer's auto-apply hint (the hint exists only to offer this very flip). Switching back to Notify resumes raising notifications and holding items for this peer.
 
 **Copy.**
-- Group label: "Incoming clipboard"
+- Group label: "Incoming clipboard from \<peer\>"
 - Option A: "Auto-apply"
-- Option A caption: "Replaces this device's clipboard automatically. Only trusted devices can send."
+- Option A caption: "Arriving clipboards replace yours automatically."
 - Option B: "Notify"
 - Option B caption: "Get a notification and keep the item until you copy or dismiss it."
 
@@ -179,7 +179,7 @@ This is a per-device receive setting, symmetric to the sender's switch and ortho
 - **Android / iOS / macOS / Desktop:** default — same control, same copy. Idiom for the two-way choice (segmented vs radio) is an implementer call.
 
 **Accessibility.**
-- Role "radio group" with two options; selected state announced. Captions are part of each option's accessible description so the Auto-apply caution is not vision-only.
+- Role "radio group" with two options scoped to this peer; selected state announced. The accessible label names the peer ("Incoming clipboard from \<peer\>"). Captions are part of each option's accessible description so the Auto-apply caution is not vision-only.
 
 ---
 
@@ -212,23 +212,23 @@ This is a per-device receive setting, symmetric to the sender's switch and ortho
 ##### 3. Item — masked preview (sensitive content)
 - When the platform flagged the arriving content as sensitive (passwords, one-time codes), the preview is **masked**: rendered as a dotted/bulleted placeholder (e.g. "••••••••") rather than clear text, both here and in the notification.
 - The item is still fully copyable: **[Copy]** places the *real* content into the clipboard; the mask is a display-only protection, never a transformation of the payload.
-- A small masked-content indicator (lock-style Tabler glyph + text) tells the user why they see dots: "Hidden — sensitive content".
+- A small masked-content indicator (lock-style Tabler glyph + text) tells the user why they see dots: "Sensitive content" — the same phrasing the notification uses.
 
 ##### 4. Auto-apply hint (dismissible, on the most-recent item)
-- A gentle, **non-nagging** suggestion attached beneath the most-recent inbox item, shown only while this peer's content still routes through Notify (i.e. the receiver is in Notify mode): "Want \<peer\>'s clipboard to land automatically? Turn on auto-apply." with a quiet **[Turn on auto-apply]** affordance and a **[×]** dismiss.
+- A gentle, **non-nagging** suggestion attached beneath the most-recent inbox item, shown only while this peer's content still routes through Notify (i.e. this peer's receive mode is Notify): "Want \<peer\>'s clipboard to land automatically? Turn on auto-apply." with a quiet **[Turn on auto-apply]** affordance and a **[×]** dismiss.
 - It is the soft, opt-in nudge decided for Notify mode: it informs the receiver they can skip the extra Copy step for future items, without pressure.
-- **No dark patterns.** The hint is unobtrusive (a quiet caption, not a banner or modal), never blocks Copy/Dismiss, and is **dismissible**. Once dismissed it does not reappear for this peer (a per-peer "don't show again"), so it never becomes a recurring nag. Accepting it sets this device to Auto-apply via the same SettingsSection setting (a global receive-mode change — see the open-question resolution note in Copy), which the hint states plainly so the choice is honest.
+- **No dark patterns.** The hint is unobtrusive (a quiet caption, not a banner or modal), never blocks Copy/Dismiss, and is **dismissible**. Once dismissed it does not reappear for this peer (a per-peer "don't show again"), so it never becomes a recurring nag. Accepting it sets *this peer's* receive mode to Auto-apply (the per-peer control above) — only items from this one peer land automatically thereafter; every other peer is untouched. The hint states this plainly so the choice is honest.
 
 **Interactions.**
 - Tap **[Copy]** on an item: real content (clear, even if the preview was masked) goes into this device's clipboard; the item **leaves the section**. Brief toast: "Copied to clipboard". If it was this peer's last item, the section disappears and the collapsed-card unread marker clears.
 - Tap **[Dismiss]** on an item: item leaves the section; nothing is copied. No undo (ephemeral by design; the user can ask the sender to resend).
-- Tap **[Turn on auto-apply]** on the hint: switches the receive mode to Auto-apply and dismisses the hint. Future items from any peer land silently.
-- Tap **[×]** on the hint: dismisses the hint for this peer permanently; inbox items still arrive in Notify mode as before.
+- Tap **[Turn on auto-apply]** on the hint: switches *this peer's* receive mode to Auto-apply and dismisses the hint. Future items *from this peer* land silently; other peers are unaffected.
+- Tap **[×]** on the hint: dismisses the hint for this peer permanently; items from this peer still arrive in Notify mode as before.
 - An item is never auto-applied from the section and never silently dropped while pending (spec: a missed/dismissed notification must not lose it — it persists in the peer's section until Copy or Dismiss).
 
 **Copy.**
 - Section label: "Clipboard inbox"
-- Masked indicator: "Hidden — sensitive content"
+- Masked indicator: "Sensitive content"
 - Copy action: "Copy"
 - Dismiss action: "Dismiss"
 - Copy confirmation toast: "Copied to clipboard"
@@ -308,12 +308,12 @@ Terminal state: switch persists Off; watcher stopped.
 
 ### Flow 3 — Clipboard sync attempted on mobile (asymmetry made legible)
 1. User turns **Clipboard sync** On for a peer on Android/iOS.
-2. An inline note appears beneath the switch: "Only sends while Tether is open." The `[i]` explains the OS background restriction.
+2. An inline note appears beneath the switch: "Only sends while Tether is on screen." The `[i]` explains the OS background restriction.
 3. While Tether is foregrounded, clipboard changes auto-send; backgrounded, they do not.
 Terminal state: the user understands the limit and falls back to **Send clipboard** for reliable one-offs. The gap is explained, never silent.
 
 ### Flow 4 — Receiving in Notify mode (default receive mode)
-1. An item arrives while the receiver is in Notify mode (the out-of-box default).
+1. An item arrives from a peer whose receive mode is Notify (the default for every peer).
 2. A notification shows a preview (masked if sensitive) and carries a **[Copy]** action. The item also lands in the source peer's Clipboard inbox section, and the peer's collapsed card shows the unread-clipboard indicator.
 3. Fast path: user taps the notification's **[Copy]** → real content goes onto their clipboard with no navigation; the item leaves the peer's inbox section.
 4. Alternative path: user taps the notification body → the source peer's PeerCard opens expanded at its Clipboard inbox section; or the user expands that peer's card from the device list independently. There they tap **[Copy]** (toast "Copied to clipboard") or **[Dismiss]**. Either way the item leaves the section.
@@ -321,7 +321,7 @@ Terminal state: the user understands the limit and falls back to **Send clipboar
 Terminal state: the peer's inbox section no longer holds that item; unread indicator clears when its last item is gone.
 
 ### Flow 5 — Receiving in Auto-apply mode
-1. Item arrives while the receiver is in Auto-apply mode.
+1. Item arrives from a peer whose receive mode is Auto-apply.
 2. It silently replaces the receiver's clipboard. No notification, no inbox entry.
 3. User pastes wherever they were working, without opening Tether.
 Terminal state: receiver's clipboard holds the item.
@@ -355,17 +355,17 @@ Terminal state: item recovered and copied, or explicitly dismissed.
 3. User re-taps when the peer is back online.
 Terminal state: nothing sent; consistent with fire-and-forget (no receipt to chase).
 
-### Flow 11 — Accepting the auto-apply hint (Notify → Auto-apply)
-1. In Notify mode, the user reads the dismissible auto-apply hint under a peer's most-recent inbox item.
-2. User taps **[Turn on auto-apply]** → receive mode switches to Auto-apply (the SettingsSection setting), the hint clears.
-3. Future arriving items land silently per Flow 5.
-Terminal state: receive mode is Auto-apply; no further extra Copy step. The user reached it by choice, never by nag.
+### Flow 11 — Accepting the auto-apply hint (Notify → Auto-apply, this peer only)
+1. In this peer's Notify mode, the user reads the dismissible auto-apply hint under that peer's most-recent inbox item.
+2. User taps **[Turn on auto-apply]** → *this peer's* receive mode switches to Auto-apply (the per-peer control in the same card), the hint clears.
+3. Future items *from this peer* land silently per Flow 5; every other peer keeps its own mode.
+Terminal state: this peer's receive mode is Auto-apply; no further extra Copy step for it. The user reached it by choice, never by nag.
 
 ---
 
 ## Navigation
 
-No new top-level navigation and no new screen. The clipboard controls **and the Clipboard inbox section** both live inside the already-expandable PeerCard (in-place, no push, no modal) — received items surface within their source peer's card, scoped per peer, never as a separate destination. The receive-mode choice is a row in the existing SettingsSection. The clipboard-received notification's **[Copy]** action acts without navigating; its **body tap** routes to the source peer's PeerCard expanded at its Clipboard inbox section (on mobile, Tether routes to that peer on launch). The collapsed-card unread-clipboard indicator points the user to the peer holding items, the notification-independent recovery path. Toasts, inline errors, and the auto-apply hint are transient/in-place and add nothing to the back stack.
+No new top-level navigation and no new screen. The clipboard controls (Send clipboard, Clipboard sync, per-peer receive mode) **and the Clipboard inbox section** all live inside the already-expandable PeerCard (in-place, no push, no modal) — both the receive-mode choice and the received items are scoped per peer within that peer's card, never a separate destination. The clipboard-received notification's **[Copy]** action acts without navigating; its **body tap** routes to the source peer's PeerCard expanded at its Clipboard inbox section (on mobile, Tether routes to that peer on launch). The collapsed-card unread-clipboard indicator points the user to the peer holding items, the notification-independent recovery path. Toasts, inline errors, and the auto-apply hint are transient/in-place and add nothing to the back stack.
 
 ---
 
@@ -392,7 +392,7 @@ No new top-level navigation and no new screen. The clipboard controls **and the 
 3. **Fire-and-forget toast** — transient, politely-announced "Clipboard sent" / "Copied to clipboard" confirmation. No progress, no receipt. Distinct from file-transfer's persistent PeerCard terminal states.
 4. **Inline control error** — a non-blocking message anchored to the control that was acted on (empty / unsupported / unreachable). Never a toast; announced as an alert. Conceptually akin to device-list's offline-row inline hint (anchored, non-modal, non-auto-dismissing-as-failure).
 5. **Clipboard sync switch** — a persisted per-peer On/Off send-only switch, with a platform-conditional inline caveat on mobile.
-6. **Clipboard receive-mode choice** — a per-device two-option control (Auto-apply / Notify) in SettingsSection, defaulting to Notify.
+6. **Clipboard receive-mode choice** — a per-peer two-option control (Auto-apply / Notify) inside the expanded PeerCard's Clipboard controls block, defaulting to Notify for every peer; symmetric to that peer's Clipboard sync send switch.
 7. **Clipboard-received notification** — an OS notification carrying source peer + preview (masked-where-sensitive), a direct **Copy** action that places the real content on the clipboard, and a body tap that opens the source peer's PeerCard.
 8. **Clipboard inbox section** — a per-peer list of that peer's pending received items inside the expanded PeerCard, with per-item Copy / Dismiss, masked-preview item variant, and the auto-apply hint; absent when the peer has no pending items. Not a standalone screen.
 9. **Unread-clipboard indicator** — a per-peer marker on the collapsed PeerCard (count/dot in the peer-identity accent) signalling pending inbox items; clears when the peer's last item is gone. Extends the device-list row's state set, does not redefine the row.
@@ -406,7 +406,7 @@ No new top-level navigation and no new screen. The clipboard controls **and the 
 
 _None outstanding._ The three prior open questions are decided:
 
-- **Out-of-box default receive mode — decided: Notify.** Notify ships as the default; no silent clipboard replacement before the user opts in. The extra-step friction is softened by the dismissible auto-apply hint on inbox items, which lets the receiver promote a peer to auto-apply without pressure. See [SettingsSection — Clipboard receive mode](#settingssection--clipboard-receive-mode) and the auto-apply hint state.
+- **Receive mode scope and default — decided: per-peer, default Notify.** Receive mode is set independently for each peer (symmetric to that peer's Clipboard sync send switch), and every peer defaults to Notify; no silent clipboard replacement from a peer before the user opts in for it. The extra-step friction is softened by the dismissible auto-apply hint on that peer's inbox items, which lets the receiver promote that one peer to auto-apply without pressure. See [PeerCard — receive mode (per-peer)](#peercard--receive-mode-per-peer) and the auto-apply hint state.
 - **Clipboard inbox placement — decided: inside the PeerCard, per peer.** Received items surface as a Clipboard inbox section of the source peer's expanded PeerCard, not a separate top-level destination or screen. The notification-independent recovery path is the collapsed-card unread-clipboard indicator plus expanding that peer's card. See [PeerCard — Clipboard inbox section](#peercard--clipboard-inbox-section).
 - **Notification Copy action — decided: yes, carried directly.** The clipboard-received notification has a **Copy** action that places the real content on the clipboard (masked previews still copy the real value), alongside a body tap that opens the source peer's card. See [Clipboard-received notification](#clipboard-received-notification-notify-mode).
 
@@ -417,5 +417,5 @@ _None outstanding._ The three prior open questions are decided:
 - **Echo suppression for Clipboard sync (send-only model).** An item that arrived via clipboard transfer and was auto-applied (Auto-apply mode) must not itself re-trigger an outbound auto-send back toward the sender. The suppression mechanism (e.g. tagging auto-applied content, or distinguishing local-user copy events from programmatic clipboard writes) is the implementer's; the user-visible requirement is simply "no echo loop". This is the behavioural backbone of the send-only decision.
 - **Unread-clipboard indicator shape.** The collapsed PeerCard's pending marker (count vs dot, exact placement within the row) is the implementer's idiom call, as long as it reads in the peer-identity accent, clears when the peer's last item is gone, and its accessible label states the pending count. It is the notification-independent recovery cue — load-bearing on Linux where notification clicks are unreliable.
 - **Auto-apply hint placement within the inbox section.** The hint attaches to the most-recent item by default; exact rendering (inline caption vs trailing affordance) is the implementer's call, provided it stays quiet, never blocks Copy/Dismiss, is dismissible per peer, and shows only in Notify mode. No dark patterns.
-- **Receive-mode control shape.** Segmented control on Desktop/macOS, two radio rows on mobile, by default; defaults to Notify. Either idiom is acceptable as long as the two captions (especially the Auto-apply caution) are visible at choice time.
+- **Receive-mode control shape.** Segmented control on Desktop/macOS, two radio rows on mobile, by default; per peer, defaults to Notify. Either idiom is acceptable as long as the two captions (especially the Auto-apply caution) are visible at choice time and the control sits within the peer's Clipboard controls block.
 - **Send-clipboard vs Auto-send visual separation.** The "Clipboard" section label plus the button-vs-switch shape contrast is the required disambiguation. If a divider/label proves too heavy in the expanded card, fall back to clear grouping spacing — but the user must never confuse the file Auto-send toggle with the Clipboard sync switch.
