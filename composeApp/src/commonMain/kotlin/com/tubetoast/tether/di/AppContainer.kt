@@ -52,7 +52,7 @@ abstract class AppContainer {
     open val discoveredDevicesStore: DiscoveredDevicesStore by lazy { DiscoveredDevicesStore() }
     open val nameRepublisher: DeviceNameRepublisher by lazy { DeviceNameRepublisher(nameStore, mdnsDiscovery) }
     open val transferActivityTracker: TransferActivityTracker by lazy { DefaultTransferActivityTracker(appScope) }
-    open val fileClient: FileClient by lazy { FileClient.default(transferActivityTracker) }
+    open val fileClient: FileClient by lazy { FileClient.default() }
     open val trustedDeviceStore: TrustedDeviceStore by lazy { DefaultTrustedDeviceStore(trustedDataStore) }
     open val peerPreferencesStore: PeerPreferencesStore by lazy { DefaultPeerPreferencesStore(dataStore) }
     abstract val fileTransferPreferences: FileTransferPreferences

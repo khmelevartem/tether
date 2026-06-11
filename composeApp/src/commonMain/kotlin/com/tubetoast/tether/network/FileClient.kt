@@ -3,8 +3,6 @@ package com.tubetoast.tether.network
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.protocol.PeerAnnouncement
 import com.tubetoast.tether.protocol.SendResult
-import com.tubetoast.tether.transfer.NoOpTransferActivityTracker
-import com.tubetoast.tether.transfer.TransferActivityTracker
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
@@ -44,13 +42,10 @@ private val log = KydraLog.withTag(default = "FileClient")
 
 open class FileClient(
     private val client: HttpClient,
-    private val tracker: TransferActivityTracker = NoOpTransferActivityTracker,
     private val noProgressTimeout: Duration = DEFAULT_NO_PROGRESS_TIMEOUT,
 ) : Closeable {
     companion object {
-        fun default(
-            tracker: TransferActivityTracker = NoOpTransferActivityTracker,
-        ): FileClient = FileClient(
+        fun default(): FileClient = FileClient(
             client = HttpClient(CIO) {
                 install(ContentNegotiation) { json() }
                 install(HttpTimeout) {
@@ -58,7 +53,6 @@ open class FileClient(
                     socketTimeoutMillis = HttpTimeoutConfig.INFINITE_TIMEOUT_MS
                 }
             },
-            tracker = tracker,
         )
     }
 
@@ -81,9 +75,9 @@ open class FileClient(
         fileName: String,
         totalBytes: Long? = null,
         onProgress: ((bytesTransferred: Long, totalBytes: Long?) -> Unit)? = null,
-    ): SendResult = tracker.withActiveTransfer {
+    ): SendResult {
         log.info { "sending '$fileName'${totalBytes?.let { " ($it bytes)" } ?: ""} → ${device.host}:${device.port}" }
-        try {
+        return try {
             sendInternal(device, channel, fileName, totalBytes, onProgress)
         } catch (e: CancellationException) {
             throw e
