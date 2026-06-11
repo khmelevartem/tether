@@ -1,11 +1,13 @@
 package com.tubetoast.tether.transfer
 
+import io.ktor.utils.io.ByteReadChannel
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -455,5 +457,62 @@ class BatchSenderTest {
         val lastOutcome = last.outcome
         assertIs<BatchOutcome.Cancelled>(lastOutcome)
         assertTrue("file2.txt" !in lastOutcome.remaining, "Skipped file must not appear in remaining")
+    }
+
+    @Test
+    fun `Sending totalBytes sums sizes of all sources`() = runTest {
+        val emitted = mutableListOf<BatchProgress>()
+        makeSender().run(sources("a.txt", "b.txt", "c.txt"), peer) { emitted.add(it) }
+
+        val sending = emitted.filterIsInstance<BatchProgress.Sending>().first()
+        assertEquals(300L, sending.totalBytes) // 3 sources * 100 bytes
+    }
+
+    @Test
+    fun `Sending totalBytes is null before materialization and resolves once the size is known`() = runTest {
+        val gate = Channel<Unit>(0)
+        val emitted = mutableListOf<BatchProgress>()
+        val sender = BatchSender(
+            sendOne = { src, onProgress ->
+                (src as LateSizeSource).materialize()
+                onProgress(src.sizeBytes ?: 0L, src.sizeBytes)
+                gate.receive() // hold the file in-flight so a throttled progress emit can occur
+            },
+            connectionMonitor = FakeConnectionMonitor(),
+            progressThrottle = 100.milliseconds,
+            // Test scheduler (not Unconfined) so the progress throttle delay is virtual-time driven.
+            dispatcher = StandardTestDispatcher(testScheduler),
+        )
+        val job = launch { sender.run(listOf(LateSizeSource("a", 150L)), peer) { emitted.add(it) } }
+
+        runCurrent()
+        // First emit precedes the source being opened → size still unknown.
+        assertNull(emitted.filterIsInstance<BatchProgress.Sending>().first().totalBytes)
+
+        advanceTimeBy(150.milliseconds)
+        runCurrent()
+        // A throttled progress emit after materialization carries the now-known batch total.
+        assertEquals(150L, emitted.filterIsInstance<BatchProgress.Sending>().last().totalBytes)
+
+        gate.send(Unit)
+        advanceUntilIdle()
+        job.join()
+    }
+
+    private class LateSizeSource(
+        override val name: String,
+        private val realSize: Long,
+    ) : FileSource {
+        override val relativePath: String = name
+        private var known = false
+        override val sizeBytes: Long? get() = if (known) realSize else null
+
+        fun materialize() {
+            known = true
+        }
+
+        override suspend fun openReadChannel(): ByteReadChannel = ByteReadChannel(ByteArray(realSize.toInt()))
+
+        override fun close() = Unit
     }
 }

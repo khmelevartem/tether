@@ -66,10 +66,6 @@ class BatchSender(
             .map { PerFileStatus.Queued(it.name, it.sizeBytes) }
             .toMutableList()
         var sentBytes = 0L
-        val totalBytes: Long? = sources.fold(0L as Long?) { acc, src ->
-            val size = src.sizeBytes
-            if (acc != null && size != null) acc + size else null
-        }
 
         try {
             var i = 0
@@ -93,7 +89,7 @@ class BatchSender(
                 var bytesDone = 0L
                 var dropDetected = false
                 var lastSending: BatchProgress.Sending =
-                    buildSending(peer, i, sources, sentBytes, totalBytes, null, perFile)
+                    buildSending(peer, i, sources, sentBytes, null, perFile)
                 emit(lastSending)
 
                 val fileGeneration: Long = ++currentGeneration
@@ -117,7 +113,7 @@ class BatchSender(
                                 delay(progressThrottle)
                                 ensureActive()
                                 val st =
-                                    buildSending(peer, i, sources, sentBytes, totalBytes, rate.valueOrNull(), perFile)
+                                    buildSending(peer, i, sources, sentBytes, rate.valueOrNull(), perFile)
                                 lastSending = st
                                 emit(st)
                             }
@@ -208,7 +204,6 @@ class BatchSender(
         index: Int,
         sources: List<FileSource>,
         sentBytes: Long,
-        totalBytes: Long?,
         bytesPerSec: Long?,
         perFile: List<PerFileStatus>,
     ): BatchProgress.Sending = BatchProgress.Sending(
@@ -217,7 +212,12 @@ class BatchSender(
         currentIndex = index,
         totalFiles = sources.size,
         sentBytes = sentBytes,
-        totalBytes = totalBytes,
+        // Re-folded each emit, not captured once: lazily-materialized sources (iOS photos) learn
+        // their size only when sent, so the batch total resolves as the transfer proceeds.
+        totalBytes = sources.fold(0L as Long?) { acc, src ->
+            val size = src.sizeBytes
+            if (acc != null && size != null) acc + size else null
+        },
         bytesPerSec = bytesPerSec,
         skippedCount = perFile.count { it is PerFileStatus.Failed },
         perFile = perFile.toList(),

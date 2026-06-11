@@ -138,3 +138,17 @@ CFRelease(dict)
 **Root cause:** the system file provider grants access to the folder only while a security scope is held via `startAccessingSecurityScopedResource()`. Once the picker dismisses, access is revoked unless the scope is explicitly started. Failing to call `start` before enumerating yields an empty result with no error.
 
 **Fix:** call `startAccessingSecurityScopedResource()` on the **original picker-vended folder URL** (not the realpath-derived one) before enumeration, and balance it with a matching `stopAccessingSecurityScopedResource()` call after all child sources derived from the enumeration are closed. Child item URLs produced by the enumerator are covered by the folder's scope — they must NOT each call start/stop independently.
+
+---
+
+## PHPicker photos: lazy materialization + no upfront size
+
+**Constraint:** `PHPickerViewController` exposes no file size before the bytes are exported. The only ways to learn a photo/video size are (1) a full `loadFileRepresentation` export, or (2) resolving a `PHAsset` via `assetIdentifier`, which requires initializing the picker with a `PHPhotoLibrary` and **Photo Library permission** — which we deliberately avoid (PHPicker's value is working without a permission prompt).
+
+**Consequence — deliberate, not a bug:** `LazyPhotoFileSource` exports/copies the file inside `openReadChannel()` (not at pick time, which would freeze the UI for seconds with no feedback), so a photo's `sizeBytes` is `null` until its transfer starts. The size is recovered via argument evaluation order — `PeerFileSender` evaluates `openReadChannel()` before `sizeBytes` in the same call — so the receiver still gets a Content-Length and per-file progress resolves. `BatchSender` re-folds the batch total on each progress emit (not once upfront), so the overall progress bar resolves as files materialize.
+
+**Residual limitations (accepted):**
+- The byte-based large-selection warning (`PendingFilesSummary.isLargeSelection`, the `totalBytes > 2 GB` branch) never trips for photos. The **count** branch (`fileCount > 500`) is the safeguard — at ~4 MB/photo that is ≈ 2 GB. A single large video can bypass both checks.
+- The aggregate progress bar for a multi-photo batch is fully determinate only once the last file has materialized; per-file bars are determinate throughout.
+
+**Reference:** `LazyPhotoFileSource` and `IosFilePicker.PhotoPickerDelegate` in `transfer/`.

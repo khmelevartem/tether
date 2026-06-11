@@ -26,8 +26,10 @@ import kotlinx.coroutines.withContext
 import platform.Foundation.NSError
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSItemProvider
+import platform.Foundation.NSNumber
 import platform.Foundation.NSTemporaryDirectory
 import platform.Foundation.NSURL
+import platform.Foundation.NSURLFileSizeKey
 import platform.Foundation.NSUUID
 import platform.posix.fclose
 import platform.posix.feof
@@ -36,6 +38,7 @@ import platform.posix.fread
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.warn
 import ru.pocketbyte.kydra.log.wrapper.withTag
+import kotlin.concurrent.Volatile
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -160,7 +163,14 @@ internal class LazyPhotoFileSource(
     override val relativePath: String,
 ) : FileSource {
     override val name: String = relativePath.substringAfterLast('/')
-    override val sizeBytes: Long? = null
+
+    // Unknown until the first openReadChannel materializes the file; PeerFileSender reads sizeBytes
+    // right after openReadChannel (same call, evaluated later), so the receiver still gets a
+    // Content-Length and progress can resolve. @Volatile: written on the send coroutine, read by
+    // BatchSender's progress coroutine.
+    @Volatile
+    private var materializedSize: Long? = null
+    override val sizeBytes: Long? get() = materializedSize
 
     private var inner: IosFileSource? = null
 
@@ -169,7 +179,8 @@ internal class LazyPhotoFileSource(
         // close() cannot leak it (the caller normally closes per attempt, but don't depend on it).
         inner?.close()
         val tempUrl = materialize()
-        return tempCopyFileSource(tempUrl, relativePath, sizeBytes = null)
+        materializedSize = fileSizeOf(tempUrl)
+        return tempCopyFileSource(tempUrl, relativePath, sizeBytes = materializedSize)
             .also { inner = it }
             .openReadChannel()
     }
@@ -212,5 +223,11 @@ internal class LazyPhotoFileSource(
                 null
             }
         }
+    }
+
+    private fun fileSizeOf(url: NSURL): Long? = memScoped {
+        val errorPtr = alloc<ObjCObjectVar<NSError?>>()
+        val values = url.resourceValuesForKeys(listOf(NSURLFileSizeKey), errorPtr.ptr)
+        (values?.get(NSURLFileSizeKey) as? NSNumber)?.longLongValue
     }
 }

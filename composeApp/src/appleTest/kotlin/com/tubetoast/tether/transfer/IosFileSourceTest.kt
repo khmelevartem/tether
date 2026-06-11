@@ -19,6 +19,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class IosFileSourceTest {
@@ -123,7 +124,9 @@ class IosFileSourceTest {
             ?: error("no registered type identifiers")
         val source = LazyPhotoFileSource(provider, typeId, "photo.txt")
 
+        assertNull(source.sizeBytes, "size is unknown before materialization")
         val first = source.drain(expected.size)
+        assertEquals(expected.size.toLong(), source.sizeBytes, "size is known after materialization")
         source.close()
         // The retry path: a second open after close() must re-materialize a fresh temp and read.
         val second = source.drain(expected.size)
