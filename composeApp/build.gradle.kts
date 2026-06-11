@@ -323,7 +323,9 @@ compose.desktop {
             linux {
                 iconFile.set(project.file("src/commonMain/composeResources/drawable/icon.png"))
             }
-            // Windows needs .ico; regenerate from icons/ when adding Windows distribution.
+            windows {
+                iconFile.set(project.file("icons/icon.ico"))
+            }
         }
     }
 }
