@@ -116,7 +116,7 @@ Sends 3 files in one command. PASS if `[send] done — 3/3 sent` appears AND all
 
 Run: `./block-2.3-retry.sh`
 
-Stops B to provoke `[send] error`, restarts B, then issues `retry SmokeMacB`. **Skipped pending [#367](https://github.com/khmelevartem/tether/issues/367)** — a restarted CLI gets a fresh ephemeral fingerprint, so the failed transfer leaves no terminal state for `retry` to resume from. Re-enable when stable-across-restart identity lands.
+Stops B to provoke `[send] error`, restarts B with the same `--config-dir` it started with in 2.1, then issues `retry SmokeMacB`. B's `--config-dir` identity (name + fingerprint) survives the stop→restart, so A's transfer engine tracks it as the same peer and the failed transfer retains its terminal state for `retry` to resume from. PASS if the file lands byte-identical after retry.
 
 #### Scenario 2.4 — exit code on `quit`
 
@@ -191,7 +191,7 @@ Runs after the Android and iOS blocks — both need instance A alive for cross-d
 
 Sends `quit` to A, waits up to 8 s, checks exit. PASS if the process exited.
 
-Checks exit code = 0 (last send was AllSent after the retry scenario). The exit-code check SKIPs when the code is unobtainable: a force-killed process, or — the usual case — CLI A being a non-child of this block's shell (launched in Block 1), where `wait` returns 127. Graceful exit itself still PASS/FAILs normally.
+Checks exit code = 0 (last send was AllSent after the retry scenario). The exit code is read from the per-run exit file (`$EXIT_A`) written by block-1's launch-wrapper subshell — `wait` on a detached PID returns 127 and cannot be used. If the exit file never appears — FAIL. If the process had to be force-killed — exit-code check SKIP.
 
 ### Block 7: Cleanup
 

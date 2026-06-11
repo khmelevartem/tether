@@ -1,6 +1,7 @@
 package com.tubetoast.tether.transfer
 
 import com.tubetoast.tether.preferences.FakePeerPreferencesStore
+import com.tubetoast.tether.protocol.Device
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -93,6 +94,18 @@ class PeerTransferEngineRegistryTest {
         registry.evict(peerA)
 
         assertFalse(scope.isActive)
+    }
+
+    @Test
+    fun `devices sharing fingerprint but differing in port resolve to the same engine`() = runTest {
+        val registry = buildRegistry(backgroundScope)
+        val devA = Device(name = "Phone", host = "192.168.1.10", port = 9000, fingerprint = "fp-shared")
+        val devB = Device(name = "Phone", host = "192.168.1.10", port = 9001, fingerprint = "fp-shared")
+
+        val engineA = registry.engineFor(devA.toPeerIdentity())
+        val engineB = registry.engineFor(devB.toPeerIdentity())
+
+        assertSame(engineA, engineB)
     }
 
     @Test

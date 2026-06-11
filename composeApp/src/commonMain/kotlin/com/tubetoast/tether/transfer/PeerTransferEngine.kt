@@ -28,7 +28,7 @@ class PeerTransferEngine(
     private val scope: CoroutineScope,
     private val peerPreferencesStore: PeerPreferencesStore,
 ) {
-    private val _state = MutableStateFlow<PeerTransferState>(PeerTransferState.Idle(peer))
+    private val _state = MutableStateFlow<PeerTransferState>(PeerTransferState.Idle)
     val state: StateFlow<PeerTransferState> = _state.asStateFlow()
 
     private var activeJob: Job? = null
@@ -47,7 +47,6 @@ class PeerTransferEngine(
         val current = _state.value
         if (current !is PeerTransferState.Idle) return false
         val claim = PeerTransferState.ActiveOutbound.Claimed(
-            peer = peer,
             totalFiles = sources.size,
             totalBytes = sources.sumOf { it.sizeBytes ?: 0L },
             perFile = sources.map { PerFileStatus.Queued(it.name, it.sizeBytes) },
@@ -132,7 +131,7 @@ class PeerTransferEngine(
                 s is PeerTransferState.Cancelled ||
                 s is PeerTransferState.Error
             ) {
-                PeerTransferState.Idle(peer)
+                PeerTransferState.Idle
             } else {
                 s
             }
@@ -155,7 +154,7 @@ class PeerTransferEngine(
         val sender = batchSenderFactory()
         currentSender = sender
         try {
-            sender.run(sources, peer, { source -> source.name in cancelledFileNames.value }) { progress ->
+            sender.run(sources, { source -> source.name in cancelledFileNames.value }) { progress ->
                 _state.update { mapProgress(progress) }
             }
         } finally {
@@ -176,12 +175,11 @@ class PeerTransferEngine(
         }
         val sent = perFile.count { it is PerFileStatus.Done }
         val remaining = perFile.filter { it !is PerFileStatus.Done }.map { it.name }
-        return PeerTransferState.Cancelled(peer = peer, sent = sent, remaining = remaining, perFile = perFile)
+        return PeerTransferState.Cancelled(sent = sent, remaining = remaining, perFile = perFile)
     }
 
     private fun mapProgress(progress: BatchProgress): PeerTransferState = when (progress) {
         is BatchProgress.Sending -> PeerTransferState.ActiveOutbound.Sending(
-            peer = progress.peer,
             currentFile = progress.currentFile,
             currentIndex = progress.currentIndex,
             totalFiles = progress.totalFiles,
@@ -192,7 +190,6 @@ class PeerTransferEngine(
             perFile = progress.perFile,
         )
         is BatchProgress.Reconnecting -> PeerTransferState.Reconnecting(
-            peer = progress.peer,
             direction = Direction.Outbound,
             remainingSeconds = progress.remainingSeconds,
             snapshotBeforeDrop = mapProgress(progress.snapshotBeforeDrop),
@@ -201,11 +198,9 @@ class PeerTransferEngine(
     }
 
     private fun mapCompleted(progress: BatchProgress.Completed): PeerTransferState {
-        val peer = progress.peer
         val perFile = progress.perFile
         return when (val outcome = progress.outcome) {
             is BatchOutcome.AllSent -> PeerTransferState.Sent(
-                peer = peer,
                 sent = perFile.count { it is PerFileStatus.Done },
                 total = perFile.size,
                 perFile = perFile,
@@ -215,7 +210,6 @@ class PeerTransferEngine(
                 val failedEntries = perFile.filterIsInstance<PerFileStatus.Failed>()
                 val doneCount = perFile.count { it is PerFileStatus.Done }
                 PeerTransferState.Sent(
-                    peer = peer,
                     sent = doneCount,
                     total = perFile.size,
                     perFile = perFile,
@@ -223,13 +217,11 @@ class PeerTransferEngine(
                 )
             }
             is BatchOutcome.Cancelled -> PeerTransferState.Cancelled(
-                peer = peer,
                 sent = outcome.sent,
                 remaining = outcome.remaining,
                 perFile = perFile,
             )
             is BatchOutcome.Failed -> PeerTransferState.Error(
-                peer = peer,
                 reason = outcome.reason,
                 sent = outcome.sent,
                 perFile = perFile,
@@ -245,7 +237,6 @@ class PeerTransferEngine(
                 }
                 _state.update {
                     PeerTransferState.ActiveInbound(
-                        peer = peer,
                         currentFile = event.currentFile,
                         currentIndex = 0,
                         totalFiles = event.totalFiles,
@@ -301,7 +292,6 @@ class PeerTransferEngine(
                         null
                     }
                     PeerTransferState.Received(
-                        peer = peer,
                         received = event.received,
                         total = event.total,
                         perFile = perFile,
@@ -322,7 +312,6 @@ class PeerTransferEngine(
             is ReceiveEvent.ConnectionLost -> {
                 _state.update { snapshot ->
                     PeerTransferState.Reconnecting(
-                        peer = peer,
                         direction = Direction.Inbound,
                         remainingSeconds = reconnectionTimeout.inWholeSeconds.toInt(),
                         snapshotBeforeDrop = snapshot,
@@ -334,7 +323,6 @@ class PeerTransferEngine(
                     val perFile = (s as? PeerTransferState.ActiveInbound)?.perFile ?: emptyList()
                     val doneCount = perFile.count { it is PerFileStatus.Done }
                     PeerTransferState.Error(
-                        peer = peer,
                         reason = TransferErrorReason.ReceiverSuspended,
                         sent = doneCount,
                         perFile = perFile,

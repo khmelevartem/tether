@@ -1,28 +1,21 @@
 package com.tubetoast.tether.transfer
 
 sealed interface PeerTransferState {
-    val peer: PeerIdentity
-
-    data class Idle(
-        override val peer: PeerIdentity,
-    ) : PeerTransferState
+    data object Idle : PeerTransferState
 
     sealed class ActiveOutbound : PeerTransferState {
-        abstract override val peer: PeerIdentity
         abstract val totalFiles: Int
         abstract val totalBytes: Long?
         abstract val perFile: List<PerFileStatus>
 
         /** Outbound transfer reserved by the engine; per-byte progress is not yet available. */
         data class Claimed(
-            override val peer: PeerIdentity,
             override val totalFiles: Int,
             override val totalBytes: Long?,
             override val perFile: List<PerFileStatus>,
         ) : ActiveOutbound()
 
         data class Sending(
-            override val peer: PeerIdentity,
             val currentFile: String,
             val currentIndex: Int,
             override val totalFiles: Int,
@@ -35,7 +28,6 @@ sealed interface PeerTransferState {
     }
 
     data class ActiveInbound(
-        override val peer: PeerIdentity,
         val currentFile: String,
         val currentIndex: Int,
         val totalFiles: Int,
@@ -46,14 +38,12 @@ sealed interface PeerTransferState {
     ) : PeerTransferState
 
     data class Reconnecting(
-        override val peer: PeerIdentity,
         val direction: Direction,
         val remainingSeconds: Int,
         val snapshotBeforeDrop: PeerTransferState,
     ) : PeerTransferState
 
     data class Sent(
-        override val peer: PeerIdentity,
         val sent: Int,
         val total: Int,
         val perFile: List<PerFileStatus>,
@@ -61,7 +51,6 @@ sealed interface PeerTransferState {
     ) : PeerTransferState
 
     data class Received(
-        override val peer: PeerIdentity,
         val received: Int,
         val total: Int,
         val perFile: List<PerFileStatus>,
@@ -69,14 +58,12 @@ sealed interface PeerTransferState {
     ) : PeerTransferState
 
     data class Cancelled(
-        override val peer: PeerIdentity,
         val sent: Int,
         val remaining: List<String>,
         val perFile: List<PerFileStatus>,
     ) : PeerTransferState
 
     data class Error(
-        override val peer: PeerIdentity,
         val reason: TransferErrorReason,
         val sent: Int,
         val perFile: List<PerFileStatus>,

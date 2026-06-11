@@ -108,7 +108,7 @@ private fun PeerListContent(
             }
         } else {
             LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(rows, key = { it.peer.device.id }) { row ->
+                items(rows, key = { it.peer.id.id }) { row ->
                     val peerComponent = row.transferComponent
                     val transferState by peerComponent.state.subscribeAsState()
                     val isIdle = transferState.transfer is PeerTransferState.Idle
@@ -132,7 +132,7 @@ private fun PeerListContent(
                         LargeSelectionConfirmDialog(
                             fileCount = confirm.summary.fileCount,
                             totalBytes = confirm.summary.totalBytes,
-                            peer = peerComponent.peer.id,
+                            peerName = peerComponent.peer.device.name,
                             dontShowAgain = confirm.dontShowAgain,
                             onDontShowAgainToggle = peerComponent::onUpdateLargeConfirmDontShowAgain,
                             onConfirm = { peerComponent.onConfirmLargeSelection(confirm.dontShowAgain) },
@@ -272,7 +272,7 @@ private fun PeerListContentPreview(
             }
         } else {
             LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(specs, key = { it.peer.device.id }) { spec ->
+                items(specs, key = { it.peer.id.id }) { spec ->
                     PeerCardContent(
                         state = spec.peerCardState,
                         isOnline = spec.peer.isOnline,
