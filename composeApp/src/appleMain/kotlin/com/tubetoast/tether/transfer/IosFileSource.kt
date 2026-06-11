@@ -195,11 +195,13 @@ internal class LazyPhotoFileSource(
     private suspend fun materialize(): NSURL = suspendCancellableCoroutine { cont ->
         val progress = provider.loadFileRepresentationForTypeIdentifier(typeId) { url, error ->
             val dest = url?.let { moveToTemp(it) }
-            when {
-                dest != null && cont.isActive -> cont.resume(dest)
-                // Lost the race against cancellation — drop the temp we just moved out.
-                dest != null -> NSFileManager.defaultManager.removeItemAtURL(dest, error = null)
-                else -> cont.resumeWithException(
+            if (dest != null) {
+                // If the coroutine is (or gets) cancelled, the resumed temp is dropped — delete it
+                // via the onCancellation handler so it cannot leak in NSTemporaryDirectory. This
+                // closes the window between an isActive check and resume.
+                cont.resume(dest) { _, _, _ -> NSFileManager.defaultManager.removeItemAtURL(dest, error = null) }
+            } else {
+                cont.resumeWithException(
                     UnreadableSourceException(
                         name,
                         IllegalStateException(

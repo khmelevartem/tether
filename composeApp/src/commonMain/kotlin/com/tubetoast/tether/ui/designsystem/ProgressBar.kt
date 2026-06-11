@@ -129,3 +129,10 @@ private fun PreviewProgressBarTrackOnly(@PreviewParameter(Themes::class) dark: B
     PreviewSurface(darkTheme = dark) {
         ProgressBar(progress = 0f, modifier = Modifier.fillMaxWidth(), height = 4.dp)
     }
+
+@Preview(name = "ProgressBar — indeterminate")
+@Composable
+private fun PreviewProgressBarIndeterminate(@PreviewParameter(Themes::class) dark: Boolean) =
+    PreviewSurface(darkTheme = dark) {
+        ProgressBar(progress = 0f, indeterminate = true, modifier = Modifier.fillMaxWidth())
+    }
