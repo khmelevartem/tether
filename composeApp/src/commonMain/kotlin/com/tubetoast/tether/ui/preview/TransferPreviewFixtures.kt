@@ -4,20 +4,17 @@ import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.Direction
 import com.tubetoast.tether.transfer.FailureReason
 import com.tubetoast.tether.transfer.PartialOutcome
-import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.PerFileStatus
 import com.tubetoast.tether.transfer.TransferErrorReason
 
 object TransferPreviewFixtures {
-    val peer = PeerIdentity("Alice")
     val device: Device = PreviewFixtures.singleDevice.first()
 
-    val idleCollapsed = PeerTransferState.Idle(peer)
-    val idleExpanded = PeerTransferState.Idle(peer)
+    val idleCollapsed = PeerTransferState.Idle
+    val idleExpanded = PeerTransferState.Idle
 
     val activeOutboundClaimed = PeerTransferState.ActiveOutbound.Claimed(
-        peer = peer,
         totalFiles = 3,
         totalBytes = 31_457_280L,
         perFile = listOf(
@@ -28,7 +25,6 @@ object TransferPreviewFixtures {
     )
 
     val activeOutbound = PeerTransferState.ActiveOutbound.Sending(
-        peer = peer,
         currentFile = "vacation_photo_2024_summer_beach_holiday.jpg",
         currentIndex = 2,
         totalFiles = 10,
@@ -58,7 +54,6 @@ object TransferPreviewFixtures {
     )
 
     val activeOutboundCalculating = PeerTransferState.ActiveOutbound.Sending(
-        peer = peer,
         currentFile = "document.pdf",
         currentIndex = 0,
         totalFiles = 3,
@@ -74,7 +69,6 @@ object TransferPreviewFixtures {
     )
 
     val activeOutboundPreparing = PeerTransferState.ActiveOutbound.Sending(
-        peer = peer,
         currentFile = "IMG_0421.heic",
         currentIndex = 1,
         totalFiles = 3,
@@ -93,7 +87,6 @@ object TransferPreviewFixtures {
     // Multi-photo batch mid-send: bytes are flowing (rate known), but the batch total is still
     // unknown because not-yet-sent iOS photos resolve their size only when sent → indeterminate bar.
     val activeOutboundUnknownTotal = PeerTransferState.ActiveOutbound.Sending(
-        peer = peer,
         currentFile = "IMG_0421.heic",
         currentIndex = 1,
         totalFiles = 3,
@@ -109,7 +102,6 @@ object TransferPreviewFixtures {
     )
 
     val activeInbound = PeerTransferState.ActiveInbound(
-        peer = peer,
         currentFile = "shared_document_from_alice.docx",
         currentIndex = 1,
         totalFiles = 5,
@@ -124,14 +116,12 @@ object TransferPreviewFixtures {
     )
 
     val reconnecting = PeerTransferState.Reconnecting(
-        peer = peer,
         direction = Direction.Outbound,
         remainingSeconds = 12,
         snapshotBeforeDrop = activeOutbound,
     )
 
     val sentFull = PeerTransferState.Sent(
-        peer = peer,
         sent = 10,
         total = 10,
         perFile = emptyList(),
@@ -139,7 +129,6 @@ object TransferPreviewFixtures {
     )
 
     val sentPartialReceiverCancelled = PeerTransferState.Sent(
-        peer = peer,
         sent = 4,
         total = 10,
         perFile = emptyList(),
@@ -147,7 +136,6 @@ object TransferPreviewFixtures {
     )
 
     val sentPartialConnectionLost = PeerTransferState.Sent(
-        peer = peer,
         sent = 6,
         total = 10,
         perFile = emptyList(),
@@ -155,7 +143,6 @@ object TransferPreviewFixtures {
     )
 
     val sentPartialUnreadable = PeerTransferState.Sent(
-        peer = peer,
         sent = 8,
         total = 10,
         perFile = emptyList(),
@@ -163,7 +150,6 @@ object TransferPreviewFixtures {
     )
 
     val receivedFull = PeerTransferState.Received(
-        peer = peer,
         received = 5,
         total = 5,
         perFile = emptyList(),
@@ -171,7 +157,6 @@ object TransferPreviewFixtures {
     )
 
     val receivedPartialSenderCancelled = PeerTransferState.Received(
-        peer = peer,
         received = 3,
         total = 5,
         perFile = emptyList(),
@@ -179,7 +164,6 @@ object TransferPreviewFixtures {
     )
 
     val receivedPartialReceiverCancelled = PeerTransferState.Received(
-        peer = peer,
         received = 2,
         total = 5,
         perFile = emptyList(),
@@ -187,7 +171,6 @@ object TransferPreviewFixtures {
     )
 
     val receivedPartialConnectionLost = PeerTransferState.Received(
-        peer = peer,
         received = 3,
         total = 5,
         perFile = emptyList(),
@@ -195,49 +178,42 @@ object TransferPreviewFixtures {
     )
 
     val cancelledClean = PeerTransferState.Cancelled(
-        peer = peer,
         sent = 0,
         remaining = emptyList(),
         perFile = emptyList(),
     )
 
     val cancelledPartial = PeerTransferState.Cancelled(
-        peer = peer,
         sent = 4,
         remaining = listOf("file_05.txt", "file_06.txt", "file_07.txt"),
         perFile = emptyList(),
     )
 
     val errorNetworkLost = PeerTransferState.Error(
-        peer = peer,
         reason = TransferErrorReason.NetworkLost,
         sent = 2,
         perFile = emptyList(),
     )
 
     val errorPeerUnreachable = PeerTransferState.Error(
-        peer = peer,
         reason = TransferErrorReason.PeerUnreachable,
         sent = 3,
         perFile = emptyList(),
     )
 
     val errorReceiverWriteFailed = PeerTransferState.Error(
-        peer = peer,
         reason = TransferErrorReason.ReceiverWriteFailed,
         sent = 1,
         perFile = emptyList(),
     )
 
     val errorAllFilesFailed = PeerTransferState.Error(
-        peer = peer,
         reason = TransferErrorReason.AllFilesFailed,
         sent = 0,
         perFile = emptyList(),
     )
 
     val errorReceiverSuspended = PeerTransferState.Error(
-        peer = peer,
         reason = TransferErrorReason.ReceiverSuspended,
         sent = 0,
         perFile = emptyList(),
@@ -283,7 +259,6 @@ object TransferPreviewFixtures {
     val activeOutboundWithPerFile = activeOutbound.copy(perFile = perFileListInProgress)
 
     val sentPartialWithPerFile = PeerTransferState.Sent(
-        peer = peer,
         sent = 2,
         total = 4,
         perFile = perFileListPartial,
@@ -291,7 +266,6 @@ object TransferPreviewFixtures {
     )
 
     val errorWithPerFile = PeerTransferState.Error(
-        peer = peer,
         reason = TransferErrorReason.AllFilesFailed,
         sent = 0,
         perFile = perFileListAllFailed,

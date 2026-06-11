@@ -26,13 +26,17 @@ if [ $EXITED -eq 0 ]; then
   set +e; kill -9 "$JPID_A" 2>/dev/null; set -e
   echo "SKIP: exit-code check (process had to be force-killed)"
 else
-  set +e; wait "$JPID_A" 2>/dev/null; EXIT_A=$?; set -e
   echo "PASS: graceful quit — exited"
-  if [ "$EXIT_A" = "0" ]; then
-    echo "PASS: exit code — exit=0 (last send AllSent)"
+  # Exit code is written by the launch wrapper in block-1; wait on a detached PID returns 127.
+  EXIT_FILE_READY=0
+  for i in $(seq 1 5); do
+    [ -f "$EXIT_A" ] && { EXIT_FILE_READY=1; break; }
+    sleep 1
+  done
+  if [ $EXIT_FILE_READY -eq 0 ]; then
+    echo "FAIL: $EXIT_A never written — exit code unknown"
   else
-    # CLI A was launched by block-1 in a separate shell, so it is not a child of this one;
-    # `wait` returns 127 ("not a child") and the real exit code is unobtainable cross-shell.
-    echo "SKIP: exit-code check — unobtainable cross-shell (wait=$EXIT_A); graceful exit passed"
+    EXIT_CODE=$(cat "$EXIT_A")
+    [ "$EXIT_CODE" = "0" ] && echo "PASS: exit code — exit=$EXIT_CODE (last send AllSent)" || echo "FAIL: exit code — exit=$EXIT_CODE"
   fi
 fi

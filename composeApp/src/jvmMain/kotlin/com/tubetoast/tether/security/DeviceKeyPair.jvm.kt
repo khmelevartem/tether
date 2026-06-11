@@ -6,6 +6,11 @@ import ru.pocketbyte.kydra.log.wrapper.withTag
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
+import java.nio.file.attribute.AclEntry
+import java.nio.file.attribute.AclEntryPermission
+import java.nio.file.attribute.AclEntryType
+import java.nio.file.attribute.AclFileAttributeView
+import java.nio.file.attribute.PosixFileAttributeView
 import java.nio.file.attribute.PosixFilePermission
 import java.security.KeyFactory
 import java.security.KeyPairGenerator
@@ -80,16 +85,45 @@ actual class DeviceKeyPair(
         generator.initialize(256)
         val keyPair = generator.generateKeyPair()
         publicKeyFile.writeBytes(keyPair.public.encoded)
-        privateKeyFile.writeBytes(keyPair.private.encoded)
+        // Restrict the empty file before the secret lands, so the key never exists with default permissions.
+        privateKeyFile.createNewFile()
         restrictToOwner(privateKeyFile)
+        privateKeyFile.writeBytes(keyPair.private.encoded)
         return keyPair.public.encoded
     }
 
     private fun restrictToOwner(file: File) {
-        val view = Files.getFileAttributeView(
-            file.toPath(),
-            java.nio.file.attribute.PosixFileAttributeView::class.java,
-        ) ?: return
-        view.setPermissions(setOf(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE))
+        val posixView = Files.getFileAttributeView(file.toPath(), PosixFileAttributeView::class.java)
+        if (posixView != null) {
+            posixView.setPermissions(setOf(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE))
+            return
+        }
+        restrictToOwnerAcl(file)
+    }
+
+    private fun restrictToOwnerAcl(file: File) {
+        val aclView = Files.getFileAttributeView(file.toPath(), AclFileAttributeView::class.java)
+        if (aclView == null) {
+            log.warn { "cannot restrict ${file.name}: filesystem supports neither POSIX nor ACL permissions" }
+            return
+        }
+        val ownerOnly = AclEntry
+            .newBuilder()
+            .setType(AclEntryType.ALLOW)
+            .setPrincipal(Files.getOwner(file.toPath()))
+            .setPermissions(
+                AclEntryPermission.READ_DATA,
+                AclEntryPermission.WRITE_DATA,
+                AclEntryPermission.APPEND_DATA,
+                AclEntryPermission.READ_ATTRIBUTES,
+                AclEntryPermission.WRITE_ATTRIBUTES,
+                AclEntryPermission.READ_NAMED_ATTRS,
+                AclEntryPermission.WRITE_NAMED_ATTRS,
+                AclEntryPermission.READ_ACL,
+                AclEntryPermission.WRITE_ACL,
+                AclEntryPermission.DELETE,
+                AclEntryPermission.SYNCHRONIZE,
+            ).build()
+        aclView.acl = listOf(ownerOnly)
     }
 }

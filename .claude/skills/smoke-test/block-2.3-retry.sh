@@ -1,12 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# TODO #367: this scenario cannot pass with the CLI's per-process ephemeral fingerprint — a
-# restarted peer is a new PeerIdentity, so the failed transfer leaves no terminal state for
-# `retry <name>` to resume from. Skipped until stable-across-restart identity (#367) lands; the
-# logic below is kept as the re-enable target.
-echo "SKIP: retry — blocked by #367 (restarted CLI gets a fresh fingerprint, no terminal state to retry from)"
-exit 0
+# CLI B runs with a persisted identity (--config-dir, set in block-2.1 and on the restart below),
+# so its fingerprint is stable across the stop→restart and the failed transfer's terminal state
+# is still keyed to the same peer for `retry` to resume from.
 
 # Requires: block-1 already executed (CLI A alive at $LOG_A / fifo $FIFO_A).
 # Requires: CLI B was alive (this script stops and restarts it).
@@ -42,8 +39,8 @@ done
 PREV_HELLO=$(grep -cE "hello from SmokeMacB@" "$LOG_A" 2>/dev/null || true)
 PREV_HELLO=${PREV_HELLO:-0}
 
-# Restart B with the same name so the engine's PeerIdentity resolves again.
-TETHER_LOG_DEBUG=true nohup java -jar "$JAR" --name SmokeMacB --port 0 < "$FIFO_B" > "$LOG_B" 2>&1 &
+# Restart B with the same name and --config-dir so its persisted fingerprint resolves again.
+TETHER_LOG_DEBUG=true nohup java -jar "$JAR" --name SmokeMacB --port 0 --config-dir "$CONFIG_DIR_B" < "$FIFO_B" > "$LOG_B" 2>&1 &
 JPID_B=$!; disown $JPID_B
 echo $JPID_B > "$PID_B"
 

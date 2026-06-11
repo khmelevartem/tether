@@ -457,7 +457,7 @@ class BannersComponentTest {
     }
 
     @Test
-    fun `peer name falls back to peer id when peer absent from repository`() = runTest {
+    fun `peer name falls back to neutral string when peer absent from repository`() = runTest {
         val repo = PendingFilesRepository()
         val relay = PeerConflictRelay()
         val pauseChannel = Channel<Unit>(0)
@@ -479,6 +479,6 @@ class BannersComponentTest {
         runCurrent()
 
         val state = assertIs<PendingOutboundBannerState.BusyPeer>(component.pendingBanner.value)
-        assertEquals(peerId.id, state.peerName)
+        assertEquals("the device", state.peerName)
     }
 }

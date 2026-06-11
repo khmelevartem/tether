@@ -13,7 +13,9 @@ sleep 600 > "$FIFO_B" 2>/dev/null &
 KEEPER_PID=$!; disown $KEEPER_PID
 echo $KEEPER_PID > "$KEEPER_B"
 
-TETHER_LOG_DEBUG=true nohup java -jar "$JAR" --name SmokeMacB --port 0 < "$FIFO_B" > "$LOG_B" 2>&1 &
+# Persisted identity so the block-2.3 restart keeps the same fingerprint; fresh per run.
+rm -rf "$CONFIG_DIR_B"
+TETHER_LOG_DEBUG=true nohup java -jar "$JAR" --name SmokeMacB --port 0 --config-dir "$CONFIG_DIR_B" < "$FIFO_B" > "$LOG_B" 2>&1 &
 JPID_B=$!; disown $JPID_B
 echo $JPID_B > "$PID_B"
 

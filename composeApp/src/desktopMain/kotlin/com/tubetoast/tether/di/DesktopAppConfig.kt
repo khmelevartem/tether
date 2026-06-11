@@ -14,10 +14,15 @@ interface DesktopAppConfig : JvmAppConfig {
 class DefaultDesktopAppConfig(
     override val port: Int,
     override val downloadsDir: File = File(System.getProperty("user.home"), "Downloads/Tether"),
-    override val deviceKeyPair: DeviceKeyPair = DeviceKeyPair(),
+    configDir: File? = null,
+    override val deviceKeyPair: DeviceKeyPair = if (configDir != null) DeviceKeyPair(configDir) else DeviceKeyPair(),
     override val namePersistenceOverride: DeviceNamePersistence? = null,
     override val fingerprintPersistenceOverride: FingerprintPersistence? = null,
-    override val preferencesFilePath: String = resolvePreferencesFilePath(desktopPlatform),
+    override val preferencesFilePath: String = if (configDir != null) {
+        File(configDir, "preferences.preferences_pb").absolutePath
+    } else {
+        resolvePreferencesFilePath(desktopPlatform)
+    },
 ) : DesktopAppConfig
 
 private fun resolvePreferencesFilePath(desktopPlatform: DesktopPlatform): String {

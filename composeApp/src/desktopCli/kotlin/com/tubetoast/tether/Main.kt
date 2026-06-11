@@ -3,6 +3,7 @@ package com.tubetoast.tether
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.ProgramResult
 import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.types.file
 import com.github.ajalt.clikt.parameters.types.int
 import com.tubetoast.tether.config.DeviceNameStore
 import com.tubetoast.tether.config.EphemeralDeviceNamePersistence
@@ -70,17 +71,32 @@ class TetherCommand :
     private val port by option("--port", help = "Ktor server port (0 = pick random free port)")
         .int()
 
+    private val configDir by option(
+        "--config-dir",
+        help = "Persist device identity (name + fingerprint) in this directory so it survives restart. " +
+            "Default: ephemeral per-process identity.",
+    ).file()
+
     override fun run() = runBlocking {
         initCliLogging()
 
         val activeEngineRef = AtomicReference<PeerTransferEngine?>(null)
 
+        val dir = configDir
         val container = CliAppContainer(
-            DefaultDesktopAppConfig(
-                port = port ?: 0,
-                namePersistenceOverride = EphemeralDeviceNamePersistence(),
-                fingerprintPersistenceOverride = EphemeralFingerprintPersistence(),
-            ),
+            if (dir != null) {
+                if (!isUsableConfigDir(dir)) {
+                    echo("ERROR: --config-dir is not a writable directory: ${dir.absolutePath}", err = true)
+                    throw ProgramResult(1)
+                }
+                DefaultDesktopAppConfig(port = port ?: 0, configDir = dir)
+            } else {
+                DefaultDesktopAppConfig(
+                    port = port ?: 0,
+                    namePersistenceOverride = EphemeralDeviceNamePersistence(),
+                    fingerprintPersistenceOverride = EphemeralFingerprintPersistence(),
+                )
+            },
         )
 
         container.nameStore.init()
@@ -404,5 +420,8 @@ fun parseTokens(line: String): List<String> {
 
 fun peersIds(peers: List<Device>): String =
     if (peers.isEmpty()) "none" else peers.joinToString(", ") { it.id }
+
+fun isUsableConfigDir(dir: java.io.File): Boolean =
+    (dir.mkdirs() || dir.isDirectory) && dir.canWrite()
 
 fun main(args: Array<String>) = TetherCommand().main(args)

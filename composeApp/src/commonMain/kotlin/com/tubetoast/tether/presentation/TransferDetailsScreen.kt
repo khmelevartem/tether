@@ -43,6 +43,7 @@ fun TransferDetailsScreen(component: TransferDetailsComponent) {
     val cardState by component.state.subscribeAsState()
     TransferDetailsContent(
         state = cardState.transfer,
+        peerName = component.peerName,
         onBack = component::onBack,
         onCancelTransfer = component::onCancelTransfer,
         onCancelFile = component::onCancelFile,
@@ -54,6 +55,7 @@ fun TransferDetailsScreen(component: TransferDetailsComponent) {
 @Composable
 private fun TransferDetailsContent(
     state: PeerTransferState,
+    peerName: String,
     onBack: () -> Unit,
     onCancelTransfer: () -> Unit,
     onCancelFile: (String) -> Unit,
@@ -86,8 +88,8 @@ private fun TransferDetailsContent(
             .background(colors.surface),
     ) {
         TopBar(
-            peerName = state.peer.id,
-            subtitle = detailsSubtitleCopy(state, state.peer.id),
+            peerName = peerName,
+            subtitle = detailsSubtitleCopy(state, peerName),
             showCancel = isActive,
             onBack = onBack,
             onCancelTransfer = onCancelTransfer,
@@ -209,6 +211,7 @@ private fun PreviewInProgress(@PreviewParameter(Themes::class) dark: Boolean) =
     PreviewSurface(darkTheme = dark) {
         TransferDetailsContent(
             state = TransferPreviewFixtures.activeOutboundWithPerFile,
+            peerName = TransferPreviewFixtures.device.name,
             onBack = {},
             onCancelTransfer = {},
             onCancelFile = {},
@@ -234,6 +237,7 @@ private fun PreviewAllSuccess(@PreviewParameter(Themes::class) dark: Boolean) =
                 },
                 partialReason = null,
             ),
+            peerName = TransferPreviewFixtures.device.name,
             onBack = {},
             onCancelTransfer = {},
             onCancelFile = {},
@@ -248,6 +252,7 @@ private fun PreviewPartial(@PreviewParameter(Themes::class) dark: Boolean) =
     PreviewSurface(darkTheme = dark) {
         TransferDetailsContent(
             state = TransferPreviewFixtures.sentPartialWithPerFile,
+            peerName = TransferPreviewFixtures.device.name,
             onBack = {},
             onCancelTransfer = {},
             onCancelFile = {},
@@ -262,6 +267,7 @@ private fun PreviewAllFailed(@PreviewParameter(Themes::class) dark: Boolean) =
     PreviewSurface(darkTheme = dark) {
         TransferDetailsContent(
             state = TransferPreviewFixtures.errorWithPerFile,
+            peerName = TransferPreviewFixtures.device.name,
             onBack = {},
             onCancelTransfer = {},
             onCancelFile = {},

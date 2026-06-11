@@ -21,8 +21,6 @@ import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class BatchSenderTest {
-    private val peer = PeerIdentity("peer-test")
-
     private fun sources(vararg names: String): List<FakeFileSource> =
         names.map { FakeFileSource(it, 100L) }
 
@@ -42,7 +40,7 @@ class BatchSenderTest {
     @Test
     fun `happy path all succeed returns AllSent and emits Completed AllSent`() = runTest {
         val emitted = mutableListOf<BatchProgress>()
-        val outcome = makeSender().run(sources("a.txt", "b.txt", "c.txt"), peer) { emitted.add(it) }
+        val outcome = makeSender().run(sources("a.txt", "b.txt", "c.txt")) { emitted.add(it) }
 
         assertIs<BatchOutcome.AllSent>(outcome)
         val completed = emitted.last()
@@ -53,7 +51,7 @@ class BatchSenderTest {
     @Test
     fun `happy path emits Sending before Completed`() = runTest {
         val emitted = mutableListOf<BatchProgress>()
-        makeSender().run(sources("a.txt", "b.txt", "c.txt"), peer) { emitted.add(it) }
+        makeSender().run(sources("a.txt", "b.txt", "c.txt")) { emitted.add(it) }
 
         val sending = emitted.dropLast(1)
         assertTrue(sending.isNotEmpty(), "Expected at least one Sending before Completed")
@@ -73,7 +71,7 @@ class BatchSenderTest {
         )
 
         val job = launch {
-            sender.run(sources("a.txt", "b.txt", "c.txt"), peer) { emitted.add(it) }
+            sender.run(sources("a.txt", "b.txt", "c.txt")) { emitted.add(it) }
         }
 
         runCurrent()
@@ -97,7 +95,7 @@ class BatchSenderTest {
             },
         )
 
-        val outcome = sender.run(sources("a.txt", "b.txt", "c.txt"), peer) { emitted.add(it) }
+        val outcome = sender.run(sources("a.txt", "b.txt", "c.txt")) { emitted.add(it) }
 
         assertIs<BatchOutcome.PartialSent>(outcome)
         val last = emitted.last()
@@ -119,7 +117,7 @@ class BatchSenderTest {
             },
         )
 
-        val outcome = sender.run(sources("a.txt", "b.txt", "c.txt"), peer) { emitted.add(it) }
+        val outcome = sender.run(sources("a.txt", "b.txt", "c.txt")) { emitted.add(it) }
 
         assertIs<BatchOutcome.PartialSent>(outcome)
         val last = emitted.last()
@@ -149,7 +147,7 @@ class BatchSenderTest {
         )
 
         val job = launch {
-            sender.run(sources("a.txt", "b.txt", "c.txt"), peer) { emitted.add(it) }
+            sender.run(sources("a.txt", "b.txt", "c.txt")) { emitted.add(it) }
         }
 
         runCurrent()
@@ -187,7 +185,7 @@ class BatchSenderTest {
 
         var outcome: BatchOutcome? = null
         val job = launch {
-            outcome = sender.run(sources("a.txt", "b.txt", "c.txt"), peer) { emitted.add(it) }
+            outcome = sender.run(sources("a.txt", "b.txt", "c.txt")) { emitted.add(it) }
         }
 
         runCurrent()
@@ -218,7 +216,7 @@ class BatchSenderTest {
     @Test
     fun `empty source list returns AllSent without emitting`() = runTest {
         val emitted = mutableListOf<BatchProgress>()
-        val outcome = makeSender().run(emptyList(), peer) { emitted.add(it) }
+        val outcome = makeSender().run(emptyList()) { emitted.add(it) }
 
         assertIs<BatchOutcome.AllSent>(outcome)
         assertTrue(emitted.isEmpty(), "Expected no emissions for empty source list")
@@ -236,7 +234,7 @@ class BatchSenderTest {
             progressThrottle = 100.milliseconds,
         )
 
-        sender.run(sources("b.txt"), peer) {}
+        sender.run(sources("b.txt")) {}
 
         assertEquals(listOf("b.txt"), called)
     }
@@ -251,7 +249,7 @@ class BatchSenderTest {
             },
         )
 
-        val outcome = sender.run(sources("a.txt", "b.txt", "c.txt"), peer) { emitted.add(it) }
+        val outcome = sender.run(sources("a.txt", "b.txt", "c.txt")) { emitted.add(it) }
 
         assertIs<BatchOutcome.PartialSent>(outcome)
         val last = emitted.last()
@@ -268,7 +266,7 @@ class BatchSenderTest {
             sendOne = { _, _ -> throw PeerUnreachableException() },
         )
 
-        val outcome = sender.run(sources("a.txt", "b.txt"), peer) { emitted.add(it) }
+        val outcome = sender.run(sources("a.txt", "b.txt")) { emitted.add(it) }
 
         assertIs<BatchOutcome.Failed>(outcome)
         assertEquals(TransferErrorReason.PeerUnreachable, outcome.reason)
@@ -286,7 +284,7 @@ class BatchSenderTest {
             sendOne = { _, _ -> throw ReceiverWriteFailedException(507) },
         )
 
-        val outcome = sender.run(sources("a.txt", "b.txt"), peer) { emitted.add(it) }
+        val outcome = sender.run(sources("a.txt", "b.txt")) { emitted.add(it) }
 
         assertIs<BatchOutcome.Failed>(outcome)
         assertEquals(TransferErrorReason.ReceiverWriteFailed, outcome.reason)
@@ -308,7 +306,7 @@ class BatchSenderTest {
             },
         )
 
-        val outcome = sender.run(sources("a.txt", "b.txt"), peer) { emitted.add(it) }
+        val outcome = sender.run(sources("a.txt", "b.txt")) { emitted.add(it) }
 
         assertIs<BatchOutcome.Failed>(outcome)
         assertEquals(TransferErrorReason.AllFilesFailed, outcome.reason)
@@ -332,7 +330,7 @@ class BatchSenderTest {
         )
 
         val job = launch {
-            sender.run(sources("a.txt", "b.txt"), peer) { emitted.add(it) }
+            sender.run(sources("a.txt", "b.txt")) { emitted.add(it) }
         }
 
         runCurrent()
@@ -351,7 +349,7 @@ class BatchSenderTest {
         val emitted = mutableListOf<BatchProgress>()
         val sender = makeSender()
 
-        val outcome = sender.run(sources("a.txt", "b.txt"), peer, skipPredicate = { true }) { emitted.add(it) }
+        val outcome = sender.run(sources("a.txt", "b.txt"), skipPredicate = { true }) { emitted.add(it) }
 
         assertIs<BatchOutcome.PartialSent>(outcome)
         val last = emitted.last()
@@ -373,7 +371,7 @@ class BatchSenderTest {
 
         val srcs = sources("a.txt", "b.txt", "c.txt")
         val job = launch {
-            sender.run(srcs, peer) { emitted.add(it) }
+            sender.run(srcs) { emitted.add(it) }
         }
 
         runCurrent()
@@ -405,7 +403,7 @@ class BatchSenderTest {
         )
 
         val job = launch(testDispatcher) {
-            sender.run(sources("a.txt"), peer) { emitted.add(it) }
+            sender.run(sources("a.txt")) { emitted.add(it) }
         }
         advanceUntilIdle()
 
@@ -444,7 +442,6 @@ class BatchSenderTest {
         val job = launch {
             sender.run(
                 sources("file1.txt", "file2.txt", "file3.txt"),
-                peer,
                 skipPredicate = { it.name in skipped },
             ) { emitted.add(it) }
         }
@@ -463,7 +460,7 @@ class BatchSenderTest {
     @Test
     fun `Sending totalBytes sums sizes of all sources`() = runTest {
         val emitted = mutableListOf<BatchProgress>()
-        makeSender().run(sources("a.txt", "b.txt", "c.txt"), peer) { emitted.add(it) }
+        makeSender().run(sources("a.txt", "b.txt", "c.txt")) { emitted.add(it) }
 
         val sending = emitted.filterIsInstance<BatchProgress.Sending>().first()
         assertEquals(300L, sending.totalBytes) // 3 sources * 100 bytes
@@ -484,7 +481,7 @@ class BatchSenderTest {
             // Test scheduler (not Unconfined) so the progress throttle delay is virtual-time driven.
             dispatcher = StandardTestDispatcher(testScheduler),
         )
-        val job = launch { sender.run(listOf(LateSizeSource("a", 150L)), peer) { emitted.add(it) } }
+        val job = launch { sender.run(listOf(LateSizeSource("a", 150L))) { emitted.add(it) } }
 
         runCurrent()
         // First emit precedes the source being opened → size still unknown.
@@ -519,7 +516,6 @@ class BatchSenderTest {
         val job = launch {
             sender.run(
                 listOf(FakeFileSource("photo.jpg", 100L, materializesLazily = true)),
-                peer,
             ) { emitted.add(it) }
         }
 
@@ -556,7 +552,7 @@ class BatchSenderTest {
             tracker = tracker,
         )
 
-        sender.run(sources("a.txt", "b.txt", "c.txt"), peer) {}
+        sender.run(sources("a.txt", "b.txt", "c.txt")) {}
 
         assertEquals(1, enters, "activity acquired once at batch start")
         assertEquals(1, exits, "activity released once at batch end — no per-file flicker")
@@ -565,7 +561,7 @@ class BatchSenderTest {
     @Test
     fun `eagerly-readable sources never report preparing`() = runTest {
         val emitted = mutableListOf<BatchProgress>()
-        makeSender().run(sources("a.txt", "b.txt"), peer) { emitted.add(it) }
+        makeSender().run(sources("a.txt", "b.txt")) { emitted.add(it) }
 
         assertTrue(emitted.filterIsInstance<BatchProgress.Sending>().none { it.preparing })
     }
@@ -586,7 +582,6 @@ class BatchSenderTest {
         val job = launch {
             sender.run(
                 listOf(FakeFileSource("photo.jpg", 100L, materializesLazily = true)),
-                peer,
             ) { emitted.add(it) }
         }
 

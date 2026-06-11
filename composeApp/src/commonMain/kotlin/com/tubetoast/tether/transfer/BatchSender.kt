@@ -57,19 +57,17 @@ class BatchSender(
 
     suspend fun run(
         sources: List<FileSource>,
-        peer: PeerIdentity,
         skipPredicate: (FileSource) -> Boolean = { false },
         emit: suspend (BatchProgress) -> Unit,
     ): BatchOutcome {
         if (sources.isEmpty()) return BatchOutcome.AllSent
         // Hold transfer activity for the whole batch so the foreground banner / iOS foreground
         // constraint does not flicker off between files or during a lazy source's materialization gap.
-        return tracker.withActiveTransfer { runBatch(sources, peer, skipPredicate, emit) }
+        return tracker.withActiveTransfer { runBatch(sources, skipPredicate, emit) }
     }
 
     private suspend fun runBatch(
         sources: List<FileSource>,
-        peer: PeerIdentity,
         skipPredicate: (FileSource) -> Boolean,
         emit: suspend (BatchProgress) -> Unit,
     ): BatchOutcome = withContext(dispatcher) {
@@ -103,7 +101,7 @@ class BatchSender(
                 // first byte flows, so the export gap is not mistaken for a stalled transfer.
                 var preparing = src.materializesLazily
                 var lastSending: BatchProgress.Sending =
-                    buildSending(peer, i, sources, sentBytes, null, perFile, preparing)
+                    buildSending(i, sources, sentBytes, null, perFile, preparing)
                 emit(lastSending)
 
                 val fileGeneration: Long = ++currentGeneration
@@ -128,7 +126,7 @@ class BatchSender(
                                 delay(progressThrottle)
                                 ensureActive()
                                 val st =
-                                    buildSending(peer, i, sources, sentBytes, rate.valueOrNull(), perFile, preparing)
+                                    buildSending(i, sources, sentBytes, rate.valueOrNull(), perFile, preparing)
                                 lastSending = st
                                 emit(st)
                             }
@@ -170,7 +168,6 @@ class BatchSender(
                 if (dropDetected) {
                     emit(
                         BatchProgress.Reconnecting(
-                            peer = peer,
                             remainingSeconds = reconnectionTimeout.inWholeSeconds.toInt(),
                             snapshotBeforeDrop = lastSending,
                         ),
@@ -188,7 +185,7 @@ class BatchSender(
                             TransferErrorReason.NetworkLost,
                             perFile.count { it is PerFileStatus.Done },
                         )
-                        emit(BatchProgress.Completed(peer, outcome, perFile.toList()))
+                        emit(BatchProgress.Completed(outcome, perFile.toList()))
                         return@withContext outcome
                     }
                 }
@@ -207,15 +204,14 @@ class BatchSender(
                 }
             }
             val outcome = BatchOutcome.Cancelled(doneCount, remaining)
-            emit(BatchProgress.Completed(peer, outcome, perFile.toList()))
+            emit(BatchProgress.Completed(outcome, perFile.toList()))
             return@withContext outcome
         }
 
-        return@withContext finalizeOutcome(peer, sources, perFile, emit)
+        return@withContext finalizeOutcome(perFile, emit)
     }
 
     private fun buildSending(
-        peer: PeerIdentity,
         index: Int,
         sources: List<FileSource>,
         sentBytes: Long,
@@ -223,7 +219,6 @@ class BatchSender(
         perFile: List<PerFileStatus>,
         preparing: Boolean,
     ): BatchProgress.Sending = BatchProgress.Sending(
-        peer = peer,
         currentFile = sources[index].name,
         currentIndex = index,
         totalFiles = sources.size,
@@ -243,8 +238,6 @@ class BatchSender(
     )
 
     private suspend fun finalizeOutcome(
-        peer: PeerIdentity,
-        sources: List<FileSource>,
         perFile: MutableList<PerFileStatus>,
         emit: suspend (BatchProgress) -> Unit,
     ): BatchOutcome {
@@ -254,7 +247,7 @@ class BatchSender(
 
         if (failedNames.isEmpty()) {
             val outcome = BatchOutcome.AllSent
-            emit(BatchProgress.Completed(peer, outcome, perFile.toList()))
+            emit(BatchProgress.Completed(outcome, perFile.toList()))
             return outcome
         }
 
@@ -262,12 +255,12 @@ class BatchSender(
         if (doneCount == 0 && !allCancelledByUser) {
             val errorReason = failedEntries.dominantErrorReason()
             val outcome = BatchOutcome.Failed(errorReason, 0)
-            emit(BatchProgress.Completed(peer, outcome, perFile.toList()))
+            emit(BatchProgress.Completed(outcome, perFile.toList()))
             return outcome
         }
 
         val outcome = BatchOutcome.PartialSent(failedNames)
-        emit(BatchProgress.Completed(peer, outcome, perFile.toList()))
+        emit(BatchProgress.Completed(outcome, perFile.toList()))
         return outcome
     }
 
