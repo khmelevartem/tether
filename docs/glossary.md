@@ -19,6 +19,8 @@ User-facing concepts. The vocabulary [`spec-writer`](../.claude/agents/spec-writ
 - **Pending files** — files staged for a transfer that has not yet started, typically arriving via share-sheet or drag-drop while the user picks the target peer. Surfaced by the pending-outbound banner on the device list (see [file-transfer](product/features/file-transfer/)). _Avoid:_ queued files, staged files, awaiting files.
 - **Share-sheet** — the platform-provided UI surface a user invokes from another app to send selected files into Tether (Android share-sheet, iOS Share extension). On Tether's side the selection lands in pending files. _Avoid:_ share menu, share dialog.
 - **Large selection** — a staged send exceeding the warning thresholds (more than 500 files or 2 GB total), which prompts a one-time confirmation before sending; the user may suppress future prompts. _Avoid:_ big batch, bulk send. (see [file-transfer](product/features/file-transfer/))
+- **Clipboard transfer** — sending the current contents of one device's clipboard to a trusted peer, ready to paste on the other side; ephemeral and never recorded in transfer history. Carries text and typed URLs in its first form. _Avoid:_ clipboard share, copy-paste sync. (see [clipboard-transfer](product/features/clipboard-transfer/))
+- **Clipboard sync** — a per-peer switch expressing the intent to automatically send one's clipboard to a trusted peer as it changes, without a manual action per copy. Distinct from **Auto-send**, which is about pending files. _Avoid:_ auto-send (that is the file toggle), clipboard auto-share. (see [clipboard-transfer](product/features/clipboard-transfer/))
 
 ## Technical
 

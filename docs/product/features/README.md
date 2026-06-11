@@ -39,6 +39,7 @@ Note on `Status` here vs. GitHub Issues: an issue can exist (and even be in prog
 | Device list screen | UI | in progress | [device-list/spec.md](device-list/spec.md) | #7 — Android + iOS done; Desktop _tbd_ |
 | File transfer | Transfer / UI | scoped | [file-transfer/spec.md](file-transfer/spec.md) | #8 (Android send UI), #81 (iOS FileServer receive), #193 (Desktop send UI); iOS UI, receive-side UI _tbd_ |
 | Device name bootstrapping | Onboarding | done | [device-name-bootstrapping/spec.md](device-name-bootstrapping/spec.md) | #147 (backend), #148 (UI) |
+| Clipboard transfer | Transfer / UI | scoped | [clipboard-transfer/spec.md](clipboard-transfer/spec.md) | [#419](https://github.com/khmelevartem/tether/issues/419) (spec & UX brief); implementation _tbd_ |
 
 ### System integration
 
