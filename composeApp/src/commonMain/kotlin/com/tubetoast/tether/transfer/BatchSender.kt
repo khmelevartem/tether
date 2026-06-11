@@ -229,7 +229,9 @@ class BatchSender(
         totalFiles = sources.size,
         sentBytes = sentBytes,
         // Re-folded each emit, not captured once: lazily-materialized sources (iOS photos) learn
-        // their size only when sent, so the batch total resolves as the transfer proceeds.
+        // their size only when sent, so the batch total resolves as the transfer proceeds. For
+        // eager sources (sizes known upfront) this recomputes the same value — an O(files) no-op,
+        // negligible against the throttle interval.
         totalBytes = sources.fold(0L as Long?) { acc, src ->
             val size = src.sizeBytes
             if (acc != null && size != null) acc + size else null
