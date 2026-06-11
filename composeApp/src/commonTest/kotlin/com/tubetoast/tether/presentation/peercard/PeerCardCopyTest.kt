@@ -5,32 +5,28 @@ import com.tubetoast.tether.transfer.Direction
 import com.tubetoast.tether.transfer.PartialOutcome
 import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.TransferErrorReason
-import com.tubetoast.tether.transfer.toPeerIdentity
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class PeerCardCopyTest {
     private val device = Device(name = "Alice", host = "h", port = 1, fingerprint = "fp-abc")
-    private val peer = device.toPeerIdentity()
 
     @Test
     fun sentFullCopy() {
-        val state = PeerTransferState.Sent(peer, sent = 5, total = 5, perFile = emptyList(), partialReason = null)
+        val state = PeerTransferState.Sent(sent = 5, total = 5, perFile = emptyList(), partialReason = null)
         assertEquals("Sent 5 files to Alice", sentCardCopy(state, device))
     }
 
     @Test
     fun sentCardCopyUsesDeviceNameNotFingerprint() {
-        // device.name ("Alice") differs from its fingerprint ("fp-abc") that backs the PeerIdentity,
-        // so the copy must read the name from the device, not from state.peer.
-        val state = PeerTransferState.Sent(peer, sent = 3, total = 3, perFile = emptyList(), partialReason = null)
+        // device.name ("Alice") differs from its fingerprint ("fp-abc"); the copy reads name from the device.
+        val state = PeerTransferState.Sent(sent = 3, total = 3, perFile = emptyList(), partialReason = null)
         assertEquals("Sent 3 files to Alice", sentCardCopy(state, device))
     }
 
     @Test
     fun sentSenderCancelledCopy() {
         val state = PeerTransferState.Sent(
-            peer,
             sent = 3,
             total = 5,
             perFile = emptyList(),
@@ -42,7 +38,6 @@ class PeerCardCopyTest {
     @Test
     fun sentReceiverCancelledCopy() {
         val state = PeerTransferState.Sent(
-            peer,
             sent = 3,
             total = 5,
             perFile = emptyList(),
@@ -54,7 +49,6 @@ class PeerCardCopyTest {
     @Test
     fun sentConnectionLostCopy() {
         val state = PeerTransferState.Sent(
-            peer,
             sent = 2,
             total = 5,
             perFile = emptyList(),
@@ -66,7 +60,6 @@ class PeerCardCopyTest {
     @Test
     fun sentFilesUnreadableCopy() {
         val state = PeerTransferState.Sent(
-            peer,
             sent = 3,
             total = 5,
             perFile = emptyList(),
@@ -78,7 +71,6 @@ class PeerCardCopyTest {
     @Test
     fun receivedFullCopy() {
         val state = PeerTransferState.Received(
-            peer,
             received = 5,
             total = 5,
             perFile = emptyList(),
@@ -90,7 +82,6 @@ class PeerCardCopyTest {
     @Test
     fun receivedSenderCancelledCopy() {
         val state = PeerTransferState.Received(
-            peer,
             received = 3,
             total = 5,
             perFile = emptyList(),
@@ -102,7 +93,6 @@ class PeerCardCopyTest {
     @Test
     fun receivedReceiverCancelledCopy() {
         val state = PeerTransferState.Received(
-            peer,
             received = 3,
             total = 5,
             perFile = emptyList(),
@@ -114,7 +104,6 @@ class PeerCardCopyTest {
     @Test
     fun receivedConnectionLostCopy() {
         val state = PeerTransferState.Received(
-            peer,
             received = 3,
             total = 5,
             perFile = emptyList(),
@@ -126,7 +115,6 @@ class PeerCardCopyTest {
     @Test
     fun receiverCancelledIsLockedCopy() {
         val state = PeerTransferState.Received(
-            peer,
             received = 2,
             total = 5,
             perFile = emptyList(),
@@ -138,7 +126,6 @@ class PeerCardCopyTest {
     @Test
     fun errorNetworkLostCopy() {
         val state = PeerTransferState.Error(
-            peer,
             reason = TransferErrorReason.NetworkLost,
             sent = 0,
             perFile = emptyList(),
@@ -149,7 +136,6 @@ class PeerCardCopyTest {
     @Test
     fun errorPeerUnreachableCopy() {
         val state = PeerTransferState.Error(
-            peer,
             reason = TransferErrorReason.PeerUnreachable,
             sent = 0,
             perFile = emptyList(),
@@ -160,7 +146,6 @@ class PeerCardCopyTest {
     @Test
     fun errorReceiverWriteFailedCopy() {
         val state = PeerTransferState.Error(
-            peer,
             reason = TransferErrorReason.ReceiverWriteFailed,
             sent = 0,
             perFile = emptyList(),
@@ -171,7 +156,6 @@ class PeerCardCopyTest {
     @Test
     fun errorAllFilesFailedCopy() {
         val state = PeerTransferState.Error(
-            peer,
             reason = TransferErrorReason.AllFilesFailed,
             sent = 0,
             perFile = emptyList(),
@@ -182,7 +166,6 @@ class PeerCardCopyTest {
     @Test
     fun errorReceiverSuspendedCopy() {
         val state = PeerTransferState.Error(
-            peer,
             reason = TransferErrorReason.ReceiverSuspended,
             sent = 0,
             perFile = emptyList(),
@@ -192,14 +175,13 @@ class PeerCardCopyTest {
 
     @Test
     fun cancelledCleanCopy() {
-        val state = PeerTransferState.Cancelled(peer, sent = 0, remaining = emptyList(), perFile = emptyList())
+        val state = PeerTransferState.Cancelled(sent = 0, remaining = emptyList(), perFile = emptyList())
         assertEquals("Cancelled", cancelledCardCopy(state))
     }
 
     @Test
     fun cancelledPartialCopy() {
         val state = PeerTransferState.Cancelled(
-            peer,
             sent = 3,
             remaining = listOf("a.txt", "b.txt"),
             perFile = emptyList(),
@@ -210,10 +192,9 @@ class PeerCardCopyTest {
     @Test
     fun reconnectingCopy() {
         val state = PeerTransferState.Reconnecting(
-            peer = peer,
             direction = Direction.Outbound,
             remainingSeconds = 12,
-            snapshotBeforeDrop = PeerTransferState.Idle(peer),
+            snapshotBeforeDrop = PeerTransferState.Idle,
         )
         assertEquals("Reconnecting to Alice… (12s)", reconnectingCardCopy(state, device))
     }
