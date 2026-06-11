@@ -6,6 +6,11 @@ import ru.pocketbyte.kydra.log.wrapper.withTag
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
+import java.nio.file.attribute.AclEntry
+import java.nio.file.attribute.AclEntryPermission
+import java.nio.file.attribute.AclEntryType
+import java.nio.file.attribute.AclFileAttributeView
+import java.nio.file.attribute.PosixFileAttributeView
 import java.nio.file.attribute.PosixFilePermission
 import java.security.KeyFactory
 import java.security.KeyPairGenerator
@@ -88,10 +93,7 @@ actual class DeviceKeyPair(
     }
 
     private fun restrictToOwner(file: File) {
-        val posixView = Files.getFileAttributeView(
-            file.toPath(),
-            java.nio.file.attribute.PosixFileAttributeView::class.java,
-        )
+        val posixView = Files.getFileAttributeView(file.toPath(), PosixFileAttributeView::class.java)
         if (posixView != null) {
             posixView.setPermissions(setOf(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE))
             return
@@ -100,31 +102,27 @@ actual class DeviceKeyPair(
     }
 
     private fun restrictToOwnerAcl(file: File) {
-        val aclView = Files.getFileAttributeView(
-            file.toPath(),
-            java.nio.file.attribute.AclFileAttributeView::class.java,
-        )
+        val aclView = Files.getFileAttributeView(file.toPath(), AclFileAttributeView::class.java)
         if (aclView == null) {
             log.warn { "cannot restrict ${file.name}: filesystem supports neither POSIX nor ACL permissions" }
             return
         }
-        val owner = Files.getOwner(file.toPath())
-        val ownerOnly = java.nio.file.attribute.AclEntry
+        val ownerOnly = AclEntry
             .newBuilder()
-            .setType(java.nio.file.attribute.AclEntryType.ALLOW)
-            .setPrincipal(owner)
+            .setType(AclEntryType.ALLOW)
+            .setPrincipal(Files.getOwner(file.toPath()))
             .setPermissions(
-                java.nio.file.attribute.AclEntryPermission.READ_DATA,
-                java.nio.file.attribute.AclEntryPermission.WRITE_DATA,
-                java.nio.file.attribute.AclEntryPermission.APPEND_DATA,
-                java.nio.file.attribute.AclEntryPermission.READ_ATTRIBUTES,
-                java.nio.file.attribute.AclEntryPermission.WRITE_ATTRIBUTES,
-                java.nio.file.attribute.AclEntryPermission.READ_NAMED_ATTRS,
-                java.nio.file.attribute.AclEntryPermission.WRITE_NAMED_ATTRS,
-                java.nio.file.attribute.AclEntryPermission.READ_ACL,
-                java.nio.file.attribute.AclEntryPermission.WRITE_ACL,
-                java.nio.file.attribute.AclEntryPermission.DELETE,
-                java.nio.file.attribute.AclEntryPermission.SYNCHRONIZE,
+                AclEntryPermission.READ_DATA,
+                AclEntryPermission.WRITE_DATA,
+                AclEntryPermission.APPEND_DATA,
+                AclEntryPermission.READ_ATTRIBUTES,
+                AclEntryPermission.WRITE_ATTRIBUTES,
+                AclEntryPermission.READ_NAMED_ATTRS,
+                AclEntryPermission.WRITE_NAMED_ATTRS,
+                AclEntryPermission.READ_ACL,
+                AclEntryPermission.WRITE_ACL,
+                AclEntryPermission.DELETE,
+                AclEntryPermission.SYNCHRONIZE,
             ).build()
         aclView.acl = listOf(ownerOnly)
     }
