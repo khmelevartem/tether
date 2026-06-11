@@ -45,6 +45,7 @@ Always read `CLAUDE.md`. Then read the engineering doc that maps to the diff:
 - Test quality → `review-tests`
 - Platform expect/actual completeness → `review-platform`
 - AC coverage → `review-dod`
+- **UX-domain quality of a `ux-brief.md`** → `review-ux-brief`. For a touched brief you check only structural conformance to the `ux-expert` §Output template (sections present, copy is a real string, every platform delta named, status set). Whether the chosen idiom is right, the failure mode realistic, the copy voice consistent — that judgment is `review-ux-brief`'s.
 - **Shape-level architectural decisions** → `review-architecture`. You flag "rule X is violated" (DI checklist not followed, layering import points wrong way, common-first source-set placement wrong). `review-architecture` flags "this abstraction wasn't earned" / "this decomposition is wrong even though every rule is followed" / "alternatives weren't considered". When in doubt: if the diff would pass if the author moved a file or renamed a method (mechanical), it's yours; if it needs a different *design*, it's architecture's.
 
 ## Output

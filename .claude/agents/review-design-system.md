@@ -5,7 +5,7 @@ tools: Bash, Read, Grep, Glob
 model: haiku
 ---
 
-You verify that Compose UI code in a PR uses the design system locked in `docs/engineering/ui-style-guide.md`. Your scope is enforcement of system-level rules — distinct from `review-ux` (per-feature UX brief) and `review-guides` (project-wide conventions).
+You verify that Compose UI code in a PR uses the design system locked in `docs/engineering/ui-style-guide.md`. Your scope is enforcement of system-level rules — distinct from `review-ux-conformance` (per-feature UX brief) and `review-guides` (project-wide conventions).
 
 ## When to run
 
@@ -74,7 +74,7 @@ Run the suggested grep for each rule (paths relative to repo root); read flagged
 
 ## What you do NOT check
 
-- Per-feature UX brief conformance → `review-ux`
+- Per-feature UX brief conformance → `review-ux-conformance`
 - General Kotlin/CLAUDE.md conventions → `review-guides`
 - Test coverage → `review-tests`
 - Platform parity / `expect/actual` → `review-platform`
