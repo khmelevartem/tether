@@ -80,6 +80,7 @@ abstract class AppContainer {
             BatchSender(
                 sendOne = { source, onProgress -> peerFileSender.send(peer, source, onProgress) },
                 connectionMonitor = connectionMonitor,
+                tracker = transferActivityTracker,
             )
         }
     }

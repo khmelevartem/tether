@@ -538,6 +538,31 @@ class BatchSenderTest {
     }
 
     @Test
+    fun `transfer activity is held once across the batch despite per-file sends`() = runTest {
+        var enters = 0
+        var exits = 0
+        val tracker = DefaultTransferActivityTracker(
+            scope = backgroundScope,
+            onFirstEnter = { enters++ },
+            onLastExit = { exits++ },
+        )
+        val sender = BatchSender(
+            // Each file nests its own hold (as FileClient.send does), so the batch hold must bridge
+            // the gaps — otherwise the count hits 0 between files and the foreground banner flickers.
+            sendOne = { _, onProgress -> tracker.withActiveTransfer { onProgress(100L, 100L) } },
+            connectionMonitor = FakeConnectionMonitor(),
+            progressThrottle = 100.milliseconds,
+            dispatcher = Dispatchers.Unconfined,
+            tracker = tracker,
+        )
+
+        sender.run(sources("a.txt", "b.txt", "c.txt"), peer) {}
+
+        assertEquals(1, enters, "activity acquired once at batch start")
+        assertEquals(1, exits, "activity released once at batch end — no per-file flicker")
+    }
+
+    @Test
     fun `eagerly-readable sources never report preparing`() = runTest {
         val emitted = mutableListOf<BatchProgress>()
         makeSender().run(sources("a.txt", "b.txt"), peer) { emitted.add(it) }

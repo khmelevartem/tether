@@ -41,6 +41,7 @@ class BatchSender(
     private val progressThrottle: Duration = 100.milliseconds,
     private val timeSource: TimeSource = TimeSource.Monotonic,
     private val dispatcher: CoroutineDispatcher = IoDispatcher.limitedParallelism(1),
+    private val tracker: TransferActivityTracker = NoOpTransferActivityTracker,
 ) {
     private var currentSendJob: Job? = null
     private var currentFileName: String? = null
@@ -59,9 +60,19 @@ class BatchSender(
         peer: PeerIdentity,
         skipPredicate: (FileSource) -> Boolean = { false },
         emit: suspend (BatchProgress) -> Unit,
-    ): BatchOutcome = withContext(dispatcher) {
-        if (sources.isEmpty()) return@withContext BatchOutcome.AllSent
+    ): BatchOutcome {
+        if (sources.isEmpty()) return BatchOutcome.AllSent
+        // Hold transfer activity for the whole batch so the foreground banner / iOS foreground
+        // constraint does not flicker off between files or during a lazy source's materialization gap.
+        return tracker.withActiveTransfer { runBatch(sources, peer, skipPredicate, emit) }
+    }
 
+    private suspend fun runBatch(
+        sources: List<FileSource>,
+        peer: PeerIdentity,
+        skipPredicate: (FileSource) -> Boolean,
+        emit: suspend (BatchProgress) -> Unit,
+    ): BatchOutcome = withContext(dispatcher) {
         val perFile: MutableList<PerFileStatus> = sources
             .map { PerFileStatus.Queued(it.name, it.sizeBytes) }
             .toMutableList()
