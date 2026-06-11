@@ -199,10 +199,10 @@ Per track (or sequentially if single track):
    - `review-architecture` (always unless DOCS or trivial one-call-site BUGFIX / cosmetic refactor)
    - `review-tests` (always unless DOCS/INFRA)
    - `review-platform` (if diff touches platform source sets)
-   - `review-ux-conformance` (only if diff touches `composeApp/src/**` AND a touched feature has a `ux-brief.md` — resolve the slug + brief path, pass it in the prompt, and don't dispatch when no brief exists; the orchestrator owns this gate so the agent isn't launched only to self-skip)
+   - `review-ux-conformance` (only if diff touches `composeApp/src/**` AND a touched feature has a `ux-brief.md`. Resolve the slug from the issue — a spec link or `docs/product/features/<slug>/` reference in the body, else glob `docs/product/features/**/ux-brief.md` and topic-match the changed paths — and pass the brief path in the prompt; don't dispatch when no brief exists. The orchestrator owns this gate so the agent isn't launched only to self-skip. Pre-PR here: resolve from the issue number, not `gh pr view`.)
    - `review-ux-brief` (if diff touches `docs/product/features/**/ux-brief.md` — judges the brief's UX-domain quality)
    - `review-design-system` (if diff touches `composeApp/src/**`)
-   - `review-visual` (if diff touches `composeApp/src/**` — the agent itself renders PNGs via Roborazzi and decides skip vs. block on missing brief)
+   - `review-visual` (if diff touches `composeApp/src/**` — the agent itself renders PNGs via Roborazzi; a missing brief narrows its checklist but does not skip it)
    Skip `review-reuse` and `review-adversarial` here — they run in the simplify wave (Step 6) and the full review (Step 7).
 4. If every reviewer says `APPROVE` and zero `[REQUIRED]` → track done.
 5. Else → aggregate `[REQUIRED]` findings, dispatch the implementing agent again with the findings as input. Apply the same commit-before-review discipline as step 2:
