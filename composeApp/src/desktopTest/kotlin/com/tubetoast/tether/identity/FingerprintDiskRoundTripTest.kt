@@ -29,6 +29,8 @@ class FingerprintDiskRoundTripTest {
         prefsFile.delete()
     }
 
+    // UnconfinedTestDispatcher runs the DataStore actor eagerly; the default StandardTestDispatcher would
+    // queue its work behind virtual time this test never advances, hanging getOrCreate.
     @Test
     fun `fingerprint written by first DataStore is readable by second DataStore at same path`() =
         runTest(UnconfinedTestDispatcher()) {
@@ -46,7 +48,6 @@ class FingerprintDiskRoundTripTest {
             val firstFingerprint = DeviceIdentityStore(DataStoreFingerprintPersistence(firstStore)).getOrCreate()
             firstJob.cancelAndJoin()
 
-            // The second DataStore rides backgroundScope — cancelled automatically at test end.
             val secondStore = PreferenceDataStoreFactory.createWithPath(scope = backgroundScope) {
                 prefsFile.toOkioPath()
             }
