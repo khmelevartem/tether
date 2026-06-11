@@ -3,7 +3,7 @@ package com.tubetoast.tether.identity
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -29,35 +29,29 @@ class FingerprintDiskRoundTripTest {
         prefsFile.delete()
     }
 
-    // UnconfinedTestDispatcher runs each coroutine eagerly on the calling thread, so the suspending
-    // DataStore read/write resolve inline under runTest; a StandardTestDispatcher (plain TestScope)
-    // would queue the DataStore actor's work behind virtual time that this test never advances.
     @Test
-    fun `fingerprint written by first DataStore is readable by second DataStore at same path`() = runTest {
-        val job1 = SupervisorJob()
-        val store1 = PreferenceDataStoreFactory.createWithPath(
-            scope = CoroutineScope(
-                job1 + UnconfinedTestDispatcher(testScheduler),
-            ),
-        ) {
-            prefsFile.toOkioPath()
-        }
-        val firstFingerprint = DeviceIdentityStore(DataStoreFingerprintPersistence(store1)).getOrCreate()
-        // Join the cancelled scope so DataStore releases the file before reopening it — otherwise the
-        // second factory call throws "multiple DataStores active for the same file".
-        job1.cancelAndJoin()
+    fun `fingerprint written by first DataStore is readable by second DataStore at same path`() =
+        runTest(UnconfinedTestDispatcher()) {
+            // The first DataStore gets its own job so it can be cancelled mid-test: DataStore releases the
+            // file only when its scope completes, and the second factory call at the same path otherwise
+            // throws "multiple DataStores active for the same file".
+            val firstJob = Job()
+            val firstStore = PreferenceDataStoreFactory.createWithPath(
+                scope = CoroutineScope(
+                    coroutineContext + firstJob,
+                ),
+            ) {
+                prefsFile.toOkioPath()
+            }
+            val firstFingerprint = DeviceIdentityStore(DataStoreFingerprintPersistence(firstStore)).getOrCreate()
+            firstJob.cancelAndJoin()
 
-        val job2 = SupervisorJob()
-        val store2 = PreferenceDataStoreFactory.createWithPath(
-            scope = CoroutineScope(
-                job2 + UnconfinedTestDispatcher(testScheduler),
-            ),
-        ) {
-            prefsFile.toOkioPath()
-        }
-        val readBack = DeviceIdentityStore(DataStoreFingerprintPersistence(store2)).getOrCreate()
-        job2.cancelAndJoin()
+            // The second DataStore rides backgroundScope — cancelled automatically at test end.
+            val secondStore = PreferenceDataStoreFactory.createWithPath(scope = backgroundScope) {
+                prefsFile.toOkioPath()
+            }
+            val readBack = DeviceIdentityStore(DataStoreFingerprintPersistence(secondStore)).getOrCreate()
 
-        assertEquals(firstFingerprint, readBack, "fingerprint must survive a DataStore close/reopen cycle")
-    }
+            assertEquals(firstFingerprint, readBack, "fingerprint must survive a DataStore close/reopen cycle")
+        }
 }
