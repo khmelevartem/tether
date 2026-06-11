@@ -17,9 +17,6 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-// DataStore writes to real disk via real dispatcher — virtual-time coroutines cannot
-// synchronize on real file I/O.
-@Suppress("ktlint:tether:no-run-blocking-in-tests")
 class DesktopAppConfigIdentityTest {
     private lateinit var tmpDir: File
 
@@ -49,6 +46,8 @@ class DesktopAppConfigIdentityTest {
         assertNull(config.fingerprintPersistenceOverride)
     }
 
+    // getOrCreate persists to DataStore on real disk; runBlocking awaits that real I/O.
+    @Suppress("ktlint:tether:no-run-blocking-in-tests")
     @Test
     fun `persistent fingerprint is written to disk in configDir`() = runBlocking {
         val container = CliAppContainer(DefaultDesktopAppConfig(port = 0, configDir = tmpDir))
@@ -57,6 +56,8 @@ class DesktopAppConfigIdentityTest {
         assertTrue(prefsFile.exists(), "preferences file must exist after getOrCreate: ${prefsFile.absolutePath}")
     }
 
+    // getOrCreate reads/writes DataStore on real disk; runBlocking awaits that real I/O.
+    @Suppress("ktlint:tether:no-run-blocking-in-tests")
     @Test
     fun `persistent fingerprint is stable within the same container`() = runBlocking {
         val container = CliAppContainer(DefaultDesktopAppConfig(port = 0, configDir = tmpDir))
@@ -65,6 +66,8 @@ class DesktopAppConfigIdentityTest {
         assertEquals(fp1, fp2, "fingerprint must be idempotent on the same container")
     }
 
+    // nameStore reads/writes DataStore on real disk; runBlocking awaits that real I/O.
+    @Suppress("ktlint:tether:no-run-blocking-in-tests")
     @Test
     fun `configDir wires DataStore-backed name persistence and round-trips a name`() = runBlocking {
         val container = CliAppContainer(DefaultDesktopAppConfig(port = 0, configDir = tmpDir))
@@ -73,6 +76,8 @@ class DesktopAppConfigIdentityTest {
         assertEquals("PersistMe", container.nameStore.name.first())
     }
 
+    // getOrCreate touches DataStore on real disk; runBlocking awaits that real I/O.
+    @Suppress("ktlint:tether:no-run-blocking-in-tests")
     @Test
     fun `ephemeral identity differs between fresh containers`() = runBlocking {
         // deviceKeyPair is pinned to tmpDir so the ephemeral path does not touch the real ~/.config/tether.
