@@ -14,7 +14,7 @@ Runs basic smoke scenarios across Tether targets and produces a human-readable r
 At the start of the run **tell the user** — coverage boundaries:
 
 - **Physical iPhone** — no, requires manual signing and certificate trust.
-- **macOS** — ships through the Desktop JVM target; smoke is covered by the Desktop block (the same jar is packaged into `.app`/`.dmg` via `packageReleaseDistributionForCurrentOS`).
+- **Packaged desktop installers** (jpackage `.dmg` / `.msi` / `.deb` and the `.app` image) — not covered. The Desktop block runs the CLI fat-jar on the full system JDK; the installer instead bundles a jlinked, stripped runtime and launches the Compose UI, a path that surfaces failures the jar never hits. Build and launch the installer manually — see [docs/knowledge/jpackage-jlink-modules.md](../../../docs/knowledge/jpackage-jlink-modules.md).
 - **iOS Local Network Privacy prompt** — on the first app launch on the simulator iOS may show "Allow Local Network access". Without Allow, `NSNetService.publish()` silently fails. If the iOS block fails on publish — check the prompt manually, grant Allow, restart the smoke.
 - **Android-initiated send (Android → Desktop)** — Android has no programmatic send trigger (intent / UI button / broadcast). The skill checks the reverse direction: Desktop → Android via CLI `send`.
 - **Tapping the Notification "Stop" button** — replaced by `am force-stop` or broadcast. That the *button is rendered and works* — verify manually.
