@@ -17,7 +17,7 @@ Otherwise, for each touched brief, load its context before judging:
 2. The owning spec (`docs/product/features/<slug>/spec.md`) — the source of truth for *what / why*. A brief decision that contradicts the spec is a finding.
 3. Product context: [`docs/product/vision.md`](../../docs/product/vision.md), [`docs/product/audience.md`](../../docs/product/audience.md).
 4. The locked visual / design system: [`docs/product/design.md`](../../docs/product/design.md), [`docs/engineering/ui-style-guide.md`](../../docs/engineering/ui-style-guide.md).
-5. **Sibling briefs** — `glob docs/product/features/**/ux-brief.md`. They set the established voice and conceptual-component naming convention this brief must match.
+5. The glossary ([`docs/glossary.md`](../../docs/glossary.md)) for the established names of domain concepts. Load a *related* sibling brief on-demand only when this feature shares a surface another brief owns — not the whole set upfront.
 
 ## What to check
 
@@ -27,9 +27,9 @@ Each row judges quality, not presence. Presence is `review-guides`.
 2. **Domain-state completeness.** Beyond the generic loading / empty / populated / error, does the brief name the states this *specific* feature's invariant demands? A transfer feature needs `offline-with-resume-possible`; a pairing feature needs `peer-rejected`. A missing domain state is a finding even though the generic-state check (presence) passed.
 3. **Accessibility-label quality.** Each semantic label actually describes the affordance's intent. `"tap to send"` is too vague; `"send selected files to <device name>"` is right. A label that is present but uninformative is a finding.
 4. **Failure-mode realism.** Each fail mode's user-visible behaviour fits the moment it occurs. A toast on network drop is wrong when a transfer is already in flight (the user needs an inline, resumable state, not a dismissible blip). Flag fail modes that are present but unrealistic.
-5. **Copy voice.** Strings match the established product voice and the sibling briefs. `"click"` on a mobile surface is wrong — Tether says `"tap"`. Inconsistent verb, tone, or capitalization against neighbours is a finding.
+5. **Copy voice.** Strings conform to [`design.md` §Tone of Voice](../../docs/product/design.md#tone-of-voice). A string that breaks that voice is a finding.
 6. **Information-architecture cohesion.** Every state and screen has a way forward; no dead-ends. An error state with no recovery affordance, or a flow that strands the user, is a finding.
-7. **Conceptual-component naming quality.** Each conceptual component is named at the pattern level with a concrete, meaningful name, consistent with sibling briefs — `"paired-device row"`, not `"interactive thing"`. Vague or off-convention names are a finding.
+7. **Conceptual-component naming quality.** Each conceptual component is named at the pattern level with a concrete, meaningful name — `"paired-device row"`, not `"interactive thing"` — and reuses the glossary's term for any domain concept it names ([`docs/glossary.md`](../../docs/glossary.md)). A vague name, or a coined synonym for a concept the glossary already names, is a finding.
 
 ## What you do NOT check
 
@@ -45,7 +45,7 @@ Each row judges quality, not presence. Presence is `review-guides`.
 PHASE: UX-brief
   [REQUIRED] device-list/ux-brief.md §Screens → DeviceListScreen → iOS delta — action sheet is not the HIG idiom for this non-destructive single choice; use an inline picker
   [REQUIRED] file-transfer/ux-brief.md §Screens → TransferScreen → States — missing `offline-with-resume-possible`; the transfer invariant requires it
-  [OK] copy voice consistent with sibling briefs
+  [OK] copy voice conforms to design.md §Tone of Voice
   [UNVERIFIABLE] spec sets one-tap send with no confirm — flagged for product owner
 DECISION: BLOCK | APPROVE
 ```
