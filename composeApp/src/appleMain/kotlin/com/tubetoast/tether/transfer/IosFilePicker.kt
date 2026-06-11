@@ -16,9 +16,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
 import platform.Foundation.NSFileManager
-import platform.Foundation.NSLock
+import platform.Foundation.NSItemProvider
 import platform.Foundation.NSNumber
-import platform.Foundation.NSTemporaryDirectory
 import platform.Foundation.NSURL
 import platform.Foundation.NSURLFileSizeKey
 import platform.Foundation.NSURLIsDirectoryKey
@@ -294,80 +293,39 @@ private class FolderPickerDelegate(
     }
 }
 
-@OptIn(ExperimentalAtomicApi::class)
 private class PhotoPickerDelegate(
     private val deferred: CompletableDeferred<List<FileSource>>,
 ) : NSObject(),
     PHPickerViewControllerDelegateProtocol {
     override fun picker(picker: PHPickerViewController, didFinishPicking: List<*>) {
         picker.dismissViewControllerAnimated(true, completion = null)
-        val results = didFinishPicking.filterIsInstance<PHPickerResult>()
-        if (results.isEmpty()) {
-            deferred.complete(emptyList())
-            return
-        }
-        loadPhotoResults(results)
+        val sources = didFinishPicking
+            .filterIsInstance<PHPickerResult>()
+            .map { lazyPhotoSource(it.itemProvider) }
+        deferred.complete(sources)
     }
 
-    private fun loadPhotoResults(results: List<PHPickerResult>) {
-        val lock = NSLock()
-        val collected = mutableListOf<FileSource>()
-        val remaining = AtomicInt(results.size)
-
-        for (result in results) {
-            val provider = result.itemProvider
-            val typeId = if (provider.hasItemConformingToTypeIdentifier("public.movie")) {
-                "public.movie"
-            } else {
-                "public.image"
-            }
-            val displayName = provider.suggestedName ?: NSUUID().UUIDString
-
-            provider.loadFileRepresentationForTypeIdentifier(typeId) { url, error ->
-                var source: FileSource? = null
-                if (error != null || url == null) {
-                    log.warn { "loadFileRepresentation failed for $displayName: ${error?.localizedDescription}" }
-                } else {
-                    // Copy before this handler returns — the OS deletes the temp file when the handler exits.
-                    val ext = url.pathExtension?.let { ".$it" } ?: ""
-                    val destPath = "${NSTemporaryDirectory()}tether-photo-${NSUUID().UUIDString}$ext"
-                    val destUrl = NSURL.fileURLWithPath(destPath)
-                    val copyError = memScoped {
-                        val errorPtr = alloc<ObjCObjectVar<platform.Foundation.NSError?>>()
-                        val copied = NSFileManager.defaultManager.copyItemAtURL(
-                            url,
-                            toURL = destUrl,
-                            error = errorPtr.ptr,
-                        )
-                        if (copied) null else errorPtr.value
-                    }
-                    if (copyError == null) {
-                        val sizeBytes = memScoped {
-                            val errorPtr = alloc<ObjCObjectVar<platform.Foundation.NSError?>>()
-                            val values = destUrl.resourceValuesForKeys(listOf(NSURLFileSizeKey), errorPtr.ptr)
-                            (values?.get(NSURLFileSizeKey) as? NSNumber)?.longLongValue
-                        }
-                        source = tempCopyFileSource(
-                            url = destUrl,
-                            relativePath = "$displayName$ext",
-                            sizeBytes = sizeBytes,
-                        )
-                    } else {
-                        log.warn { "failed to copy temp photo for $displayName: ${copyError.localizedDescription}" }
-                    }
-                }
-                lock.lock()
-                try {
-                    if (source != null) collected.add(source)
-                } finally {
-                    lock.unlock()
-                }
-                if (remaining.addAndFetch(-1) == 0) {
-                    deferred.complete(collected.toList())
-                }
-            }
+    private fun lazyPhotoSource(provider: NSItemProvider): FileSource {
+        // Load via the generic image/movie UTI: it is always file-representable, unlike a concrete
+        // first registered identifier (e.g. a Live Photo bundle), which loadFileRepresentation
+        // cannot export — that would surface the item as silently unreadable.
+        val typeId = if (provider.hasItemConformingToTypeIdentifier("public.movie")) "public.movie" else "public.image"
+        val baseName = provider.suggestedName ?: NSUUID().UUIDString
+        val ext = predictedExtension(provider)
+        val relativePath = when {
+            ext == null -> baseName
+            baseName.endsWith(".$ext", ignoreCase = true) -> baseName
+            else -> "$baseName.$ext"
         }
+        return LazyPhotoFileSource(provider, typeId, relativePath)
     }
+
+    // suggestedName usually lacks an extension; derive one from the item's concrete registered UTIs
+    // so the received file keeps a usable name. The materialized temp uses the real exported extension.
+    private fun predictedExtension(provider: NSItemProvider): String? =
+        provider.registeredTypeIdentifiers
+            .filterIsInstance<String>()
+            .firstNotNullOfOrNull { UTType.typeWithIdentifier(it)?.preferredFilenameExtension }
 }
 
 private fun realpathOf(path: String): String? = memScoped {
