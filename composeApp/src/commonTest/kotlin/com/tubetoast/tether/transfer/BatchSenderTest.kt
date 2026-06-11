@@ -570,6 +570,40 @@ class BatchSenderTest {
         assertTrue(emitted.filterIsInstance<BatchProgress.Sending>().none { it.preparing })
     }
 
+    @Test
+    fun `cancelling a lazy source during its preparing gap marks it cancelled`() = runTest {
+        val materializeGate = Channel<Unit>(0)
+        val emitted = mutableListOf<BatchProgress>()
+        val sender = BatchSender(
+            sendOne = { _, onProgress ->
+                materializeGate.receive() // never released — cancel arrives during the export gap
+                onProgress(100L, 100L)
+            },
+            connectionMonitor = FakeConnectionMonitor(),
+            progressThrottle = 100.milliseconds,
+            dispatcher = StandardTestDispatcher(testScheduler),
+        )
+        val job = launch {
+            sender.run(
+                listOf(FakeFileSource("photo.jpg", 100L, materializesLazily = true)),
+                peer,
+            ) { emitted.add(it) }
+        }
+
+        runCurrent()
+        val sendings = emitted.filterIsInstance<BatchProgress.Sending>()
+        assertTrue(sendings.isNotEmpty() && sendings.all { it.preparing }, "should be preparing before cancel")
+
+        job.cancel()
+        runCurrent()
+
+        val last = emitted.last()
+        assertIs<BatchProgress.Completed>(last)
+        val cancelled = last.outcome
+        assertIs<BatchOutcome.Cancelled>(cancelled)
+        assertTrue("photo.jpg" in cancelled.remaining, "a lazy source cancelled mid-preparing is left unsent")
+    }
+
     private class LateSizeSource(
         override val name: String,
         private val realSize: Long,
