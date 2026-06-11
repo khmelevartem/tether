@@ -139,6 +139,8 @@ CFRelease(dict)
 
 **Fix:** call `startAccessingSecurityScopedResource()` on the **original picker-vended folder URL** (not the realpath-derived one) before enumeration, and balance it with a matching `stopAccessingSecurityScopedResource()` call after all child sources derived from the enumeration are closed. Child item URLs produced by the enumerator are covered by the folder's scope — they must NOT each call start/stop independently.
 
+**Same quirk for `resourceValuesForKeys` on a picked file URL.** Reading any resource value (e.g. `NSURLFileSizeKey`) on a security-scoped *file* URL from `UIDocumentPickerViewController` also returns `null` on a real device unless the scope is held. On the simulator it returns the value without a scope, so the gap is invisible there. Wrap the read in a `start`/`stop` pair. If skipped, the file's `sizeBytes` is `null` and the transfer shows an indeterminate bar instead of byte progress.
+
 ---
 
 ## PHPicker photos: lazy materialization + no upfront size

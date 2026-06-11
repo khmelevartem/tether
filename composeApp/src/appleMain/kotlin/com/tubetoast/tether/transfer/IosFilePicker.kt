@@ -273,10 +273,20 @@ private class FilePickerDelegate(
         deferred.complete(emptyList())
     }
 
-    private fun fileSizeOf(url: NSURL): Long? = memScoped {
-        val errorPtr = alloc<ObjCObjectVar<platform.Foundation.NSError?>>()
-        val values = url.resourceValuesForKeys(listOf(NSURLFileSizeKey), errorPtr.ptr)
-        (values?.get(NSURLFileSizeKey) as? NSNumber)?.longLongValue
+    private fun fileSizeOf(url: NSURL): Long? {
+        // On a real device the OS withholds resource values (including size) until the security
+        // scope is active — the same quirk as folder enumeration. Hold it just for the read, so the
+        // size is known up front and the transfer shows byte progress instead of an indeterminate bar.
+        val started = url.startAccessingSecurityScopedResource()
+        return try {
+            memScoped {
+                val errorPtr = alloc<ObjCObjectVar<platform.Foundation.NSError?>>()
+                val values = url.resourceValuesForKeys(listOf(NSURLFileSizeKey), errorPtr.ptr)
+                (values?.get(NSURLFileSizeKey) as? NSNumber)?.longLongValue
+            }
+        } finally {
+            if (started) url.stopAccessingSecurityScopedResource()
+        }
     }
 }
 
