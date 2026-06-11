@@ -143,7 +143,7 @@ Card swells. Transfer in progress from this device to the peer.
 - Current filename (one line, center-truncated with ellipsis).
 - Progress copy: "X.X MB of Y.Y MB".
 - Transfer speed: "3.2 MB/s" (shows "Calculating…" for first ~3 s).
-- **Preparing phase** (only for sources that materialize on read, e.g. iOS gallery photos/videos that must be exported before bytes flow): while the current file is still being prepared, the progress bar is **indeterminate** (a segment sweeps the track) and the speed slot reads "Preparing…" instead of "Calculating…". TransferDetailsScreen subtitle reads "Preparing N of M…". The phase ends the instant the first byte flows, switching to the normal determinate bar + speed. Sources whose bytes are immediately readable (Files, Folder, and all desktop/Android sends) never show this phase.
+- **Preparing.** Some files (e.g. photos picked from the gallery) need a brief preparation before sending. While a file is being prepared the progress bar is indeterminate and the speed slot reads "Preparing…" instead of "Calculating…"; it switches to the normal proportional bar once the file starts sending.
 - Both progress copy and speed are always shown — not one or the other.
 - Skip-count badge (appears only when ≥1 file skipped): muted-tone secondary badge: "\<N\> files skipped".
 - A [Show details →] button opens TransferDetailsScreen in its in-progress mode (live view of files-received-so-far). Optional drill-down for large batches; the card remains the primary surface.

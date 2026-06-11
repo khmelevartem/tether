@@ -44,23 +44,14 @@ internal fun PeerCardActiveOutbound(
 ) {
     val peerName = device.name
     val sending = state as? PeerTransferState.ActiveOutbound.Sending
-    val total = state.totalBytes
-    val progress = if (sending != null && total != null && total > 0L) {
-        (sending.sentBytes.toFloat() / total.toFloat()).coerceIn(0f, 1f)
-    } else {
-        0f
-    }
-    // Indeterminate whenever there is no byte total to divide by: the preparing gap, or a batch
-    // whose total is still unknown (iOS photos resolve their size only as each is sent). Otherwise
-    // the card would show a determinate bar stuck at 0% for the whole transfer.
-    val indeterminate = sending?.preparing == true || total == null || total <= 0L
+    val cardProgress = outboundCardProgress(state)
 
     ActiveCardShell(
         peerName = peerName,
         titlePrefix = null,
-        progress = progress,
+        progress = cardProgress.progress,
         preparing = sending?.preparing == true,
-        indeterminate = indeterminate,
+        indeterminate = cardProgress.indeterminate,
         currentFile = sending?.currentFile.orEmpty(),
         sentBytes = sending?.sentBytes ?: 0L,
         totalBytes = state.totalBytes,
@@ -90,18 +81,13 @@ internal fun PeerCardActiveInbound(
     isPaired: Boolean = false,
 ) {
     val peerName = device.name
-    val total = state.totalBytes
-    val progress = if (total != null && total > 0L) {
-        (state.receivedBytes.toFloat() / total.toFloat()).coerceIn(0f, 1f)
-    } else {
-        0f
-    }
+    val cardProgress = inboundCardProgress(state)
 
     ActiveCardShell(
         peerName = "From $peerName",
         titlePrefix = null,
-        progress = progress,
-        indeterminate = total == null || total <= 0L,
+        progress = cardProgress.progress,
+        indeterminate = cardProgress.indeterminate,
         currentFile = state.currentFile,
         sentBytes = state.receivedBytes,
         totalBytes = state.totalBytes,

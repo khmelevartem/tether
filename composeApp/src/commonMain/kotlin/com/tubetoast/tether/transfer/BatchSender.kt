@@ -61,8 +61,6 @@ class BatchSender(
         emit: suspend (BatchProgress) -> Unit,
     ): BatchOutcome {
         if (sources.isEmpty()) return BatchOutcome.AllSent
-        // Hold transfer activity for the whole batch so the foreground banner / iOS foreground
-        // constraint does not flicker off between files or during a lazy source's materialization gap.
         return tracker.withActiveTransfer { runBatch(sources, skipPredicate, emit) }
     }
 
