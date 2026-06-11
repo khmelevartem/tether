@@ -44,17 +44,23 @@ internal fun PeerCardActiveOutbound(
 ) {
     val peerName = device.name
     val sending = state as? PeerTransferState.ActiveOutbound.Sending
-    val progress = if (sending != null && sending.totalBytes != null && sending.totalBytes > 0) {
-        (sending.sentBytes.toFloat() / sending.totalBytes.toFloat()).coerceIn(0f, 1f)
+    val total = state.totalBytes
+    val progress = if (sending != null && total != null && total > 0L) {
+        (sending.sentBytes.toFloat() / total.toFloat()).coerceIn(0f, 1f)
     } else {
         0f
     }
+    // Indeterminate whenever there is no byte total to divide by: the preparing gap, or a batch
+    // whose total is still unknown (iOS photos resolve their size only as each is sent). Otherwise
+    // the card would show a determinate bar stuck at 0% for the whole transfer.
+    val indeterminate = sending?.preparing == true || total == null || total <= 0L
 
     ActiveCardShell(
         peerName = peerName,
         titlePrefix = null,
         progress = progress,
         preparing = sending?.preparing == true,
+        indeterminate = indeterminate,
         currentFile = sending?.currentFile.orEmpty(),
         sentBytes = sending?.sentBytes ?: 0L,
         totalBytes = state.totalBytes,
@@ -84,8 +90,9 @@ internal fun PeerCardActiveInbound(
     isPaired: Boolean = false,
 ) {
     val peerName = device.name
-    val progress = if (state.totalBytes != null && state.totalBytes > 0) {
-        (state.receivedBytes.toFloat() / state.totalBytes.toFloat()).coerceIn(0f, 1f)
+    val total = state.totalBytes
+    val progress = if (total != null && total > 0L) {
+        (state.receivedBytes.toFloat() / total.toFloat()).coerceIn(0f, 1f)
     } else {
         0f
     }
@@ -94,6 +101,7 @@ internal fun PeerCardActiveInbound(
         peerName = "From $peerName",
         titlePrefix = null,
         progress = progress,
+        indeterminate = total == null || total <= 0L,
         currentFile = state.currentFile,
         sentBytes = state.receivedBytes,
         totalBytes = state.totalBytes,
@@ -127,6 +135,7 @@ private fun ActiveCardShell(
     showDetailsDescription: String,
     modifier: Modifier = Modifier,
     preparing: Boolean = false,
+    indeterminate: Boolean = false,
 ) {
     val spacing = TetherTheme.spacing
     val colors = TetherTheme.colors
@@ -177,7 +186,7 @@ private fun ActiveCardShell(
 
             TransferProgressBar(
                 progress = animatedProgress,
-                indeterminate = preparing,
+                indeterminate = indeterminate,
                 modifier = Modifier
                     .fillMaxWidth()
                     .semantics {
@@ -281,6 +290,17 @@ private fun PreviewActiveOutboundPreparing(@PreviewParameter(Themes::class) dark
     PreviewSurface(darkTheme = dark) {
         PeerCardActiveOutbound(
             state = TransferPreviewFixtures.activeOutboundPreparing,
+            device = TransferPreviewFixtures.device,
+            callbacks = previewCardCallbacks(),
+        )
+    }
+
+@Preview(name = "PeerCardActiveOutbound — unknown total (indeterminate)")
+@Composable
+private fun PreviewActiveOutboundUnknownTotal(@PreviewParameter(Themes::class) dark: Boolean) =
+    PreviewSurface(darkTheme = dark) {
+        PeerCardActiveOutbound(
+            state = TransferPreviewFixtures.activeOutboundUnknownTotal,
             device = TransferPreviewFixtures.device,
             callbacks = previewCardCallbacks(),
         )
