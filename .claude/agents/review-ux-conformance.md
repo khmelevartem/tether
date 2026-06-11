@@ -9,19 +9,9 @@ You review whether the UI implemented in a PR matches the UX brief that owns the
 
 ## When to run
 
-If the diff does NOT touch `composeApp/src/**` → output `PHASE: UX-conformance — N/A (no Compose changes)` and stop.
+The orchestrator dispatches you only when the diff touches `composeApp/src/**` **and** it has resolved at least one touched feature to an existing UX brief — it passes you the feature slug(s) and brief path(s) `docs/product/features/<slug>/ux-brief.md`. Whether a brief should exist for a change is the orchestrator's call (small / cosmetic / refactor changes legitimately ship without one); you are never invoked when there is no brief, so you do not discover slugs or decide to skip on a missing brief.
 
-Otherwise, discover the feature slug(s) for this PR:
-
-1. `gh pr view <PR> --json closingIssuesReferences,body` — list referenced/closing issues.
-2. For each issue, `gh issue view <N>` and look for a spec link or a feature directory under `docs/product/features/`.
-3. If the issue does not name a spec, `glob docs/product/features/**/ux-brief.md` and match by topic from the PR title or changed file paths. If multiple candidates match — read each brief.
-
-For every discovered slug, check whether `docs/product/features/<slug>/ux-brief.md` exists:
-- **Exists** → load it as the contract for this slug and proceed to "What to check".
-- **Does not exist** → output `PHASE: UX-conformance — N/A (no UX brief for feature <slug>)` and stop. Whether one *should* exist is an orchestrator-level concern (handled in `/implement` Step 3 dispatch of `ux-expert`); the reviewer does not block on its absence — small / cosmetic / refactor changes legitimately ship without a brief.
-
-Read the brief(s), the spec(s) for context, and the changed composables in the diff.
+Treat each passed brief as the contract for its slug. Read the brief(s), the owning spec(s) for context, and the changed composables in the diff.
 
 ## What to check
 
