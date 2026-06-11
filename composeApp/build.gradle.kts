@@ -310,6 +310,12 @@ compose.desktop {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "Tether"
             packageVersion = "1.0.0"
+            // jpackage's jlinked runtime keeps only jlink-detected modules, dropping ones the
+            // app reaches reflectively:
+            //   jdk.unsupported — sun.misc.Unsafe, via DataStore's bundled protobuf
+            //   jdk.crypto.ec   — SunEC provider for the EC device key pair (resolved by name)
+            // java.instrument and java.management are statically referenced by bundled libraries.
+            modules("java.instrument", "java.management", "jdk.unsupported", "jdk.crypto.ec")
             macOS {
                 bundleID = "com.tubetoast.tether"
                 iconFile.set(project.file("icons/icon.icns"))
