@@ -7,6 +7,7 @@ import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.TransferErrorReason
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 
 class PeerCardCopyTest {
     private val device = Device(name = "Alice", host = "h", port = 1, fingerprint = "fp-abc")
@@ -19,9 +20,10 @@ class PeerCardCopyTest {
 
     @Test
     fun sentCardCopyUsesDeviceNameNotFingerprint() {
-        // device.name ("Alice") differs from its fingerprint ("fp-abc"); the copy reads name from the device.
         val state = PeerTransferState.Sent(sent = 3, total = 3, perFile = emptyList(), partialReason = null)
-        assertEquals("Sent 3 files to Alice", sentCardCopy(state, device))
+        val result = sentCardCopy(state, device)
+        assertEquals("Sent 3 files to Alice", result)
+        assertFalse(result.contains("fp-abc"))
     }
 
     @Test

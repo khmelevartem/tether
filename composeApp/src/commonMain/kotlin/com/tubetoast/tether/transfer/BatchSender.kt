@@ -56,7 +56,6 @@ class BatchSender(
 
     suspend fun run(
         sources: List<FileSource>,
-        peer: PeerIdentity,
         skipPredicate: (FileSource) -> Boolean = { false },
         emit: suspend (BatchProgress) -> Unit,
     ): BatchOutcome = withContext(dispatcher) {
@@ -93,7 +92,7 @@ class BatchSender(
                 var bytesDone = 0L
                 var dropDetected = false
                 var lastSending: BatchProgress.Sending =
-                    buildSending(peer, i, sources, sentBytes, totalBytes, null, perFile)
+                    buildSending(i, sources, sentBytes, totalBytes, null, perFile)
                 emit(lastSending)
 
                 val fileGeneration: Long = ++currentGeneration
@@ -117,7 +116,7 @@ class BatchSender(
                                 delay(progressThrottle)
                                 ensureActive()
                                 val st =
-                                    buildSending(peer, i, sources, sentBytes, totalBytes, rate.valueOrNull(), perFile)
+                                    buildSending(i, sources, sentBytes, totalBytes, rate.valueOrNull(), perFile)
                                 lastSending = st
                                 emit(st)
                             }
@@ -159,7 +158,6 @@ class BatchSender(
                 if (dropDetected) {
                     emit(
                         BatchProgress.Reconnecting(
-                            peer = peer,
                             remainingSeconds = reconnectionTimeout.inWholeSeconds.toInt(),
                             snapshotBeforeDrop = lastSending,
                         ),
@@ -177,7 +175,7 @@ class BatchSender(
                             TransferErrorReason.NetworkLost,
                             perFile.count { it is PerFileStatus.Done },
                         )
-                        emit(BatchProgress.Completed(peer, outcome, perFile.toList()))
+                        emit(BatchProgress.Completed(outcome, perFile.toList()))
                         return@withContext outcome
                     }
                 }
@@ -196,15 +194,14 @@ class BatchSender(
                 }
             }
             val outcome = BatchOutcome.Cancelled(doneCount, remaining)
-            emit(BatchProgress.Completed(peer, outcome, perFile.toList()))
+            emit(BatchProgress.Completed(outcome, perFile.toList()))
             return@withContext outcome
         }
 
-        return@withContext finalizeOutcome(peer, sources, perFile, emit)
+        return@withContext finalizeOutcome(perFile, emit)
     }
 
     private fun buildSending(
-        peer: PeerIdentity,
         index: Int,
         sources: List<FileSource>,
         sentBytes: Long,
@@ -212,7 +209,6 @@ class BatchSender(
         bytesPerSec: Long?,
         perFile: List<PerFileStatus>,
     ): BatchProgress.Sending = BatchProgress.Sending(
-        peer = peer,
         currentFile = sources[index].name,
         currentIndex = index,
         totalFiles = sources.size,
@@ -224,8 +220,6 @@ class BatchSender(
     )
 
     private suspend fun finalizeOutcome(
-        peer: PeerIdentity,
-        sources: List<FileSource>,
         perFile: MutableList<PerFileStatus>,
         emit: suspend (BatchProgress) -> Unit,
     ): BatchOutcome {
@@ -235,7 +229,7 @@ class BatchSender(
 
         if (failedNames.isEmpty()) {
             val outcome = BatchOutcome.AllSent
-            emit(BatchProgress.Completed(peer, outcome, perFile.toList()))
+            emit(BatchProgress.Completed(outcome, perFile.toList()))
             return outcome
         }
 
@@ -243,12 +237,12 @@ class BatchSender(
         if (doneCount == 0 && !allCancelledByUser) {
             val errorReason = failedEntries.dominantErrorReason()
             val outcome = BatchOutcome.Failed(errorReason, 0)
-            emit(BatchProgress.Completed(peer, outcome, perFile.toList()))
+            emit(BatchProgress.Completed(outcome, perFile.toList()))
             return outcome
         }
 
         val outcome = BatchOutcome.PartialSent(failedNames)
-        emit(BatchProgress.Completed(peer, outcome, perFile.toList()))
+        emit(BatchProgress.Completed(outcome, perFile.toList()))
         return outcome
     }
 

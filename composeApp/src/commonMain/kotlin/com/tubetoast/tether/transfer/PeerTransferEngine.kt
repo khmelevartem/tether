@@ -154,7 +154,7 @@ class PeerTransferEngine(
         val sender = batchSenderFactory()
         currentSender = sender
         try {
-            sender.run(sources, peer, { source -> source.name in cancelledFileNames.value }) { progress ->
+            sender.run(sources, { source -> source.name in cancelledFileNames.value }) { progress ->
                 _state.update { mapProgress(progress) }
             }
         } finally {
