@@ -54,6 +54,7 @@ internal fun PeerCardActiveOutbound(
         peerName = peerName,
         titlePrefix = null,
         progress = progress,
+        preparing = sending?.preparing == true,
         currentFile = sending?.currentFile.orEmpty(),
         sentBytes = sending?.sentBytes ?: 0L,
         totalBytes = state.totalBytes,
@@ -125,6 +126,7 @@ private fun ActiveCardShell(
     onShowDetails: () -> Unit,
     showDetailsDescription: String,
     modifier: Modifier = Modifier,
+    preparing: Boolean = false,
 ) {
     val spacing = TetherTheme.spacing
     val colors = TetherTheme.colors
@@ -175,9 +177,12 @@ private fun ActiveCardShell(
 
             TransferProgressBar(
                 progress = animatedProgress,
+                indeterminate = preparing,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .semantics { contentDescription = "Transfer in progress" },
+                    .semantics {
+                        contentDescription = if (preparing) "Preparing files" else "Transfer in progress"
+                    },
             )
 
             Spacer(Modifier.height(spacing.xs))
@@ -190,17 +195,15 @@ private fun ActiveCardShell(
                     color = colors.textMuted,
                     modifier = Modifier.weight(1f),
                 )
-                if (bytesPerSec != null) {
-                    NumericText(
-                        text = "${ByteFormatting.formatSize(bytesPerSec)}/s",
-                        color = colors.textMuted,
-                    )
-                } else {
-                    NumericText(
-                        text = "Calculating…",
-                        color = colors.textMuted,
-                    )
+                val statusText = when {
+                    bytesPerSec != null -> "${ByteFormatting.formatSize(bytesPerSec)}/s"
+                    preparing -> "Preparing…"
+                    else -> "Calculating…"
                 }
+                NumericText(
+                    text = statusText,
+                    color = colors.textMuted,
+                )
             }
         }
 
@@ -223,8 +226,9 @@ private fun ActiveCardShell(
 private fun TransferProgressBar(
     progress: Float,
     modifier: Modifier = Modifier,
+    indeterminate: Boolean = false,
 ) {
-    ProgressBar(progress = progress, modifier = modifier)
+    ProgressBar(progress = progress, indeterminate = indeterminate, modifier = modifier)
 }
 
 @Preview(name = "PeerCardActiveOutbound — claimed")
@@ -266,6 +270,17 @@ private fun PreviewActiveOutboundCalculating(@PreviewParameter(Themes::class) da
     PreviewSurface(darkTheme = dark) {
         PeerCardActiveOutbound(
             state = TransferPreviewFixtures.activeOutboundCalculating,
+            device = TransferPreviewFixtures.device,
+            callbacks = previewCardCallbacks(),
+        )
+    }
+
+@Preview(name = "PeerCardActiveOutbound — preparing")
+@Composable
+private fun PreviewActiveOutboundPreparing(@PreviewParameter(Themes::class) dark: Boolean) =
+    PreviewSurface(darkTheme = dark) {
+        PeerCardActiveOutbound(
+            state = TransferPreviewFixtures.activeOutboundPreparing,
             device = TransferPreviewFixtures.device,
             callbacks = previewCardCallbacks(),
         )

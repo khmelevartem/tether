@@ -13,6 +13,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -497,6 +498,51 @@ class BatchSenderTest {
         gate.send(Unit)
         advanceUntilIdle()
         job.join()
+    }
+
+    @Test
+    fun `lazy source reports preparing until the first byte then sending`() = runTest {
+        val materializeGate = Channel<Unit>(0)
+        val streamGate = Channel<Unit>(0)
+        val emitted = mutableListOf<BatchProgress>()
+        val sender = BatchSender(
+            sendOne = { _, onProgress ->
+                materializeGate.receive() // the openReadChannel export gap
+                onProgress(50L, 100L) // first byte → streaming begins
+                streamGate.receive() // stay in-flight so a throttled progress emit lands
+                onProgress(100L, 100L)
+            },
+            connectionMonitor = FakeConnectionMonitor(),
+            progressThrottle = 100.milliseconds,
+            dispatcher = StandardTestDispatcher(testScheduler),
+        )
+        val job = launch {
+            sender.run(
+                listOf(FakeFileSource("photo.jpg", 100L, materializesLazily = true)),
+                peer,
+            ) { emitted.add(it) }
+        }
+
+        runCurrent()
+        val beforeByte = emitted.filterIsInstance<BatchProgress.Sending>()
+        assertTrue(beforeByte.isNotEmpty() && beforeByte.all { it.preparing }, "preparing until first byte")
+
+        materializeGate.send(Unit)
+        advanceTimeBy(150.milliseconds)
+        runCurrent()
+        assertFalse(emitted.filterIsInstance<BatchProgress.Sending>().last().preparing, "sending after first byte")
+
+        streamGate.send(Unit)
+        advanceUntilIdle()
+        job.join()
+    }
+
+    @Test
+    fun `eagerly-readable sources never report preparing`() = runTest {
+        val emitted = mutableListOf<BatchProgress>()
+        makeSender().run(sources("a.txt", "b.txt"), peer) { emitted.add(it) }
+
+        assertTrue(emitted.filterIsInstance<BatchProgress.Sending>().none { it.preparing })
     }
 
     private class LateSizeSource(

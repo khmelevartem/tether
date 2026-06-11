@@ -164,6 +164,8 @@ internal class LazyPhotoFileSource(
 ) : FileSource {
     override val name: String = relativePath.substringAfterLast('/')
 
+    override val materializesLazily: Boolean = true
+
     // Unknown until the first openReadChannel materializes the file; PeerFileSender reads sizeBytes
     // right after openReadChannel (same call, evaluated later), so the receiver still gets a
     // Content-Length and progress can resolve. @Volatile: written on the send coroutine, read by

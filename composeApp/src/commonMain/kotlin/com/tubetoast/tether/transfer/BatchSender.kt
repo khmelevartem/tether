@@ -88,8 +88,11 @@ class BatchSender(
                 val rate = BytesPerSecondMovingAverage(timeSource = timeSource)
                 var bytesDone = 0L
                 var dropDetected = false
+                // Sources that materialize on read (iOS photos) show a "preparing" phase until the
+                // first byte flows, so the export gap is not mistaken for a stalled transfer.
+                var preparing = src.materializesLazily
                 var lastSending: BatchProgress.Sending =
-                    buildSending(peer, i, sources, sentBytes, null, perFile)
+                    buildSending(peer, i, sources, sentBytes, null, perFile, preparing)
                 emit(lastSending)
 
                 val fileGeneration: Long = ++currentGeneration
@@ -99,6 +102,7 @@ class BatchSender(
                     coroutineScope {
                         val sendJob = launch {
                             sendOne(src) { done, _ ->
+                                preparing = false
                                 val delta = done - bytesDone
                                 bytesDone = done
                                 sentBytes += delta
@@ -113,7 +117,7 @@ class BatchSender(
                                 delay(progressThrottle)
                                 ensureActive()
                                 val st =
-                                    buildSending(peer, i, sources, sentBytes, rate.valueOrNull(), perFile)
+                                    buildSending(peer, i, sources, sentBytes, rate.valueOrNull(), perFile, preparing)
                                 lastSending = st
                                 emit(st)
                             }
@@ -206,6 +210,7 @@ class BatchSender(
         sentBytes: Long,
         bytesPerSec: Long?,
         perFile: List<PerFileStatus>,
+        preparing: Boolean,
     ): BatchProgress.Sending = BatchProgress.Sending(
         peer = peer,
         currentFile = sources[index].name,
@@ -221,6 +226,7 @@ class BatchSender(
         bytesPerSec = bytesPerSec,
         skippedCount = perFile.count { it is PerFileStatus.Failed },
         perFile = perFile.toList(),
+        preparing = preparing,
     )
 
     private suspend fun finalizeOutcome(

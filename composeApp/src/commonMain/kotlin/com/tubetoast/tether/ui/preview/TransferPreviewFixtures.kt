@@ -73,6 +73,23 @@ object TransferPreviewFixtures {
         ),
     )
 
+    val activeOutboundPreparing = PeerTransferState.ActiveOutbound.Sending(
+        peer = peer,
+        currentFile = "IMG_0421.heic",
+        currentIndex = 1,
+        totalFiles = 3,
+        sentBytes = 4_194_304L,
+        totalBytes = null,
+        bytesPerSec = null,
+        skippedCount = 0,
+        preparing = true,
+        perFile = listOf(
+            PerFileStatus.Done("IMG_0420.heic", 4_194_304L),
+            PerFileStatus.InProgress("IMG_0421.heic", null, 0L),
+            PerFileStatus.Queued("IMG_0422.heic", null),
+        ),
+    )
+
     val activeInbound = PeerTransferState.ActiveInbound(
         peer = peer,
         currentFile = "shared_document_from_alice.docx",

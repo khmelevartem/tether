@@ -190,6 +190,7 @@ class PeerTransferEngine(
             bytesPerSec = progress.bytesPerSec,
             skippedCount = progress.skippedCount,
             perFile = progress.perFile,
+            preparing = progress.preparing,
         )
         is BatchProgress.Reconnecting -> PeerTransferState.Reconnecting(
             peer = progress.peer,

@@ -31,6 +31,8 @@ sealed interface PeerTransferState {
             val bytesPerSec: Long?,
             val skippedCount: Int,
             override val perFile: List<PerFileStatus>,
+            /** The current file is still materializing (e.g. exporting a photo); no bytes flow yet. */
+            val preparing: Boolean = false,
         ) : ActiveOutbound()
     }
 
