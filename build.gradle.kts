@@ -31,7 +31,8 @@ subprojects {
         android.set(true)
         outputToConsole.set(true)
         filter {
-            exclude { it.file.path.contains("/build/") }
+            // invariantSeparatorsPath so the match holds on Windows, where File.path uses backslashes.
+            exclude { it.file.invariantSeparatorsPath.contains("/build/") }
         }
     }
 }
