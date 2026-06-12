@@ -4,7 +4,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.random.Random
 
-// TODO — replace interim random hex with EC P-256 public key fingerprint (#11)
+// TODO — replace interim random hex with EC P-256 public key fingerprint (#429)
 class DeviceIdentityStore(
     private val persistence: FingerprintPersistence,
 ) {
