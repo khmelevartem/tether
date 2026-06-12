@@ -13,6 +13,7 @@ The minimum that makes Tether worth installing. **All four platforms ship togeth
 - Device list screen + transfer/progress screen on every platform.
 - Settable device name (implicit in pairing/discovery; full settings screen comes in Post-MVP).
 - Channel encryption decision made and implemented (see [security.md](../security/README.md)).
+- Installable and published on all four platforms — signed builds from a legitimate channel (Play, App Store, signed desktop installers) plus a public landing page (epic [#430](https://github.com/khmelevartem/tether/issues/430)).
 
 Done = a non-technical user can install Tether on their phone (Android/iOS) and macOS/Windows laptop, pair them once, and reliably move files between them on home Wi-Fi.
 

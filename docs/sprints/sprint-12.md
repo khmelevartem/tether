@@ -4,15 +4,29 @@
 
 ## Состав
 
-| # | Issue | Название | Тип | Размер |
-| - | ----- | -------- | --- | ------ |
-| 1 | [#10](https://github.com/khmelevartem/tether/issues/10) | Паринг — handshake, вычисление PIN-кода, CLI-флоу | feature | M |
-| 2 | [#378](https://github.com/khmelevartem/tether/issues/378) | Independent threat model and attack-surface analysis for pairing and transfer | docs | L |
-| 3 | [#361](https://github.com/khmelevartem/tether/issues/361) | Pairing mutual confirmation before trust is stored | feature | M |
-| 4 | [#193](https://github.com/khmelevartem/tether/issues/193) | Desktop sender wiring: AWT file picker на EDT и drag-and-drop по окну | feature | M |
-| 5 | [#194](https://github.com/khmelevartem/tether/issues/194) | iOS sender wiring: UIDocumentPickerViewController и bookmark-based FileSource | feature | M |
-| 6 | [#198](https://github.com/khmelevartem/tether/issues/198) | Structured findings + synthesis pass в /code-review | infra | M |
-| 7 | [#354](https://github.com/khmelevartem/tether/issues/354) | Block writes outside the current worktree via PreToolUse hook | infra | S |
+**Итог:** 5/7 закрыто. #10 переехал (новый блокер [#429](https://github.com/khmelevartem/tether/issues/429)), #361 снят со скоупа — поглощён в переопределённый #10.
+
+| # | Issue | Название | Тип | Размер | Итог |
+| - | ----- | -------- | --- | ------ | ---- |
+| 1 | [#10](https://github.com/khmelevartem/tether/issues/10) | Паринг — handshake, вычисление PIN-кода, CLI-флоу | feature | M | ❌ не сделано (блокер [#429](https://github.com/khmelevartem/tether/issues/429); попытка [#362](https://github.com/khmelevartem/tether/pull/362) закрыта без мерджа) |
+| 2 | [#378](https://github.com/khmelevartem/tether/issues/378) | Independent threat model and attack-surface analysis for pairing and transfer | docs | L | ✅ закрыто ([PR #394](https://github.com/khmelevartem/tether/pull/394)) |
+| 3 | [#361](https://github.com/khmelevartem/tether/issues/361) | Pairing mutual confirmation before trust is stored | feature | M | ❌ снят (NOT_PLANNED — confirm-before-trust поглощён в переопределённый #10) |
+| 4 | [#193](https://github.com/khmelevartem/tether/issues/193) | Desktop sender wiring: AWT file picker на EDT и drag-and-drop по окну | feature | M | ✅ закрыто ([PR #401](https://github.com/khmelevartem/tether/pull/401)) |
+| 5 | [#194](https://github.com/khmelevartem/tether/issues/194) | iOS sender wiring: UIDocumentPickerViewController и bookmark-based FileSource | feature | M | ✅ закрыто ([PR #416](https://github.com/khmelevartem/tether/pull/416)) |
+| 6 | [#198](https://github.com/khmelevartem/tether/issues/198) | Structured findings + synthesis pass в /code-review | infra | M | ✅ закрыто ([PR #396](https://github.com/khmelevartem/tether/pull/396)) |
+| 7 | [#354](https://github.com/khmelevartem/tether/issues/354) | Block writes outside the current worktree via PreToolUse hook | infra | S | ✅ закрыто ([PR #400](https://github.com/khmelevartem/tether/pull/400)) |
+
+## Дополнительные результаты
+
+Закрыты в окне спринта вне исходного состава:
+
+- [#194 → #416](https://github.com/khmelevartem/tether/pull/416) учтён в составе; ниже — внеплановое.
+- [#148](https://github.com/khmelevartem/tether/issues/148) ([PR #402](https://github.com/khmelevartem/tether/pull/402)) — «This device» на device list с inline-rename: закрывает UI-хвост device-name-bootstrapping.
+- [#367](https://github.com/khmelevartem/tether/issues/367) ([PR #414](https://github.com/khmelevartem/tether/pull/414)) — opt-in persistent CLI identity + fingerprint-keyed PeerIdentity: стабильная идентичность пира между рестартами, фундамент под паринг.
+- [#418](https://github.com/khmelevartem/tether/issues/418) ([PR #423](https://github.com/khmelevartem/tether/pull/423)) — packaged desktop installers запускаются (bundled JDK, Windows icon): первый задел под эпик #430.
+- [#214](https://github.com/khmelevartem/tether/issues/214) ([PR #420](https://github.com/khmelevartem/tether/pull/420)) — review-ux-brief: UX-доменный ревьюер для ux-brief.md.
+- [#404](https://github.com/khmelevartem/tether/issues/404) ([PR #406](https://github.com/khmelevartem/tether/pull/406), [PR #415](https://github.com/khmelevartem/tether/pull/415)) — smoke-test изолируется по воркт­ри и надёжно гасит свои CLI-инстансы.
+- [#397](https://github.com/khmelevartem/tether/issues/397) ([PR #398](https://github.com/khmelevartem/tether/pull/398)) — sizing по review-усилию в create-issue/close-issue + cost в /progress.
 
 ## Что разблокирует
 
