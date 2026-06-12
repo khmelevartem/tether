@@ -20,7 +20,6 @@
 
 Закрыты в окне спринта вне исходного состава:
 
-- [#194 → #416](https://github.com/khmelevartem/tether/pull/416) учтён в составе; ниже — внеплановое.
 - [#148](https://github.com/khmelevartem/tether/issues/148) ([PR #402](https://github.com/khmelevartem/tether/pull/402)) — «This device» на device list с inline-rename: закрывает UI-хвост device-name-bootstrapping.
 - [#367](https://github.com/khmelevartem/tether/issues/367) ([PR #414](https://github.com/khmelevartem/tether/pull/414)) — opt-in persistent CLI identity + fingerprint-keyed PeerIdentity: стабильная идентичность пира между рестартами, фундамент под паринг.
 - [#418](https://github.com/khmelevartem/tether/issues/418) ([PR #423](https://github.com/khmelevartem/tether/pull/423)) — packaged desktop installers запускаются (bundled JDK, Windows icon): первый задел под эпик #430.
