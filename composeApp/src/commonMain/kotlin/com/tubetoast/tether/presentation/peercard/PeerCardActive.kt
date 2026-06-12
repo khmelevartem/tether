@@ -43,25 +43,47 @@ internal fun PeerCardActiveOutbound(
     isPaired: Boolean = false,
 ) {
     val peerName = device.name
-    val sending = state as? PeerTransferState.ActiveOutbound.Sending
     val cardProgress = outboundCardProgress(state)
+    val currentFile: String
+    val sentBytes: Long
+    val bytesPerSec: Long?
+    val skippedCount: Int
+    when (state) {
+        is PeerTransferState.ActiveOutbound.Preparing -> {
+            currentFile = state.currentFile
+            sentBytes = state.sentBytes
+            bytesPerSec = null
+            skippedCount = state.skippedCount
+        }
+        is PeerTransferState.ActiveOutbound.Sending -> {
+            currentFile = state.currentFile
+            sentBytes = state.sentBytes
+            bytesPerSec = state.bytesPerSec
+            skippedCount = state.skippedCount
+        }
+        is PeerTransferState.ActiveOutbound.Claimed -> {
+            currentFile = ""
+            sentBytes = 0L
+            bytesPerSec = null
+            skippedCount = 0
+        }
+    }
 
     ActiveCardShell(
         peerName = peerName,
         titlePrefix = null,
         progress = cardProgress.progress,
-        preparing = sending?.preparing == true,
+        preparing = state is PeerTransferState.ActiveOutbound.Preparing,
         indeterminate = cardProgress.indeterminate,
-        currentFile = sending?.currentFile.orEmpty(),
-        sentBytes = sending?.sentBytes ?: 0L,
+        currentFile = currentFile,
+        sentBytes = sentBytes,
         totalBytes = state.totalBytes,
-        bytesPerSec = sending?.bytesPerSec,
+        bytesPerSec = bytesPerSec,
         isInbound = false,
         isPaired = isPaired,
         trailingContent = {
-            val skipped = sending?.skippedCount ?: 0
-            if (skipped > 0) {
-                SkipCountBadge(count = skipped)
+            if (skippedCount > 0) {
+                SkipCountBadge(count = skippedCount)
             }
         },
         cancelDescription = "Cancel transfer to $peerName",

@@ -9,12 +9,16 @@ data class ActiveCardProgress(
 )
 
 fun outboundCardProgress(state: PeerTransferState.ActiveOutbound): ActiveCardProgress {
-    val sending = state as? PeerTransferState.ActiveOutbound.Sending
     val total = state.totalBytes
     val totalKnown = total != null && total > 0L
+    val sentBytes = when (state) {
+        is PeerTransferState.ActiveOutbound.Preparing -> state.sentBytes
+        is PeerTransferState.ActiveOutbound.Sending -> state.sentBytes
+        is PeerTransferState.ActiveOutbound.Claimed -> null
+    }
     return ActiveCardProgress(
-        progress = sending?.sentBytes?.fractionOf(total) ?: 0f,
-        indeterminate = sending?.preparing == true || !totalKnown,
+        progress = sentBytes?.fractionOf(total) ?: 0f,
+        indeterminate = state is PeerTransferState.ActiveOutbound.Preparing || !totalKnown,
     )
 }
 

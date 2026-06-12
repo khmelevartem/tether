@@ -15,6 +15,17 @@ sealed interface PeerTransferState {
             override val perFile: List<PerFileStatus>,
         ) : ActiveOutbound()
 
+        /** The current file is still materializing (e.g. exporting a photo); no bytes flow yet, so no rate exists. */
+        data class Preparing(
+            val currentFile: String,
+            val currentIndex: Int,
+            override val totalFiles: Int,
+            val sentBytes: Long,
+            override val totalBytes: Long?,
+            val skippedCount: Int,
+            override val perFile: List<PerFileStatus>,
+        ) : ActiveOutbound()
+
         data class Sending(
             val currentFile: String,
             val currentIndex: Int,
@@ -24,8 +35,6 @@ sealed interface PeerTransferState {
             val bytesPerSec: Long?,
             val skippedCount: Int,
             override val perFile: List<PerFileStatus>,
-            /** The current file is still materializing (e.g. exporting a photo); no bytes flow yet. */
-            val preparing: Boolean = false,
         ) : ActiveOutbound()
     }
 

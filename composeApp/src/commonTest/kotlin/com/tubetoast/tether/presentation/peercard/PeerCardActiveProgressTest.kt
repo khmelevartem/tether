@@ -44,8 +44,17 @@ class PeerCardActiveProgressTest {
     }
 
     @Test
-    fun outbound_sending_preparing_isIndeterminate() {
-        val result = outboundCardProgress(sending(sentBytes = 0L, totalBytes = 10_000L, preparing = true))
+    fun outbound_preparing_isIndeterminate() {
+        val state = PeerTransferState.ActiveOutbound.Preparing(
+            currentFile = "a.jpg",
+            currentIndex = 0,
+            totalFiles = 1,
+            sentBytes = 0L,
+            totalBytes = 10_000L,
+            skippedCount = 0,
+            perFile = emptyList(),
+        )
+        val result = outboundCardProgress(state)
         assertTrue(result.indeterminate)
         assertEquals(0f, result.progress)
     }
@@ -137,7 +146,6 @@ class PeerCardActiveProgressTest {
     private fun sending(
         sentBytes: Long,
         totalBytes: Long?,
-        preparing: Boolean = false,
     ) = PeerTransferState.ActiveOutbound.Sending(
         currentFile = "a.jpg",
         currentIndex = 0,
@@ -146,7 +154,6 @@ class PeerCardActiveProgressTest {
         totalBytes = totalBytes,
         bytesPerSec = null,
         skippedCount = 0,
-        preparing = preparing,
         perFile = emptyList(),
     )
 
