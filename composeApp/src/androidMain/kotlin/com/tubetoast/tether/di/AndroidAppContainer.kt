@@ -12,15 +12,15 @@ import com.tubetoast.tether.identity.DataStoreFingerprintPersistence
 import com.tubetoast.tether.identity.FingerprintPersistence
 import com.tubetoast.tether.network.AndroidMediaStoreUploadStorage
 import com.tubetoast.tether.network.AndroidTransferLockHolder
-import com.tubetoast.tether.network.DefaultTransferActivityTracker
-import com.tubetoast.tether.network.TransferActivityTracker
 import com.tubetoast.tether.network.UploadStorage
 import com.tubetoast.tether.preferences.DefaultFileTransferPreferences
 import com.tubetoast.tether.preferences.FileTransferPreferences
 import com.tubetoast.tether.protocol.DeviceType
 import com.tubetoast.tether.transfer.AndroidFilePicker
 import com.tubetoast.tether.transfer.AndroidPickerCoordinator
+import com.tubetoast.tether.transfer.DefaultTransferActivityTracker
 import com.tubetoast.tether.transfer.FilePicker
+import com.tubetoast.tether.transfer.TransferActivityTracker
 import okio.Path.Companion.toOkioPath
 
 class AndroidAppContainer(
@@ -28,10 +28,13 @@ class AndroidAppContainer(
 ) : JvmAppContainer(config) {
     val application = config.application
     private val lockHolder = AndroidTransferLockHolder(application)
-    override val transferActivityTracker: TransferActivityTracker = DefaultTransferActivityTracker(
-        onFirstEnter = lockHolder::acquire,
-        onLastExit = lockHolder::release,
-    )
+    override val transferActivityTracker: TransferActivityTracker by lazy {
+        DefaultTransferActivityTracker(
+            scope = appScope,
+            onFirstEnter = lockHolder::acquire,
+            onLastExit = lockHolder::release,
+        )
+    }
     override val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.createWithPath {
         application.filesDir
             .resolve("datastore/tether_preferences.preferences_pb")

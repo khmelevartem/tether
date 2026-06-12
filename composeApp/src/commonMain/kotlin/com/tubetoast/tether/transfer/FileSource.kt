@@ -11,6 +11,13 @@ interface FileSource {
     /** `null` when the size is not known before opening (e.g. live streams). */
     val sizeBytes: Long?
 
+    /**
+     * True when [openReadChannel] does significant work (e.g. exporting a photo from the gallery)
+     * before any bytes flow. The sender surfaces a "preparing" phase for such sources so the gap
+     * is not mistaken for a stalled transfer.
+     */
+    val materializesLazily: Boolean get() = false
+
     suspend fun openReadChannel(): ByteReadChannel
 
     fun close()

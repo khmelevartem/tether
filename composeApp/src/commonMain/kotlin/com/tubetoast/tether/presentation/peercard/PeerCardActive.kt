@@ -43,27 +43,47 @@ internal fun PeerCardActiveOutbound(
     isPaired: Boolean = false,
 ) {
     val peerName = device.name
-    val sending = state as? PeerTransferState.ActiveOutbound.Sending
-    val progress = if (sending != null && sending.totalBytes != null && sending.totalBytes > 0) {
-        (sending.sentBytes.toFloat() / sending.totalBytes.toFloat()).coerceIn(0f, 1f)
-    } else {
-        0f
+    val cardProgress = outboundCardProgress(state)
+    val currentFile: String
+    val sentBytes: Long
+    val bytesPerSec: Long?
+    val skippedCount: Int
+    when (state) {
+        is PeerTransferState.ActiveOutbound.Preparing -> {
+            currentFile = state.currentFile
+            sentBytes = state.sentBytes
+            bytesPerSec = null
+            skippedCount = state.skippedCount
+        }
+        is PeerTransferState.ActiveOutbound.Sending -> {
+            currentFile = state.currentFile
+            sentBytes = state.sentBytes
+            bytesPerSec = state.bytesPerSec
+            skippedCount = state.skippedCount
+        }
+        is PeerTransferState.ActiveOutbound.Claimed -> {
+            currentFile = ""
+            sentBytes = 0L
+            bytesPerSec = null
+            skippedCount = 0
+        }
     }
 
     ActiveCardShell(
         peerName = peerName,
         titlePrefix = null,
-        progress = progress,
-        currentFile = sending?.currentFile.orEmpty(),
-        sentBytes = sending?.sentBytes ?: 0L,
+        progress = cardProgress.progress,
+        preparing = state is PeerTransferState.ActiveOutbound.Preparing,
+        indeterminate = cardProgress.indeterminate,
+        currentFile = currentFile,
+        sentBytes = sentBytes,
         totalBytes = state.totalBytes,
-        bytesPerSec = sending?.bytesPerSec,
+        bytesPerSec = bytesPerSec,
         isInbound = false,
         isPaired = isPaired,
         trailingContent = {
-            val skipped = sending?.skippedCount ?: 0
-            if (skipped > 0) {
-                SkipCountBadge(count = skipped)
+            if (skippedCount > 0) {
+                SkipCountBadge(count = skippedCount)
             }
         },
         cancelDescription = "Cancel transfer to $peerName",
@@ -83,16 +103,13 @@ internal fun PeerCardActiveInbound(
     isPaired: Boolean = false,
 ) {
     val peerName = device.name
-    val progress = if (state.totalBytes != null && state.totalBytes > 0) {
-        (state.receivedBytes.toFloat() / state.totalBytes.toFloat()).coerceIn(0f, 1f)
-    } else {
-        0f
-    }
+    val cardProgress = inboundCardProgress(state)
 
     ActiveCardShell(
         peerName = "From $peerName",
         titlePrefix = null,
-        progress = progress,
+        progress = cardProgress.progress,
+        indeterminate = cardProgress.indeterminate,
         currentFile = state.currentFile,
         sentBytes = state.receivedBytes,
         totalBytes = state.totalBytes,
@@ -125,6 +142,8 @@ private fun ActiveCardShell(
     onShowDetails: () -> Unit,
     showDetailsDescription: String,
     modifier: Modifier = Modifier,
+    preparing: Boolean = false,
+    indeterminate: Boolean = false,
 ) {
     val spacing = TetherTheme.spacing
     val colors = TetherTheme.colors
@@ -175,9 +194,12 @@ private fun ActiveCardShell(
 
             TransferProgressBar(
                 progress = animatedProgress,
+                indeterminate = indeterminate,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .semantics { contentDescription = "Transfer in progress" },
+                    .semantics {
+                        contentDescription = if (preparing) "Preparing files" else "Transfer in progress"
+                    },
             )
 
             Spacer(Modifier.height(spacing.xs))
@@ -190,17 +212,15 @@ private fun ActiveCardShell(
                     color = colors.textMuted,
                     modifier = Modifier.weight(1f),
                 )
-                if (bytesPerSec != null) {
-                    NumericText(
-                        text = "${ByteFormatting.formatSize(bytesPerSec)}/s",
-                        color = colors.textMuted,
-                    )
-                } else {
-                    NumericText(
-                        text = "Calculating…",
-                        color = colors.textMuted,
-                    )
+                val statusText = when {
+                    bytesPerSec != null -> "${ByteFormatting.formatSize(bytesPerSec)}/s"
+                    preparing -> "Preparing…"
+                    else -> "Calculating…"
                 }
+                NumericText(
+                    text = statusText,
+                    color = colors.textMuted,
+                )
             }
         }
 
@@ -223,8 +243,9 @@ private fun ActiveCardShell(
 private fun TransferProgressBar(
     progress: Float,
     modifier: Modifier = Modifier,
+    indeterminate: Boolean = false,
 ) {
-    ProgressBar(progress = progress, modifier = modifier)
+    ProgressBar(progress = progress, indeterminate = indeterminate, modifier = modifier)
 }
 
 @Preview(name = "PeerCardActiveOutbound — claimed")
@@ -266,6 +287,28 @@ private fun PreviewActiveOutboundCalculating(@PreviewParameter(Themes::class) da
     PreviewSurface(darkTheme = dark) {
         PeerCardActiveOutbound(
             state = TransferPreviewFixtures.activeOutboundCalculating,
+            device = TransferPreviewFixtures.device,
+            callbacks = previewCardCallbacks(),
+        )
+    }
+
+@Preview(name = "PeerCardActiveOutbound — preparing")
+@Composable
+private fun PreviewActiveOutboundPreparing(@PreviewParameter(Themes::class) dark: Boolean) =
+    PreviewSurface(darkTheme = dark) {
+        PeerCardActiveOutbound(
+            state = TransferPreviewFixtures.activeOutboundPreparing,
+            device = TransferPreviewFixtures.device,
+            callbacks = previewCardCallbacks(),
+        )
+    }
+
+@Preview(name = "PeerCardActiveOutbound — unknown total (indeterminate)")
+@Composable
+private fun PreviewActiveOutboundUnknownTotal(@PreviewParameter(Themes::class) dark: Boolean) =
+    PreviewSurface(darkTheme = dark) {
+        PeerCardActiveOutbound(
+            state = TransferPreviewFixtures.activeOutboundUnknownTotal,
             device = TransferPreviewFixtures.device,
             callbacks = previewCardCallbacks(),
         )

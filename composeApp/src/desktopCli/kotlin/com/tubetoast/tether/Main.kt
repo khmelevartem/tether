@@ -331,9 +331,12 @@ private fun renderStateTransition(
         is PeerTransferState.Reconnecting -> {
             output("[send] reconnecting… ${current.remainingSeconds}s remaining")
         }
-        is PeerTransferState.ActiveOutbound.Sending -> {
+        is PeerTransferState.ActiveOutbound.Preparing,
+        is PeerTransferState.ActiveOutbound.Sending,
+        -> {
             val prevPerFile = (prev as? PeerTransferState.ActiveOutbound)?.perFile ?: emptyList()
-            current.perFile.forEachIndexed { i, status ->
+            val perFile = (current as PeerTransferState.ActiveOutbound).perFile
+            perFile.forEachIndexed { i, status ->
                 val prevStatus = prevPerFile.getOrNull(i)
                 if (prevStatus == null || prevStatus::class != status::class) {
                     output("[send] ${status.name}  ${status.label()}")

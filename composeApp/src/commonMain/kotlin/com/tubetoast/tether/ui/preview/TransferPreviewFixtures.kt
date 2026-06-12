@@ -68,6 +68,37 @@ object TransferPreviewFixtures {
         ),
     )
 
+    val activeOutboundPreparing = PeerTransferState.ActiveOutbound.Preparing(
+        currentFile = "IMG_0421.heic",
+        currentIndex = 1,
+        totalFiles = 3,
+        sentBytes = 4_194_304L,
+        totalBytes = null,
+        skippedCount = 0,
+        perFile = listOf(
+            PerFileStatus.Done("IMG_0420.heic", 4_194_304L),
+            PerFileStatus.InProgress("IMG_0421.heic", null, 0L),
+            PerFileStatus.Queued("IMG_0422.heic", null),
+        ),
+    )
+
+    // Multi-photo batch mid-send: bytes are flowing (rate known), but the batch total is still
+    // unknown because not-yet-sent iOS photos resolve their size only when sent → indeterminate bar.
+    val activeOutboundUnknownTotal = PeerTransferState.ActiveOutbound.Sending(
+        currentFile = "IMG_0421.heic",
+        currentIndex = 1,
+        totalFiles = 3,
+        sentBytes = 6_291_456L,
+        totalBytes = null,
+        bytesPerSec = 3_145_728L,
+        skippedCount = 0,
+        perFile = listOf(
+            PerFileStatus.Done("IMG_0420.heic", 4_194_304L),
+            PerFileStatus.InProgress("IMG_0421.heic", null, 2_097_152L),
+            PerFileStatus.Queued("IMG_0422.heic", null),
+        ),
+    )
+
     val activeInbound = PeerTransferState.ActiveInbound(
         currentFile = "shared_document_from_alice.docx",
         currentIndex = 1,

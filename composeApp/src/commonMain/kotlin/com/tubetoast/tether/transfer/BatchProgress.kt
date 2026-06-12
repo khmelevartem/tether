@@ -10,6 +10,8 @@ sealed interface BatchProgress {
         val bytesPerSec: Long?,
         val skippedCount: Int,
         val perFile: List<PerFileStatus>,
+        // The current file is still materializing (e.g. exporting a photo) — no bytes flow yet.
+        val preparing: Boolean = false,
     ) : BatchProgress
 
     data class Reconnecting(
