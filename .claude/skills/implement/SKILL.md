@@ -209,7 +209,7 @@ Per track (or sequentially if single track):
    - `review-ux-brief` (if diff touches `docs/product/features/**/ux-brief.md` — judges the brief's UX-domain quality)
    - `review-design-system` (if diff touches `composeApp/src/**`)
    - `review-visual` (if diff touches `composeApp/src/**` — the agent itself renders PNGs via Roborazzi; a missing brief narrows its checklist but does not skip it)
-   Skip `review-reuse` and `review-adversarial` here — they run in the simplify wave (Step 6) and the full review (Step 7).
+   Skip `review-reuse` and `review-adversarial` here — they run in the simplify wave (Step 5) and the full review (Step 6).
 
    **Delta re-review (iterations 2+).** The full wave above runs on the first iteration to establish a baseline. On every later iteration re-dispatch only: (a) reviewers that raised a `[REQUIRED]` finding the previous round, and (b) reviewers whose domain the new changes touch (a fix that adds Compose pulls in `review-design-system` / `review-visual` even if they were silent before). A reviewer that returned `APPROVE` on code its domain did not change this round returns the same verdict — re-running it spends tokens to re-derive a known result. Track each reviewer's last verdict and whether its domain was touched; that pair decides re-dispatch. Full-roster coverage is restored at Step 6.
 4. If every reviewer says `APPROVE` and zero `[REQUIRED]` → track done.
