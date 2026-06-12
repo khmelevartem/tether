@@ -61,6 +61,8 @@ class BatchSender(
         emit: suspend (BatchProgress) -> Unit,
     ): BatchOutcome {
         if (sources.isEmpty()) return BatchOutcome.AllSent
+        // Held across the whole batch, not per file: a per-file hold lets the count drop to 0
+        // between files, flickering the iOS foreground banner / Android wake lock off and on.
         return tracker.withActiveTransfer { runBatch(sources, skipPredicate, emit) }
     }
 
