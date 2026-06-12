@@ -35,28 +35,29 @@ class PeerListComponent(
     init {
         peersRepository.peers
             .onEach { peers ->
-                val previous = _state.value.rows.associateBy { it.peer.id }
+                val previous = _state.value.rows.associateBy { it.transferComponent.peerId }
                 val newIds = peers.map { it.id }.toSet()
 
                 previous.values
-                    .filter { it.peer.id !in newIds }
+                    .filter { it.transferComponent.peerId !in newIds }
                     .forEach { it.transferComponent.destroyContext() }
 
-                _state.update {
-                    PeerListState(
-                        rows = peers.map { peer ->
-                            val existing = previous[peer.id]?.transferComponent
-                            val component = existing ?: createComponent(peer)
-                            PeerRow(peer, component)
-                        },
-                    )
+                val newRows = peers.map { peer ->
+                    val existing = previous[peer.id]?.transferComponent
+                    if (existing != null) {
+                        existing.updatePeer(peer)
+                        PeerRow(existing)
+                    } else {
+                        PeerRow(createComponent(peer))
+                    }
                 }
+                _state.update { PeerListState(rows = newRows) }
             }.launchIn(coroutineScope)
     }
 
     fun peerTransferComponent(peer: PeerIdentity): PeerTransferComponent? =
         _state.value.rows
-            .firstOrNull { it.peer.id == peer }
+            .firstOrNull { it.transferComponent.peerId == peer }
             ?.transferComponent
 
     private fun createComponent(peer: Peer): PeerTransferComponent {

@@ -1,6 +1,5 @@
 package com.tubetoast.tether.presentation
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,33 +16,25 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.composables.core.SheetDetent
 import com.composables.core.rememberModalBottomSheetState
 import com.tubetoast.tether.foundation.IsMobileChooserPlatform
-import com.tubetoast.tether.peer.Peer
 import com.tubetoast.tether.presentation.banners.BannersSection
 import com.tubetoast.tether.presentation.banners.PendingOutboundBanner
 import com.tubetoast.tether.presentation.banners.PendingOutboundBannerState
 import com.tubetoast.tether.presentation.devicename.ThisDeviceStripContent
 import com.tubetoast.tether.presentation.devicename.ThisDeviceStripScreen
-import com.tubetoast.tether.presentation.dialogs.LargeSelectionConfirmDialog
 import com.tubetoast.tether.presentation.peercard.PeerCard
 import com.tubetoast.tether.presentation.peercard.PeerCardCallbacks
 import com.tubetoast.tether.presentation.peercard.PeerCardContent
 import com.tubetoast.tether.presentation.sheets.MobilePickerChooserSheet
 import com.tubetoast.tether.presentation.transfer.PeerCardState
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
-import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.PendingFilesSummary
 import com.tubetoast.tether.transfer.PickKind
-import com.tubetoast.tether.transfer.toPeerIdentity
 import com.tubetoast.tether.ui.designsystem.BodyText
 import com.tubetoast.tether.ui.designsystem.BrandMark
 import com.tubetoast.tether.ui.designsystem.BrandMarkState
@@ -108,41 +99,18 @@ private fun PeerListContent(
             }
         } else {
             LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(rows, key = { it.peer.id.id }) { row ->
+                items(rows, key = { it.transferComponent.peerId.id }) { row ->
                     val peerComponent = row.transferComponent
-                    val transferState by peerComponent.state.subscribeAsState()
-                    val isIdle = transferState.transfer is PeerTransferState.Idle
-                    val tapAction: () -> Unit = if (isIdle && showMobileChooser && !hasPendingOutbound) {
-                        {
-                            pendingPickComponent = peerComponent
-                            sheetState.targetDetent = SheetDetent.FullyExpanded
-                        }
-                    } else {
-                        peerComponent::onCardClick
-                    }
-                    val cardModifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(onClick = tapAction)
-                        .semantics {
-                            role = Role.Button
-                            contentDescription = "Tap to interact with ${row.peer.device.name}"
-                        }
-
-                    transferState.largeConfirm?.let { confirm ->
-                        LargeSelectionConfirmDialog(
-                            fileCount = confirm.summary.fileCount,
-                            totalBytes = confirm.summary.totalBytes,
-                            peerName = peerComponent.peer.device.name,
-                            dontShowAgain = confirm.dontShowAgain,
-                            onDontShowAgainToggle = peerComponent::onUpdateLargeConfirmDontShowAgain,
-                            onConfirm = { peerComponent.onConfirmLargeSelection(confirm.dontShowAgain) },
-                            onDismiss = peerComponent::onDismissLargeSelection,
-                        )
-                    }
-
                     PeerCard(
                         component = peerComponent,
-                        modifier = cardModifier,
+                        onRequestMobileChooser = if (showMobileChooser && !hasPendingOutbound) {
+                            {
+                                pendingPickComponent = peerComponent
+                                sheetState.targetDetent = SheetDetent.FullyExpanded
+                            }
+                        } else {
+                            null
+                        },
                     )
                 }
             }
@@ -167,11 +135,6 @@ private fun PeerListContent(
     )
 }
 
-private data class PeerCardPreviewSpec(
-    val peer: Peer,
-    val peerCardState: PeerCardState,
-)
-
 @Preview(name = "PeerList — discovering empty")
 @Composable
 private fun PreviewDiscovering(@PreviewParameter(Themes::class) dark: Boolean) =
@@ -186,9 +149,11 @@ private fun PreviewSingleDevice(@PreviewParameter(Themes::class) dark: Boolean) 
         val device = PreviewFixtures.singleDevice.first()
         PeerListContentPreview(
             specs = listOf(
-                PeerCardPreviewSpec(
-                    peer = Peer(id = device.toPeerIdentity(), device = device),
-                    peerCardState = PeerCardState(TransferPreviewFixtures.idleCollapsed, expanded = false),
+                PeerCardState(
+                    transfer = TransferPreviewFixtures.idleCollapsed,
+                    expanded = false,
+                    isOnline = true,
+                    device = device,
                 ),
             ),
         )
@@ -200,16 +165,15 @@ private fun PreviewMultipleDevices(@PreviewParameter(Themes::class) dark: Boolea
     PreviewSurface(darkTheme = dark) {
         PeerListContentPreview(
             specs = PreviewFixtures.multipleDevices.mapIndexed { index, device ->
-                PeerCardPreviewSpec(
-                    peer = Peer(id = device.toPeerIdentity(), device = device, isOnline = index != 2),
-                    peerCardState = PeerCardState(
-                        transfer = when (index) {
-                            0 -> TransferPreviewFixtures.activeOutbound
-                            1 -> TransferPreviewFixtures.idleCollapsed
-                            else -> TransferPreviewFixtures.sentFull
-                        },
-                        expanded = false,
-                    ),
+                PeerCardState(
+                    transfer = when (index) {
+                        0 -> TransferPreviewFixtures.activeOutbound
+                        1 -> TransferPreviewFixtures.idleCollapsed
+                        else -> TransferPreviewFixtures.sentFull
+                    },
+                    expanded = false,
+                    isOnline = index != 2,
+                    device = device,
                 )
             },
         )
@@ -222,9 +186,11 @@ private fun PreviewPendingState(@PreviewParameter(Themes::class) dark: Boolean) 
         val device = PreviewFixtures.singleDevice.first()
         PeerListContentPreview(
             specs = listOf(
-                PeerCardPreviewSpec(
-                    peer = Peer(id = device.toPeerIdentity(), device = device),
-                    peerCardState = PeerCardState(TransferPreviewFixtures.idleCollapsed, expanded = false),
+                PeerCardState(
+                    transfer = TransferPreviewFixtures.idleCollapsed,
+                    expanded = false,
+                    isOnline = true,
+                    device = device,
                 ),
             ),
             hasPendingOutbound = true,
@@ -233,7 +199,7 @@ private fun PreviewPendingState(@PreviewParameter(Themes::class) dark: Boolean) 
 
 @Composable
 private fun PeerListContentPreview(
-    specs: List<PeerCardPreviewSpec>,
+    specs: List<PeerCardState>,
     hasPendingOutbound: Boolean = false,
 ) {
     val spacing = TetherTheme.spacing
@@ -272,11 +238,9 @@ private fun PeerListContentPreview(
             }
         } else {
             LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(specs, key = { it.peer.id.id }) { spec ->
+                items(specs, key = { it.device.host }) { spec ->
                     PeerCardContent(
-                        state = spec.peerCardState,
-                        isOnline = spec.peer.isOnline,
-                        device = spec.peer.device,
+                        state = spec,
                         callbacks = previewCallbacks(),
                         modifier = Modifier.fillMaxWidth(),
                     )

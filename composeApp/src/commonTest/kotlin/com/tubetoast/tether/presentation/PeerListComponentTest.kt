@@ -1,36 +1,19 @@
 package com.tubetoast.tether.presentation
 
-import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.resume
-import com.tubetoast.tether.config.DeviceNameStore
-import com.tubetoast.tether.config.EphemeralDeviceNamePersistence
 import com.tubetoast.tether.discovery.FakeDeviceDiscovery
 import com.tubetoast.tether.peer.FakePeersRepository
 import com.tubetoast.tether.peer.Peer
 import com.tubetoast.tether.peer.PeersRepository
-import com.tubetoast.tether.preferences.FakeFileTransferPreferences
-import com.tubetoast.tether.preferences.FakePeerPreferencesStore
-import com.tubetoast.tether.presentation.banners.BannersComponent
-import com.tubetoast.tether.presentation.banners.PeerConflictRelay
-import com.tubetoast.tether.presentation.devicename.DeviceNameComponent
-import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.protocol.Device
-import com.tubetoast.tether.protocol.DeviceType
-import com.tubetoast.tether.transfer.FakeFilePicker
 import com.tubetoast.tether.transfer.FakeFileSource
-import com.tubetoast.tether.transfer.NoOpTransferActivityTracker
-import com.tubetoast.tether.transfer.PeerTransferEngine
 import com.tubetoast.tether.transfer.PeerTransferState
-import com.tubetoast.tether.transfer.PendingFilesRepository
-import com.tubetoast.tether.transfer.fakeBatchSender
-import com.tubetoast.tether.transfer.fakePeerTransferEngineRegistry
 import com.tubetoast.tether.transfer.toPeerIdentity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -45,6 +28,9 @@ import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertSame
+
+private val PeerRow.peerState get() = transferComponent.state.value
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PeerListComponentTest {
@@ -79,7 +65,7 @@ class PeerListComponentTest {
         assertEquals(
             setOf(deviceA, deviceB),
             component.state.value.rows
-                .map { it.peer.device }
+                .map { it.peerState.device }
                 .toSet(),
         )
     }
@@ -99,7 +85,7 @@ class PeerListComponentTest {
             deviceA,
             component.state.value.rows
                 .first()
-                .peer.device,
+                .peerState.device,
         )
     }
 
@@ -119,7 +105,7 @@ class PeerListComponentTest {
 
         assertNull(
             component.state.value.rows
-                .firstOrNull { it.peer.id == deviceA.toPeerIdentity() },
+                .firstOrNull { it.transferComponent.peerId == deviceA.toPeerIdentity() },
         )
         assertNull(component.peerTransferComponent(deviceA.toPeerIdentity()))
     }
@@ -135,7 +121,7 @@ class PeerListComponentTest {
 
         assertNull(
             component.state.value.rows
-                .firstOrNull { it.peer.id == deviceA.toPeerIdentity() },
+                .firstOrNull { it.transferComponent.peerId == deviceA.toPeerIdentity() },
         )
         assertNull(component.peerTransferComponent(deviceA.toPeerIdentity()))
     }
@@ -181,7 +167,7 @@ class PeerListComponentTest {
         assertNotNull(component.peerTransferComponent(deviceA.toPeerIdentity()))
         assertNotNull(
             component.state.value.rows
-                .firstOrNull { it.peer.id == deviceA.toPeerIdentity() },
+                .firstOrNull { it.transferComponent.peerId == deviceA.toPeerIdentity() },
         )
     }
 
@@ -204,7 +190,7 @@ class PeerListComponentTest {
 
         assertNotNull(
             component.state.value.rows
-                .firstOrNull { it.peer.id == deviceA.toPeerIdentity() },
+                .firstOrNull { it.transferComponent.peerId == deviceA.toPeerIdentity() },
         )
         val second = component.peerTransferComponent(deviceA.toPeerIdentity())
         assertNotNull(second)
@@ -259,8 +245,8 @@ class PeerListComponentTest {
         assertEquals(
             true,
             component.state.value.rows
-                .first { it.peer.id == deviceA.toPeerIdentity() }
-                .peer.isOnline,
+                .first { it.transferComponent.peerId == deviceA.toPeerIdentity() }
+                .peerState.isOnline,
         )
     }
 
@@ -276,7 +262,7 @@ class PeerListComponentTest {
             false,
             component.state.value.rows
                 .first()
-                .peer.isOnline,
+                .peerState.isOnline,
         )
     }
 
@@ -299,7 +285,7 @@ class PeerListComponentTest {
             false,
             component.state.value.rows
                 .first()
-                .peer.isOnline,
+                .peerState.isOnline,
         )
     }
 
@@ -325,18 +311,9 @@ class PeerListComponentTest {
             false,
             component.state.value.rows
                 .first()
-                .peer.isOnline,
+                .peerState.isOnline,
         )
     }
-
-    private fun fakeDeviceNameComponentFactory(scope: CoroutineScope): (ComponentContext) -> DeviceNameComponent =
-        { deviceNameCtx ->
-            DeviceNameComponent(
-                componentContext = deviceNameCtx,
-                nameStore = DeviceNameStore(EphemeralDeviceNamePersistence()),
-                coroutineScope = scope,
-            )
-        }
 
     private fun buildComponent(
         initial: List<Device> = emptyList(),
@@ -347,52 +324,14 @@ class PeerListComponentTest {
         val lifecycle = LifecycleRegistry()
         val context = DefaultComponentContext(lifecycle)
         lifecycle.resume()
-        val peersRepository = PeersRepository(
-            discovery = FakeDeviceDiscovery(flow),
-            scope = coroutineScope,
-        )
         return PeerListComponent(
             componentContext = context,
-            peersRepository = peersRepository,
-            peerTransferComponentFactory = { childCtx, childLifecycle, peer ->
-                val wrappedLifecycle = object : LifecycleRegistry by childLifecycle {
-                    override fun onDestroy() {
-                        onDestroyContext(peer.id.id)
-                        childLifecycle.onDestroy()
-                    }
-                }
-                val engine = PeerTransferEngine(
-                    peer = peer.id,
-                    batchSenderFactory = fakeBatchSender(),
-                    inboundEvents = MutableSharedFlow(),
-                    scope = coroutineScope,
-                    peerPreferencesStore = FakePeerPreferencesStore(),
-                )
-                PeerTransferComponent(
-                    componentContext = childCtx,
-                    peer = peer,
-                    lifecycleRegistry = wrappedLifecycle,
-                    engine = engine,
-                    onShowDetails = {},
-                    scope = coroutineScope,
-                    pendingFilesRepository = PendingFilesRepository(),
-                    filePicker = FakeFilePicker(result = emptyList()),
-                    conflictRelay = PeerConflictRelay(),
-                    fileTransferPreferences = FakeFileTransferPreferences(),
-                )
-            },
-            bannersComponentFactory = { bannersCtx ->
-                BannersComponent(
-                    componentContext = bannersCtx,
-                    pendingFilesRepository = PendingFilesRepository(),
-                    peersRepository = FakePeersRepository(),
-                    engineRegistry = fakePeerTransferEngineRegistry(coroutineScope),
-                    conflictRelay = PeerConflictRelay(),
-                    transferActivityTracker = NoOpTransferActivityTracker,
-                    ownDeviceType = DeviceType.Android,
-                    coroutineScope = coroutineScope,
-                )
-            },
+            peersRepository = PeersRepository(
+                discovery = FakeDeviceDiscovery(flow),
+                scope = coroutineScope,
+            ),
+            peerTransferComponentFactory = fakePeerTransferComponentFactory(coroutineScope, onDestroyContext),
+            bannersComponentFactory = fakeBannersComponentFactory(coroutineScope),
             deviceNameComponentFactory = fakeDeviceNameComponentFactory(coroutineScope),
             coroutineScope = coroutineScope,
         )
@@ -409,45 +348,8 @@ class PeerListComponentTest {
         return PeerListComponent(
             componentContext = context,
             peersRepository = FakePeersRepository(peerFlow),
-            peerTransferComponentFactory = { childCtx, childLifecycle, peer ->
-                val wrappedLifecycle = object : LifecycleRegistry by childLifecycle {
-                    override fun onDestroy() {
-                        onDestroyContext(peer.id.id)
-                        childLifecycle.onDestroy()
-                    }
-                }
-                val engine = PeerTransferEngine(
-                    peer = peer.id,
-                    batchSenderFactory = fakeBatchSender(),
-                    inboundEvents = MutableSharedFlow(),
-                    scope = coroutineScope,
-                    peerPreferencesStore = FakePeerPreferencesStore(),
-                )
-                PeerTransferComponent(
-                    componentContext = childCtx,
-                    peer = peer,
-                    lifecycleRegistry = wrappedLifecycle,
-                    engine = engine,
-                    onShowDetails = {},
-                    scope = coroutineScope,
-                    pendingFilesRepository = PendingFilesRepository(),
-                    filePicker = FakeFilePicker(result = emptyList()),
-                    conflictRelay = PeerConflictRelay(),
-                    fileTransferPreferences = FakeFileTransferPreferences(),
-                )
-            },
-            bannersComponentFactory = { bannersCtx ->
-                BannersComponent(
-                    componentContext = bannersCtx,
-                    pendingFilesRepository = PendingFilesRepository(),
-                    peersRepository = FakePeersRepository(),
-                    engineRegistry = fakePeerTransferEngineRegistry(coroutineScope),
-                    conflictRelay = PeerConflictRelay(),
-                    transferActivityTracker = NoOpTransferActivityTracker,
-                    ownDeviceType = DeviceType.Android,
-                    coroutineScope = coroutineScope,
-                )
-            },
+            peerTransferComponentFactory = fakePeerTransferComponentFactory(coroutineScope, onDestroyContext),
+            bannersComponentFactory = fakeBannersComponentFactory(coroutineScope),
             deviceNameComponentFactory = fakeDeviceNameComponentFactory(coroutineScope),
             coroutineScope = coroutineScope,
         )
@@ -463,8 +365,8 @@ class PeerListComponentTest {
 
         val rows = component.state.value.rows
         assertEquals(2, rows.size)
-        assertEquals(true, rows.first { it.peer.id == deviceA.toPeerIdentity() }.peer.isOnline)
-        assertEquals(false, rows.first { it.peer.id == deviceB.toPeerIdentity() }.peer.isOnline)
+        assertEquals(true, rows.first { it.transferComponent.peerId == deviceA.toPeerIdentity() }.peerState.isOnline)
+        assertEquals(false, rows.first { it.transferComponent.peerId == deviceB.toPeerIdentity() }.peerState.isOnline)
     }
 
     @Test
@@ -501,5 +403,46 @@ class PeerListComponentTest {
 
         val after = component.peerTransferComponent(deviceA.toPeerIdentity())
         assertEquals(before, after)
+    }
+
+    @Test
+    fun `offline-online polarity — component stays same instance and final state is online`() = runTest {
+        val peerOnline = Peer(id = deviceA.toPeerIdentity(), device = deviceA, isOnline = true)
+        val peerFlow = MutableStateFlow(listOf(peerOnline))
+        val component = buildComponentWithPeers(peerFlow = peerFlow, coroutineScope = backgroundScope)
+        runCurrent()
+
+        val retained = component.peerTransferComponent(deviceA.toPeerIdentity())
+        assertNotNull(retained)
+
+        peerFlow.value = listOf(peerOnline.copy(isOnline = false))
+        runCurrent()
+        assertSame(retained, component.peerTransferComponent(deviceA.toPeerIdentity()))
+        assertEquals(false, retained.state.value.isOnline)
+
+        peerFlow.value = listOf(peerOnline.copy(isOnline = true))
+        runCurrent()
+        assertSame(retained, component.peerTransferComponent(deviceA.toPeerIdentity()))
+        assertEquals(true, retained.state.value.isOnline)
+    }
+
+    @Test
+    fun `device rename reactivity — state reflects updated device name on retained component`() = runTest {
+        val peerFlow = MutableStateFlow(
+            listOf(Peer(id = deviceA.toPeerIdentity(), device = deviceA, isOnline = true)),
+        )
+        val component = buildComponentWithPeers(peerFlow = peerFlow, coroutineScope = backgroundScope)
+        runCurrent()
+
+        val retained = component.peerTransferComponent(deviceA.toPeerIdentity())
+        assertNotNull(retained)
+        assertEquals(deviceA.name, retained.state.value.device.name)
+
+        val renamedDevice = deviceA.copy(name = "RenamedDevice")
+        peerFlow.value = listOf(Peer(id = deviceA.toPeerIdentity(), device = renamedDevice, isOnline = true))
+        runCurrent()
+
+        assertSame(retained, component.peerTransferComponent(deviceA.toPeerIdentity()))
+        assertEquals("RenamedDevice", retained.state.value.device.name)
     }
 }

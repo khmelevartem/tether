@@ -5,32 +5,18 @@ import com.arkivanov.essenty.backhandler.BackDispatcher
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.resume
 import com.arkivanov.essenty.statekeeper.StateKeeperDispatcher
-import com.tubetoast.tether.config.DeviceNameStore
-import com.tubetoast.tether.config.EphemeralDeviceNamePersistence
 import com.tubetoast.tether.discovery.FakeDeviceDiscovery
 import com.tubetoast.tether.peer.PeersRepository
-import com.tubetoast.tether.preferences.FakeFileTransferPreferences
-import com.tubetoast.tether.preferences.FakePeerPreferencesStore
-import com.tubetoast.tether.presentation.banners.BannersComponent
-import com.tubetoast.tether.presentation.banners.PeerConflictRelay
-import com.tubetoast.tether.presentation.devicename.DeviceNameComponent
-import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.protocol.Device
-import com.tubetoast.tether.protocol.DeviceType
 import com.tubetoast.tether.transfer.FakeFilePicker
 import com.tubetoast.tether.transfer.FakeFileSource
-import com.tubetoast.tether.transfer.NoOpTransferActivityTracker
-import com.tubetoast.tether.transfer.PeerTransferEngine
 import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.PendingFilesRepository
 import com.tubetoast.tether.transfer.PendingFilesSummary
-import com.tubetoast.tether.transfer.fakeBatchSender
-import com.tubetoast.tether.transfer.fakePeerTransferEngineRegistry
 import com.tubetoast.tether.transfer.toPeerIdentity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -328,46 +314,18 @@ class RootComponentTest {
                 PeerListComponent(
                     componentContext = childCtx,
                     peersRepository = peersRepository,
-                    peerTransferComponentFactory = { peerCtx, peerLifecycle, peerModel ->
-                        val engine = PeerTransferEngine(
-                            peer = peerModel.id,
-                            batchSenderFactory = fakeBatchSender(),
-                            inboundEvents = MutableSharedFlow(),
-                            scope = coroutineScope,
-                            peerPreferencesStore = FakePeerPreferencesStore(),
-                        )
-                        PeerTransferComponent(
-                            componentContext = peerCtx,
-                            peer = peerModel,
-                            lifecycleRegistry = peerLifecycle,
-                            engine = engine,
-                            onShowDetails = onShowDetails,
-                            scope = coroutineScope,
-                            pendingFilesRepository = pendingFilesRepository,
-                            filePicker = filePicker,
-                            conflictRelay = PeerConflictRelay(),
-                            fileTransferPreferences = FakeFileTransferPreferences(),
-                        )
-                    },
-                    bannersComponentFactory = { bannersCtx ->
-                        BannersComponent(
-                            componentContext = bannersCtx,
-                            pendingFilesRepository = pendingFilesRepository,
-                            peersRepository = peersRepository,
-                            engineRegistry = fakePeerTransferEngineRegistry(coroutineScope),
-                            conflictRelay = PeerConflictRelay(),
-                            transferActivityTracker = NoOpTransferActivityTracker,
-                            ownDeviceType = DeviceType.Android,
-                            coroutineScope = coroutineScope,
-                        )
-                    },
-                    deviceNameComponentFactory = { deviceNameCtx ->
-                        DeviceNameComponent(
-                            componentContext = deviceNameCtx,
-                            nameStore = DeviceNameStore(EphemeralDeviceNamePersistence()),
-                            coroutineScope = coroutineScope,
-                        )
-                    },
+                    peerTransferComponentFactory = fakePeerTransferComponentFactory(
+                        coroutineScope = coroutineScope,
+                        pendingFilesRepository = pendingFilesRepository,
+                        filePicker = filePicker,
+                        onShowDetails = onShowDetails,
+                    ),
+                    bannersComponentFactory = fakeBannersComponentFactory(
+                        coroutineScope = coroutineScope,
+                        pendingFilesRepository = pendingFilesRepository,
+                        peersRepository = peersRepository,
+                    ),
+                    deviceNameComponentFactory = fakeDeviceNameComponentFactory(coroutineScope),
                     coroutineScope = coroutineScope,
                 )
             },

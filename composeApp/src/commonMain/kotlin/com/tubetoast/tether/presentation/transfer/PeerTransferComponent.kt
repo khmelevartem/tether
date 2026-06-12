@@ -36,7 +36,7 @@ data class PendingLargeConfirm(
 
 class PeerTransferComponent(
     componentContext: ComponentContext,
-    val peer: Peer,
+    peer: Peer,
     private val lifecycleRegistry: LifecycleRegistry,
     private val engine: PeerTransferEngine,
     onShowDetails: (PeerIdentity) -> Unit,
@@ -46,6 +46,14 @@ class PeerTransferComponent(
     private val conflictRelay: PeerConflictRelay,
     private val fileTransferPreferences: FileTransferPreferences,
 ) : ComponentContext by componentContext {
+    val peerId: PeerIdentity = peer.id
+    private val mutablePeer = MutableStateFlow(peer)
+
+    fun updatePeer(peer: Peer) {
+        require(peer.id == peerId) { "updatePeer must not change peer identity" }
+        mutablePeer.update { peer }
+    }
+
     // TODO(#332): read from peer.device.deviceType once Device carries the field
     val deviceType: DeviceType? = null
 
@@ -57,13 +65,27 @@ class PeerTransferComponent(
     private val expanded = MutableStateFlow(false)
     private val largeConfirm = MutableStateFlow<PendingLargeConfirm?>(null)
     private val mutableState = MutableValue(
-        PeerCardState(engine.state.value, expanded.value, largeConfirm.value),
+        PeerCardState(
+            transfer = engine.state.value,
+            expanded = expanded.value,
+            largeConfirm = largeConfirm.value,
+            isOnline = peer.isOnline,
+            device = peer.device,
+        ),
     )
     val state: Value<PeerCardState> = mutableState
 
     init {
-        combine(engine.state, expanded, largeConfirm) { transfer, exp, confirm ->
-            mutableState.update { PeerCardState(transfer, exp, confirm) }
+        combine(engine.state, expanded, largeConfirm, mutablePeer) { transfer, exp, confirm, p ->
+            mutableState.update {
+                PeerCardState(
+                    transfer = transfer,
+                    expanded = exp,
+                    largeConfirm = confirm,
+                    isOnline = p.isOnline,
+                    device = p.device,
+                )
+            }
         }.launchIn(scope)
     }
 
@@ -140,7 +162,7 @@ class PeerTransferComponent(
         if (accepted) {
             clearOnSuccess?.let { pendingFilesRepository.clearIfMatches(it) }
         } else {
-            conflictRelay.reportBusyTap(peer.id)
+            conflictRelay.reportBusyTap(peerId)
         }
     }
 
@@ -160,5 +182,5 @@ class PeerTransferComponent(
 
     fun setAutoSend(enabled: Boolean) = engine.setAutoSend(enabled)
 
-    fun onShowDetails() = showDetailsCallback(peer.id)
+    fun onShowDetails() = showDetailsCallback(peerId)
 }
