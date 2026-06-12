@@ -23,7 +23,7 @@ Sample load-bearing nouns in the prose under review:
 
 - KDoc, docstrings, inline comments in code files;
 - every touched file under `docs/`;
-- every touched file under `.claude/` (skill prompts, agent definitions, slash commands);
+- every touched file under `.claude/` (skill prompts, agent definitions, slash commands) — **drift only**: check that Tether-domain nouns match the glossary, but raise no missing-entry findings here. These files are written in agent-harness vocabulary, not Tether-product domain (see the process-vocabulary exclusion in rule 2);
 - the inline prose itself, when the input mode is inline.
 
 For each sampled term:
@@ -31,7 +31,12 @@ For each sampled term:
 1. **Drift.** Term has a glossary entry but the diff uses it with a meaning that contradicts the definition, or uses a near-synonym the glossary explicitly lists under `_Avoid:_` (e.g. «node» where glossary says **Peer** + `_Avoid: node_`). Flag as `[REQUIRED]` with the canonical term and the avoidance note.
 2. **Missing entry.** The prose under review introduces a **domain term** — a concept that carries meaning outside the code and recurs in product / engineering discussions, not a code symbol — across two or more touched artifacts (or already used elsewhere in the repo) without a glossary entry. Flag as `[REQUIRED]`; the writing agent adds the entry as part of addressing the finding. Use the admission rule from [`docs/engineering/glossary-discipline.md`](../../docs/engineering/glossary-discipline.md#what-qualifies-as-a-term): Kotlin type names, function / method names, API / library symbol names, and implementation-technique labels do NOT qualify — do not flag them.
 
-   **Do not flag industry-standard terms.** Acronyms and concepts with an established, externally-documented meaning across the software industry (e.g. ADR, retro / retrospective, MVP, CI/CD, MVI, DI, REST, KMP, ORM, DTO, P2P, mDNS) do not need a Tether glossary entry — their definition lives in industry references, and restating it here adds drift surface, not clarity. The Tether glossary is for terms whose meaning is shaped by this project (a peer, a session, a transfer state); use the entry to capture *our* meaning, not to redefine the industry's. If the term has a single uncontested meaning outside the project and the prose uses it that way, skip it.
+   **Mechanical pre-filter — if any holds, raise no missing-entry finding:**
+   - **identifier-shaped** — camelCase / PascalCase / snake_case token, or an API field name (`reserveDeduplicatedFile`, `UploadHandle`, `application tag`). It names a symbol, not a concept discussed in prose.
+   - **already an `_Avoid:_` synonym** — the term appears in some entry's `_Avoid:_` list (e.g. «PIN» under **SAS**). That is *drift* — handle under rule 1 by steering to the canonical, never as a new entry.
+   - **agent-harness / process vocabulary** — terms naming the AI development *process* rather than the Tether product/system: «orchestrator», «sub-agent», «review wave / round», «simplify pass», «recon», «worktree» (as a process artifact), sprint codenames. The glossary covers the product being built, not the process that builds it.
+
+   **Do not flag industry-standard terms.** Acronyms and concepts with an established, externally-documented meaning across the software industry (e.g. ADR, retro / retrospective, MVP, CI/CD, MVI, DI, REST, KMP, ORM, DTO, P2P, mDNS, and standardised primitives / wire formats like EC P-256, X.509, SPKI, ASN.1) do not need a Tether glossary entry — their definition lives in industry references, and restating it here adds drift surface, not clarity. The Tether glossary is for terms whose meaning is shaped by this project (a peer, a session, a transfer state); use the entry to capture *our* meaning, not to redefine the industry's. If the term has a single uncontested meaning outside the project and the prose uses it that way, skip it.
 3. **Glossary self-edit.** If the prose under review touches `docs/glossary.md`, treat new/changed entries as diff-internal: don't flag them as «undocumented term», but verify the entry shape declared in the glossary header. Malformed entries are `[REQUIRED]`.
 
 Skip from sampling:
@@ -59,3 +64,5 @@ DECISION: BLOCK | APPROVE
 ```
 
 `APPROVE` only if zero `[REQUIRED]`. Cite the canonical entry verbatim so the writing agent can resolve the finding without re-reading the glossary.
+
+**Output discipline.** One line per distinct (term, canonical) pair — dedupe across files and call sites; never repeat a finding per occurrence. Emit only the `PHASE` / `DECISION` block — no «let me verify…» narration, no reasoning prose.

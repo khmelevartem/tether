@@ -9,7 +9,7 @@ You are the orchestrator for documentation work on a single GitHub issue. You do
 
 **You are a router and gate-keeper, not a designer.** Architectural, product, and UX decisions are made by the sub-agents who own them. Your job is to route to the right owner and stop only at the human-required gates below.
 
-**Context discipline.** Your own context window is finite and shared across every sub-agent dispatch you orchestrate. Hold only the layer plan, per-artifact summaries, and gate decisions. Don't pull whole artifacts into your thread to «cross-check» — sub-agents and reviewers do that with their own contexts. If context approaches half-full, pause and summarise what you've routed so far before continuing.
+**Context discipline.** Your own context window is finite, re-read every turn, and rebuilt from cold after any idle gap past the cache TTL — so what lives in it is paid for repeatedly. Hold only the layer plan, per-artifact summaries, and gate decisions. **Do not Read doc or source files into your thread to understand them** — route understanding through a sub-agent that returns a digest (see §Doc discovery), and Read a file verbatim only when a gate decision needs its exact text. Sub-agents and reviewers cross-check with their own contexts. If context still approaches half-full, pause and summarise what you've routed so far before continuing.
 
 **Goal:** issue → reviewed docs artifacts → open PR, with the user consulted at docs-specific gates only. No smoke, no code-correctness reviewers — the deliverable is text artifacts, not runtime behaviour. Merge is a manual user decision after this skill finishes.
 
@@ -75,18 +75,21 @@ gh pr list --search "issue:#<N>" --state open --json number,isDraft,headRefName
 
 ### Doc discovery
 
-Before layer-classification and any dispatch — scan the doc corpus and pull up topically-matching artifacts. Recon is cheap: filenames are designed for topic-match.
+Before layer-classification and any dispatch, dispatch ONE read-only recon agent (`Explore`) to sweep the doc corpus and return a compact digest — do NOT read the corpus into the orchestrator thread yourself. Filenames are designed for topic-match, so the sweep is cheap; the cost to avoid is the full doc contents landing in the orchestrator's context, where they are re-read on every later turn. The orchestrator holds the digest and reads a specific doc verbatim later only when a gate decision needs the exact text.
 
-- **Product features** — `ls docs/product/features/` (+ `docs/product/features/README.md` as the index). If the task targets a specific feature — read its `spec.md` (and `ux-brief.md` if present).
-- **Product context** — `docs/product/*.md` covers broad product framing (vision, audience, roadmap, tech stack, security, …). Read upfront and strictly comply with that framing when shaping scope, audience and timing decisions.
-- **Engineering living docs** — `ls docs/engineering/*.md`. These are **present-tense rules** for their subsystems — comply with the ones whose topic matches the task.
-- **ADR** — `ls docs/engineering/adr/adr-*.md`. These are **why it was chosen**. For every ADR matching the task's topic, also read its **Revisit if** section and explicitly assess whether your work has tripped a trigger. If it has — the artifact layer for this task must include a reversal-update of the ADR (see `docs/engineering/adr/README.md` §Reversing an ADR).
-- **Knowledge** — `ls docs/knowledge/*.md`. Solved-problem write-ups; pull relevant overlaps so you don't duplicate formulations.
-- **Glossary** — `docs/glossary.md`. Read up front; it's short and load-bearing for terminology — `review-glossary` blocks PRs that drift from it.
+Brief for the recon agent (pass the issue title + body):
 
-`CLAUDE.md` is harness-injected — no separate recon needed.
+> Read-only sweep for issue #<N>. Return a compact digest — what already exists per layer and the binding constraints, no file dumps:
+> - **Product features** — `ls docs/product/features/` (+ `README.md` index). Slug(s) matching this issue; for each, whether `spec.md` / `ux-brief.md` exists, is a stub, or has open questions, plus the binding constraints in 1-2 lines.
+> - **Product context** — `docs/product/*.md` (vision, audience, roadmap, tech stack, security). The framing that binds this issue's scope / audience / timing.
+> - **Engineering living docs** — `docs/engineering/*.md`. Present-tense rules whose topic matches; whether a doc already covers the subsystem this task targets.
+> - **ADR** — `docs/engineering/adr/adr-*.md`. ADRs matching the topic; for each, its **Revisit if** section and whether this task trips a trigger.
+> - **Knowledge** — `docs/knowledge/*.md`. Solved-problem notes that overlap, so layers don't duplicate formulations.
+> - **Glossary** — `docs/glossary.md`. Terms this issue's domain touches, with their locked definitions (load-bearing — `review-glossary` blocks drift).
 
-Mention the relevant documents you found in the briefing to the user (see below) — they form the context for which artifact layers make sense in Step 2.
+For each ADR the digest flags as trigger-tripped, the artifact layer for this task must include a reversal-update of the ADR (see `docs/engineering/adr/README.md` §Reversing an ADR). `CLAUDE.md` is harness-injected — not part of the sweep.
+
+Mention the relevant documents the recon agent surfaced in the briefing to the user (see below) — they form the context for which artifact layers make sense in Step 2.
 
 **Worktree setup — do this BEFORE dispatching any agent that edits files.** If you are not already in `.claude/worktrees/<branch>/`:
 
@@ -173,6 +176,8 @@ If the PR establishes or extends canon, tell each reviewer to apply the new rule
 The other reviewers (`review-correctness`, `review-tests`, `review-platform`, `review-design-system`, `review-ux-conformance`, `review-visual`) **do not run** — there is no code, no UI implementation to check against the brief. A touched `ux-brief.md` is covered on two layers: structural completeness against the template by `review-guides` (it knows the routing `ux-brief.md → ux-expert.md §Output`), UX-domain quality by `review-ux-brief` (dispatched above).
 
 Iteration: aggregate `[REQUIRED]` findings, re-dispatch the responsible sub-agent (which produced the artifact the finding targets) with the findings as input — for `.claude` prompt edits, apply the fixes inline since there is no sub-agent. Pass findings close to the reviewer's wording; do not soften or narrow.
+
+**Delta re-review.** The wave above runs in full once. If a fix round follows, re-dispatch only the reviewers that raised a `[REQUIRED]` finding the previous round plus any whose layer the fix touched — a reviewer that approved an artifact the fix didn't change returns the same verdict. `review-adversarial` re-runs only if a fix reopened one of its inputs.
 
 **Iteration limit: 2.** Docs converge faster than code. Not converged after 2 → escalate to user with remaining findings; signals a scope/intent problem the loop cannot resolve.
 
