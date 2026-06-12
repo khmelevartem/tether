@@ -190,9 +190,12 @@ cat > "$MSG_HOOK_FILE" << 'EOF'
 
 COMMIT_MSG_FILE="$1"
 
-# Skip auto-generated merge / squash messages.
-COMMIT_SOURCE="$2"
-[ "$COMMIT_SOURCE" = "merge" ] || [ "$COMMIT_SOURCE" = "squash" ] && exit 0
+# Skip auto-generated merge / squash commits. git passes no source argument to
+# commit-msg (only prepare-commit-msg gets it), so detect them from repo state.
+GIT_DIR=$(git rev-parse --git-dir)
+if git rev-parse -q --verify MERGE_HEAD >/dev/null 2>&1 || [ -f "$GIT_DIR/SQUASH_MSG" ]; then
+  exit 0
+fi
 
 # Strip git template comments ("# " or bare "#") and blank lines, take the subject.
 SUBJECT=$(grep -vE '^#([[:space:]]|$)' "$COMMIT_MSG_FILE" | grep -v '^[[:space:]]*$' | head -1)
