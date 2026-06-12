@@ -175,7 +175,7 @@ Run: `./block-5-ios.sh`
 1. Resolve + boot simulator (default `iPhone 17`; override via `IOS_DEVICE` env var).
 2. `xcodebuild`, install, launch.
 3. mDNS publish — `dns-sd -B` for up to 30 s.
-4. TXT record — must return `23 66 70 3D` (`#fp=`).
+4. TXT record — must carry an `fp=` field (`66 70 3D`); length-agnostic, since the fingerprint is the hex SHA-256 of the public key.
 5. Cross-discovery — iOS peer must appear in Desktop A's log within 30 s.
 6. `/health` on the real iOS bundle — port discovered via `lsof` on the host loopback.
 7. `/pair` X.509 EC P-256 SPKI shape (91 bytes, `[0]=0x30`, `[26]=0x04`). Load-bearing gate for the class of Apple-Keychain regression that unit tests cannot reach — `simctl spawn` binaries have no app identity, so `SecItem*` returns "unavailable" regardless of correctness. See `docs/knowledge/apple-platform.md`.
@@ -250,7 +250,7 @@ At the end of the run print a markdown report:
 | Android | force-stop | ✓ PASS | process killed |
 | iOS | xcodebuild + install | ✓ PASS | UDID=<...>, 28s |
 | iOS | launch | ✓ PASS | pid=<...> |
-| iOS | mDNS publish | ✓ PASS | service=<IOS_NAME>, TXT=23 66 70 3D |
+| iOS | mDNS publish | ✓ PASS | service=<IOS_NAME>, TXT carries fp= |
 | iOS | cross-discovery | ✓ PASS | seen on Desktop A in 4s |
 | iOS | /health (real bundle) | ✓ PASS | port=55171, "Tether OK" |
 | iOS | /pair X.509 EC P-256 | ✓ PASS | 91 bytes via real Keychain |
