@@ -54,10 +54,6 @@ Specific common patterns to flag:
 
 If PR_TYPE is BUGFIX: does the fix address the **root cause** or only the symptom? Could the same root cause manifest elsewhere? Grep for sibling code paths with the same anti-pattern.
 
-### 6. Invariant rebinding cascade
-
-When a PR changes how an identity / routing key is derived or extends its lifetime, redundant carriers of that key in adjacent state, parameters, or copy/display sites become stale-copy hazards — benign while the key was unstable, dangerous once it persists. Flag each as `[REQUIRED]` unless the diff articulates why dual storage stays safe; collapse is the default.
-
 ## What you do NOT check
 
 - AC coverage → review-dod
