@@ -116,18 +116,21 @@ When delegating to /document: "This task is docs-only. Running `/document <N>` a
 
 ### Doc discovery
 
-Before planning and any dispatch — scan the doc corpus and pull up topically-matching artifacts. Recon is cheap: filenames are designed for topic-match.
+Before planning and any dispatch, dispatch ONE read-only recon agent (`Explore`) to sweep the doc corpus and return a compact digest of binding constraints — do NOT read the corpus into the orchestrator thread yourself. Filenames are designed for topic-match, so the sweep is cheap; the cost to avoid is the full doc contents landing in the orchestrator's context, where they are re-read on every later turn. The orchestrator holds the digest and reads a specific doc verbatim later only when a gate decision needs the exact text.
 
-- **Product features** — `ls docs/product/features/` (+ `docs/product/features/README.md` as the index). If a slug matches our scope — read its `spec.md` (and `ux-brief.md` if present).
-- **Product context** — `docs/product/*.md` covers broad product framing (vision, audience, roadmap, tech stack, security, …). Read upfront and strictly comply with that framing when shaping scope, audience and timing decisions.
-- **Engineering living docs** — `ls docs/engineering/*.md`. These are **present-tense rules** for their subsystems — comply with the ones whose topic matches the task.
-- **ADR** — `ls docs/engineering/adr/adr-*.md`. These are **why it was chosen**. For every ADR matching the task's topic, also read its **Revisit if** section and explicitly assess whether your work has tripped a trigger. If it has — the plan either confirms the ADR (false trigger) or includes a reversal with its own sub-plan (see `docs/engineering/adr/README.md` §Reversing an ADR).
-- **Knowledge** — `ls docs/knowledge/*.md`. Solved-problem write-ups (platform quirks, library traps, workarounds) — check before starting so you don't debug from scratch something already recorded.
-- **Glossary** — `docs/glossary.md`. Read up front; it's short and load-bearing for terminology — `review-glossary` blocks PRs that drift from it.
+Brief for the recon agent (pass the issue title + body):
 
-`CLAUDE.md` is harness-injected — no separate recon needed.
+> Read-only sweep for issue #<N>. Return a compact digest — binding constraints and relevant paths, no file dumps:
+> - **Product features** — `ls docs/product/features/` (+ `README.md` index). Slug(s) matching this issue's scope; the binding constraints from each `spec.md` / `ux-brief.md` in 1-2 lines.
+> - **Product context** — `docs/product/*.md` (vision, audience, roadmap, tech stack, security). The framing that binds this issue's scope / audience / timing.
+> - **Engineering living docs** — `docs/engineering/*.md`. The present-tense rules whose topic matches the task.
+> - **ADR** — `docs/engineering/adr/adr-*.md`. ADRs matching the topic; for each, its **Revisit if** section and whether this task trips a trigger.
+> - **Knowledge** — `docs/knowledge/*.md`. Solved-problem notes relevant to the task.
+> - **Glossary** — `docs/glossary.md`. The terms this issue's domain touches, with their locked definitions (load-bearing — `review-glossary` blocks drift).
 
-Mention the relevant documents you found in the briefing to the user (see below).
+For each ADR the digest flags as trigger-tripped, the plan either confirms the ADR (false trigger) or includes a reversal with its own sub-plan (see `docs/engineering/adr/README.md` §Reversing an ADR). `CLAUDE.md` is harness-injected — not part of the sweep.
+
+Mention the relevant documents the recon agent surfaced in the briefing to the user (see below).
 
 **Worktree setup — do this BEFORE dispatching any agent that edits files.** If you are not already in `.claude/worktrees/<branch>/`:
 
@@ -207,6 +210,8 @@ Per track (or sequentially if single track):
    - `review-design-system` (if diff touches `composeApp/src/**`)
    - `review-visual` (if diff touches `composeApp/src/**` — the agent itself renders PNGs via Roborazzi; a missing brief narrows its checklist but does not skip it)
    Skip `review-reuse` and `review-adversarial` here — they run in the simplify wave (Step 6) and the full review (Step 7).
+
+   **Delta re-review (iterations 2+).** The full wave above runs on the first iteration to establish a baseline. On every later iteration re-dispatch only: (a) reviewers that raised a `[REQUIRED]` finding the previous round, and (b) reviewers whose domain the new changes touch (a fix that adds Compose pulls in `review-design-system` / `review-visual` even if they were silent before). A reviewer that returned `APPROVE` on code its domain did not change this round returns the same verdict — re-running it spends tokens to re-derive a known result. Track each reviewer's last verdict and whether its domain was touched; that pair decides re-dispatch. Full-roster coverage is restored at Step 6.
 4. If every reviewer says `APPROVE` and zero `[REQUIRED]` → track done.
 5. Else → aggregate `[REQUIRED]` findings, dispatch the implementing agent again with the findings as input. Apply the same commit-before-review discipline as step 2:
 
@@ -233,7 +238,7 @@ Dispatch the implementing agent once more:
 > **Do not rephrase prose for brevity.** If a sentence is load-bearing and free of the issues above, leave its wording alone. Cut whole sentences when they fail the rule above; otherwise keep them as written. Word-count reduction on well-formed sentences is not a goal.
 > Do not change behavior; do not touch anything outside the diff. Run `./gradlew allTests -q` after.
 
-If anything was simplified — **commit the simplification** (see Step 4 discipline — reviewers read only the committed diff), then re-run **the same set of agents that ran in Step 4 for this PR type** (i.e. dod + guides + glossary + correctness + tests + platform-if-touched + ux-conformance-if-brief + ux-brief-if-touched + design-system-if-touched + visual-if-touched) **plus `review-reuse`** on the simplified diff. `review-reuse` is critical here because duplication is what most likely accumulated across iterations and tracks. `review-platform`, `review-design-system`, and `review-visual` follow the same skip rules as Step 4 (platform set touched / `composeApp/src/**` touched); `review-ux-conformance` additionally requires a resolved brief (Compose touched **and** a touched feature has a `ux-brief.md`); `review-ux-brief` follows its own (any `docs/product/features/**/ux-brief.md` touched). If clean, proceed.
+If anything was simplified — **commit the simplification** (see Step 4 discipline — reviewers read only the committed diff), then re-review the simplified diff with a **delta set**: `review-reuse` always (duplication is what most likely accumulated across iterations and tracks — this is the gate's whole point), plus only the reviewers whose domain the simplification actually touched (`review-correctness` / `review-tests` if logic moved; `review-design-system` / `review-visual` if Compose changed). The authoritative full-roster pass is Step 6, immediately after — do not duplicate it here. If clean, proceed.
 
 ## Step 6 — Full pre-PR review (inline, not via /code-review skill)
 
@@ -314,5 +319,5 @@ Next step is manual review on GitHub, then `/close-issue <N>`.
 - This orchestrator does NOT call `/close-issue` automatically. Merge is always a user decision.
 - Worktree cleanup: `.claude/scripts/cleanup-worktrees.sh` runs on `Stop` hook and removes any worktree whose remote branch is gone and whose PR is merged — it iterates **all** worktrees regardless of naming, so the `feature/<N>-<slug>` pattern is auto-cleaned after merge. No manual cleanup needed.
 - If at any iteration the implementing agent reports an open question (not a fixable finding — e.g., "the issue says X but the existing pattern is Y, which to follow?") — escalate to user immediately. Agents cannot decide architectural questions.
-- Token discipline: every sub-agent runs in its own context. Your main thread holds only the plan, per-iteration finding summaries, and gate decisions. If context exceeds 50% — pause and summarize before continuing.
+- Token discipline: every sub-agent runs in its own context; your main thread holds only the plan, per-iteration finding summaries, and gate decisions. **Do not Read doc or source files into the orchestrator thread to understand them** — route understanding through a sub-agent that returns a digest (see §Doc discovery), and Read a file verbatim only when a gate decision needs its exact text. Inline Bash is for git / `gh` / smoke control, not for bulk file inspection. The orchestrator's context is re-read on every turn and rebuilt from cold after any idle gap past the cache TTL, so what lives there is paid for repeatedly — keep it lean. If it still exceeds 50% of the window — pause and summarize before continuing.
 - This skill is for one issue at a time. Multiple parallel issues = multiple invocations on multiple worktrees.
