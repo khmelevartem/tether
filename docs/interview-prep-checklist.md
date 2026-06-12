@@ -243,7 +243,7 @@
 - [ ] ClassLoader — как загружается класс, parent delegation
 - [ ] `synchronized` — monitor, reentrant, оверхед
 - [x] `volatile` — видимость, не атомарность
-- [ ] `happens-before` — гарантии JMM
+- [x] `happens-before` — гарантии JMM
 - [ ] `ThreadLocal` — зачем, утечки
 - [ ] `@JvmStatic` / `@JvmField` / `@JvmOverloads` — Kotlin-Java interop
 - [ ] SAM-conversion — как работает, ограничения

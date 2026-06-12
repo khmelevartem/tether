@@ -1,16 +1,19 @@
 package com.tubetoast.tether.transfer
 
+import io.ktor.utils.io.ByteReadChannel
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -452,5 +455,164 @@ class BatchSenderTest {
         val lastOutcome = last.outcome
         assertIs<BatchOutcome.Cancelled>(lastOutcome)
         assertTrue("file2.txt" !in lastOutcome.remaining, "Skipped file must not appear in remaining")
+    }
+
+    @Test
+    fun `Sending totalBytes sums sizes of all sources`() = runTest {
+        val emitted = mutableListOf<BatchProgress>()
+        makeSender().run(sources("a.txt", "b.txt", "c.txt")) { emitted.add(it) }
+
+        val sending = emitted.filterIsInstance<BatchProgress.Sending>().first()
+        assertEquals(300L, sending.totalBytes) // 3 sources * 100 bytes
+    }
+
+    @Test
+    fun `Sending totalBytes is null before materialization and resolves once the size is known`() = runTest {
+        val gate = Channel<Unit>(0)
+        val emitted = mutableListOf<BatchProgress>()
+        val sender = BatchSender(
+            sendOne = { src, onProgress ->
+                (src as LateSizeSource).materialize()
+                onProgress(src.sizeBytes ?: 0L, src.sizeBytes)
+                gate.receive() // hold the file in-flight so a throttled progress emit can occur
+            },
+            connectionMonitor = FakeConnectionMonitor(),
+            progressThrottle = 100.milliseconds,
+            // Test scheduler (not Unconfined) so the progress throttle delay is virtual-time driven.
+            dispatcher = StandardTestDispatcher(testScheduler),
+        )
+        val job = launch { sender.run(listOf(LateSizeSource("a", 150L))) { emitted.add(it) } }
+
+        runCurrent()
+        // First emit precedes the source being opened → size still unknown.
+        assertNull(emitted.filterIsInstance<BatchProgress.Sending>().first().totalBytes)
+
+        advanceTimeBy(150.milliseconds)
+        runCurrent()
+        // A throttled progress emit after materialization carries the now-known batch total.
+        assertEquals(150L, emitted.filterIsInstance<BatchProgress.Sending>().last().totalBytes)
+
+        gate.send(Unit)
+        advanceUntilIdle()
+        job.join()
+    }
+
+    @Test
+    fun `lazy source reports preparing until the first byte then sending`() = runTest {
+        val materializeGate = Channel<Unit>(0)
+        val streamGate = Channel<Unit>(0)
+        val emitted = mutableListOf<BatchProgress>()
+        val sender = BatchSender(
+            sendOne = { _, onProgress ->
+                materializeGate.receive() // the openReadChannel export gap
+                onProgress(50L, 100L) // first byte → streaming begins
+                streamGate.receive() // stay in-flight so a throttled progress emit lands
+                onProgress(100L, 100L)
+            },
+            connectionMonitor = FakeConnectionMonitor(),
+            progressThrottle = 100.milliseconds,
+            dispatcher = StandardTestDispatcher(testScheduler),
+        )
+        val job = launch {
+            sender.run(
+                listOf(FakeFileSource("photo.jpg", 100L, materializesLazily = true)),
+            ) { emitted.add(it) }
+        }
+
+        runCurrent()
+        val beforeByte = emitted.filterIsInstance<BatchProgress.Sending>()
+        assertTrue(beforeByte.isNotEmpty() && beforeByte.all { it.preparing }, "preparing until first byte")
+
+        materializeGate.send(Unit)
+        advanceTimeBy(150.milliseconds)
+        runCurrent()
+        assertFalse(emitted.filterIsInstance<BatchProgress.Sending>().last().preparing, "sending after first byte")
+
+        streamGate.send(Unit)
+        advanceUntilIdle()
+        job.join()
+    }
+
+    @Test
+    fun `transfer activity is held once across the batch despite per-file sends`() = runTest {
+        var enters = 0
+        var exits = 0
+        val tracker = DefaultTransferActivityTracker(
+            scope = backgroundScope,
+            onFirstEnter = { enters++ },
+            onLastExit = { exits++ },
+        )
+        val sender = BatchSender(
+            // Each file nests its own hold (as FileClient.send does), so the batch hold must bridge
+            // the gaps — otherwise the count hits 0 between files and the foreground banner flickers.
+            sendOne = { _, onProgress -> tracker.withActiveTransfer { onProgress(100L, 100L) } },
+            connectionMonitor = FakeConnectionMonitor(),
+            progressThrottle = 100.milliseconds,
+            dispatcher = Dispatchers.Unconfined,
+            tracker = tracker,
+        )
+
+        sender.run(sources("a.txt", "b.txt", "c.txt")) {}
+
+        assertEquals(1, enters, "activity acquired once at batch start")
+        assertEquals(1, exits, "activity released once at batch end — no per-file flicker")
+    }
+
+    @Test
+    fun `eagerly-readable sources never report preparing`() = runTest {
+        val emitted = mutableListOf<BatchProgress>()
+        makeSender().run(sources("a.txt", "b.txt")) { emitted.add(it) }
+
+        assertTrue(emitted.filterIsInstance<BatchProgress.Sending>().none { it.preparing })
+    }
+
+    @Test
+    fun `cancelling a lazy source during its preparing gap marks it cancelled`() = runTest {
+        val materializeGate = Channel<Unit>(0)
+        val emitted = mutableListOf<BatchProgress>()
+        val sender = BatchSender(
+            sendOne = { _, onProgress ->
+                materializeGate.receive() // never released — cancel arrives during the export gap
+                onProgress(100L, 100L)
+            },
+            connectionMonitor = FakeConnectionMonitor(),
+            progressThrottle = 100.milliseconds,
+            dispatcher = StandardTestDispatcher(testScheduler),
+        )
+        val job = launch {
+            sender.run(
+                listOf(FakeFileSource("photo.jpg", 100L, materializesLazily = true)),
+            ) { emitted.add(it) }
+        }
+
+        runCurrent()
+        val sendings = emitted.filterIsInstance<BatchProgress.Sending>()
+        assertTrue(sendings.isNotEmpty() && sendings.all { it.preparing }, "should be preparing before cancel")
+
+        job.cancel()
+        runCurrent()
+
+        val last = emitted.last()
+        assertIs<BatchProgress.Completed>(last)
+        val cancelled = last.outcome
+        assertIs<BatchOutcome.Cancelled>(cancelled)
+        assertTrue("photo.jpg" in cancelled.remaining, "a lazy source cancelled mid-preparing is left unsent")
+    }
+
+    private class LateSizeSource(
+        override val name: String,
+        private val realSize: Long,
+    ) : FileSource {
+        override val relativePath: String = name
+        private var known = false
+        override val sizeBytes: Long? get() = if (known) realSize else null
+
+        fun materialize() {
+            known = true
+        }
+
+        override suspend fun openReadChannel(): ByteReadChannel = ByteReadChannel(ByteArray(realSize.toInt()))
+
+        override fun close() = Unit
     }
 }

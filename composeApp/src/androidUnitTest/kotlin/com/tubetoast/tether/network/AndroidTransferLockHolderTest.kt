@@ -2,6 +2,7 @@ package com.tubetoast.tether.network
 
 import android.content.Context
 import com.tubetoast.tether.TetherApp
+import com.tubetoast.tether.transfer.DefaultTransferActivityTracker
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -54,6 +55,7 @@ class AndroidTransferLockHolderTest {
     @Test
     fun `tracker callbacks drive both locks end-to-end`() = kotlinx.coroutines.test.runTest {
         val tracker = DefaultTransferActivityTracker(
+            scope = backgroundScope,
             onFirstEnter = holder::acquire,
             onLastExit = holder::release,
         )

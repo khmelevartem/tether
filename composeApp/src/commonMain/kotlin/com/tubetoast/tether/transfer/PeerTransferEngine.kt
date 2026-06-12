@@ -105,19 +105,24 @@ class PeerTransferEngine(
             is PerFileStatus.Queued -> {
                 cancelledFileNames.update { it + name }
                 _state.update { s ->
-                    val active = s as? PeerTransferState.ActiveOutbound.Sending ?: return@update s
-                    val rowIndex = active.perFile.indexOfFirst { it.name == name }.takeIf { it >= 0 } ?: return@update s
-                    val updated = active.perFile.toMutableList()
+                    if (s !is PeerTransferState.ActiveOutbound) return@update s
+                    val rowIndex = s.perFile.indexOfFirst { it.name == name }.takeIf { it >= 0 } ?: return@update s
+                    val updated = s.perFile.toMutableList()
                     updated[rowIndex] = PerFileStatus.Failed(
                         status.name,
                         status.size,
                         FailureReason.CancelledByUser,
                         cancelledByUser = true,
                     )
-                    active.copy(
-                        perFile = updated,
-                        skippedCount = updated.count { it is PerFileStatus.Failed },
-                    )
+                    val skipped = updated.count { it is PerFileStatus.Failed }
+                    when (s) {
+                        is PeerTransferState.ActiveOutbound.Sending -> s.copy(perFile = updated, skippedCount = skipped)
+                        is PeerTransferState.ActiveOutbound.Preparing -> s.copy(
+                            perFile = updated,
+                            skippedCount = skipped,
+                        )
+                        is PeerTransferState.ActiveOutbound.Claimed -> s
+                    }
                 }
             }
             else -> Unit
@@ -179,16 +184,28 @@ class PeerTransferEngine(
     }
 
     private fun mapProgress(progress: BatchProgress): PeerTransferState = when (progress) {
-        is BatchProgress.Sending -> PeerTransferState.ActiveOutbound.Sending(
-            currentFile = progress.currentFile,
-            currentIndex = progress.currentIndex,
-            totalFiles = progress.totalFiles,
-            sentBytes = progress.sentBytes,
-            totalBytes = progress.totalBytes,
-            bytesPerSec = progress.bytesPerSec,
-            skippedCount = progress.skippedCount,
-            perFile = progress.perFile,
-        )
+        is BatchProgress.Sending -> if (progress.preparing) {
+            PeerTransferState.ActiveOutbound.Preparing(
+                currentFile = progress.currentFile,
+                currentIndex = progress.currentIndex,
+                totalFiles = progress.totalFiles,
+                sentBytes = progress.sentBytes,
+                totalBytes = progress.totalBytes,
+                skippedCount = progress.skippedCount,
+                perFile = progress.perFile,
+            )
+        } else {
+            PeerTransferState.ActiveOutbound.Sending(
+                currentFile = progress.currentFile,
+                currentIndex = progress.currentIndex,
+                totalFiles = progress.totalFiles,
+                sentBytes = progress.sentBytes,
+                totalBytes = progress.totalBytes,
+                bytesPerSec = progress.bytesPerSec,
+                skippedCount = progress.skippedCount,
+                perFile = progress.perFile,
+            )
+        }
         is BatchProgress.Reconnecting -> PeerTransferState.Reconnecting(
             direction = Direction.Outbound,
             remainingSeconds = progress.remainingSeconds,

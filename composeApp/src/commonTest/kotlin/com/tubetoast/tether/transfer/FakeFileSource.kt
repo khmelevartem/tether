@@ -7,6 +7,7 @@ internal class FakeFileSource(
     override val sizeBytes: Long?,
     override val relativePath: String = name,
     val throwOnOpen: Throwable? = null,
+    override val materializesLazily: Boolean = false,
 ) : FileSource {
     var closeCalled = false
 
