@@ -15,8 +15,8 @@ import json
 import os
 import sys
 
-WARN = 400_000   # main-thread context tokens — orchestrator hoarding
-ALARM = 600_000  # paying heavily per turn just to re-read; pivot now
+WARN = 400_000   # main-thread context tokens — large, re-read every turn
+ALARM = 600_000  # very large — each turn pays heavily to re-read; pivot now
 TAIL_BYTES = 96_000
 
 
@@ -92,21 +92,27 @@ def main():
     k = ctx // 1000
     if lvl == 2:
         head = f"🔴 Orchestrator context {k}K (>{ALARM // 1000}K)"
-        action = ("you are paying heavily every turn just to re-read this thread, "
-                  "and any idle gap rebuilds it from cold. Stop accumulating: route "
-                  "remaining recon/reads through sub-agents that return digests, and "
-                  "summarize the thread before continuing.")
+        action = ("every turn now pays heavily just to re-read this thread, and any "
+                  "idle gap past the cache TTL rebuilds it from cold. If it is filling "
+                  "with recon/reads, route what is left through sub-agents that return "
+                  "digests and summarize the thread; if it is one large one-off load, "
+                  "compact now.")
     else:
         head = f"🟠 Orchestrator context {k}K (>{WARN // 1000}K)"
-        action = ("the orchestrator is hoarding context instead of delegating. Keep "
-                  "file reads and recon inside sub-agents; hold only the plan, finding "
-                  "summaries, and gate decisions in this thread.")
+        action = ("the main thread is large and re-read every turn. If it is filling "
+                  "with file reads and recon, keep those in sub-agents and hold only "
+                  "the plan, finding summaries, and gate decisions here.")
 
+    # systemMessage is a notification (mutable by the user); additionalContext is the
+    # reliable channel — instruct the model to echo the warning into the chat so it is
+    # visible even with notifications off.
     print(json.dumps({
         "systemMessage": f"{head} — {action}",
         "hookSpecificOutput": {
             "hookEventName": "PostToolUse",
-            "additionalContext": f"[context-guard] {head}. {action}",
+            "additionalContext": (f"[context-guard] {head}. {action} "
+                                  "Surface this warning to the user verbatim in your "
+                                  "next reply before continuing."),
         },
     }))
 
