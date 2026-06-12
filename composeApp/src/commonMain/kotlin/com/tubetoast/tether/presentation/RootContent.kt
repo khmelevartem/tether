@@ -6,7 +6,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.only
-import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.safeContent
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -34,7 +34,7 @@ internal fun RootContent(
             modifier = modifier
                 .fillMaxSize()
                 .background(TetherTheme.colors.surface)
-                .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Vertical)),
+                .windowInsetsPadding(WindowInsets.safeContent.only(WindowInsetsSides.Vertical)),
         ) {
             Children(stack = stack) { child ->
                 when (val instance = child.instance) {
