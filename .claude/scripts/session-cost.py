@@ -37,8 +37,7 @@ def price_for(model):
         return PRICE["sonnet"]
     return PRICE["opus"]  # opus / fable / unknown → top tier
 
-# Health thresholds. Heuristic, calibrated on a handful of sessions — refine on
-# a larger sample before trusting the fail verdict.
+# Health thresholds (heuristic — treat a fail as a prompt to look, not a verdict).
 PEAK_WARN, PEAK_FAIL = 400_000, 600_000          # main-thread context tokens
 ORCH_SHARE_WARN, ORCH_SHARE_FAIL = 0.75, 0.85    # orchestrator / total cost
 CC_RATIO_WARN = 0.10                             # cache_create / cache_read
@@ -111,7 +110,7 @@ def main_thread(jf):
 def subagents(session_jsonl):
     subdir = session_jsonl[:-6] + "/subagents"  # strip ".jsonl"
     by_type = {}
-    tot = dict(out=0, cc=0, cr=0, n=0)
+    tot = dict(out=0, cc=0, cr=0, inp=0, n=0, cost=0.0)
     if not os.path.isdir(subdir):
         return tot, by_type
     for jf in glob.glob(os.path.join(subdir, "*.jsonl")):
@@ -119,10 +118,11 @@ def subagents(session_jsonl):
         atype = "?"
         if os.path.exists(meta):
             try:
-                atype = json.load(open(meta, encoding="utf-8")).get("agentType", "?")
+                with open(meta, encoding="utf-8") as fh:
+                    atype = json.load(fh).get("agentType", "?")
             except (ValueError, OSError):
                 pass
-        out = cc = cr = 0
+        out = cc = cr = inp = 0
         model = None
         for side, mdl, u in _usage_rows(jf):
             if mdl and mdl != "<synthetic>":
@@ -130,11 +130,14 @@ def subagents(session_jsonl):
             out += u.get("output_tokens", 0)
             cc += u.get("cache_creation_input_tokens", 0)
             cr += u.get("cache_read_input_tokens", 0)
-        d = by_type.setdefault(atype, dict(out=0, cc=0, cr=0, n=0, models=set()))
-        d["out"] += out; d["cc"] += cc; d["cr"] += cr; d["n"] += 1
+            inp += u.get("input_tokens", 0)
+        c = cost(model, out, cc, cr, inp)  # price each file at its own tier
+        d = by_type.setdefault(atype, dict(out=0, cc=0, cr=0, n=0, cost=0.0, models=set()))
+        d["out"] += out; d["cc"] += cc; d["cr"] += cr; d["n"] += 1; d["cost"] += c
         if model:
             d["models"].add(model.replace("claude-", ""))
-        tot["out"] += out; tot["cc"] += cc; tot["cr"] += cr; tot["n"] += 1
+        tot["out"] += out; tot["cc"] += cc; tot["cr"] += cr
+        tot["inp"] += inp; tot["n"] += 1; tot["cost"] += c
     return tot, by_type
 
 
@@ -142,8 +145,7 @@ def analyze(session_jsonl):
     mt = main_thread(session_jsonl)
     sub_tot, by_type = subagents(session_jsonl)
     orch_cost = cost(mt["model"], mt["out"], mt["cc"], mt["cr"], mt["inp"])
-    sub_cost = sum(cost(next(iter(d["models"]), None), d["out"], d["cc"], d["cr"])
-                   for d in by_type.values())
+    sub_cost = sub_tot["cost"]
     total = orch_cost + sub_cost
     share = orch_cost / total if total else 0.0
     cc_ratio = mt["cc"] / mt["cr"] if mt["cr"] else 0.0
@@ -201,7 +203,6 @@ def report_all(analyses):
     print(f"peak main ctx   median={_pct(peaks,50):,}  p90={_pct(peaks,90):,}  max={max(peaks):,}")
     if shares:
         print(f"orch cost share median={_pct(shares,50)*100:.0f}%  p90={_pct(shares,90)*100:.0f}%")
-    # verdict distribution by peak
     buckets = {"green<250K": 0, "250-400K": 0, "400-600K": 0, ">600K": 0}
     for p in peaks:
         if p < 250_000: buckets["green<250K"] += 1
@@ -209,14 +210,12 @@ def report_all(analyses):
         elif p < 600_000: buckets["400-600K"] += 1
         else: buckets[">600K"] += 1
     print("peak-ctx distribution:", "  ".join(f"{k}={v}" for k, v in buckets.items()))
-    # model anomalies aggregated
     anomalies = {}
     for a in orch_sessions:
         for atype, d in a["by_type"].items():
             if atype in CHEAP_AGENTS_OPUS_FORBIDDEN and any("opus" in m for m in d["models"]):
                 anomalies.setdefault(atype, set()).update(m for m in d["models"] if "opus" in m)
     print("model-tier anomalies:", dict(anomalies) if anomalies else "none")
-    # top offenders by cost
     print("\ntop sessions by est. cost:")
     print(f"  {'cost':>8}{'orch%':>7}{'peakCtx':>10}{'turns':>7}{'disp':>5}  session")
     for a in sorted(analyses, key=lambda x: -x["total"])[:12]:

@@ -4,8 +4,8 @@
 Fires after each sub-agent dispatch (Agent / Task). Tail-reads the live
 transcript — never a full parse — takes the latest main-thread context size,
 and emits a warning when it crosses a threshold. The orchestrator main thread
-is the audited cost driver (re-read every turn, rebuilt cold after idle gaps);
-this is the in-run trigger that a run is going wrong while it still can pivot.
+is re-read every turn and rebuilt cold after idle gaps, so it is the dominant
+cost surface; this is the in-run trigger to pivot before a run goes wrong.
 
 Throttled to fire once per escalation (healthy → warn → alarm), not on every
 dispatch. Any error exits 0 silently — a guard must never block a real run.
@@ -75,7 +75,8 @@ def main():
     keyfile = throttle_key(data, path)
     last = 0
     try:
-        last = int(open(keyfile).read().strip())
+        with open(keyfile) as f:
+            last = int(f.read().strip())
     except (OSError, ValueError):
         pass
     try:
@@ -84,7 +85,7 @@ def main():
     except OSError:
         pass
 
-    # Only escalate: fire on crossing UP into a worse band, stay quiet otherwise.
+    # Fire only when crossing up into a worse band.
     if lvl <= last or lvl == 0:
         return
 

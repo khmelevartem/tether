@@ -32,7 +32,7 @@ For each sampled term:
 2. **Missing entry.** The prose under review introduces a **domain term** — a concept that carries meaning outside the code and recurs in product / engineering discussions, not a code symbol — across two or more touched artifacts (or already used elsewhere in the repo) without a glossary entry. Flag as `[REQUIRED]`; the writing agent adds the entry as part of addressing the finding. Use the admission rule from [`docs/engineering/glossary-discipline.md`](../../docs/engineering/glossary-discipline.md#what-qualifies-as-a-term): Kotlin type names, function / method names, API / library symbol names, and implementation-technique labels do NOT qualify — do not flag them.
 
    **Mechanical pre-filter — if any holds, raise no missing-entry finding:**
-   - **identifier-shaped** — camelCase / PascalCase / snake_case token, or an API field name (`reserveDeduplicatedFile`, `UploadHandle`, `application tag`). It names a symbol, not a concept discussed in prose.
+   - **identifier-shaped** — camelCase / PascalCase / snake_case token or an API symbol name (`reserveDeduplicatedFile`, `UploadHandle`). It names a symbol, not a concept discussed in prose.
    - **already an `_Avoid:_` synonym** — the term appears in some entry's `_Avoid:_` list (e.g. «PIN» under **SAS**). That is *drift* — handle under rule 1 by steering to the canonical, never as a new entry.
    - **agent-harness / process vocabulary** — terms naming the AI development *process* rather than the Tether product/system: «orchestrator», «sub-agent», «review wave / round», «simplify pass», «recon», «worktree» (as a process artifact), sprint codenames. The glossary covers the product being built, not the process that builds it.
 

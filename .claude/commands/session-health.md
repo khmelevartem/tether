@@ -1,4 +1,4 @@
-On-demand cost/context health report for Claude Code sessions. Wraps `.claude/scripts/session-cost.py` — the orchestrator main thread is the audited cost driver (median ~75% of per-issue spend, re-read every turn), so this surfaces when a run is ballooning.
+On-demand cost/context health report for a Claude Code session — surfaces when an orchestrator run is ballooning its own context.
 
 ## Scope (from the argument)
 
@@ -15,6 +15,7 @@ After running, give a 3–5 line read, not a re-print of the table:
 
 ## Notes
 
+- The orchestrator's own main thread dominates per-issue cost — it is re-read every turn — so its peak context and cost share are the signals worth watching.
 - Pure analytics — no Gradle, tests, or smoke; no writes to `docs/`.
 - Thresholds in the script are heuristic; treat a single fail as a prompt to look, not a verdict.
 - This is the manual counterpart to the `orchestrator-context-guard` PostToolUse hook, which fires the same signal live during a run.
