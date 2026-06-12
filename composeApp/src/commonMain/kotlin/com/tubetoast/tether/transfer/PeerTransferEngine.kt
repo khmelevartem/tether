@@ -105,32 +105,23 @@ class PeerTransferEngine(
             is PerFileStatus.Queued -> {
                 cancelledFileNames.update { it + name }
                 _state.update { s ->
-                    val updated: MutableList<PerFileStatus>
-                    val rowIndex: Int
+                    if (s !is PeerTransferState.ActiveOutbound) return@update s
+                    val rowIndex = s.perFile.indexOfFirst { it.name == name }.takeIf { it >= 0 } ?: return@update s
+                    val updated = s.perFile.toMutableList()
+                    updated[rowIndex] = PerFileStatus.Failed(
+                        status.name,
+                        status.size,
+                        FailureReason.CancelledByUser,
+                        cancelledByUser = true,
+                    )
+                    val skipped = updated.count { it is PerFileStatus.Failed }
                     when (s) {
-                        is PeerTransferState.ActiveOutbound.Sending -> {
-                            rowIndex = s.perFile.indexOfFirst { it.name == name }.takeIf { it >= 0 } ?: return@update s
-                            updated = s.perFile.toMutableList()
-                            updated[rowIndex] = PerFileStatus.Failed(
-                                status.name,
-                                status.size,
-                                FailureReason.CancelledByUser,
-                                cancelledByUser = true,
-                            )
-                            s.copy(perFile = updated, skippedCount = updated.count { it is PerFileStatus.Failed })
-                        }
-                        is PeerTransferState.ActiveOutbound.Preparing -> {
-                            rowIndex = s.perFile.indexOfFirst { it.name == name }.takeIf { it >= 0 } ?: return@update s
-                            updated = s.perFile.toMutableList()
-                            updated[rowIndex] = PerFileStatus.Failed(
-                                status.name,
-                                status.size,
-                                FailureReason.CancelledByUser,
-                                cancelledByUser = true,
-                            )
-                            s.copy(perFile = updated, skippedCount = updated.count { it is PerFileStatus.Failed })
-                        }
-                        else -> s
+                        is PeerTransferState.ActiveOutbound.Sending -> s.copy(perFile = updated, skippedCount = skipped)
+                        is PeerTransferState.ActiveOutbound.Preparing -> s.copy(
+                            perFile = updated,
+                            skippedCount = skipped,
+                        )
+                        is PeerTransferState.ActiveOutbound.Claimed -> s
                     }
                 }
             }

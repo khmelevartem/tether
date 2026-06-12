@@ -169,6 +169,40 @@ class PeerTransferEngineTest {
     }
 
     @Test
+    fun `lazy source maps to Preparing state until the first byte`() = runTest {
+        val pauseChannel = Channel<Unit>(0)
+        val engine = buildEngine(pauseChannel = pauseChannel, scope = backgroundScope)
+
+        engine.startOutbound(listOf(FakeFileSource("photo.jpg", 100L, materializesLazily = true)))
+        runCurrent()
+
+        // First emit for a lazy source carries preparing=true; the engine promotes it to Preparing.
+        assertIs<PeerTransferState.ActiveOutbound.Preparing>(engine.state.value)
+    }
+
+    @Test
+    fun `onCancelFile marks a queued file failed while in Preparing`() = runTest {
+        val pauseChannel = Channel<Unit>(0)
+        val engine = buildEngine(pauseChannel = pauseChannel, scope = backgroundScope)
+
+        engine.startOutbound(
+            listOf(
+                FakeFileSource("photo.jpg", 100L, materializesLazily = true),
+                FakeFileSource("queued.jpg", 100L),
+            ),
+        )
+        runCurrent()
+        assertIs<PeerTransferState.ActiveOutbound.Preparing>(engine.state.value)
+
+        engine.onCancelFile("queued.jpg")
+        runCurrent()
+
+        val state = assertIs<PeerTransferState.ActiveOutbound.Preparing>(engine.state.value)
+        assertIs<PerFileStatus.Failed>(state.perFile.first { it.name == "queued.jpg" })
+        assertEquals(1, state.skippedCount)
+    }
+
+    @Test
     fun `inbound Started Progress FileCompleted BatchCompleted produces Received`() = runTest {
         val events = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
         val engine = engineInActiveInbound(events)

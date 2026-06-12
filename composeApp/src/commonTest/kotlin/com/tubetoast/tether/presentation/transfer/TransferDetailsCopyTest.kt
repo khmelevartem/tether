@@ -1,11 +1,41 @@
 package com.tubetoast.tether.presentation.transfer
 
+import com.tubetoast.tether.transfer.PeerTransferState
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class TransferDetailsCopyTest {
+    @Test
+    fun subtitleForPreparing() {
+        val state = PeerTransferState.ActiveOutbound.Preparing(
+            currentFile = "photo.jpg",
+            currentIndex = 1,
+            totalFiles = 3,
+            sentBytes = 0L,
+            totalBytes = null,
+            skippedCount = 0,
+            perFile = emptyList(),
+        )
+        assertEquals("Preparing 2 of 3…", detailsSubtitleCopy(state, "peer"))
+    }
+
+    @Test
+    fun subtitleForSending() {
+        val state = PeerTransferState.ActiveOutbound.Sending(
+            currentFile = "photo.jpg",
+            currentIndex = 1,
+            totalFiles = 3,
+            sentBytes = 500L,
+            totalBytes = 1_000L,
+            bytesPerSec = 100L,
+            skippedCount = 0,
+            perFile = emptyList(),
+        )
+        assertEquals("Sending 2 of 3…", detailsSubtitleCopy(state, "peer"))
+    }
+
     @Test
     fun aggregateStripNoFailed() {
         val result = aggregateStripCopy(sent = 5, total = 8, failed = 0)

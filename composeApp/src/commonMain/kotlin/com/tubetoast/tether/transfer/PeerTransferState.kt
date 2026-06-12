@@ -15,7 +15,7 @@ sealed interface PeerTransferState {
             override val perFile: List<PerFileStatus>,
         ) : ActiveOutbound()
 
-        /** The current file is still materializing (e.g. exporting a photo); no bytes flow yet, so no rate exists. */
+        /** The current file is still materializing (e.g. exporting a photo); no bytes flow yet. */
         data class Preparing(
             val currentFile: String,
             val currentIndex: Int,
