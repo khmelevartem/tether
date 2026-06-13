@@ -1,8 +1,6 @@
 package com.tubetoast.tether.discovery
 
-import com.tubetoast.tether.identity.DataStoreFingerprintPersistence
 import com.tubetoast.tether.identity.DeviceIdentityStore
-import com.tubetoast.tether.preferences.TempDataStore
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -15,10 +13,8 @@ import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
 
-private fun testDiscovery(): MdnsDiscovery {
-    val temp = TempDataStore()
-    return MdnsDiscovery(DiscoveredDevicesStore(), DeviceIdentityStore(DataStoreFingerprintPersistence(temp.dataStore)))
-}
+private fun testDiscovery(pubKey: ByteArray = ByteArray(32) { it.toByte() }): MdnsDiscovery =
+    MdnsDiscovery(DiscoveredDevicesStore(), DeviceIdentityStore(pubKey))
 
 // NSNetService delivers callbacks via NSRunLoop, not via coroutine dispatchers.
 // runBlocking / TestDispatcher / Turbine don't pump NSRunLoop, so integration tests
@@ -88,8 +84,8 @@ class MdnsDiscoveryTest {
 
     @Test
     fun `two instances discover each other`() = runBlocking {
-        val a = testDiscovery()
-        val b = testDiscovery()
+        val a = testDiscovery(ByteArray(32) { it.toByte() })
+        val b = testDiscovery(ByteArray(32) { (it + 1).toByte() })
         try {
             a.start("ApplePeerA", 19110)
             b.start("ApplePeerB", 19111)
@@ -109,8 +105,8 @@ class MdnsDiscoveryTest {
 
     @Test
     fun `instances do not discover themselves`() = runBlocking {
-        val a = testDiscovery()
-        val b = testDiscovery()
+        val a = testDiscovery(ByteArray(32) { it.toByte() })
+        val b = testDiscovery(ByteArray(32) { (it + 1).toByte() })
         try {
             a.start("AppleSelfA", 19120)
             b.start("AppleSelfB", 19121)
@@ -134,8 +130,8 @@ class MdnsDiscoveryTest {
 
     @Test
     fun `discovered device has correct port`() = runBlocking {
-        val a = testDiscovery()
-        val b = testDiscovery()
+        val a = testDiscovery(ByteArray(32) { it.toByte() })
+        val b = testDiscovery(ByteArray(32) { (it + 1).toByte() })
         try {
             a.start("AppleHostA", 19130)
             b.start("AppleHostB", 19131)
