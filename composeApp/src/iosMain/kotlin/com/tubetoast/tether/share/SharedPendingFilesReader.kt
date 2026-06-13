@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalForeignApi::class, kotlinx.cinterop.BetaInteropApi::class)
+@file:OptIn(ExperimentalForeignApi::class, kotlinx.cinterop.BetaInteropApi::class, ExperimentalAtomicApi::class)
 
 package com.tubetoast.tether.share
 
@@ -22,18 +22,19 @@ import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.info
 import ru.pocketbyte.kydra.log.warn
 import ru.pocketbyte.kydra.log.wrapper.withTag
+import kotlin.concurrent.atomics.AtomicBoolean
+import kotlin.concurrent.atomics.AtomicInt
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 private val log = KydraLog.withTag(default = "SharedPendingFilesReader")
 
 /**
- * Reads file batches deposited by TetherShareExtension into the shared app-group inbox.
+ * At-least-once delivery: batches are moved to a staging directory before being returned, so a
+ * crash between move and processing causes the batch to be re-read on the next foreground
+ * activation. A [Mutex] ensures only one [consume] runs at a time.
  *
- * Each call to [consume] is at-least-once: batches are moved to a staging directory before
- * being returned, so a crash between move and processing causes the batch to be re-read on
- * the next foreground activation. A [Mutex] ensures only one [consume] runs at a time.
- *
- * @param inboxDir path to `<appGroupContainer>/inbox`
- * @param stagingDir path to `<appGroupContainer>/staging`
+ * On first [consume] a startup sweep deletes any staging dirs left over from previous sessions
+ * (their in-memory references died with the process).
  */
 internal class SharedPendingFilesReader(
     private val inboxDir: String,
@@ -41,10 +42,12 @@ internal class SharedPendingFilesReader(
 ) {
     private val mutex = Mutex()
     private val fm = NSFileManager.defaultManager
+    private val startupSweepDone = AtomicBoolean(false)
 
     suspend fun consume(): List<FileSource> = mutex.withLock {
         withContext(Dispatchers.IO) {
             ensureDir(stagingDir)
+            sweepStaleStagingOnce()
             val batches = listBatchDirs(inboxDir)
             if (batches.isEmpty()) return@withContext emptyList()
 
@@ -56,6 +59,15 @@ internal class SharedPendingFilesReader(
             log.info { "consume: ${sources.size} file(s) from ${batches.size} batch(es)" }
             sources
         }
+    }
+
+    // Runs under mutex, so no concurrent consume can race the deletion.
+    private fun sweepStaleStagingOnce() {
+        if (!startupSweepDone.compareAndSet(expectedValue = false, newValue = true)) return
+        for (batchPath in listBatchDirs(stagingDir)) {
+            deleteStagedBatch(batchPath)
+        }
+        log.info { "startup staging sweep complete" }
     }
 
     private fun listBatchDirs(parentPath: String): List<String> {
@@ -74,7 +86,12 @@ internal class SharedPendingFilesReader(
     private fun moveBatchToStaging(batchPath: String): String? {
         val batchName = batchPath.substringAfterLast('/')
         val dest = "$stagingDir/$batchName"
-        if (isDir(dest)) return dest
+        // batchIDs are unique UUIDs; a pre-existing staging dir indicates a bug or race —
+        // skip rather than silently reusing and corrupting a live ref-count tree.
+        if (isDir(dest)) {
+            log.warn { "staging collision for '$batchName' — skipping" }
+            return null
+        }
         return memScoped {
             val errorPtr = alloc<ObjCObjectVar<NSError?>>()
             val ok = fm.moveItemAtPath(batchPath, toPath = dest, error = errorPtr.ptr)
@@ -95,14 +112,12 @@ internal class SharedPendingFilesReader(
             return emptyList()
         }
 
-        val delegate = object {
-            var remaining = entries.size
-        }
+        val remaining = AtomicInt(entries.size)
         val sources = mutableListOf<FileSource>()
         for (entry in entries) {
             val filePath = "$batchPath/${entry.name}"
             if (!fm.fileExistsAtPath(filePath)) {
-                delegate.remaining--
+                if (remaining.addAndFetch(-1) == 0) deleteStagedBatch(batchPath)
                 continue
             }
             val url = NSURL.fileURLWithPath(filePath)
@@ -113,8 +128,7 @@ internal class SharedPendingFilesReader(
                 securityScoped = false,
             )
             sources += StagedFileSource(inner) {
-                delegate.remaining--
-                if (delegate.remaining == 0) deleteStagedBatch(batchPath)
+                if (remaining.addAndFetch(-1) == 0) deleteStagedBatch(batchPath)
             }
         }
         if (sources.isEmpty()) deleteStagedBatch(batchPath)
@@ -173,12 +187,14 @@ private class StagedFileSource(
     private val inner: IosFileSource,
     private val onLastClose: () -> Unit,
 ) : FileSource by inner {
-    private var closed = false
+    private val closed = AtomicBoolean(false)
 
     override fun close() {
-        if (closed) return
-        closed = true
-        inner.close()
-        onLastClose()
+        if (!closed.compareAndSet(expectedValue = false, newValue = true)) return
+        try {
+            inner.close()
+        } finally {
+            onLastClose()
+        }
     }
 }

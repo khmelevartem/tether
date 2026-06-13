@@ -29,7 +29,9 @@ class SharedPendingFilesReaderTest {
     private fun writeFile(dir: String, name: String, bytes: ByteArray): String {
         val path = "$dir/$name"
         val file = fopen(path, "wb") ?: error("fopen failed: $path")
-        bytes.usePinned { fwrite(it.addressOf(0), 1u, bytes.size.toULong(), file) }
+        if (bytes.isNotEmpty()) {
+            bytes.usePinned { fwrite(it.addressOf(0), 1u, bytes.size.toULong(), file) }
+        }
         fclose(file)
         return path
     }
@@ -75,7 +77,8 @@ class SharedPendingFilesReaderTest {
         assertFalse(fm.fileExistsAtPath(inboxBatch), "inbox batch must be gone after consume")
         assertTrue(fm.fileExistsAtPath("$root/staging/batch-1"), "staging batch must exist")
 
-        // drain the source and close
+        // IosFileSource.openReadChannel() reads on real Dispatchers.IO, so virtual time
+        // cannot gate the read — we drain synchronously via readAvailable in a real coroutine.
         val channel = sources[0].openReadChannel()
         val buf = ByteArray(content.size)
         channel.readAvailable(buf)
@@ -137,5 +140,117 @@ class SharedPendingFilesReaderTest {
 
         val sources = reader(root).consume()
         assertTrue(sources.isEmpty(), "batch without manifest must be skipped")
+    }
+
+    @Test
+    fun `consume returns empty and leaves no staging for corrupt manifest — not-json`() = runTest {
+        val root = makeRoot()
+        val inboxBatch = "$root/inbox/batch-corrupt"
+        makeDir(inboxBatch)
+        writeFile(inboxBatch, "manifest.json", "not json!!!".encodeToByteArray())
+
+        val sources = reader(root).consume()
+        assertTrue(sources.isEmpty(), "corrupt manifest must yield no sources")
+        assertFalse(fm.fileExistsAtPath("$root/staging/batch-corrupt"), "staging must be cleaned up")
+    }
+
+    @Test
+    fun `consume returns empty and leaves no staging for non-array json manifest`() = runTest {
+        val root = makeRoot()
+        val inboxBatch = "$root/inbox/batch-object-manifest"
+        makeDir(inboxBatch)
+        writeFile(inboxBatch, "manifest.json", """{"key":"value"}""".encodeToByteArray())
+
+        val sources = reader(root).consume()
+        assertTrue(sources.isEmpty(), "non-array JSON manifest must yield no sources")
+        assertFalse(fm.fileExistsAtPath("$root/staging/batch-object-manifest"), "staging must be cleaned up")
+    }
+
+    @Test
+    fun `partial batch — manifest lists 2 files but only 1 exists on disk`() = runTest {
+        val root = makeRoot()
+        val inboxBatch = "$root/inbox/batch-partial"
+        makeDir(inboxBatch)
+        writeFile(inboxBatch, "present.txt", "data".encodeToByteArray())
+        // missing.txt is not written
+        writeManifest(
+            inboxBatch,
+            listOf("present.txt" to 4L, "missing.txt" to 10L),
+        )
+
+        val sources = reader(root).consume()
+        assertEquals(1, sources.size, "only the present file must be returned")
+        assertEquals("present.txt", sources[0].name)
+
+        // closing the single source triggers last-close → staging deleted
+        sources[0].close()
+        assertFalse(
+            fm.fileExistsAtPath("$root/staging/batch-partial"),
+            "staging must be deleted after the only source is closed",
+        )
+    }
+
+    @Test
+    fun `double-close does not crash and onLastClose effects happen exactly once`() = runTest {
+        val root = makeRoot()
+        val inboxBatch = "$root/inbox/batch-double-close"
+        makeDir(inboxBatch)
+        writeFile(inboxBatch, "f.txt", "x".encodeToByteArray())
+        writeManifest(inboxBatch, listOf("f.txt" to 1L))
+
+        val sources = reader(root).consume()
+        assertEquals(1, sources.size)
+
+        sources[0].close()
+        assertFalse(
+            fm.fileExistsAtPath("$root/staging/batch-double-close"),
+            "staging must be gone after first close",
+        )
+
+        // second close must be a no-op (no crash, no double-delete attempt)
+        sources[0].close()
+        assertFalse(
+            fm.fileExistsAtPath("$root/staging/batch-double-close"),
+            "staging still gone after second close",
+        )
+    }
+
+    @Test
+    fun `zero-byte file — source returned with sizeBytes 0 and channel closes cleanly`() = runTest {
+        val root = makeRoot()
+        val inboxBatch = "$root/inbox/batch-zero"
+        makeDir(inboxBatch)
+        writeFile(inboxBatch, "empty.bin", ByteArray(0))
+        writeManifest(inboxBatch, listOf("empty.bin" to 0L))
+
+        val sources = reader(root).consume()
+        assertEquals(1, sources.size)
+        assertEquals("empty.bin", sources[0].name)
+        assertEquals(0L, sources[0].sizeBytes)
+
+        // IosFileSource.openReadChannel() reads on real Dispatchers.IO, so virtual time
+        // cannot gate the read — confirm channel is immediately exhausted.
+        val channel = sources[0].openReadChannel()
+        val buf = ByteArray(16)
+        val bytesRead = channel.readAvailable(buf)
+        assertTrue(bytesRead <= 0, "empty file must yield no bytes")
+        assertTrue(channel.isClosedForRead, "channel must be closed after EOF")
+
+        sources[0].close()
+    }
+
+    @Test
+    fun `startup sweep removes stale staging dirs left from a previous session`() = runTest {
+        val root = makeRoot()
+        // Pre-create a stale staging batch dir (simulates a dir left by a crashed previous session)
+        val staleDir = "$root/staging/stale-batch"
+        makeDir(staleDir)
+        writeFile(staleDir, "leftover.txt", ByteArray(4))
+        assertTrue(fm.fileExistsAtPath(staleDir), "stale dir must exist before reader is used")
+
+        // Constructing and consuming from a fresh reader triggers the startup sweep
+        val sources = reader(root).consume()
+        assertTrue(sources.isEmpty(), "inbox is empty so consume returns nothing")
+        assertFalse(fm.fileExistsAtPath(staleDir), "startup sweep must have removed the stale staging dir")
     }
 }

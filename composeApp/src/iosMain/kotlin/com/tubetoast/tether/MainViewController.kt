@@ -42,15 +42,6 @@ fun MainViewController() = run {
                 scope.cancel()
             }
             scope = CoroutineScope(SupervisorJob() + Dispatchers.Main + exceptionHandler)
-            scope.launch {
-                container.nameStore.init()
-                val name = container.nameStore.name.first()
-                val port = container.fileServer.start()
-                container.mdnsDiscovery.start(name, port = port)
-                container.nameRepublisher.start(scope)
-                container.rendezvousAnnouncer.start(scope)
-                container.autoSendDispatcher.start()
-            }
 
             val reader = container.sharedPendingFilesReader
 
@@ -64,7 +55,16 @@ fun MainViewController() = run {
                 }
             }
 
-            drainSharedFiles()
+            scope.launch {
+                container.nameStore.init()
+                val name = container.nameStore.name.first()
+                val port = container.fileServer.start()
+                container.mdnsDiscovery.start(name, port = port)
+                container.nameRepublisher.start(scope)
+                container.rendezvousAnnouncer.start(scope)
+                container.autoSendDispatcher.start()
+                drainSharedFiles()
+            }
 
             val observer = NSNotificationCenter.defaultCenter.addObserverForName(
                 name = UIApplicationDidBecomeActiveNotification,

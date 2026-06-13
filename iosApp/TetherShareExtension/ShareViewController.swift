@@ -6,6 +6,7 @@
 import UIKit
 import UniformTypeIdentifiers
 
+// Must match APP_GROUP_ID in composeApp/src/iosMain/kotlin/com/tubetoast/tether/di/IosAppContainer.kt
 private let appGroupID = "group.com.tubetoast.tether"
 
 class ShareViewController: UIViewController {
@@ -60,21 +61,20 @@ class ShareViewController: UIViewController {
                 defer { group.leave() }
                 guard let url, error == nil else { return }
 
-                let fileName = url.lastPathComponent
-                let destURL = inboxURL.appendingPathComponent(fileName)
+                let baseName = url.deletingPathExtension().lastPathComponent
+                let ext = url.pathExtension
 
+                // Collision-check, uniquify, and copy are serialized under lock so two
+                // attachments with the same name don't race-overwrite each other.
+                lock.lock()
+                defer { lock.unlock() }
+
+                let destURL = uniqueDestURL(in: inboxURL, baseName: baseName, ext: ext)
                 do {
-                    if FileManager.default.fileExists(atPath: destURL.path) {
-                        try FileManager.default.removeItem(at: destURL)
-                    }
                     try FileManager.default.copyItem(at: url, to: destURL)
-
                     let attrs = try FileManager.default.attributesOfItem(atPath: destURL.path)
                     let size = (attrs[.size] as? Int) ?? 0
-
-                    lock.lock()
-                    manifest.append(["name": fileName, "size": size])
-                    lock.unlock()
+                    manifest.append(["name": destURL.lastPathComponent, "size": size])
                 } catch {
                     // Skip files that cannot be copied; the batch may still be partially useful.
                 }
@@ -111,4 +111,16 @@ class ShareViewController: UIViewController {
     private func completeExtension() {
         extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
     }
+}
+
+private func uniqueDestURL(in dir: URL, baseName: String, ext: String) -> URL {
+    let firstName = ext.isEmpty ? baseName : "\(baseName).\(ext)"
+    var candidate = dir.appendingPathComponent(firstName)
+    var counter = 2
+    while FileManager.default.fileExists(atPath: candidate.path) {
+        let name = ext.isEmpty ? "\(baseName) (\(counter))" : "\(baseName) (\(counter)).\(ext)"
+        candidate = dir.appendingPathComponent(name)
+        counter += 1
+    }
+    return candidate
 }

@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		AC9117C32FDDC8AE00AC3FCF /* TetherShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = AC9117B92FDDC8AE00AC3FCF /* TetherShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		AC9117CA2FDDC91C00AC3FCF /* File.txt in Resources */ = {isa = PBXBuildFile; fileRef = AC9117C92FDDC91C00AC3FCF /* File.txt */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -38,7 +37,6 @@
 /* Begin PBXFileReference section */
 		35AE4D5BAD6A02871874FB63 /* Tether.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tether.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AC9117B92FDDC8AE00AC3FCF /* TetherShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TetherShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		AC9117C92FDDC91C00AC3FCF /* File.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = File.txt; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -103,7 +101,6 @@
 		03AB104281002277CDB29390 = {
 			isa = PBXGroup;
 			children = (
-				AC9117C92FDDC91C00AC3FCF /* File.txt */,
 				6ADF10981B49572313127913 /* Configuration */,
 				1E88CD25248F97F2BB68024C /* iosApp */,
 				AC9117BA2FDDC8AE00AC3FCF /* TetherShareExtension */,
@@ -220,7 +217,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AC9117CA2FDDC91C00AC3FCF /* File.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
