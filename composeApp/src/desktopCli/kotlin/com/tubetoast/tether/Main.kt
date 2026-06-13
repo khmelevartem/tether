@@ -12,6 +12,7 @@ import com.tubetoast.tether.di.DefaultDesktopAppConfig
 import com.tubetoast.tether.identity.EphemeralFingerprintPersistence
 import com.tubetoast.tether.logging.initCliLogging
 import com.tubetoast.tether.protocol.Device
+import com.tubetoast.tether.transfer.ByteFormatting
 import com.tubetoast.tether.transfer.JvmPathFileSource
 import com.tubetoast.tether.transfer.PeerTransferEngine
 import com.tubetoast.tether.transfer.PeerTransferEngineRegistry
@@ -23,6 +24,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -33,7 +35,10 @@ import kotlinx.coroutines.withTimeoutOrNull
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.io.path.exists
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeMark
+import kotlin.time.TimeSource
 
 sealed class CliBatchResult {
     data object AllSent : CliBatchResult()
@@ -207,7 +212,12 @@ suspend fun handleSend(
     paths: List<Path>,
     output: (String) -> Unit = ::println,
     errorOutput: (String) -> Unit = System.err::println,
+    rawOutput: (String) -> Unit = {
+        print(it)
+        System.out.flush()
+    },
     onActiveEngine: (PeerTransferEngine?) -> Unit = {},
+    timeSource: TimeSource = TimeSource.Monotonic,
 ): CliBatchResult {
     val matching = peers.filter { it.name == peerName }
     if (matching.isEmpty()) {
@@ -233,7 +243,7 @@ suspend fun handleSend(
     if (engine.state.value.isTerminal()) engine.onDismiss()
     onActiveEngine(engine)
     return try {
-        runEngineAndRender(engine, sources, output, errorOutput) { engine.startOutbound(it) }
+        runEngineAndRender(engine, sources, output, errorOutput, rawOutput, timeSource) { engine.startOutbound(it) }
     } finally {
         onActiveEngine(null)
     }
@@ -245,7 +255,12 @@ suspend fun handleRetry(
     peerName: String,
     output: (String) -> Unit = ::println,
     errorOutput: (String) -> Unit = System.err::println,
+    rawOutput: (String) -> Unit = {
+        print(it)
+        System.out.flush()
+    },
     onActiveEngine: (PeerTransferEngine?) -> Unit = {},
+    timeSource: TimeSource = TimeSource.Monotonic,
 ): CliBatchResult {
     val matching = peers.filter { it.name == peerName }
     if (matching.isEmpty()) {
@@ -277,7 +292,7 @@ suspend fun handleRetry(
 
     onActiveEngine(engine)
     return try {
-        awaitAndRenderTerminal(engine, output, errorOutput)
+        awaitAndRenderTerminal(engine, output, errorOutput, rawOutput, timeSource)
     } finally {
         onActiveEngine(null)
     }
@@ -288,30 +303,59 @@ private suspend fun runEngineAndRender(
     sources: List<com.tubetoast.tether.transfer.FileSource>,
     output: (String) -> Unit,
     errorOutput: (String) -> Unit,
+    rawOutput: (String) -> Unit,
+    timeSource: TimeSource,
     startFn: (List<com.tubetoast.tether.transfer.FileSource>) -> Unit,
 ): CliBatchResult {
     startFn(sources)
-    return collectUntilTerminal(engine, output, errorOutput)
+    return collectUntilTerminal(engine.state, output, errorOutput, rawOutput, timeSource)
 }
 
 private suspend fun awaitAndRenderTerminal(
     engine: PeerTransferEngine,
     output: (String) -> Unit,
     errorOutput: (String) -> Unit,
-): CliBatchResult = collectUntilTerminal(engine, output, errorOutput)
+    rawOutput: (String) -> Unit,
+    timeSource: TimeSource,
+): CliBatchResult = collectUntilTerminal(engine.state, output, errorOutput, rawOutput, timeSource)
 
 // `state.first { terminal }` returning before the separate renderer observed the terminal would
 // drop the final "done/error/cancelled" line — this collapses both into one collector.
-private suspend fun collectUntilTerminal(
-    engine: PeerTransferEngine,
+suspend fun collectUntilTerminal(
+    states: StateFlow<PeerTransferState>,
     output: (String) -> Unit,
     errorOutput: (String) -> Unit,
+    rawOutput: (String) -> Unit,
+    timeSource: TimeSource = TimeSource.Monotonic,
 ): CliBatchResult = coroutineScope {
     val terminalSeen = CompletableDeferred<PeerTransferState>()
     val rendererJob = launch {
         var lastState: PeerTransferState? = null
-        engine.state.collect { state ->
-            renderStateTransition(lastState, state, output, errorOutput)
+        var lastProgressMark: TimeMark? = null
+        var progressLineOpen = false
+        states.collect { state ->
+            val hasStatusClassChange = state is PeerTransferState.ActiveOutbound &&
+                run {
+                    val prevPerFile = (lastState as? PeerTransferState.ActiveOutbound)?.perFile ?: emptyList()
+                    val curPerFile = state.perFile
+                    prevPerFile.size != curPerFile.size ||
+                        prevPerFile.zip(curPerFile).any { (prev, cur) -> prev::class != cur::class }
+                }
+            if (hasStatusClassChange || state !is PeerTransferState.ActiveOutbound.Sending) {
+                if (progressLineOpen) {
+                    rawOutput("\n")
+                    progressLineOpen = false
+                }
+                renderStateTransition(lastState, state, output, errorOutput)
+            }
+            if (state is PeerTransferState.ActiveOutbound.Sending) {
+                val mark = lastProgressMark
+                if (mark == null || mark.elapsedNow() >= 500.milliseconds) {
+                    rawOutput("\r" + formatSendProgress(state))
+                    progressLineOpen = true
+                    lastProgressMark = timeSource.markNow()
+                }
+            }
             lastState = state
             if (state.isTerminal()) terminalSeen.complete(state)
         }
@@ -319,6 +363,18 @@ private suspend fun collectUntilTerminal(
     val terminal = terminalSeen.await()
     rendererJob.cancel()
     terminalToResult(terminal)
+}
+
+/**
+ * Caller prepends `\r`; the returned body has no leading `\r`.
+ * Null [PeerTransferState.ActiveOutbound.Sending.totalBytes] renders as `?`.
+ */
+fun formatSendProgress(state: PeerTransferState.ActiveOutbound.Sending): String {
+    val sent = ByteFormatting.formatSize(state.sentBytes)
+    val total = state.totalBytes?.let { ByteFormatting.formatSize(it) } ?: "?"
+    val speed = ByteFormatting.formatSpeed(state.bytesPerSec)
+    val fileLabel = "${state.currentIndex + 1}/${state.totalFiles} ${state.currentFile}"
+    return "[send] $sent / $total  $speed  ($fileLabel)"
 }
 
 private fun renderStateTransition(

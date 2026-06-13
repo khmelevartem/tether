@@ -19,16 +19,22 @@ import com.tubetoast.tether.transfer.PeerTransferEngine
 import com.tubetoast.tether.transfer.PeerTransferEngineRegistry
 import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.PeerUnreachableException
+import com.tubetoast.tether.transfer.PerFileStatus
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.yield
 import java.io.File
 import java.nio.file.Files
 import java.util.concurrent.atomic.AtomicInteger
@@ -39,9 +45,12 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.TestTimeSource
 
 // real CIO server — CIOApplicationEngine hardcodes real-thread dispatchers
 @Suppress("ktlint:tether:no-run-blocking-in-tests")
+@OptIn(ExperimentalCoroutinesApi::class)
 class CliSendTest {
     private lateinit var tmpDir: File
     private lateinit var configDir: File
@@ -480,6 +489,252 @@ class CliSendTest {
         )
         assertEquals(CliBatchResult.AllSent, result)
     }
+
+    @Test
+    fun `send emits throttled progress lines during Sending`() {
+        val content = ByteArray(512 * 1024) { it.toByte() }
+        val file = Files.createTempFile("cli-progress", ".bin")
+        file.writeBytes(content)
+
+        val stream = mutableListOf<String>()
+        runBlocking {
+            handleSend(
+                engineRegistry = engineRegistry,
+                peers = listOf(device),
+                peerName = device.name,
+                paths = listOf(file),
+                output = { stream.add(it) },
+                rawOutput = { stream.add(it) },
+            )
+        }
+
+        val progressWrites = stream.filter { it.startsWith("\r") }
+        assertTrue(progressWrites.isNotEmpty(), "Expected at least one \\r progress write but got: $stream")
+
+        Files.deleteIfExists(file)
+    }
+
+    @Test
+    fun `send closes progress line before terminal done so smoke grep invariant holds`() {
+        val content = ByteArray(512 * 1024) { it.toByte() }
+        val file = Files.createTempFile("cli-progress-done", ".bin")
+        file.writeBytes(content)
+
+        val stream = mutableListOf<String>()
+        runBlocking {
+            handleSend(
+                engineRegistry = engineRegistry,
+                peers = listOf(device),
+                peerName = device.name,
+                paths = listOf(file),
+                output = { stream.add(it + "\n") },
+                rawOutput = { stream.add(it) },
+            )
+        }
+
+        assertTrue(
+            stream.any { it.startsWith("\r") },
+            "Expected at least one \\r progress write before done — progress line was never opened. Stream: $stream",
+        )
+
+        val joined = stream.joinToString("")
+        assertTrue(
+            Regex("""(?m)^\[send\] done""").containsMatchIn(joined),
+            "Smoke grep invariant failed: '\\n[send] done' not found in stream — progress line may not be closed. Stream:\n$joined",
+        )
+
+        Files.deleteIfExists(file)
+    }
+
+    @Test
+    fun `throttle - first Sending always writes immediately`() = runTest(UnconfinedTestDispatcher()) {
+        val clock = TestTimeSource()
+        val states = MutableStateFlow<PeerTransferState>(PeerTransferState.Idle)
+        val rawWrites = mutableListOf<String>()
+
+        val job = launch {
+            collectUntilTerminal(
+                states = states,
+                output = {},
+                errorOutput = {},
+                rawOutput = rawWrites::add,
+                timeSource = clock,
+            )
+        }
+        yield()
+        states.value = makeSending()
+        yield()
+        states.value = PeerTransferState.Sent(sent = 1, total = 1, perFile = emptyList(), partialReason = null)
+        job.join()
+
+        val progressWrites = rawWrites.filter { it.startsWith("\r") }
+        assertEquals(1, progressWrites.size, "First Sending (mark == null) must write immediately: $rawWrites")
+    }
+
+    @Test
+    fun `throttle - second Sending within 500ms is suppressed`() = runTest(UnconfinedTestDispatcher()) {
+        val clock = TestTimeSource()
+        val states = MutableStateFlow<PeerTransferState>(PeerTransferState.Idle)
+        val rawWrites = mutableListOf<String>()
+
+        val job = launch {
+            collectUntilTerminal(
+                states = states,
+                output = {},
+                errorOutput = {},
+                rawOutput = rawWrites::add,
+                timeSource = clock,
+            )
+        }
+        yield()
+        states.value = makeSending(sentBytes = 100)
+        yield()
+        // clock NOT advanced — elapsedNow() < 500ms
+        states.value = makeSending(sentBytes = 200)
+        yield()
+        states.value = PeerTransferState.Sent(sent = 1, total = 1, perFile = emptyList(), partialReason = null)
+        job.join()
+
+        val progressWrites = rawWrites.filter { it.startsWith("\r") }
+        assertEquals(1, progressWrites.size, "Second Sending < 500ms must be suppressed: $rawWrites")
+    }
+
+    @Test
+    fun `throttle - Sending after 500ms elapsed writes a new progress line`() = runTest(UnconfinedTestDispatcher()) {
+        val clock = TestTimeSource()
+        val states = MutableStateFlow<PeerTransferState>(PeerTransferState.Idle)
+        val rawWrites = mutableListOf<String>()
+
+        val job = launch {
+            collectUntilTerminal(
+                states = states,
+                output = {},
+                errorOutput = {},
+                rawOutput = rawWrites::add,
+                timeSource = clock,
+            )
+        }
+        yield()
+        states.value = makeSending(sentBytes = 100)
+        yield()
+        clock += 600.milliseconds
+        states.value = makeSending(sentBytes = 200)
+        yield()
+        states.value = PeerTransferState.Sent(sent = 1, total = 1, perFile = emptyList(), partialReason = null)
+        job.join()
+
+        val progressWrites = rawWrites.filter { it.startsWith("\r") }
+        assertEquals(2, progressWrites.size, "Sending after >= 500ms must write a new progress line: $rawWrites")
+    }
+
+    @Test
+    fun `progress line rewrites in place - no newline between throttled writes for same file`() = runTest(
+        UnconfinedTestDispatcher(),
+    ) {
+        val clock = TestTimeSource()
+        val states = MutableStateFlow<PeerTransferState>(PeerTransferState.Idle)
+        val rawWrites = mutableListOf<String>()
+
+        val job = launch {
+            collectUntilTerminal(
+                states = states,
+                output = {},
+                errorOutput = {},
+                rawOutput = rawWrites::add,
+                timeSource = clock,
+            )
+        }
+        yield()
+        // First write
+        states.value = makeSending(sentBytes = 100)
+        yield()
+        clock += 600.milliseconds
+        // Second write — same file, same InProgress class, just more bytes
+        states.value = makeSending(sentBytes = 200)
+        yield()
+        clock += 600.milliseconds
+        // Third write — still same file, same InProgress class
+        states.value = makeSending(sentBytes = 300)
+        yield()
+        states.value = PeerTransferState.Sent(sent = 1, total = 1, perFile = emptyList(), partialReason = null)
+        job.join()
+
+        val progressWrites = rawWrites.filter { it.startsWith("\r") }
+        assertEquals(3, progressWrites.size, "Expected 3 throttled \\r progress writes: $rawWrites")
+        // No newline must appear between consecutive progress writes (only before the terminal line)
+        val firstProgressIndex = rawWrites.indexOfFirst { it.startsWith("\r") }
+        val lastProgressIndex = rawWrites.indexOfLast { it.startsWith("\r") }
+        val between = rawWrites.subList(firstProgressIndex + 1, lastProgressIndex)
+        assertFalse(
+            between.any { it == "\n" },
+            "Spurious newline between progress writes — in-place rewrite broken. Writes: $rawWrites",
+        )
+    }
+
+    @Test
+    fun `progress line is closed with newline when per-file status class changes`() = runTest(
+        UnconfinedTestDispatcher(),
+    ) {
+        val clock = TestTimeSource()
+        val states = MutableStateFlow<PeerTransferState>(PeerTransferState.Idle)
+        val rawWrites = mutableListOf<String>()
+
+        val job = launch {
+            collectUntilTerminal(
+                states = states,
+                output = {},
+                errorOutput = {},
+                rawOutput = rawWrites::add,
+                timeSource = clock,
+            )
+        }
+        yield()
+        // File 1 in progress
+        states.value = makeSending(sentBytes = 100)
+        yield()
+        clock += 600.milliseconds
+        // File 1 done, file 2 starts — status class changes from InProgress to Done for file[0]
+        states.value = makeSendingFileCompleted()
+        yield()
+        states.value = PeerTransferState.Sent(sent = 2, total = 2, perFile = emptyList(), partialReason = null)
+        job.join()
+
+        val newlineIndex = rawWrites.indexOf("\n")
+        val firstProgressIndex = rawWrites.indexOfFirst { it.startsWith("\r") }
+        assertTrue(firstProgressIndex >= 0, "Expected at least one \\r write: $rawWrites")
+        assertTrue(
+            newlineIndex > firstProgressIndex,
+            "Expected \\n to close progress line after \\r write. Writes: $rawWrites",
+        )
+    }
+
+    private fun makeSending(sentBytes: Long = 0L): PeerTransferState.ActiveOutbound.Sending =
+        PeerTransferState.ActiveOutbound.Sending(
+            currentFile = "file.txt",
+            currentIndex = 0,
+            totalFiles = 1,
+            sentBytes = sentBytes,
+            totalBytes = 1024L,
+            bytesPerSec = null,
+            skippedCount = 0,
+            perFile = listOf(PerFileStatus.InProgress("file.txt", 1024L, sentBytes)),
+        )
+
+    /** file1 transitions to Done, file2 starts as InProgress — triggers status-class change guard. */
+    private fun makeSendingFileCompleted(): PeerTransferState.ActiveOutbound.Sending =
+        PeerTransferState.ActiveOutbound.Sending(
+            currentFile = "file2.txt",
+            currentIndex = 1,
+            totalFiles = 2,
+            sentBytes = 1024L,
+            totalBytes = 2048L,
+            bytesPerSec = null,
+            skippedCount = 0,
+            perFile = listOf(
+                PerFileStatus.Done("file.txt", 1024L),
+                PerFileStatus.InProgress("file2.txt", 1024L, 0L),
+            ),
+        )
 
     /** Returns a registry and the external call counter. `failOnCall` = which call number to throw on (1-based). */
     private fun buildPartialRegistry(

@@ -78,7 +78,7 @@
 - [ ] `flatMapLatest` vs `flatMapMerge` vs `flatMapConcat` — параллелизм
 - [ ] `combine` vs `zip` — эмит при любом изменении vs ждёт пару
 - [ ] `debounce`, `throttleFirst` — поиск с задержкой
-- [ ] `buffer` / `conflate` / `collectLatest` — backpressure
+- [x] `buffer` / `conflate` / `collectLatest` — backpressure
 - [ ] `callbackFlow` — интеграция callback API
 - [ ] `channelFlow` — отличие от `flow { }`
 - [ ] Отмена Flow — автоматически при отмене корутины-collector
