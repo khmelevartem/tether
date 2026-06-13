@@ -172,7 +172,7 @@ Use the built-in `Plan` agent (or `general-purpose` if plan unavailable) to prod
 
 **Choosing the fix level.** The issue identifies where the bug manifests, not necessarily where to fix it. When the root cause describes a class of bugs (not a single instance) or when parallel implementations contain the same defect — consider a fix one level up: a type / container / contract change that makes the class of bugs impossible. Compare costs: N point-fixes vs 1 structural fix. If you choose point-fix — explicitly list in the plan the parallel locations that remain defective, and file a follow-up issue before starting coding.
 
-**Issue scope — starting point, not a cage.** The file list in the issue is a starting point. If touching adjacent classes or neighbouring platforms is needed for a quality solution — expand scope in this same PR. A follow-up issue only when expansion genuinely breaks the PR (new target, broad public contract edit, multiplicative volume growth, discovery of a separate bug). Notes / TODOs the implementer added along the way — finish them here.
+**Issue scope — starting point, not a cage.** The file list in the issue is a starting point. If touching adjacent classes or neighbouring platforms is needed for a quality solution — expand scope in this same PR. A follow-up issue only when expansion genuinely breaks the PR (new target, broad public contract edit, multiplicative volume growth, discovery of a separate bug). Notes / TODOs the implementer added along the way — finish them here. For any finding — including a pre-existing one — apply the fold-vs-defer test in [`scope-discipline.md`](../../../docs/engineering/scope-discipline.md): provenance is not an axis; "it existed before" is never on its own a reason to defer.
 
 **Exception — forced cascade outside literal scope.** When the expansion is forced but falls outside the issue's literal **Out of scope** — route through the `Forced-cascade scope expansion` gate (§Gate semantics), do not silently fold.
 
@@ -299,10 +299,10 @@ Only after Step 7 is 🟢. Commit on the feature branch, push, create the PR:
 git add <relevant files>
 git commit -m "#<N>: <message>"
 git push -u origin feature/<N>-<short-slug>
-gh pr create --title "<title>" --body "<...>"
+gh pr create --title "<title>" --body-file <path>   # full body in a file; never --body with an in-shell-built string
 ```
 
-Read [`.github/pull_request_template.md`](../../../.github/pull_request_template.md) before composing the body. `Closes #<N>` is required. `👀 Sanity-check` must list every defer-decision (skipped scope, TODO/FIXME left in diff, follow-up planned). Add smoke verdict + `## Dependency check` (if new deps) as trailing sections only when non-trivial; for green smoke and no new deps, omit.
+Read [`.github/pull_request_template.md`](../../../.github/pull_request_template.md) before composing the body. Write the complete body to a file and pass `--body-file` (see CLAUDE.md §Git conventions); after creating, confirm `Closes #<N>` is present in the live body. `Closes #<N>` is required. `👀 Sanity-check` must list every defer-decision (skipped scope, TODO/FIXME left in diff, follow-up planned). Add smoke verdict + `## Dependency check` (if new deps) as trailing sections only when non-trivial; for green smoke and no new deps, omit.
 
 Report to the user:
 - PR URL.

@@ -41,6 +41,8 @@ If at least one of these questions is answered "yes", and the overall volume doe
 
 "Scope grows critically" = new target / new component / changing a public contract / needing to change adjacent layers / unpredictable volume due to revealing a hidden bug. Volume in lines is not the main criterion; the main criterion is relevance to the current task.
 
+This is the fold-vs-defer test in [`scope-discipline.md`](../../../docs/engineering/scope-discipline.md). Provenance is not an axis: a finding that pre-dates the task is judged by the same test, not waved off because it is old — and a correctness or security finding is never silently dropped on "out of scope".
+
 Especially careful: when the reviewer themselves referenced a DoD item or edge case from the issue, the "optional" tag in that case often means "not a blocker for me personally", but strictly speaking this is a **gap in the DoD**, and closing it is the responsibility of the current task's assignee, not the next review or a future contributor. Do not offload your DoD onto someone else's backlog.
 
 ## Important: responding to comments
