@@ -73,7 +73,6 @@ class SharedPendingFilesReaderTest {
         assertEquals("hello.txt", sources[0].name)
         assertEquals(content.size.toLong(), sources[0].sizeBytes)
 
-        // batch moved to staging, inbox entry gone
         assertFalse(fm.fileExistsAtPath(inboxBatch), "inbox batch must be gone after consume")
         assertTrue(fm.fileExistsAtPath("$root/staging/batch-1"), "staging batch must exist")
 
@@ -85,7 +84,6 @@ class SharedPendingFilesReaderTest {
         sources[0].close()
 
         assertEquals(content.decodeToString(), buf.decodeToString())
-        // staging batch deleted after last source closed
         assertFalse(
             fm.fileExistsAtPath("$root/staging/batch-1"),
             "staging batch must be deleted after all sources closed",
@@ -136,7 +134,6 @@ class SharedPendingFilesReaderTest {
         val inboxBatch = "$root/inbox/batch-no-manifest"
         makeDir(inboxBatch)
         writeFile(inboxBatch, "orphan.txt", ByteArray(4))
-        // no manifest.json written
 
         val sources = reader(root).consume()
         assertTrue(sources.isEmpty(), "batch without manifest must be skipped")
@@ -172,7 +169,6 @@ class SharedPendingFilesReaderTest {
         val inboxBatch = "$root/inbox/batch-partial"
         makeDir(inboxBatch)
         writeFile(inboxBatch, "present.txt", "data".encodeToByteArray())
-        // missing.txt is not written
         writeManifest(
             inboxBatch,
             listOf("present.txt" to 4L, "missing.txt" to 10L),
@@ -182,7 +178,6 @@ class SharedPendingFilesReaderTest {
         assertEquals(1, sources.size, "only the present file must be returned")
         assertEquals("present.txt", sources[0].name)
 
-        // closing the single source triggers last-close → staging deleted
         sources[0].close()
         assertFalse(
             fm.fileExistsAtPath("$root/staging/batch-partial"),
@@ -207,7 +202,6 @@ class SharedPendingFilesReaderTest {
             "staging must be gone after first close",
         )
 
-        // second close must be a no-op (no crash, no double-delete attempt)
         sources[0].close()
         assertFalse(
             fm.fileExistsAtPath("$root/staging/batch-double-close"),
@@ -242,15 +236,38 @@ class SharedPendingFilesReaderTest {
     @Test
     fun `startup sweep removes stale staging dirs left from a previous session`() = runTest {
         val root = makeRoot()
-        // Pre-create a stale staging batch dir (simulates a dir left by a crashed previous session)
         val staleDir = "$root/staging/stale-batch"
         makeDir(staleDir)
         writeFile(staleDir, "leftover.txt", ByteArray(4))
         assertTrue(fm.fileExistsAtPath(staleDir), "stale dir must exist before reader is used")
 
-        // Constructing and consuming from a fresh reader triggers the startup sweep
         val sources = reader(root).consume()
         assertTrue(sources.isEmpty(), "inbox is empty so consume returns nothing")
         assertFalse(fm.fileExistsAtPath(staleDir), "startup sweep must have removed the stale staging dir")
+    }
+
+    @Test
+    fun `startup sweep runs at most once — live staging dirs from first consume survive second consume`() = runTest {
+        val root = makeRoot()
+        val inboxBatch = "$root/inbox/batch-once"
+        makeDir(inboxBatch)
+        writeFile(inboxBatch, "f.txt", "data".encodeToByteArray())
+        writeManifest(inboxBatch, listOf("f.txt" to 4L))
+
+        val r = reader(root)
+        val first = r.consume()
+        assertEquals(1, first.size)
+
+        val stagingBatch = "$root/staging/batch-once"
+        assertTrue(fm.fileExistsAtPath(stagingBatch), "staging must exist while sources are open")
+
+        val second = r.consume()
+        assertTrue(second.isEmpty(), "inbox is empty so second consume returns nothing")
+        assertTrue(
+            fm.fileExistsAtPath(stagingBatch),
+            "second consume must not sweep live staging dirs from the first consume",
+        )
+
+        first[0].close()
     }
 }

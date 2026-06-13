@@ -131,7 +131,7 @@ internal class SharedPendingFilesReader(
                 if (remaining.addAndFetch(-1) == 0) deleteStagedBatch(batchPath)
             }
         }
-        if (sources.isEmpty()) deleteStagedBatch(batchPath)
+        if (sources.isEmpty() && remaining.load() > 0) deleteStagedBatch(batchPath)
         return sources
     }
 
