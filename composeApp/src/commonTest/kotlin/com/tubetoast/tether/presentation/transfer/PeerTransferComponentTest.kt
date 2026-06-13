@@ -24,7 +24,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -35,6 +34,7 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -454,23 +454,20 @@ class PeerTransferComponentTest {
     }
 
     @Test
-    fun `onCardClick on mobile-chooser platform emits chooser request when idle`() = runTest {
+    fun `onCardClick on mobile-chooser platform sets requestMobileChooser when idle`() = runTest {
         val (component) = buildComponent(
             isMobileChooserPlatform = true,
             scope = backgroundScope,
         )
 
-        val received = mutableListOf<Unit>()
-        val collectJob = backgroundScope.launch { component.chooserRequests.toList(received) }
-        runCurrent()
-
         component.onCardClick()
         runCurrent()
 
-        assertEquals(1, received.size, "chooser request must be emitted on mobile-chooser platform when idle")
+        assertTrue(
+            component.state.value.requestMobileChooser,
+            "requestMobileChooser must be true on mobile-chooser platform when idle",
+        )
         assertIs<PeerTransferState.Idle>(component.state.value.transfer)
-
-        collectJob.cancel()
     }
 
     @Test
@@ -482,17 +479,102 @@ class PeerTransferComponentTest {
             scope = backgroundScope,
         )
 
-        val received = mutableListOf<Unit>()
-        val collectJob = backgroundScope.launch { component.chooserRequests.toList(received) }
+        component.onCardClick()
+        runCurrent()
+
+        assertTrue(picker.pickFilesCalled, "non-chooser platform must invoke picker directly")
+        assertFalse(
+            component.state.value.requestMobileChooser,
+            "requestMobileChooser must stay false on non-chooser platform",
+        )
+    }
+
+    @Test
+    fun `onCardClick on mobile-chooser platform does not set requestMobileChooser when engine busy`() = runTest {
+        val pauseChannel = Channel<Unit>(0)
+        val relay = PeerConflictRelay()
+        val lifecycle = LifecycleRegistry()
+        lifecycle.resume()
+        val engine = PeerTransferEngine(
+            peer = peer.id,
+            batchSenderFactory = fakeBatchSender(pauseChannel = pauseChannel),
+            inboundEvents = MutableSharedFlow(),
+            scope = backgroundScope,
+            peerPreferencesStore = FakePeerPreferencesStore(),
+        )
+        val pickedSources = listOf(FakeFileSource("picked.txt", 100L))
+        val component = PeerTransferComponent(
+            componentContext = DefaultComponentContext(lifecycle),
+            peer = peer,
+            lifecycleRegistry = lifecycle,
+            engine = engine,
+            onShowDetails = {},
+            scope = backgroundScope,
+            pendingFilesRepository = PendingFilesRepository(),
+            filePicker = FakeFilePicker(result = pickedSources),
+            conflictRelay = relay,
+            fileTransferPreferences = FakeFileTransferPreferences(),
+            isMobileChooserPlatform = true,
+        )
+
+        engine.startOutbound(listOf(FakeFileSource("in-flight.txt", 50L)))
+        runCurrent()
+        assertIs<PeerTransferState.ActiveOutbound>(component.state.value.transfer)
+
+        val emitted = mutableListOf<PeerIdentity>()
+        val collectJob = backgroundScope.launch { relay.busyTaps.collect { emitted.add(it) } }
         runCurrent()
 
         component.onCardClick()
         runCurrent()
 
-        assertTrue(picker.pickFilesCalled, "non-chooser platform must invoke picker directly")
-        assertTrue(received.isEmpty(), "no chooser request must be emitted on non-chooser platform")
+        assertFalse(
+            component.state.value.requestMobileChooser,
+            "requestMobileChooser must not be set when engine is busy",
+        )
+        assertEquals(listOf(peer.id), emitted, "conflictRelay must receive the busy peer identity")
 
         collectJob.cancel()
+    }
+
+    @Test
+    fun `onCardClick on mobile-chooser platform does not set requestMobileChooser when pending present`() = runTest {
+        val repo = PendingFilesRepository()
+        val sources = listOf(FakeFileSource("file.txt", 100L))
+        repo.setPending(sources)
+        val (component) = buildComponent(
+            pendingFilesRepository = repo,
+            isMobileChooserPlatform = true,
+            scope = backgroundScope,
+        )
+
+        component.onCardClick()
+        runCurrent()
+
+        assertFalse(
+            component.state.value.requestMobileChooser,
+            "requestMobileChooser must not be set when pending files are present",
+        )
+    }
+
+    @Test
+    fun `onMobileChooserShown resets requestMobileChooser and second onCardClick can set it again`() = runTest {
+        val (component) = buildComponent(
+            isMobileChooserPlatform = true,
+            scope = backgroundScope,
+        )
+
+        component.onCardClick()
+        runCurrent()
+        assertTrue(component.state.value.requestMobileChooser, "flag must be set after first onCardClick")
+
+        component.onMobileChooserShown()
+        runCurrent()
+        assertFalse(component.state.value.requestMobileChooser, "onMobileChooserShown must reset flag to false")
+
+        component.onCardClick()
+        runCurrent()
+        assertTrue(component.state.value.requestMobileChooser, "flag must be settable again after reset")
     }
 
     @Test

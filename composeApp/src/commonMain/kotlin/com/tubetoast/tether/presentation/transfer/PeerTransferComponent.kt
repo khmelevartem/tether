@@ -20,13 +20,11 @@ import com.tubetoast.tether.transfer.PendingFilesRepository
 import com.tubetoast.tether.transfer.PendingFilesSummary
 import com.tubetoast.tether.transfer.PickKind
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -53,7 +51,7 @@ class PeerTransferComponent(
     val peerId: PeerIdentity = peer.id
     private val mutablePeer = MutableStateFlow(peer)
 
-    fun updatePeer(peer: Peer) {
+    internal fun updatePeer(peer: Peer) {
         require(peer.id == peerId) { "updatePeer must not change peer identity" }
         mutablePeer.update { peer }
     }
@@ -68,10 +66,8 @@ class PeerTransferComponent(
     private val showDetailsCallback = onShowDetails
     private val expanded = MutableStateFlow(false)
     private val largeConfirm = MutableStateFlow<PendingLargeConfirm?>(null)
+    private val mobileChooserRequested = MutableStateFlow(false)
 
-    /** Emits once per tap that should open the mobile picker chooser sheet. */
-    private val _chooserRequests = Channel<Unit>(Channel.CONFLATED)
-    val chooserRequests: Flow<Unit> = _chooserRequests.receiveAsFlow()
     private val mutableState = MutableValue(
         PeerCardState(
             transfer = engine.state.value,
@@ -79,12 +75,19 @@ class PeerTransferComponent(
             largeConfirm = largeConfirm.value,
             isOnline = peer.isOnline,
             device = peer.device,
+            requestMobileChooser = false,
         ),
     )
     val state: Value<PeerCardState> = mutableState
 
     init {
-        combine(engine.state, expanded, largeConfirm, mutablePeer) { transfer, exp, confirm, p ->
+        combine(engine.state, expanded, largeConfirm, mutablePeer, mobileChooserRequested) {
+            transfer,
+            exp,
+            confirm,
+            p,
+            chooser,
+            ->
             mutableState.update {
                 PeerCardState(
                     transfer = transfer,
@@ -92,9 +95,14 @@ class PeerTransferComponent(
                     largeConfirm = confirm,
                     isOnline = p.isOnline,
                     device = p.device,
+                    requestMobileChooser = chooser,
                 )
             }
         }.launchIn(scope)
+    }
+
+    fun onMobileChooserShown() {
+        mobileChooserRequested.update { false }
     }
 
     fun startOutbound(sources: List<FileSource>) = engine.startOutbound(sources)
@@ -103,7 +111,7 @@ class PeerTransferComponent(
         val pending = pendingFilesRepository.pending.value
         if (pending == null) {
             if (isMobileChooserPlatform && engine.state.value is PeerTransferState.Idle) {
-                _chooserRequests.trySend(Unit)
+                mobileChooserRequested.update { true }
                 return
             }
             onPick(PickKind.Files)

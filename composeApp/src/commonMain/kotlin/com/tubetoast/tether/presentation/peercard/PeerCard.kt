@@ -28,8 +28,11 @@ fun PeerCard(
     val isAutoSendEnabled by component.observeAutoSend().collectAsState(initial = false)
     val deviceType = component.deviceType
 
-    LaunchedEffect(component) {
-        component.chooserRequests.collect { onChooserRequest?.invoke() }
+    LaunchedEffect(state.requestMobileChooser) {
+        if (state.requestMobileChooser) {
+            onChooserRequest?.invoke()
+            component.onMobileChooserShown()
+        }
     }
 
     val cardModifier = modifier
