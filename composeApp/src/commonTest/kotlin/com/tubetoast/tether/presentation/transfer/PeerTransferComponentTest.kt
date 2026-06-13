@@ -555,6 +555,7 @@ class PeerTransferComponentTest {
             component.state.value.requestMobileChooser,
             "requestMobileChooser must not be set when pending files are present",
         )
+        assertIs<PeerTransferState.Sent>(component.state.value.transfer)
     }
 
     @Test
