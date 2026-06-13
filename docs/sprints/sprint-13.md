@@ -22,4 +22,4 @@
 
 #224 → #417 ; #426 || #429 || #425 || #389
 
-`||` — параллельные ветки. #224 и #417 делят iosMain file-handling (Share Extension target / app group и receive-path destination) — мержить последовательно. #426 (common-UI `safeContentPadding`), #429 (commonMain crypto/identity), #425 (presentation `PeerTransferComponent`) и #389 (jvmMain/CLI) изолированы друг от друга и от iOS-пары.
+`||` — параллельные ветки. #224 и #417 делят iosMain file-handling (Share Extension target / app group и receive-path destination) — мержить последовательно. #426 (common-UI root safe-area insets), #429 (commonMain crypto/identity), #425 (presentation `PeerTransferComponent`) и #389 (jvmMain/CLI) изолированы друг от друга и от iOS-пары.
