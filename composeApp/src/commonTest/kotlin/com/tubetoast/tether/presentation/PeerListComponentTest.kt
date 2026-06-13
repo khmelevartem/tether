@@ -27,6 +27,7 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
@@ -51,6 +52,7 @@ class PeerListComponentTest {
 
     private val deviceA = Device(name = "DeviceA", host = "192.168.1.1", port = 8080)
     private val deviceB = Device(name = "DeviceB", host = "192.168.1.2", port = 8080)
+    private val deviceC = Device(name = "DeviceC", host = "192.168.1.3", port = 8080)
 
     @Test
     fun `empty state when no devices discovered`() = runTest {
@@ -612,6 +614,82 @@ class PeerListComponentTest {
         runCurrent()
 
         assertEquals(true, component.state.value.showPickerModeChooser)
+    }
+
+    @Test
+    fun `peer evicted while chooser open clears pendingPickComponent`() = runTest {
+        val peerA = Peer(id = deviceA.toPeerIdentity(), device = deviceA, isOnline = true)
+        val peerFlow = MutableStateFlow(listOf(peerA))
+        val component = buildComponentWithPeers(
+            peerFlow = peerFlow,
+            coroutineScope = backgroundScope,
+            isPickerModeChooserNeeded = true,
+        )
+        runCurrent()
+
+        val row = component.state.value.rows
+            .first()
+        row.onCardClick()
+        runCurrent()
+        assertEquals(true, component.state.value.showPickerModeChooser)
+
+        peerFlow.value = emptyList()
+        runCurrent()
+
+        assertEquals(false, component.state.value.showPickerModeChooser)
+        assertFailsWith<IllegalStateException> { component.onChoosePickerMode(PickKind.Files) }
+    }
+
+    @Test
+    fun `unrelated peer change does not close open chooser`() = runTest {
+        val pickerA = FakeFilePicker(result = emptyList())
+        val pickerB = FakeFilePicker(result = emptyList())
+        val flow = MutableStateFlow(listOf(deviceA, deviceB))
+
+        val lifecycle = LifecycleRegistry()
+        val context = DefaultComponentContext(lifecycle)
+        lifecycle.resume()
+        val pickersByPeer = mapOf(
+            deviceA.toPeerIdentity() to pickerA,
+            deviceB.toPeerIdentity() to pickerB,
+        )
+        val component = PeerListComponent(
+            componentContext = context,
+            peersRepository = PeersRepository(
+                discovery = FakeDeviceDiscovery(flow),
+                scope = backgroundScope,
+            ),
+            peerTransferComponentFactory = { childCtx, childLifecycle, peer, onPeerChosen ->
+                val picker = pickersByPeer[peer.id] ?: FakeFilePicker(result = emptyList())
+                fakePeerTransferComponentFactory(
+                    coroutineScope = backgroundScope,
+                    filePicker = picker,
+                ).invoke(childCtx, childLifecycle, peer, onPeerChosen)
+            },
+            bannersComponentFactory = fakeBannersComponentFactory(backgroundScope),
+            deviceNameComponentFactory = fakeDeviceNameComponentFactory(backgroundScope),
+            isPickerModeChooserNeeded = true,
+            coroutineScope = backgroundScope,
+        )
+        runCurrent()
+
+        val rowA = component.state.value.rows
+            .first { it.peerId == deviceA.toPeerIdentity() }
+        rowA.onCardClick()
+        runCurrent()
+        assertEquals(true, component.state.value.showPickerModeChooser)
+
+        // Emit a peer-list change that does NOT evict deviceA — add deviceC, drop deviceB.
+        flow.value = listOf(deviceA, deviceC)
+        runCurrent()
+
+        assertEquals(true, component.state.value.showPickerModeChooser)
+        // pendingPickComponent still points to deviceA — Files pick must reach its picker without throwing.
+        component.onChoosePickerMode(PickKind.Files)
+        runCurrent()
+
+        assertTrue(pickerA.pickFilesCalled, "Files pick must be routed to deviceA after unrelated peer churn")
+        assertFalse(pickerB.pickFilesCalled, "deviceB must not receive the pick")
     }
 
     @Test

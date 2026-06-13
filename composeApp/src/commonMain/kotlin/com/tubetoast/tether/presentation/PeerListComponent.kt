@@ -44,9 +44,11 @@ class PeerListComponent(
                 val previous = _state.value.rows.associateBy { it.peerId }
                 val newIds = peers.map { it.id }.toSet()
 
-                previous.values
-                    .filter { it.peerId !in newIds }
-                    .forEach { it.destroyContext() }
+                val evicted = previous.values.filter { it.peerId !in newIds }
+                evicted.forEach { it.destroyContext() }
+                if (pendingPickComponent in evicted) {
+                    onChoosePickerMode(null)
+                }
 
                 val newRows = peers.map { peer ->
                     val existing = previous[peer.id]
@@ -57,7 +59,7 @@ class PeerListComponent(
                         createComponent(peer)
                     }
                 }
-                _state.update { PeerListState(rows = newRows) }
+                _state.update { it.copy(rows = newRows) }
             }.launchIn(coroutineScope)
     }
 
