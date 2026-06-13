@@ -19,6 +19,8 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import platform.Foundation.NSNotificationCenter
+import platform.UIKit.UIApplicationDidBecomeActiveNotification
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.error
 import ru.pocketbyte.kydra.log.wrapper.withTag
@@ -49,7 +51,29 @@ fun MainViewController() = run {
                 container.rendezvousAnnouncer.start(scope)
                 container.autoSendDispatcher.start()
             }
+
+            val reader = container.sharedPendingFilesReader
+
+            fun drainSharedFiles() {
+                if (reader == null) return
+                scope.launch {
+                    val sources = reader.consume()
+                    if (sources.isNotEmpty()) {
+                        component.onFilesDropped(sources)
+                    }
+                }
+            }
+
+            drainSharedFiles()
+
+            val observer = NSNotificationCenter.defaultCenter.addObserverForName(
+                name = UIApplicationDidBecomeActiveNotification,
+                `object` = null,
+                queue = null,
+            ) { _ -> drainSharedFiles() }
+
             onDispose {
+                NSNotificationCenter.defaultCenter.removeObserver(observer)
                 container.nameRepublisher.stop()
                 container.rendezvousAnnouncer.stop()
                 scope.cancel()
