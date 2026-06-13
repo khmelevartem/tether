@@ -6,6 +6,7 @@ import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.resume
 import com.arkivanov.essenty.statekeeper.StateKeeperDispatcher
 import com.tubetoast.tether.discovery.FakeDeviceDiscovery
+import com.tubetoast.tether.foundation.IsPickerModeChooserNeeded
 import com.tubetoast.tether.peer.PeersRepository
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.FakeFilePicker
@@ -28,6 +29,7 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
@@ -136,7 +138,7 @@ class RootComponentTest {
     }
 
     @Test
-    fun `onCardClick without pending sources invokes file picker`() = runTest {
+    fun `onCardClick without pending sources shows chooser or picks per platform`() = runTest {
         val devices = MutableStateFlow(listOf(deviceA))
         val picker = FakeFilePicker(result = emptyList())
         val component = buildComponent(
@@ -152,7 +154,13 @@ class RootComponentTest {
         peerComponent.onCardClick()
         runCurrent()
 
-        assertTrue(picker.pickFilesCalled)
+        if (IsPickerModeChooserNeeded) {
+            assertTrue(component.peerListComponent.state.value.showPickerModeChooser)
+            assertFalse(picker.pickFilesCalled)
+        } else {
+            assertTrue(picker.pickFilesCalled)
+            assertFalse(component.peerListComponent.state.value.showPickerModeChooser)
+        }
     }
 
     @Test
