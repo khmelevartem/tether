@@ -39,10 +39,13 @@ class ShareViewController: UIViewController {
         }
 
         let batchID = UUID().uuidString
+        // Write into a temp dir outside inbox/ so the reader never sees a partial batch.
+        // After manifest is written, an atomic rename publishes it to inbox/<batchID>/.
+        let tmpURL = container.appendingPathComponent("tmp/\(batchID)", isDirectory: true)
         let inboxURL = container.appendingPathComponent("inbox/\(batchID)", isDirectory: true)
 
         do {
-            try FileManager.default.createDirectory(at: inboxURL, withIntermediateDirectories: true)
+            try FileManager.default.createDirectory(at: tmpURL, withIntermediateDirectories: true)
         } catch {
             completeExtension()
             return
@@ -69,7 +72,7 @@ class ShareViewController: UIViewController {
                 lock.lock()
                 defer { lock.unlock() }
 
-                let destURL = uniqueDestURL(in: inboxURL, baseName: baseName, ext: ext)
+                let destURL = uniqueDestURL(in: tmpURL, baseName: baseName, ext: ext)
                 do {
                     try FileManager.default.copyItem(at: url, to: destURL)
                     let attrs = try FileManager.default.attributesOfItem(atPath: destURL.path)
@@ -83,29 +86,36 @@ class ShareViewController: UIViewController {
 
         group.notify(queue: .main) { [weak self] in
             guard let self else { return }
-            if !manifest.isEmpty {
-                self.writeManifest(manifest, to: inboxURL)
-            } else {
-                try? FileManager.default.removeItem(at: inboxURL)
+            if manifest.isEmpty {
+                try? FileManager.default.removeItem(at: tmpURL)
+            } else if self.publishBatch(manifest: manifest, from: tmpURL, to: inboxURL) == false {
+                try? FileManager.default.removeItem(at: tmpURL)
             }
             self.completeExtension()
         }
     }
 
-    private func preferredTypeID(for provider: NSItemProvider) -> String? {
-        let preferred = ["public.file-url", "public.data"]
-        for typeID in preferred {
-            if provider.hasItemConformingToTypeIdentifier(typeID) {
-                return typeID
-            }
-        }
-        return provider.registeredTypeIdentifiers.first as? String
+    /// Writes manifest into the temp dir, then atomically renames it into inbox/.
+    /// Returns false if either step fails; caller must clean up tmpURL.
+    private func publishBatch(manifest: [[String: Any]], from tmpURL: URL, to inboxURL: URL) -> Bool {
+        guard let data = try? JSONSerialization.data(withJSONObject: manifest) else { return false }
+        let manifestURL = tmpURL.appendingPathComponent("manifest.json")
+        guard (try? data.write(to: manifestURL)) != nil else { return false }
+        // Same volume (app-group container) → rename is atomic; reader only sees complete batches.
+        guard (try? FileManager.default.moveItem(at: tmpURL, to: inboxURL)) != nil else { return false }
+        return true
     }
 
-    private func writeManifest(_ entries: [[String: Any]], to batchURL: URL) {
-        guard let data = try? JSONSerialization.data(withJSONObject: entries) else { return }
-        let manifestURL = batchURL.appendingPathComponent("manifest.json")
-        try? data.write(to: manifestURL)
+    private func preferredTypeID(for provider: NSItemProvider) -> String? {
+        // Do NOT request public.file-url: loadFileRepresentation for that UTI materializes a
+        // tiny file containing the URL string, not the document bytes. Instead use the provider's
+        // own concrete content type so we get actual bytes; fall back to public.data.
+        for typeID in provider.registeredTypeIdentifiers {
+            let id = typeID as? String ?? ""
+            if id == "public.file-url" || id == "public.url" { continue }
+            return id
+        }
+        return provider.hasItemConformingToTypeIdentifier("public.data") ? "public.data" : nil
     }
 
     private func completeExtension() {

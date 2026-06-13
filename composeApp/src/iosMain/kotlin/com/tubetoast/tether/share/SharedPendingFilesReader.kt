@@ -30,16 +30,17 @@ import kotlin.concurrent.atomics.ExperimentalAtomicApi
 private val log = KydraLog.withTag(default = "SharedPendingFilesReader")
 
 /**
- * At-least-once delivery: batches are moved to a staging directory before being returned, so a
- * crash between move and processing causes the batch to be re-read on the next foreground
+ * Published batches are read at least once: a batch is moved to a staging directory before being
+ * returned, so a crash between move and ingest causes it to be re-read on the next foreground
  * activation.
  *
- * On first [consume] a startup sweep deletes any staging dirs left over from previous sessions
- * (their in-memory references died with the process).
+ * On first [consume] a startup sweep clears stale staging dirs and abandoned tmp dirs left over
+ * from previous sessions.
  */
 internal class SharedPendingFilesReader(
     private val inboxDir: String,
     private val stagingDir: String,
+    private val tmpDir: String,
 ) {
     private val mutex = Mutex()
     private val fm = NSFileManager.defaultManager
@@ -62,13 +63,16 @@ internal class SharedPendingFilesReader(
         }
     }
 
-    // Runs under mutex, so no concurrent consume can race the deletion.
+    // Runs under mutex, so no concurrent consume can race the deletions.
     private fun sweepStaleStagingOnce() {
         if (!startupSweepDone.compareAndSet(expectedValue = false, newValue = true)) return
         for (batchPath in listBatchDirs(stagingDir)) {
             deleteStagedBatch(batchPath)
         }
-        log.info { "startup staging sweep complete" }
+        for (batchPath in listBatchDirs(tmpDir)) {
+            deleteStagedBatch(batchPath)
+        }
+        log.info { "startup sweep complete" }
     }
 
     private fun listBatchDirs(parentPath: String): List<String> {
@@ -107,6 +111,12 @@ internal class SharedPendingFilesReader(
 
     private fun readBatch(batchPath: String): List<FileSource> {
         val manifestPath = "$batchPath/manifest.json"
+        if (!fm.fileExistsAtPath(manifestPath)) {
+            // Inbox is supposed to be written atomically (manifest last, then renamed in).
+            // A batch without a manifest here is unexpected — leave it rather than destroying it.
+            log.warn { "manifest absent in staged batch '${batchPath.substringAfterLast('/')}' — leaving in place" }
+            return emptyList()
+        }
         val entries = parseManifest(manifestPath)
         if (entries.isEmpty()) {
             deleteStagedBatch(batchPath)

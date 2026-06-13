@@ -16,6 +16,7 @@ open class IosAppContainer(
         SharedPendingFilesReader(
             inboxDir = "$container/inbox",
             stagingDir = "$container/staging",
+            tmpDir = "$container/tmp",
         )
     }
 }

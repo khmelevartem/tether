@@ -50,6 +50,7 @@ class SharedPendingFilesReaderTest {
     private fun reader(root: String) = SharedPendingFilesReader(
         inboxDir = "$root/inbox",
         stagingDir = "$root/staging",
+        tmpDir = "$root/tmp",
     )
 
     @Test
@@ -129,7 +130,7 @@ class SharedPendingFilesReaderTest {
     }
 
     @Test
-    fun `consume skips batch with missing manifest`() = runTest {
+    fun `consume skips batch with missing manifest and leaves it in place`() = runTest {
         val root = makeRoot()
         val inboxBatch = "$root/inbox/batch-no-manifest"
         makeDir(inboxBatch)
@@ -137,6 +138,16 @@ class SharedPendingFilesReaderTest {
 
         val sources = reader(root).consume()
         assertTrue(sources.isEmpty(), "batch without manifest must be skipped")
+        // The dir was moved to staging before readBatch found the manifest absent.
+        // Staging must exist (not deleted) so the data isn't destroyed.
+        assertFalse(
+            fm.fileExistsAtPath(inboxBatch),
+            "inbox batch must be moved to staging (not left in inbox)",
+        )
+        assertTrue(
+            fm.fileExistsAtPath("$root/staging/batch-no-manifest"),
+            "manifest-less batch must survive in staging, not be deleted",
+        )
     }
 
     @Test
@@ -244,6 +255,18 @@ class SharedPendingFilesReaderTest {
         val sources = reader(root).consume()
         assertTrue(sources.isEmpty(), "inbox is empty so consume returns nothing")
         assertFalse(fm.fileExistsAtPath(staleDir), "startup sweep must have removed the stale staging dir")
+    }
+
+    @Test
+    fun `startup sweep removes stale tmp dirs left from a previous extension session`() = runTest {
+        val root = makeRoot()
+        val staleTmp = "$root/tmp/abandoned-batch"
+        makeDir(staleTmp)
+        writeFile(staleTmp, "partial.bin", ByteArray(8))
+        assertTrue(fm.fileExistsAtPath(staleTmp), "stale tmp dir must exist before reader is used")
+
+        reader(root).consume()
+        assertFalse(fm.fileExistsAtPath(staleTmp), "startup sweep must have removed the stale tmp dir")
     }
 
     @Test
