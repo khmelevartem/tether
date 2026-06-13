@@ -9,7 +9,6 @@ import com.tubetoast.tether.config.DeviceNameStore
 import com.tubetoast.tether.config.EphemeralDeviceNamePersistence
 import com.tubetoast.tether.di.CliAppContainer
 import com.tubetoast.tether.di.DefaultDesktopAppConfig
-import com.tubetoast.tether.identity.EphemeralFingerprintPersistence
 import com.tubetoast.tether.logging.initCliLogging
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.ByteFormatting
@@ -32,6 +31,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.io.path.exists
@@ -88,50 +88,61 @@ class TetherCommand :
         val activeEngineRef = AtomicReference<PeerTransferEngine?>(null)
 
         val dir = configDir
-        val container = CliAppContainer(
-            if (dir != null) {
-                if (!isUsableConfigDir(dir)) {
-                    echo("ERROR: --config-dir is not a writable directory: ${dir.absolutePath}", err = true)
+        var ephemeralTempDir: java.io.File? = null
+        val container: CliAppContainer
+        try {
+            container = CliAppContainer(
+                if (dir != null) {
+                    if (!isUsableConfigDir(dir)) {
+                        echo("ERROR: --config-dir is not a writable directory: ${dir.absolutePath}", err = true)
+                        throw ProgramResult(1)
+                    }
+                    DefaultDesktopAppConfig(port = port ?: 0, configDir = dir)
+                } else {
+                    val tempDir = Files.createTempDirectory("tether-cli").toFile()
+                    ephemeralTempDir = tempDir
+                    DefaultDesktopAppConfig(
+                        port = port ?: 0,
+                        configDir = tempDir,
+                        namePersistenceOverride = EphemeralDeviceNamePersistence(),
+                    )
+                },
+            )
+
+            container.nameStore.init()
+            nameOverride?.let { name ->
+                container.nameStore.setName(name).getOrElse { e ->
+                    echo("ERROR: invalid --name: ${e.message}", err = true)
                     throw ProgramResult(1)
                 }
-                DefaultDesktopAppConfig(port = port ?: 0, configDir = dir)
-            } else {
-                DefaultDesktopAppConfig(
-                    port = port ?: 0,
-                    namePersistenceOverride = EphemeralDeviceNamePersistence(),
-                    fingerprintPersistenceOverride = EphemeralFingerprintPersistence(),
-                )
-            },
-        )
+            }
+            val deviceName = container.nameStore.name.first()
 
-        container.nameStore.init()
-        nameOverride?.let { name ->
-            container.nameStore.setName(name).getOrElse { e ->
-                echo("ERROR: invalid --name: ${e.message}", err = true)
+            echo("=== Tether debug runner ===")
+            echo("device : $deviceName")
+
+            val handle = try {
+                container.startBackendOrFail()
+            } catch (e: BackendStartException.FileServer) {
+                echo("ERROR: Could not start FileServer on port ${port ?: 0} — ${e.cause?.message}", err = true)
+                echo("Tip: use --port 0 to auto-select a free port.", err = true)
+                throw ProgramResult(1)
+            } catch (e: BackendStartException.Mdns) {
+                echo("ERROR: Could not start mDNS — ${e.cause?.message}", err = true)
                 throw ProgramResult(1)
             }
-        }
-        val deviceName = container.nameStore.name.first()
+            echo("port   : ${handle.port}")
+            echo("FileServer started  →  http://localhost:${handle.port}/health")
+            echo("mDNS started → advertising '$deviceName' on port ${handle.port}\n")
 
-        echo("=== Tether debug runner ===")
-        echo("device : $deviceName")
-
-        val handle = try {
-            container.startBackendOrFail()
-        } catch (e: BackendStartException.FileServer) {
-            echo("ERROR: Could not start FileServer on port ${port ?: 0} — ${e.cause?.message}", err = true)
-            echo("Tip: use --port 0 to auto-select a free port.", err = true)
-            throw ProgramResult(1)
-        } catch (e: BackendStartException.Mdns) {
-            echo("ERROR: Could not start mDNS — ${e.cause?.message}", err = true)
-            throw ProgramResult(1)
-        }
-        echo("port   : ${handle.port}")
-        echo("FileServer started  →  http://localhost:${handle.port}/health")
-        echo("mDNS started → advertising '$deviceName' on port ${handle.port}\n")
-
-        registerShutdownHook(handle) {
-            activeEngineRef.get()?.onCancel()
+            registerShutdownHook(
+                handle = handle,
+                onCancel = { activeEngineRef.get()?.onCancel() },
+                afterClose = { ephemeralTempDir?.deleteRecursively() },
+            )
+        } catch (e: Throwable) {
+            ephemeralTempDir?.deleteRecursively()
+            throw e
         }
 
         val discovery = container.mdnsDiscovery

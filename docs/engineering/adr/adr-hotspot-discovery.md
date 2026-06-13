@@ -82,7 +82,7 @@ Wired into LocalSend's API split (upload mode vs download mode). Rejected: the s
 
 **Negative**
 - Three additional code paths to maintain on the discovery surface (rendezvous endpoint, subnet-scan worker, UDP listener/sender). Each is small and shares the existing discovered-peers upsert path.
-- Identity in `/hello` cannot be a stable fingerprint until [#11 — Pairing UI](https://github.com/khmelevartem/tether/issues/11) lands the keypair flow. Interim identity is per-install random.
+- `/hello` identity is the device's EC P-256 public-key fingerprint (see [device-identity.md](../device-identity.md)), but trust still requires pairing — the SAS confirmation UI ([#11](https://github.com/khmelevartem/tether/issues/11)) is not yet shipped, so hotspot peers are identified, not yet verified.
 - Permissions surface on all platforms is unchanged from what mDNS already requires; final permission inventory and rationale flow live in [permissions/spec.md](../../product/features/system/permissions/spec.md).
 
 **Neutral**

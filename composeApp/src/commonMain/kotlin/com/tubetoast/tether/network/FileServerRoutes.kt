@@ -89,7 +89,7 @@ internal fun Application.installFileServerRoutes(
                 call.respond(HttpStatusCode.BadRequest, mapOf("error" to "invalid_port"))
                 return@post
             }
-            if (deviceIdentityStore != null && body.fingerprint == deviceIdentityStore.getOrCreate()) {
+            if (deviceIdentityStore != null && body.fingerprint == deviceIdentityStore.fingerprint()) {
                 log.debug { "hello self-suppressed (own fingerprint) from ${body.alias}" }
                 call.respond(HttpStatusCode.OK, emptyMap<String, String>())
                 return@post

@@ -67,7 +67,7 @@ internal class MdnsDiscoveryJmdns(
     @Volatile private var started: Boolean = false
 
     override suspend fun start(deviceName: String, port: Int) {
-        val fingerprint = deviceIdentityStore.getOrCreate()
+        val fingerprint = deviceIdentityStore.fingerprint()
         lifecycleLock.withLock {
             if (started) throw IllegalStateException("MdnsDiscovery already started; call stop() first")
             this.deviceName = deviceName

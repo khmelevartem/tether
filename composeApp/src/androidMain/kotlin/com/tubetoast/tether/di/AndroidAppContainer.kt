@@ -8,8 +8,6 @@ import com.tubetoast.tether.config.DefaultDeviceNamePersistence
 import com.tubetoast.tether.config.DeviceNamePersistence
 import com.tubetoast.tether.discovery.DiscoveredDevicesStore
 import com.tubetoast.tether.discovery.MdnsDiscovery
-import com.tubetoast.tether.identity.DataStoreFingerprintPersistence
-import com.tubetoast.tether.identity.FingerprintPersistence
 import com.tubetoast.tether.network.AndroidMediaStoreUploadStorage
 import com.tubetoast.tether.network.AndroidTransferLockHolder
 import com.tubetoast.tether.network.UploadStorage
@@ -50,7 +48,6 @@ class AndroidAppContainer(
             }.toOkioPath()
     }
     override val namePersistence: DeviceNamePersistence = DefaultDeviceNamePersistence(dataStore)
-    override val fingerprintPersistence: FingerprintPersistence = DataStoreFingerprintPersistence(dataStore)
     override val discoveredDevicesStore: DiscoveredDevicesStore = DiscoveredDevicesStore()
     override val mdnsDiscovery: MdnsDiscovery by lazy {
         MdnsDiscovery(application, discoveredDevicesStore, deviceIdentityStore)
