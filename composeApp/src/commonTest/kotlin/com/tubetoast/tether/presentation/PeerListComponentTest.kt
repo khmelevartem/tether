@@ -535,11 +535,134 @@ class PeerListComponentTest {
 
         var thrown: IllegalStateException? = null
         try {
-            component.onChoosePickerMode()
+            component.onChoosePickerMode(PickKind.Files)
         } catch (e: IllegalStateException) {
             thrown = e
         }
 
         assertNotNull(thrown)
+    }
+
+    @Test
+    fun `onChoosePickerMode null dismisses chooser without picking`() = runTest {
+        val picker = FakeFilePicker(result = emptyList())
+        val flow = MutableStateFlow(listOf(deviceA))
+        val component = buildComponent(
+            flow = flow,
+            coroutineScope = backgroundScope,
+            isPickerModeChooserNeeded = true,
+            filePicker = picker,
+        )
+        runCurrent()
+
+        val row = component.state.value.rows
+            .first()
+        row.onCardClick()
+        runCurrent()
+
+        assertEquals(true, component.state.value.showPickerModeChooser)
+
+        component.onChoosePickerMode(null)
+        runCurrent()
+
+        assertEquals(false, component.state.value.showPickerModeChooser)
+        assertFalse(picker.pickFilesCalled, "dismiss must not invoke picker")
+        assertFalse(picker.pickPhotosCalled, "dismiss must not invoke picker")
+        assertFalse(picker.pickFolderCalled, "dismiss must not invoke picker")
+        assertIs<PeerTransferState.Idle>(row.state.value.transfer)
+    }
+
+    @Test
+    fun `chooser re-arms on subsequent taps after choose and after dismiss`() = runTest {
+        // Empty picker result keeps engine Idle so onCardClick() proceeds on the second tap.
+        val picker = FakeFilePicker(result = emptyList())
+        val flow = MutableStateFlow(listOf(deviceA))
+        val component = buildComponent(
+            flow = flow,
+            coroutineScope = backgroundScope,
+            isPickerModeChooserNeeded = true,
+            filePicker = picker,
+        )
+        runCurrent()
+
+        val row = component.state.value.rows
+            .first()
+
+        row.onCardClick()
+        runCurrent()
+        assertEquals(true, component.state.value.showPickerModeChooser)
+
+        component.onChoosePickerMode(PickKind.Files)
+        runCurrent()
+
+        assertEquals(false, component.state.value.showPickerModeChooser)
+        assertIs<PeerTransferState.Idle>(row.state.value.transfer)
+
+        row.onCardClick()
+        runCurrent()
+
+        assertEquals(true, component.state.value.showPickerModeChooser)
+
+        component.onChoosePickerMode(null)
+        runCurrent()
+
+        assertEquals(false, component.state.value.showPickerModeChooser)
+
+        row.onCardClick()
+        runCurrent()
+
+        assertEquals(true, component.state.value.showPickerModeChooser)
+    }
+
+    @Test
+    fun `onChoosePickerMode routes pick to tapped row only`() = runTest {
+        val pickerA = FakeFilePicker(result = emptyList())
+        val pickerB = FakeFilePicker(result = listOf(FakeFileSource("img.png", 50L)))
+        val flow = MutableStateFlow(listOf(deviceA, deviceB))
+
+        val lifecycle = LifecycleRegistry()
+        val context = DefaultComponentContext(lifecycle)
+        lifecycle.resume()
+        val pickersByPeer = mapOf(
+            deviceA.toPeerIdentity() to pickerA,
+            deviceB.toPeerIdentity() to pickerB,
+        )
+        val component = PeerListComponent(
+            componentContext = context,
+            peersRepository = PeersRepository(
+                discovery = FakeDeviceDiscovery(flow),
+                scope = backgroundScope,
+            ),
+            peerTransferComponentFactory = { childCtx, childLifecycle, peer, onPeerChosen ->
+                val picker = pickersByPeer[peer.id] ?: FakeFilePicker(result = emptyList())
+                fakePeerTransferComponentFactory(
+                    coroutineScope = backgroundScope,
+                    filePicker = picker,
+                ).invoke(childCtx, childLifecycle, peer, onPeerChosen)
+            },
+            bannersComponentFactory = fakeBannersComponentFactory(backgroundScope),
+            deviceNameComponentFactory = fakeDeviceNameComponentFactory(backgroundScope),
+            isPickerModeChooserNeeded = true,
+            coroutineScope = backgroundScope,
+        )
+        runCurrent()
+
+        val rows = component.state.value.rows
+        assertEquals(2, rows.size)
+        val rowA = rows.first { it.peerId == deviceA.toPeerIdentity() }
+        val rowB = rows.first { it.peerId == deviceB.toPeerIdentity() }
+
+        rowB.onCardClick()
+        runCurrent()
+        assertEquals(true, component.state.value.showPickerModeChooser)
+
+        component.onChoosePickerMode(PickKind.Photos)
+        runCurrent()
+
+        assertEquals(false, component.state.value.showPickerModeChooser)
+        assertTrue(pickerB.pickPhotosCalled, "Photos pick must reach row B's picker")
+        assertFalse(pickerA.pickPhotosCalled, "row A must not receive the pick")
+        assertIs<PeerTransferState.Sent>(rowB.state.value.transfer)
+        assertIs<PeerTransferState.Idle>(rowA.state.value.transfer)
     }
 }
