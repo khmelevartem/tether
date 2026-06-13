@@ -33,8 +33,6 @@ All git naming in English. **All commit messages and PR titles must start with t
 
 All issue titles, issue bodies, and PR descriptions must be written in English. Russian is only permitted in interactive chat.
 
-When creating or editing a PR or issue body with `gh`, write the complete body to a file and pass `--body-file`; never assemble a body by in-shell substitution on a captured body (`${var/…/…}`, `sed` over `gh … --json body`) — multiline markdown corrupts silently, and a dropped `Closes #<N>` leaves the issue open after merge. After any body create or edit, confirm the required link lines (`Closes #<N>`) survived.
-
 Before committing, make sure the issue exists. If it does not — ask the user to create it. Sprint-planning commits under `plan sprint <N>` are the exception: planning needs no backing issue.
 
 To pull main into the branch — `/pull-main` (merges fresh main and shows what came in). It runs from both `/close-issue` and mid-flight.

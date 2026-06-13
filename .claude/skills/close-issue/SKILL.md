@@ -157,7 +157,7 @@ Don't treat this as "a poor estimate" — scope often grows along the way due to
 
 Before merging — while the PR can still absorb a fix — surface every loose end. Sources: the issue's "Consequences" / "Out of scope", TODO/FIXME in the diff, anything deferred or scoped out during the work, and any cheap fix you spotted in a file you already touched.
 
-State **each** item as: **"\<known problem / unfinished item\>. Can do now because … / Can't do now because …"** — your honest read of whether it belongs in this PR, decided by the fold-vs-defer test in [`scope-discipline.md`](../../../docs/engineering/scope-discipline.md) (in reach + behaviour-local + already-verifiable → do-now; a separate surface / new target / contract change / unpredictable volume → defer). Provenance is not an axis — a pre-existing finding is judged by the same test, not deferred because it is old. Then ask the user **"What do you disagree with?"** and **stop**.
+State **each** item as: **"\<known problem / unfinished item\>. Can do now because … / Can't do now because …"** — your honest read of whether it belongs in this PR, per [`scope-discipline.md`](../../../docs/engineering/scope-discipline.md). Then ask the user **"What do you disagree with?"** and **stop**.
 
 Hard stop-point: the user redirects do-now-vs-defer here, while the merge is still reversible — not after, when a cheap in-file fix can no longer ride along.
 
@@ -173,7 +173,7 @@ Hard stop-point: the user redirects do-now-vs-defer here, while the merge is sti
 gh pr merge <PR> --squash --delete-branch
 ```
 
-Use squash unless otherwise specified. After merging, confirm the PR actually merged: `gh pr merge` can print a local-sync error (e.g. "Could not read from remote", "not possible to fast-forward") even when the server-side merge succeeded — leaving the worktree switched to `main` with pre-PR file content, which looks like a failed merge or lost work. Verify via `gh pr view <PR> --json state,mergedAt` (`state == MERGED`) before treating any local CLI error as failure; then confirm the branch is deleted. Finally confirm the issue itself closed (`gh issue view <N> --json state` → `CLOSED`): a body that lost its `Closes #<N>` link (e.g. an in-shell body edit, see CLAUDE.md §Git conventions) leaves the issue open after merge — close it manually with a comment linking the PR.
+Use squash unless otherwise specified. After merging, confirm the PR actually merged: `gh pr merge` can print a local-sync error (e.g. "Could not read from remote", "not possible to fast-forward") even when the server-side merge succeeded — leaving the worktree switched to `main` with pre-PR file content, which looks like a failed merge or lost work. Verify via `gh pr view <PR> --json state,mergedAt` (`state == MERGED`) before treating any local CLI error as failure; then confirm the branch is deleted.
 
 ---
 
