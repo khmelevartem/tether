@@ -14,16 +14,19 @@ import com.tubetoast.tether.transfer.FilePicker
 import com.tubetoast.tether.transfer.FileSource
 import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PeerTransferEngine
+import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.Pending
 import com.tubetoast.tether.transfer.PendingFilesRepository
 import com.tubetoast.tether.transfer.PendingFilesSummary
 import com.tubetoast.tether.transfer.PickKind
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -45,6 +48,7 @@ class PeerTransferComponent(
     private val filePicker: FilePicker,
     private val conflictRelay: PeerConflictRelay,
     private val fileTransferPreferences: FileTransferPreferences,
+    private val isMobileChooserPlatform: Boolean = false,
 ) : ComponentContext by componentContext {
     val peerId: PeerIdentity = peer.id
     private val mutablePeer = MutableStateFlow(peer)
@@ -64,6 +68,10 @@ class PeerTransferComponent(
     private val showDetailsCallback = onShowDetails
     private val expanded = MutableStateFlow(false)
     private val largeConfirm = MutableStateFlow<PendingLargeConfirm?>(null)
+
+    /** Emits once per tap that should open the mobile picker chooser sheet. */
+    private val _chooserRequests = Channel<Unit>(Channel.CONFLATED)
+    val chooserRequests: Flow<Unit> = _chooserRequests.receiveAsFlow()
     private val mutableState = MutableValue(
         PeerCardState(
             transfer = engine.state.value,
@@ -94,6 +102,10 @@ class PeerTransferComponent(
     fun onCardClick() {
         val pending = pendingFilesRepository.pending.value
         if (pending == null) {
+            if (isMobileChooserPlatform && engine.state.value is PeerTransferState.Idle) {
+                _chooserRequests.trySend(Unit)
+                return
+            }
             onPick(PickKind.Files)
             return
         }

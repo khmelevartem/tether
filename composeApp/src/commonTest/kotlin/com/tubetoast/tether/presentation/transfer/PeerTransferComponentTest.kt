@@ -24,6 +24,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -60,6 +61,7 @@ class PeerTransferComponentTest {
         pendingFilesRepository: PendingFilesRepository = PendingFilesRepository(),
         filePicker: FakeFilePicker = FakeFilePicker(result = emptyList()),
         conflictRelay: PeerConflictRelay = PeerConflictRelay(),
+        isMobileChooserPlatform: Boolean = false,
         scope: kotlinx.coroutines.CoroutineScope,
     ): Pair<PeerTransferComponent, LifecycleRegistry> {
         val lifecycle = LifecycleRegistry()
@@ -83,6 +85,7 @@ class PeerTransferComponentTest {
             filePicker = filePicker,
             conflictRelay = conflictRelay,
             fileTransferPreferences = FakeFileTransferPreferences(),
+            isMobileChooserPlatform = isMobileChooserPlatform,
         )
         return component to lifecycle
     }
@@ -448,6 +451,48 @@ class PeerTransferComponentTest {
         runCurrent()
 
         assertEquals(2, picker.pickFilesCallCount, "onPick must work again after flag is reset")
+    }
+
+    @Test
+    fun `onCardClick on mobile-chooser platform emits chooser request when idle`() = runTest {
+        val (component) = buildComponent(
+            isMobileChooserPlatform = true,
+            scope = backgroundScope,
+        )
+
+        val received = mutableListOf<Unit>()
+        val collectJob = backgroundScope.launch { component.chooserRequests.toList(received) }
+        runCurrent()
+
+        component.onCardClick()
+        runCurrent()
+
+        assertEquals(1, received.size, "chooser request must be emitted on mobile-chooser platform when idle")
+        assertIs<PeerTransferState.Idle>(component.state.value.transfer)
+
+        collectJob.cancel()
+    }
+
+    @Test
+    fun `onCardClick on non-chooser platform invokes picker directly`() = runTest {
+        val picker = FakeFilePicker(result = emptyList())
+        val (component) = buildComponent(
+            filePicker = picker,
+            isMobileChooserPlatform = false,
+            scope = backgroundScope,
+        )
+
+        val received = mutableListOf<Unit>()
+        val collectJob = backgroundScope.launch { component.chooserRequests.toList(received) }
+        runCurrent()
+
+        component.onCardClick()
+        runCurrent()
+
+        assertTrue(picker.pickFilesCalled, "non-chooser platform must invoke picker directly")
+        assertTrue(received.isEmpty(), "no chooser request must be emitted on non-chooser platform")
+
+        collectJob.cancel()
     }
 
     @Test

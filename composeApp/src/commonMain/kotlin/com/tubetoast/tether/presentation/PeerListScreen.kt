@@ -21,7 +21,6 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.composables.core.SheetDetent
 import com.composables.core.rememberModalBottomSheetState
-import com.tubetoast.tether.foundation.IsMobileChooserPlatform
 import com.tubetoast.tether.presentation.banners.BannersSection
 import com.tubetoast.tether.presentation.banners.PendingOutboundBanner
 import com.tubetoast.tether.presentation.banners.PendingOutboundBannerState
@@ -65,10 +64,9 @@ fun PeerListScreen(component: PeerListComponent, modifier: Modifier = Modifier) 
 
 @Composable
 private fun PeerListContent(
-    rows: List<PeerRow>,
+    rows: List<PeerTransferComponent>,
     modifier: Modifier = Modifier,
     hasPendingOutbound: Boolean = false,
-    showMobileChooser: Boolean = IsMobileChooserPlatform,
 ) {
     val spacing = TetherTheme.spacing
 
@@ -99,11 +97,10 @@ private fun PeerListContent(
             }
         } else {
             LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(rows, key = { it.transferComponent.peerId.id }) { row ->
-                    val peerComponent = row.transferComponent
+                items(rows, key = { it.peerId.id }) { peerComponent ->
                     PeerCard(
                         component = peerComponent,
-                        onRequestMobileChooser = if (showMobileChooser && !hasPendingOutbound) {
+                        onChooserRequest = if (!hasPendingOutbound) {
                             {
                                 pendingPickComponent = peerComponent
                                 sheetState.targetDetent = SheetDetent.FullyExpanded

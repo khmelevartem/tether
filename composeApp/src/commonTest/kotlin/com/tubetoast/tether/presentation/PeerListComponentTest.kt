@@ -7,6 +7,7 @@ import com.tubetoast.tether.discovery.FakeDeviceDiscovery
 import com.tubetoast.tether.peer.FakePeersRepository
 import com.tubetoast.tether.peer.Peer
 import com.tubetoast.tether.peer.PeersRepository
+import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.FakeFileSource
 import com.tubetoast.tether.transfer.PeerTransferState
@@ -30,7 +31,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertSame
 
-private val PeerRow.peerState get() = transferComponent.state.value
+private val PeerTransferComponent.peerState get() = state.value
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PeerListComponentTest {
@@ -105,7 +106,7 @@ class PeerListComponentTest {
 
         assertNull(
             component.state.value.rows
-                .firstOrNull { it.transferComponent.peerId == deviceA.toPeerIdentity() },
+                .firstOrNull { it.peerId == deviceA.toPeerIdentity() },
         )
         assertNull(component.peerTransferComponent(deviceA.toPeerIdentity()))
     }
@@ -121,7 +122,7 @@ class PeerListComponentTest {
 
         assertNull(
             component.state.value.rows
-                .firstOrNull { it.transferComponent.peerId == deviceA.toPeerIdentity() },
+                .firstOrNull { it.peerId == deviceA.toPeerIdentity() },
         )
         assertNull(component.peerTransferComponent(deviceA.toPeerIdentity()))
     }
@@ -167,7 +168,7 @@ class PeerListComponentTest {
         assertNotNull(component.peerTransferComponent(deviceA.toPeerIdentity()))
         assertNotNull(
             component.state.value.rows
-                .firstOrNull { it.transferComponent.peerId == deviceA.toPeerIdentity() },
+                .firstOrNull { it.peerId == deviceA.toPeerIdentity() },
         )
     }
 
@@ -190,7 +191,7 @@ class PeerListComponentTest {
 
         assertNotNull(
             component.state.value.rows
-                .firstOrNull { it.transferComponent.peerId == deviceA.toPeerIdentity() },
+                .firstOrNull { it.peerId == deviceA.toPeerIdentity() },
         )
         val second = component.peerTransferComponent(deviceA.toPeerIdentity())
         assertNotNull(second)
@@ -208,7 +209,7 @@ class PeerListComponentTest {
         assertIs<PeerTransferState.Idle>(
             component.state.value.rows
                 .first()
-                .transferComponent.state.value.transfer,
+                .state.value.transfer,
         )
 
         val peerComponent = component.peerTransferComponent(deviceA.toPeerIdentity())
@@ -219,7 +220,7 @@ class PeerListComponentTest {
         assertIs<PeerTransferState.Sent>(
             component.state.value.rows
                 .first()
-                .transferComponent.state.value.transfer,
+                .state.value.transfer,
         )
     }
 
@@ -245,7 +246,7 @@ class PeerListComponentTest {
         assertEquals(
             true,
             component.state.value.rows
-                .first { it.transferComponent.peerId == deviceA.toPeerIdentity() }
+                .first { it.peerId == deviceA.toPeerIdentity() }
                 .peerState.isOnline,
         )
     }
@@ -365,8 +366,8 @@ class PeerListComponentTest {
 
         val rows = component.state.value.rows
         assertEquals(2, rows.size)
-        assertEquals(true, rows.first { it.transferComponent.peerId == deviceA.toPeerIdentity() }.peerState.isOnline)
-        assertEquals(false, rows.first { it.transferComponent.peerId == deviceB.toPeerIdentity() }.peerState.isOnline)
+        assertEquals(true, rows.first { it.peerId == deviceA.toPeerIdentity() }.peerState.isOnline)
+        assertEquals(false, rows.first { it.peerId == deviceB.toPeerIdentity() }.peerState.isOnline)
     }
 
     @Test

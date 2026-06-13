@@ -3,6 +3,7 @@ package com.tubetoast.tether.presentation
 import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.essenty.lifecycle.coroutines.withLifecycle
 import com.tubetoast.tether.config.DeviceNameStore
+import com.tubetoast.tether.foundation.IsMobileChooserPlatform
 import com.tubetoast.tether.peer.PeersRepository
 import com.tubetoast.tether.preferences.FileTransferPreferences
 import com.tubetoast.tether.presentation.banners.BannersComponent
@@ -50,6 +51,7 @@ class RootComponentFactory(
                             filePicker = filePicker,
                             conflictRelay = peerConflictRelay,
                             fileTransferPreferences = fileTransferPreferences,
+                            isMobileChooserPlatform = IsMobileChooserPlatform,
                         )
                     },
                     bannersComponentFactory = { bannersCtx ->

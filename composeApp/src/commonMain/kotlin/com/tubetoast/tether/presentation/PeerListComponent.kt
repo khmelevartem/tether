@@ -35,20 +35,20 @@ class PeerListComponent(
     init {
         peersRepository.peers
             .onEach { peers ->
-                val previous = _state.value.rows.associateBy { it.transferComponent.peerId }
+                val previous = _state.value.rows.associateBy { it.peerId }
                 val newIds = peers.map { it.id }.toSet()
 
                 previous.values
-                    .filter { it.transferComponent.peerId !in newIds }
-                    .forEach { it.transferComponent.destroyContext() }
+                    .filter { it.peerId !in newIds }
+                    .forEach { it.destroyContext() }
 
                 val newRows = peers.map { peer ->
-                    val existing = previous[peer.id]?.transferComponent
+                    val existing = previous[peer.id]
                     if (existing != null) {
                         existing.updatePeer(peer)
-                        PeerRow(existing)
+                        existing
                     } else {
-                        PeerRow(createComponent(peer))
+                        createComponent(peer)
                     }
                 }
                 _state.update { PeerListState(rows = newRows) }
@@ -56,9 +56,7 @@ class PeerListComponent(
     }
 
     fun peerTransferComponent(peer: PeerIdentity): PeerTransferComponent? =
-        _state.value.rows
-            .firstOrNull { it.transferComponent.peerId == peer }
-            ?.transferComponent
+        _state.value.rows.firstOrNull { it.peerId == peer }
 
     private fun createComponent(peer: Peer): PeerTransferComponent {
         val lifecycle = LifecycleRegistry()
