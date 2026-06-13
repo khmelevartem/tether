@@ -31,7 +31,7 @@ private val log = KydraLog.withTag(default = "SharedPendingFilesReader")
 /**
  * At-least-once delivery: batches are moved to a staging directory before being returned, so a
  * crash between move and processing causes the batch to be re-read on the next foreground
- * activation. A [Mutex] ensures only one [consume] runs at a time.
+ * activation.
  *
  * On first [consume] a startup sweep deletes any staging dirs left over from previous sessions
  * (their in-memory references died with the process).
