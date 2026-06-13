@@ -31,8 +31,9 @@ import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 private val log = KydraLog.withTag(default = "SharedPendingFilesReader")
 
-// Cross-process: a tmp dir younger than this may belong to an in-flight extension copy.
-private const val TMP_STALE_THRESHOLD_SECONDS = 300.0
+// Must exceed the longest possible share-extension lifetime: a tmp dir's mtime does not advance
+// during a long single-file copy, so any dir younger than this may still be an in-flight copy.
+private const val TMP_STALE_THRESHOLD_SECONDS = 3600.0
 
 /**
  * Published batches are read at least once: a batch is moved to a staging directory before being

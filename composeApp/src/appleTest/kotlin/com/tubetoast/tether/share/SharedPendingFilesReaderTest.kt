@@ -270,7 +270,7 @@ class SharedPendingFilesReaderTest {
         val staleTmp = "$root/tmp/abandoned-batch"
         makeDir(staleTmp)
         writeFile(staleTmp, "partial.bin", ByteArray(8))
-        backdateDir(staleTmp, secondsAgo = 600.0)
+        backdateDir(staleTmp, secondsAgo = 4000.0)
         assertTrue(fm.fileExistsAtPath(staleTmp), "old tmp dir must exist before reader is used")
 
         reader(root).consume()
