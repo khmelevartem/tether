@@ -9,8 +9,10 @@ import com.tubetoast.tether.peer.Peer
 import com.tubetoast.tether.peer.PeersRepository
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.protocol.Device
+import com.tubetoast.tether.transfer.FakeFilePicker
 import com.tubetoast.tether.transfer.FakeFileSource
 import com.tubetoast.tether.transfer.PeerTransferState
+import com.tubetoast.tether.transfer.PickKind
 import com.tubetoast.tether.transfer.toPeerIdentity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -25,11 +27,13 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertSame
+import kotlin.test.assertTrue
 
 private val PeerTransferComponent.peerState get() = state.value
 
@@ -321,6 +325,8 @@ class PeerListComponentTest {
         flow: MutableStateFlow<List<Device>> = MutableStateFlow(initial),
         coroutineScope: CoroutineScope,
         onDestroyContext: (String) -> Unit = {},
+        isPickerModeChooserNeeded: Boolean = false,
+        filePicker: FakeFilePicker = FakeFilePicker(result = emptyList()),
     ): PeerListComponent {
         val lifecycle = LifecycleRegistry()
         val context = DefaultComponentContext(lifecycle)
@@ -331,9 +337,14 @@ class PeerListComponentTest {
                 discovery = FakeDeviceDiscovery(flow),
                 scope = coroutineScope,
             ),
-            peerTransferComponentFactory = fakePeerTransferComponentFactory(coroutineScope, onDestroyContext),
+            peerTransferComponentFactory = fakePeerTransferComponentFactory(
+                coroutineScope = coroutineScope,
+                onDestroyContext = onDestroyContext,
+                filePicker = filePicker,
+            ),
             bannersComponentFactory = fakeBannersComponentFactory(coroutineScope),
             deviceNameComponentFactory = fakeDeviceNameComponentFactory(coroutineScope),
+            isPickerModeChooserNeeded = isPickerModeChooserNeeded,
             coroutineScope = coroutineScope,
         )
     }
@@ -342,6 +353,7 @@ class PeerListComponentTest {
         peerFlow: MutableStateFlow<List<Peer>>,
         coroutineScope: CoroutineScope,
         onDestroyContext: (String) -> Unit = {},
+        isPickerModeChooserNeeded: Boolean = false,
     ): PeerListComponent {
         val lifecycle = LifecycleRegistry()
         val context = DefaultComponentContext(lifecycle)
@@ -352,6 +364,7 @@ class PeerListComponentTest {
             peerTransferComponentFactory = fakePeerTransferComponentFactory(coroutineScope, onDestroyContext),
             bannersComponentFactory = fakeBannersComponentFactory(coroutineScope),
             deviceNameComponentFactory = fakeDeviceNameComponentFactory(coroutineScope),
+            isPickerModeChooserNeeded = isPickerModeChooserNeeded,
             coroutineScope = coroutineScope,
         )
     }
@@ -445,5 +458,88 @@ class PeerListComponentTest {
 
         assertSame(retained, component.peerTransferComponent(deviceA.toPeerIdentity()))
         assertEquals("RenamedDevice", retained.state.value.device.name)
+    }
+
+    @Test
+    fun `isPickerModeChooserNeeded true — onCardClick sets showPickerModeChooser without invoking picker`() = runTest {
+        val picker = FakeFilePicker(result = emptyList())
+        val flow = MutableStateFlow(listOf(deviceA))
+        val component = buildComponent(
+            flow = flow,
+            coroutineScope = backgroundScope,
+            isPickerModeChooserNeeded = true,
+            filePicker = picker,
+        )
+        runCurrent()
+
+        val row = component.state.value.rows
+            .first()
+        row.onCardClick()
+        runCurrent()
+
+        assertEquals(true, component.state.value.showPickerModeChooser)
+        assertFalse(picker.pickFilesCalled, "picker must not be invoked before mode is chosen")
+        assertFalse(picker.pickPhotosCalled)
+    }
+
+    @Test
+    fun `isPickerModeChooserNeeded — onChoosePickerMode Photos routes pick to tapped row`() = runTest {
+        val picker = FakeFilePicker(result = listOf(FakeFileSource("img.png", 50L)))
+        val flow = MutableStateFlow(listOf(deviceA))
+        val component = buildComponent(
+            flow = flow,
+            coroutineScope = backgroundScope,
+            isPickerModeChooserNeeded = true,
+            filePicker = picker,
+        )
+        runCurrent()
+
+        val row = component.state.value.rows
+            .first()
+        row.onCardClick()
+        runCurrent()
+        assertEquals(true, component.state.value.showPickerModeChooser)
+
+        component.onChoosePickerMode(PickKind.Photos)
+        runCurrent()
+
+        assertEquals(false, component.state.value.showPickerModeChooser)
+        assertTrue(picker.pickPhotosCalled, "Photos pick must be routed to the tapped row's picker")
+        assertIs<PeerTransferState.Sent>(row.state.value.transfer)
+    }
+
+    @Test
+    fun `isPickerModeChooserNeeded false — onCardClick invokes picker directly without showing chooser`() = runTest {
+        val picker = FakeFilePicker(result = emptyList())
+        val flow = MutableStateFlow(listOf(deviceA))
+        val component = buildComponent(
+            flow = flow,
+            coroutineScope = backgroundScope,
+            isPickerModeChooserNeeded = false,
+            filePicker = picker,
+        )
+        runCurrent()
+
+        val row = component.state.value.rows
+            .first()
+        row.onCardClick()
+        runCurrent()
+
+        assertEquals(false, component.state.value.showPickerModeChooser)
+        assertTrue(picker.pickFilesCalled, "picker must be invoked directly when chooser is not needed")
+    }
+
+    @Test
+    fun `onChoosePickerMode without prior tap throws IllegalStateException`() = runTest {
+        val component = buildComponent(coroutineScope = backgroundScope, isPickerModeChooserNeeded = true)
+
+        var thrown: IllegalStateException? = null
+        try {
+            component.onChoosePickerMode()
+        } catch (e: IllegalStateException) {
+            thrown = e
+        }
+
+        assertNotNull(thrown)
     }
 }
