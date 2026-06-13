@@ -157,7 +157,7 @@ Don't treat this as "a poor estimate" — scope often grows along the way due to
 
 Before merging — while the PR can still absorb a fix — surface every loose end. Sources: the issue's "Consequences" / "Out of scope", TODO/FIXME in the diff, anything deferred or scoped out during the work, and any cheap fix you spotted in a file you already touched.
 
-State **each** item as: **"\<known problem / unfinished item\>. Can do now because … / Can't do now because …"** — your honest read of whether it belongs in this PR (cheap and in files already touched → lean do-now; a separate surface / new target / large change → defer). Then ask the user **"What do you disagree with?"** and **stop**.
+State **each** item as: **"\<known problem / unfinished item\>. Can do now because … / Can't do now because …"** — your honest read of whether it belongs in this PR, per [`scope-discipline.md`](../../../docs/engineering/scope-discipline.md). Then ask the user **"What do you disagree with?"** and **stop**.
 
 Hard stop-point: the user redirects do-now-vs-defer here, while the merge is still reversible — not after, when a cheap in-file fix can no longer ride along.
 

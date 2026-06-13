@@ -23,6 +23,7 @@ Product-side docs (vision, audience, features) live in [`docs/product/`](../prod
 - [Platform concerns](platform-concerns.md) — recurring stumbling points for PRs touching platform source sets; checklist used by `review-platform`.
 - [Glossary discipline](glossary-discipline.md) — `docs/glossary.md` as the single dictionary (product / technical); `review-glossary` as a subagent that catches drift and undocumented terms in a PR diff.
 - [Long-lived artifacts](long-lived-artifacts.md) — writing discipline for prose that outlives the task. Applies to `CLAUDE.md`, `docs/`, `.claude/`, KDoc, comments, error messages.
+- [Scope discipline](scope-discipline.md) — the single fold-vs-defer test for findings (in reach + behaviour-local + already-verifiable); provenance is not an axis. Referenced by the `implement`, `close-issue`, and `check-review` skills.
 
 ## Writing style for these guides
 
