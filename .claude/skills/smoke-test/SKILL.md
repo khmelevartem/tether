@@ -313,3 +313,4 @@ Don't ask the user for clarification — the skill must be "zero-question": ever
 - **Don't run `./gradlew clean`** — it will eat the cache and slow down the next run.
 - **Don't send anything over the network** other than localhost and `$ANDROID_IP` (the latter — only if an adb device is connected).
 - **Don't guess file destination paths** — verify by filename: walk `$DOWNLOADS_B` (Desktop receiver) or the app-private Tether dir (Android) for the expected filename, then diff against the source.
+- **Don't pin incidental format width** — assert the invariant under test, not a length a legitimate change can vary; and a FAIL right after a deliberate format/behaviour change is drift, not flakiness.
