@@ -7,7 +7,9 @@ import io.ktor.utils.io.readAvailable
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.usePinned
 import kotlinx.coroutines.test.runTest
+import platform.Foundation.NSDate
 import platform.Foundation.NSFileManager
+import platform.Foundation.NSFileModificationDate
 import platform.posix.fclose
 import platform.posix.fopen
 import platform.posix.fwrite
@@ -38,6 +40,11 @@ class SharedPendingFilesReaderTest {
 
     private fun makeDir(path: String) {
         fm.createDirectoryAtPath(path, withIntermediateDirectories = true, attributes = null, error = null)
+    }
+
+    private fun backdateDir(path: String, secondsAgo: Double) {
+        val oldDate = NSDate(timeIntervalSinceReferenceDate = NSDate().timeIntervalSinceReferenceDate - secondsAgo)
+        fm.setAttributes(mapOf<Any?, Any>(NSFileModificationDate to oldDate), ofItemAtPath = path, error = null)
     }
 
     private fun writeManifest(batchDir: String, entries: List<Pair<String, Long>>) {
@@ -258,15 +265,28 @@ class SharedPendingFilesReaderTest {
     }
 
     @Test
-    fun `startup sweep removes stale tmp dirs left from a previous extension session`() = runTest {
+    fun `startup sweep removes old tmp dirs left from a previous extension session`() = runTest {
         val root = makeRoot()
         val staleTmp = "$root/tmp/abandoned-batch"
         makeDir(staleTmp)
         writeFile(staleTmp, "partial.bin", ByteArray(8))
-        assertTrue(fm.fileExistsAtPath(staleTmp), "stale tmp dir must exist before reader is used")
+        backdateDir(staleTmp, secondsAgo = 600.0)
+        assertTrue(fm.fileExistsAtPath(staleTmp), "old tmp dir must exist before reader is used")
 
         reader(root).consume()
-        assertFalse(fm.fileExistsAtPath(staleTmp), "startup sweep must have removed the stale tmp dir")
+        assertFalse(fm.fileExistsAtPath(staleTmp), "startup sweep must have removed the old tmp dir")
+    }
+
+    @Test
+    fun `startup sweep preserves recent tmp dir that may belong to an in-flight extension copy`() = runTest {
+        val root = makeRoot()
+        val activeTmp = "$root/tmp/in-flight-batch"
+        makeDir(activeTmp)
+        writeFile(activeTmp, "partial.bin", ByteArray(8))
+        assertTrue(fm.fileExistsAtPath(activeTmp), "recent tmp dir must exist before reader is used")
+
+        reader(root).consume()
+        assertTrue(fm.fileExistsAtPath(activeTmp), "startup sweep must not delete a recently-modified tmp dir")
     }
 
     @Test

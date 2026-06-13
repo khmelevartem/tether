@@ -76,7 +76,7 @@ class ShareViewController: UIViewController {
                 do {
                     try FileManager.default.copyItem(at: url, to: destURL)
                     let attrs = try FileManager.default.attributesOfItem(atPath: destURL.path)
-                    let size = (attrs[.size] as? Int) ?? 0
+                    let size = (attrs[.size] as? NSNumber)?.int64Value ?? 0
                     manifest.append(["name": destURL.lastPathComponent, "size": size])
                 } catch {
                     // Skip files that cannot be copied; the batch may still be partially useful.
@@ -111,9 +111,8 @@ class ShareViewController: UIViewController {
         // tiny file containing the URL string, not the document bytes. Instead use the provider's
         // own concrete content type so we get actual bytes; fall back to public.data.
         for typeID in provider.registeredTypeIdentifiers {
-            let id = typeID as? String ?? ""
-            if id == "public.file-url" || id == "public.url" { continue }
-            return id
+            if typeID == "public.file-url" || typeID == "public.url" { continue }
+            return typeID
         }
         return provider.hasItemConformingToTypeIdentifier("public.data") ? "public.data" : nil
     }

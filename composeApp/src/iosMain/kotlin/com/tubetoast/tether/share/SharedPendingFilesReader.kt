@@ -16,8 +16,10 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import platform.Foundation.NSDate
 import platform.Foundation.NSError
 import platform.Foundation.NSFileManager
+import platform.Foundation.NSFileModificationDate
 import platform.Foundation.NSURL
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.info
@@ -28,6 +30,9 @@ import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 private val log = KydraLog.withTag(default = "SharedPendingFilesReader")
+
+// Cross-process: a tmp dir younger than this may belong to an in-flight extension copy.
+private const val TMP_STALE_THRESHOLD_SECONDS = 300.0
 
 /**
  * Published batches are read at least once: a batch is moved to a staging directory before being
@@ -70,7 +75,7 @@ internal class SharedPendingFilesReader(
             deleteStagedBatch(batchPath)
         }
         for (batchPath in listBatchDirs(tmpDir)) {
-            deleteStagedBatch(batchPath)
+            if (isTmpDirStale(batchPath)) deleteStagedBatch(batchPath)
         }
         log.info { "startup sweep complete" }
     }
@@ -163,6 +168,13 @@ internal class SharedPendingFilesReader(
         } catch (_: Exception) {
             emptyList()
         }
+    }
+
+    private fun isTmpDirStale(batchPath: String): Boolean {
+        val attrs = fm.attributesOfItemAtPath(batchPath, error = null) ?: return true
+        val mtime = attrs[NSFileModificationDate] as? NSDate ?: return true
+        return NSDate().timeIntervalSinceReferenceDate - mtime.timeIntervalSinceReferenceDate >
+            TMP_STALE_THRESHOLD_SECONDS
     }
 
     private fun deleteStagedBatch(batchPath: String) {
