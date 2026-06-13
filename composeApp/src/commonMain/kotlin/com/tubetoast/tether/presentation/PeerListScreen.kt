@@ -98,7 +98,7 @@ private fun PeerListContent(
 @Composable
 private fun PickerModeChooser(
     showPickerModeChooser: Boolean,
-    onChoosePickerMode: (PickKind) -> Unit,
+    onChoosePickerMode: (PickKind?) -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(
         initialDetent = SheetDetent.Hidden,
@@ -123,7 +123,9 @@ private fun PickerModeChooser(
         onPickFolder = {
             onChoosePickerMode(PickKind.Folder)
         },
-        onDismiss = { sheetState.targetDetent = SheetDetent.Hidden },
+        onDismiss = {
+            onChoosePickerMode(null)
+        },
     )
 }
 

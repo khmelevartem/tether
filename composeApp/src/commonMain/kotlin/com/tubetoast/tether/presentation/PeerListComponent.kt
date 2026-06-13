@@ -64,12 +64,14 @@ class PeerListComponent(
     fun peerTransferComponent(peer: PeerIdentity): PeerTransferComponent? =
         _state.value.rows.firstOrNull { it.peerId == peer }
 
-    fun onChoosePickerMode(mode: PickKind = PickKind.Files) {
+    fun onChoosePickerMode(mode: PickKind?) {
         _state.update {
             it.copy(showPickerModeChooser = false)
         }
-        pendingPickComponent?.onPick(mode)
-            ?: throw IllegalStateException("Choosing picker mode is unavailable before picking peer in current UX")
+        mode?.let {
+            pendingPickComponent?.onPick(mode)
+                ?: throw IllegalStateException("Choosing picker mode is unavailable before picking peer in current UX")
+        }
         pendingPickComponent = null
     }
 
@@ -86,7 +88,7 @@ class PeerListComponent(
                 it.copy(showPickerModeChooser = true)
             }
         } else {
-            onChoosePickerMode()
+            onChoosePickerMode(PickKind.Files)
         }
     }
 }
