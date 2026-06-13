@@ -4,6 +4,7 @@ package com.tubetoast.tether.share
 
 import com.tubetoast.tether.transfer.FileSource
 import com.tubetoast.tether.transfer.IosFileSource
+import com.tubetoast.tether.transfer.OnCloseFileSource
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.ObjCObjectVar
 import kotlinx.cinterop.alloc
@@ -127,7 +128,7 @@ internal class SharedPendingFilesReader(
                 sizeBytes = entry.size,
                 securityScoped = false,
             )
-            sources += StagedFileSource(inner) {
+            sources += OnCloseFileSource(inner) {
                 if (remaining.addAndFetch(-1) == 0) deleteStagedBatch(batchPath)
             }
         }
@@ -181,20 +182,4 @@ internal class SharedPendingFilesReader(
         val name: String,
         val size: Long?,
     )
-}
-
-private class StagedFileSource(
-    private val inner: IosFileSource,
-    private val onLastClose: () -> Unit,
-) : FileSource by inner {
-    private val closed = AtomicBoolean(false)
-
-    override fun close() {
-        if (!closed.compareAndSet(expectedValue = false, newValue = true)) return
-        try {
-            inner.close()
-        } finally {
-            onLastClose()
-        }
-    }
 }
