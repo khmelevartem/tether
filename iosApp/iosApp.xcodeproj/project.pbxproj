@@ -377,7 +377,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.tubetoast.tether.Tether$(TEAM_ID).TetherShareExtension;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.tubetoast.tether.Tether$(TEAM_ID).TetherShareExtension";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -409,7 +409,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.tubetoast.tether.Tether$(TEAM_ID).TetherShareExtension;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.tubetoast.tether.Tether$(TEAM_ID).TetherShareExtension";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
