@@ -10,5 +10,4 @@ data class PeerCardState(
     val largeConfirm: PendingLargeConfirm? = null,
     val isOnline: Boolean,
     val device: Device,
-    val requestMobileChooser: Boolean = false,
 )

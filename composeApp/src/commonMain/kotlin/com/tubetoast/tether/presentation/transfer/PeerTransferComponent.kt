@@ -46,7 +46,7 @@ class PeerTransferComponent(
     private val filePicker: FilePicker,
     private val conflictRelay: PeerConflictRelay,
     private val fileTransferPreferences: FileTransferPreferences,
-    private val isMobileChooserPlatform: Boolean = false,
+    private val onPeerChosen: (PeerTransferComponent) -> Unit,
 ) : ComponentContext by componentContext {
     val peerId: PeerIdentity = peer.id
     private val mutablePeer = MutableStateFlow(peer)
@@ -66,7 +66,6 @@ class PeerTransferComponent(
     private val showDetailsCallback = onShowDetails
     private val expanded = MutableStateFlow(false)
     private val largeConfirm = MutableStateFlow<PendingLargeConfirm?>(null)
-    private val mobileChooserRequested = MutableStateFlow(false)
 
     private val mutableState = MutableValue(
         PeerCardState(
@@ -75,49 +74,41 @@ class PeerTransferComponent(
             largeConfirm = largeConfirm.value,
             isOnline = peer.isOnline,
             device = peer.device,
-            requestMobileChooser = false,
         ),
     )
     val state: Value<PeerCardState> = mutableState
 
     init {
-        combine(engine.state, expanded, largeConfirm, mutablePeer, mobileChooserRequested) {
-            transfer,
-            exp,
-            confirm,
-            p,
-            chooser,
-            ->
+        combine(
+            engine.state,
+            expanded,
+            largeConfirm,
+            mutablePeer,
+        ) { transfer, exp, confirm, peer ->
             mutableState.update {
                 PeerCardState(
                     transfer = transfer,
                     expanded = exp,
                     largeConfirm = confirm,
-                    isOnline = p.isOnline,
-                    device = p.device,
-                    requestMobileChooser = chooser,
+                    isOnline = peer.isOnline,
+                    device = peer.device,
                 )
             }
         }.launchIn(scope)
     }
 
-    fun onMobileChooserShown() {
-        mobileChooserRequested.update { false }
-    }
-
     fun startOutbound(sources: List<FileSource>) = engine.startOutbound(sources)
 
     fun onCardClick() {
+        if (engine.state.value !is PeerTransferState.Idle) return
+
         val pending = pendingFilesRepository.pending.value
-        if (pending == null) {
-            if (isMobileChooserPlatform && engine.state.value is PeerTransferState.Idle) {
-                mobileChooserRequested.update { true }
-                return
-            }
-            onPick(PickKind.Files)
+        if (pending != null) {
+            sendOrConfirmLarge(pending.sources, clearOnSuccess = pending)
             return
         }
-        sendOrConfirmLarge(pending.sources, clearOnSuccess = pending)
+
+        onPeerChosen(this)
     }
 
     // All access is main-thread-confined: onPick is called from UI and the coroutine body

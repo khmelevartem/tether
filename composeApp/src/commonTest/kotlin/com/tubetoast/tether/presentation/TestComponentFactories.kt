@@ -30,6 +30,7 @@ internal fun fakePeerTransferComponentFactory(
     pendingFilesRepository: PendingFilesRepository = PendingFilesRepository(),
     filePicker: FakeFilePicker = FakeFilePicker(result = emptyList()),
     onShowDetails: (PeerIdentity) -> Unit = {},
+    onPeerChosen: (PeerTransferComponent) -> Unit = {},
 ): (ComponentContext, LifecycleRegistry, Peer) -> PeerTransferComponent =
     { childCtx, childLifecycle, peer ->
         val wrappedLifecycle = object : LifecycleRegistry by childLifecycle {
@@ -56,6 +57,7 @@ internal fun fakePeerTransferComponentFactory(
             filePicker = filePicker,
             conflictRelay = PeerConflictRelay(),
             fileTransferPreferences = FakeFileTransferPreferences(),
+            onPeerChosen = onPeerChosen,
         )
     }
 

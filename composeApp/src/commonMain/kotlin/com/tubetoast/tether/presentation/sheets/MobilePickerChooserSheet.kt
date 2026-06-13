@@ -44,7 +44,7 @@ enum class PickerKind { Photos, Files, Folder }
  *   restored from onDismiss. Not blocking transfer flow; pure a11y polish.
  */
 @Composable
-fun MobilePickerChooserSheet(
+fun PickerModeChooserSheet(
     sheetState: ModalBottomSheetState,
     onPickPhotos: () -> Unit,
     onPickFiles: () -> Unit,

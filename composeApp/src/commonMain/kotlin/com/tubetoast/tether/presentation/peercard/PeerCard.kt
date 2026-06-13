@@ -3,7 +3,6 @@ package com.tubetoast.tether.presentation.peercard
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -22,18 +21,10 @@ import com.tubetoast.tether.transfer.PeerTransferState
 fun PeerCard(
     component: PeerTransferComponent,
     modifier: Modifier = Modifier,
-    onChooserRequest: (() -> Unit)? = null,
 ) {
     val state by component.state.subscribeAsState()
     val isAutoSendEnabled by component.observeAutoSend().collectAsState(initial = false)
     val deviceType = component.deviceType
-
-    LaunchedEffect(state.requestMobileChooser) {
-        if (state.requestMobileChooser) {
-            onChooserRequest?.invoke()
-            component.onMobileChooserShown()
-        }
-    }
 
     val cardModifier = modifier
         .fillMaxWidth()

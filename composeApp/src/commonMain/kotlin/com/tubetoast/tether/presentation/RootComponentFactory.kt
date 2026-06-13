@@ -3,7 +3,6 @@ package com.tubetoast.tether.presentation
 import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.essenty.lifecycle.coroutines.withLifecycle
 import com.tubetoast.tether.config.DeviceNameStore
-import com.tubetoast.tether.foundation.IsMobileChooserPlatform
 import com.tubetoast.tether.peer.PeersRepository
 import com.tubetoast.tether.preferences.FileTransferPreferences
 import com.tubetoast.tether.presentation.banners.BannersComponent
@@ -37,7 +36,7 @@ class RootComponentFactory(
                 PeerListComponent(
                     componentContext = ctx,
                     peersRepository = peersRepository,
-                    peerTransferComponentFactory = { childCtx, lifecycle, peer ->
+                    peerTransferComponentFactory = { childCtx, lifecycle, peer, onPeerChosen ->
                         val engine = peerTransferEngineRegistry.engineFor(peer.id)
                         val componentScope = CoroutineScope(Dispatchers.Main.immediate).withLifecycle(lifecycle)
                         PeerTransferComponent(
@@ -51,7 +50,7 @@ class RootComponentFactory(
                             filePicker = filePicker,
                             conflictRelay = peerConflictRelay,
                             fileTransferPreferences = fileTransferPreferences,
-                            isMobileChooserPlatform = IsMobileChooserPlatform,
+                            onPeerChosen = onPeerChosen,
                         )
                     },
                     bannersComponentFactory = { bannersCtx ->
