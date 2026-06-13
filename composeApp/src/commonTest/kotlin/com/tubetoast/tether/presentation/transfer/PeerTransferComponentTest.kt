@@ -62,6 +62,7 @@ class PeerTransferComponentTest {
         filePicker: FakeFilePicker = FakeFilePicker(result = emptyList()),
         conflictRelay: PeerConflictRelay = PeerConflictRelay(),
         isMobileChooserPlatform: Boolean = false,
+        pauseChannel: Channel<Unit>? = null,
         scope: kotlinx.coroutines.CoroutineScope,
     ): Pair<PeerTransferComponent, LifecycleRegistry> {
         val lifecycle = LifecycleRegistry()
@@ -69,7 +70,7 @@ class PeerTransferComponentTest {
         val context = DefaultComponentContext(lifecycle)
         val engine = PeerTransferEngine(
             peer = peer.id,
-            batchSenderFactory = fakeBatchSender(),
+            batchSenderFactory = fakeBatchSender(pauseChannel = pauseChannel),
             inboundEvents = MutableSharedFlow(),
             scope = scope,
             peerPreferencesStore = FakePeerPreferencesStore(),
@@ -493,31 +494,16 @@ class PeerTransferComponentTest {
     fun `onCardClick on mobile-chooser platform does not set requestMobileChooser when engine busy`() = runTest {
         val pauseChannel = Channel<Unit>(0)
         val relay = PeerConflictRelay()
-        val lifecycle = LifecycleRegistry()
-        lifecycle.resume()
-        val engine = PeerTransferEngine(
-            peer = peer.id,
-            batchSenderFactory = fakeBatchSender(pauseChannel = pauseChannel),
-            inboundEvents = MutableSharedFlow(),
-            scope = backgroundScope,
-            peerPreferencesStore = FakePeerPreferencesStore(),
-        )
         val pickedSources = listOf(FakeFileSource("picked.txt", 100L))
-        val component = PeerTransferComponent(
-            componentContext = DefaultComponentContext(lifecycle),
-            peer = peer,
-            lifecycleRegistry = lifecycle,
-            engine = engine,
-            onShowDetails = {},
-            scope = backgroundScope,
-            pendingFilesRepository = PendingFilesRepository(),
+        val (component, _) = buildComponent(
             filePicker = FakeFilePicker(result = pickedSources),
             conflictRelay = relay,
-            fileTransferPreferences = FakeFileTransferPreferences(),
             isMobileChooserPlatform = true,
+            pauseChannel = pauseChannel,
+            scope = backgroundScope,
         )
 
-        engine.startOutbound(listOf(FakeFileSource("in-flight.txt", 50L)))
+        component.startOutbound(listOf(FakeFileSource("in-flight.txt", 50L)))
         runCurrent()
         assertIs<PeerTransferState.ActiveOutbound>(component.state.value.transfer)
 
