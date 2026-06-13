@@ -100,7 +100,7 @@ private fun TransferDetailsContent(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = spacing.lg, vertical = spacing.sm),
+                    .padding(horizontal = spacing.sm, vertical = spacing.sm),
             ) {
                 AggregateStrip(
                     sentCount = sentCount,
@@ -120,9 +120,7 @@ private fun TransferDetailsContent(
 
         LazyColumn(
             state = rememberLazyListState(),
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = spacing.lg),
+            modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(spacing.xs),
         ) {
             itemsIndexed(perFile, key = { index, _ -> index }) { index, fileStatus ->
