@@ -36,7 +36,7 @@ class RootComponentFactory(
                 PeerListComponent(
                     componentContext = ctx,
                     peersRepository = peersRepository,
-                    peerTransferComponentFactory = { childCtx, lifecycle, peer ->
+                    peerTransferComponentFactory = { childCtx, lifecycle, peer, onPeerChosen ->
                         val engine = peerTransferEngineRegistry.engineFor(peer.id)
                         val componentScope = CoroutineScope(Dispatchers.Main.immediate).withLifecycle(lifecycle)
                         PeerTransferComponent(
@@ -50,6 +50,7 @@ class RootComponentFactory(
                             filePicker = filePicker,
                             conflictRelay = peerConflictRelay,
                             fileTransferPreferences = fileTransferPreferences,
+                            onPeerChosen = onPeerChosen,
                         )
                     },
                     bannersComponentFactory = { bannersCtx ->

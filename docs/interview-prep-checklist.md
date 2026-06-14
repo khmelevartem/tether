@@ -84,7 +84,7 @@
 - [ ] Отмена Flow — автоматически при отмене корутины-collector
 
 ### Channels
-- [ ] `Channel` vs `Flow` — когда что
+- [x] `Channel` vs `Flow` — когда что
 - [ ] `produce` builder
 - [ ] Почему `BroadcastChannel` deprecated и что вместо (SharedFlow)
 
