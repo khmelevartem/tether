@@ -37,7 +37,7 @@ DeviceListScreen  (existing — touched)
       │
       └── [tap peer, idle, no pending outbound] ─────────────────┐
                                                                   ▼
-                                          PickerModeChooserSheet (Android + iOS only)
+                                          Picker-mode chooser sheet (Android + iOS only)
                                                                   │
                                                      [large selection?] ─── LargeSelectionConfirmDialog
                                                                   │
@@ -53,7 +53,7 @@ DeviceListScreen  (existing — touched)
 SettingsSection — File Transfer  (inside the app's existing settings surface)
 ```
 
-Screens introduced: LargeSelectionConfirmDialog, TransferDetailsScreen, PickerModeChooserSheet, SettingsSection — File Transfer.
+Screens introduced: LargeSelectionConfirmDialog, TransferDetailsScreen, picker-mode chooser sheet, SettingsSection — File Transfer.
 
 Screens touched: DeviceListScreen — extended with file-transfer banners and PeerCard state extensions (baseline owned by [device-list/ux-brief.md](../device-list/ux-brief.md)).
 
@@ -85,7 +85,7 @@ DeviceListScreen is owned by [device-list/ux-brief.md](../device-list/ux-brief.m
 - Tap PeerCard body when pending outbound exists and the peer is Idle: initiates send to that peer. On any platform: first shows LargeSelectionConfirmDialog if threshold exceeded, then transitions card to Active outbound.
 - Tap PeerCard body when pending outbound exists and the peer is busy (Active outbound / Active inbound / Connection paused / reconnecting): no card-state change; pending selection preserved; banner switches to (or re-asserts) the busy-peer variant naming this peer. Tapping the busy card's own [Cancel button] (the in-card transfer cancel) is unaffected and still cancels the in-flight transfer per PeerCard.
 - Tap PeerCard body when pending outbound exists and the peer is in a terminal state (Sent / Received / Error / Cancelled): no card-state change; pending selection preserved; banner switches to (or re-asserts) the terminal-display variant naming this peer. The card's in-place affordances ([Dismiss ×], [Retry] on Error, [Show details →], Received-state deep-link via the card body's Received-specific tap target) continue to work; only the "tap the empty card body to start a new send" semantics are suppressed while a terminal state is on display. Tapping [Dismiss ×] returns the card to Idle and the banner to default copy; the next tap on the card then initiates the send.
-- Tap PeerCard body when no pending outbound exists: on Android/iOS, opens PickerModeChooserSheet. On macOS/Desktop, opens system file dialog. (This extends device-list's "tap reachable PeerCard → file-send flow" hand-off.)
+- Tap PeerCard body when no pending outbound exists: on Android/iOS, opens the picker-mode chooser sheet. On macOS/Desktop, opens system file dialog. (This extends device-list's "tap reachable PeerCard → file-send flow" hand-off.)
 - All other PeerCard interactions: handled within the card itself (see PeerCard below).
 
 **Copy contributed by file-transfer.**
@@ -99,7 +99,7 @@ DeviceListScreen is owned by [device-list/ux-brief.md](../device-list/ux-brief.m
 
 - Android: share-sheet entry sets pending state and shows banner.
 - iOS: persistent iOS foreground constraint banner during any transfer. Share-sheet entry sets pending state.
-- macOS: drag-and-drop onto the Tether window sets pending state and shows banner; the drop is accepted at the window root on any screen, and the banner surfaces on DeviceListScreen beneath whatever screen is on top. System file dialog replaces PickerModeChooserSheet. No foreground constraint banner.
+- macOS: drag-and-drop onto the Tether window sets pending state and shows banner; the drop is accepted at the window root on any screen, and the banner surfaces on DeviceListScreen beneath whatever screen is on top. System file dialog replaces the picker-mode chooser sheet. No foreground constraint banner.
 - Desktop JVM: same as macOS for drag-and-drop and file dialog. No share-sheet. No foreground constraint banner.
 
 **Accessibility contributed by file-transfer.**
@@ -340,7 +340,7 @@ Brief inline state. Persistent — does not self-dismiss.
 
 ---
 
-### PickerModeChooserSheet
+### Picker-mode chooser sheet
 
 **Purpose.** A bottom sheet on Android and iOS that lets the user choose which system picker to invoke — Photos, Files, or Folder — before a send flow begins.
 
@@ -394,7 +394,7 @@ Brief inline state. Persistent — does not self-dismiss.
 
 **Entry points.**
 
-- After folder selection (PickerModeChooserSheet on Android/iOS, or system file dialog on macOS/Desktop) when the selection exceeds the threshold.
+- After folder selection (picker-mode chooser sheet on Android/iOS, or system file dialog on macOS/Desktop) when the selection exceeds the threshold.
 - After multi-file picker selection that exceeds the threshold.
 - After share-sheet arrival with >500 files or >2 GB.
 - After drag-and-drop with >500 files or >2 GB.
@@ -592,7 +592,7 @@ Auto-send is configured per-peer via the expanded PeerCard (see PeerCard § Idle
 
 1. User opens Tether → DeviceListScreen in populated state. PeerCards in Idle (collapsed).
 2. User taps target PeerCard body.
-3. **Android/iOS:** PickerModeChooserSheet appears. User taps "Photos" or "Files". System picker opens. User selects files. Sheet closes.
+3. **Android/iOS:** the picker-mode chooser sheet appears. User taps "Photos" or "Files". System picker opens. User selects files. Sheet closes.
    **macOS/Desktop:** System file dialog opens directly. User selects files.
 4. If selection exceeds threshold (>500 files OR >2 GB): LargeSelectionConfirmDialog appears. User taps [Send button].
 5. PeerCard transitions to Active outbound. Progress bar advances. Filename, progress copy ("X.X MB of Y.Y MB"), and speed update live. Receiver's same PeerCard transitions to Active inbound.
@@ -704,7 +704,7 @@ The drop is accepted at the window root — on any screen, not only DeviceListSc
 
 **DeviceListScreen** is the root screen. It is never replaced — it is always beneath any other screen in the stack.
 
-**PickerModeChooserSheet** is a bottom-sheet modal overlaid on DeviceListScreen (Android/iOS only). Dismissing it returns focus to DeviceListScreen without navigating anywhere.
+The **picker-mode chooser sheet** is a bottom-sheet modal overlaid on DeviceListScreen (Android/iOS only). Dismissing it returns focus to DeviceListScreen without navigating anywhere.
 
 **LargeSelectionConfirmDialog** is a modal dialog. It can appear over DeviceListScreen (if triggered from the picker sheet or from drag-drop). Dismissing returns to DeviceListScreen.
 
@@ -774,7 +774,7 @@ These are non-blocking unless noted. None gate the current implementation unless
 
 1. **Receiver-side retry for batch failures.** Sender-side retry is in scope for this feature; receiver-initiated retry is deferred. A receiver-side retry — where the receiver itself requests the sender to re-send only the failed files after freeing space — requires a pull-protocol shape, a decision on how long the failed-batch reference persists, and whether the sender must still be online. Deferred until the sender-side retry ships and usage signals the demand.
 
-2. **Mobile picker unification — the "two taps" gap.** The PickerModeChooserSheet adds one tap to the vision's "two taps to send" on Android and iOS, caused by OS constraints (the OS file/folder pickers do not support mixing folder and multi-file selection in a single picker session). Revisit once OS support evolves or an in-app picker becomes viable.
+2. **Mobile picker unification — the "two taps" gap.** The picker-mode chooser sheet adds one tap to the vision's "two taps to send" on Android and iOS, caused by OS constraints (the OS file/folder pickers do not support mixing folder and multi-file selection in a single picker session). Revisit once OS support evolves or an in-app picker becomes viable.
 
 3. **iOS deep-link to Files app reliability.** The inline hint in PeerCard Received state ("Open Files → On My iPhone → Tether") is a static instruction when the deep-link fails. If the deep-link proves unreliable in practice, a more guided in-app flow may be needed. Monitor failure rate post-launch.
 

@@ -39,7 +39,7 @@ enum class PickerKind { Photos, Files, Folder }
 
 /**
  * @param onDismiss Called when the sheet is dismissed. The call site is responsible for restoring
- *   focus to the triggering PeerCard row (brief §PickerModeChooserSheet Accessibility).
+ *   focus to the triggering PeerCard row (brief §Picker-mode chooser sheet Accessibility).
  *   TODO(#191-followup): file a separate accessibility issue — per-PeerCard FocusRequester map in PeerListScreen,
  *   restored from onDismiss. Not blocking transfer flow; pure a11y polish.
  */
