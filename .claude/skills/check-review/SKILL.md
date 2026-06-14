@@ -39,7 +39,7 @@ Before agreeing to move an "optional" item out of scope, ask yourself:
 
 If at least one of these questions is answered "yes", and the overall volume does not exceed a reasonable extension — **do it in this same PR**. The "optional" tag does not cancel the value of the fix or exempt you from it.
 
-"Scope grows critically" = new target / new component / changing a public contract / needing to change adjacent layers / unpredictable volume due to revealing a hidden bug. Volume in lines is not the main criterion; the main criterion is relevance to the current task.
+"Scope grows critically" = new target / new component / changing a public contract / needing to change adjacent layers / unpredictable volume due to revealing a hidden bug. Volume in lines is not the main criterion; the main criterion is relevance to the current task. Full fold-vs-defer test — [`scope-discipline.md`](../../../docs/engineering/scope-discipline.md); provenance is not an axis.
 
 Especially careful: when the reviewer themselves referenced a DoD item or edge case from the issue, the "optional" tag in that case often means "not a blocker for me personally", but strictly speaking this is a **gap in the DoD**, and closing it is the responsibility of the current task's assignee, not the next review or a future contributor. Do not offload your DoD onto someone else's backlog.
 

@@ -78,6 +78,7 @@ class TransferDetailsComponentTest {
             filePicker = FakeFilePicker(result = emptyList()),
             conflictRelay = PeerConflictRelay(),
             fileTransferPreferences = FakeFileTransferPreferences(),
+            onPeerChosen = {},
         )
     }
 

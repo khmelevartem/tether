@@ -1,58 +1,40 @@
 package com.tubetoast.tether.identity
 
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancelAndJoin
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.runTest
-import okio.Path.Companion.toOkioPath
+import com.tubetoast.tether.security.DeviceKeyPair
 import java.nio.file.Files
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class FingerprintDiskRoundTripTest {
-    private lateinit var prefsFile: java.io.File
+    private lateinit var keyDir: java.io.File
+    private lateinit var otherKeyDir: java.io.File
 
     @BeforeTest
     fun setup() {
-        prefsFile = Files.createTempFile("tether-fp-roundtrip", ".preferences_pb").toFile()
-        prefsFile.delete()
+        keyDir = Files.createTempDirectory("tether-fp-roundtrip").toFile()
+        otherKeyDir = Files.createTempDirectory("tether-fp-roundtrip-other").toFile()
     }
 
     @AfterTest
     fun teardown() {
-        prefsFile.delete()
+        keyDir.deleteRecursively()
+        otherKeyDir.deleteRecursively()
     }
 
-    // UnconfinedTestDispatcher runs the DataStore actor eagerly; the default StandardTestDispatcher would
-    // queue its work behind virtual time this test never advances, hanging getOrCreate.
     @Test
-    fun `fingerprint written by first DataStore is readable by second DataStore at same path`() =
-        runTest(UnconfinedTestDispatcher()) {
-            // The first DataStore gets its own job so it can be cancelled mid-test: DataStore releases the
-            // file only when its scope completes, and the second factory call at the same path otherwise
-            // throws "multiple DataStores active for the same file".
-            val firstJob = Job()
-            val firstStore = PreferenceDataStoreFactory.createWithPath(
-                scope = CoroutineScope(
-                    coroutineContext + firstJob,
-                ),
-            ) {
-                prefsFile.toOkioPath()
-            }
-            val firstFingerprint = DeviceIdentityStore(DataStoreFingerprintPersistence(firstStore)).getOrCreate()
-            firstJob.cancelAndJoin()
+    fun `two DeviceKeyPair instances from same dir yield equal fingerprint`() {
+        val fp1 = DeviceIdentityStore(DeviceKeyPair(keyDir).publicKey).fingerprint()
+        val fp2 = DeviceIdentityStore(DeviceKeyPair(keyDir).publicKey).fingerprint()
+        assertEquals(fp1, fp2, "same key dir must yield same fingerprint")
+    }
 
-            val secondStore = PreferenceDataStoreFactory.createWithPath(scope = backgroundScope) {
-                prefsFile.toOkioPath()
-            }
-            val readBack = DeviceIdentityStore(DataStoreFingerprintPersistence(secondStore)).getOrCreate()
-
-            assertEquals(firstFingerprint, readBack, "fingerprint must survive a DataStore close/reopen cycle")
-        }
+    @Test
+    fun `DeviceKeyPair from different dir yields different fingerprint`() {
+        val fp1 = DeviceIdentityStore(DeviceKeyPair(keyDir).publicKey).fingerprint()
+        val fp2 = DeviceIdentityStore(DeviceKeyPair(otherKeyDir).publicKey).fingerprint()
+        assertNotEquals(fp1, fp2, "different key dirs must yield different fingerprints")
+    }
 }

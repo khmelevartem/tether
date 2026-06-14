@@ -1,3 +1,3 @@
 package com.tubetoast.tether.foundation
 
-actual val IsMobileChooserPlatform: Boolean = false
+actual val IsPickerModeChooserNeeded: Boolean = false

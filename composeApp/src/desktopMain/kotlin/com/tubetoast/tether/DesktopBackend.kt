@@ -71,7 +71,7 @@ internal suspend fun DesktopAppContainer.startBackendOrFail(): BackendHandle {
     }
 }
 
-internal fun registerShutdownHook(handle: BackendHandle, onCancel: () -> Unit = {}) {
+internal fun registerShutdownHook(handle: BackendHandle, onCancel: () -> Unit = {}, afterClose: () -> Unit = {}) {
     Runtime.getRuntime().addShutdownHook(
         Thread {
             runCatching { onCancel() }
@@ -79,6 +79,7 @@ internal fun registerShutdownHook(handle: BackendHandle, onCancel: () -> Unit = 
                 runCatching { handle.close() }.onFailure {
                     log.warn { "backend cleanup failed — ${it.message}" }
                 }
+                runCatching { afterClose() }
             }
             cleanup.isDaemon = true
             cleanup.start()

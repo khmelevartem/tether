@@ -39,12 +39,12 @@ enum class PickerKind { Photos, Files, Folder }
 
 /**
  * @param onDismiss Called when the sheet is dismissed. The call site is responsible for restoring
- *   focus to the triggering PeerCard row (brief §MobilePickerChooserSheet Accessibility).
+ *   focus to the triggering PeerCard row (brief §Picker-mode chooser sheet Accessibility).
  *   TODO(#191-followup): file a separate accessibility issue — per-PeerCard FocusRequester map in PeerListScreen,
  *   restored from onDismiss. Not blocking transfer flow; pure a11y polish.
  */
 @Composable
-fun MobilePickerChooserSheet(
+fun PickerModeChooserSheet(
     sheetState: ModalBottomSheetState,
     onPickPhotos: () -> Unit,
     onPickFiles: () -> Unit,
@@ -65,7 +65,7 @@ fun MobilePickerChooserSheet(
                 .clip(TetherTheme.shapes.lg)
                 .background(TetherTheme.colors.surfaceRaised),
         ) {
-            MobilePickerChooserSheetContent(
+            PickerModeChooserSheetContent(
                 enabledKinds = enabledKinds,
                 onPickPhotos = onPickPhotos,
                 onPickFiles = onPickFiles,
@@ -76,7 +76,7 @@ fun MobilePickerChooserSheet(
 }
 
 @Composable
-private fun MobilePickerChooserSheetContent(
+private fun PickerModeChooserSheetContent(
     enabledKinds: Set<PickerKind>,
     onPickPhotos: () -> Unit,
     onPickFiles: () -> Unit,
@@ -150,11 +150,11 @@ private fun PickerRow(
     }
 }
 
-@Preview(name = "MobilePickerChooserSheet — all kinds")
+@Preview(name = "PickerModeChooserSheet — all kinds")
 @Composable
 private fun PreviewAllKinds(@PreviewParameter(Themes::class) dark: Boolean) =
     PreviewSurface(darkTheme = dark) {
-        MobilePickerChooserSheetContent(
+        PickerModeChooserSheetContent(
             enabledKinds = PickerKind.entries.toSet(),
             onPickPhotos = {},
             onPickFiles = {},
@@ -162,11 +162,11 @@ private fun PreviewAllKinds(@PreviewParameter(Themes::class) dark: Boolean) =
         )
     }
 
-@Preview(name = "MobilePickerChooserSheet — photos disabled")
+@Preview(name = "PickerModeChooserSheet — photos disabled")
 @Composable
 private fun PreviewPhotosDisabled(@PreviewParameter(Themes::class) dark: Boolean) =
     PreviewSurface(darkTheme = dark) {
-        MobilePickerChooserSheetContent(
+        PickerModeChooserSheetContent(
             enabledKinds = setOf(PickerKind.Files, PickerKind.Folder),
             onPickPhotos = {},
             onPickFiles = {},
