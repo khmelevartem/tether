@@ -11,6 +11,7 @@ import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.FakeFilePicker
 import com.tubetoast.tether.transfer.FakeFileSource
+import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.PickKind
 import com.tubetoast.tether.transfer.toPeerIdentity
@@ -371,6 +372,35 @@ class PeerListComponentTest {
         )
     }
 
+    private fun buildComponentWithPickersByPeer(
+        pickersByPeer: Map<PeerIdentity, FakeFilePicker>,
+        devices: MutableStateFlow<List<Device>>,
+        coroutineScope: CoroutineScope,
+        isPickerModeChooserNeeded: Boolean = true,
+    ): PeerListComponent {
+        val lifecycle = LifecycleRegistry()
+        val context = DefaultComponentContext(lifecycle)
+        lifecycle.resume()
+        return PeerListComponent(
+            componentContext = context,
+            peersRepository = PeersRepository(
+                discovery = FakeDeviceDiscovery(devices),
+                scope = coroutineScope,
+            ),
+            peerTransferComponentFactory = { childCtx, childLifecycle, peer, onPeerChosen ->
+                val picker = pickersByPeer[peer.id] ?: FakeFilePicker(result = emptyList())
+                fakePeerTransferComponentFactory(
+                    coroutineScope = coroutineScope,
+                    filePicker = picker,
+                ).invoke(childCtx, childLifecycle, peer, onPeerChosen)
+            },
+            bannersComponentFactory = fakeBannersComponentFactory(coroutineScope),
+            deviceNameComponentFactory = fakeDeviceNameComponentFactory(coroutineScope),
+            isPickerModeChooserNeeded = isPickerModeChooserNeeded,
+            coroutineScope = coroutineScope,
+        )
+    }
+
     @Test
     fun `mixed online and offline peers in same emit produce mixed-flag rows`() = runTest {
         val peerOnline = Peer(id = deviceA.toPeerIdentity(), device = deviceA, isOnline = true)
@@ -535,14 +565,7 @@ class PeerListComponentTest {
     fun `onChoosePickerMode without prior tap throws IllegalStateException`() = runTest {
         val component = buildComponent(coroutineScope = backgroundScope, isPickerModeChooserNeeded = true)
 
-        var thrown: IllegalStateException? = null
-        try {
-            component.onChoosePickerMode(PickKind.Files)
-        } catch (e: IllegalStateException) {
-            thrown = e
-        }
-
-        assertNotNull(thrown)
+        assertFailsWith<IllegalStateException> { component.onChoosePickerMode(PickKind.Files) }
     }
 
     @Test
@@ -645,30 +668,12 @@ class PeerListComponentTest {
         val pickerA = FakeFilePicker(result = emptyList())
         val pickerB = FakeFilePicker(result = emptyList())
         val flow = MutableStateFlow(listOf(deviceA, deviceB))
-
-        val lifecycle = LifecycleRegistry()
-        val context = DefaultComponentContext(lifecycle)
-        lifecycle.resume()
-        val pickersByPeer = mapOf(
-            deviceA.toPeerIdentity() to pickerA,
-            deviceB.toPeerIdentity() to pickerB,
-        )
-        val component = PeerListComponent(
-            componentContext = context,
-            peersRepository = PeersRepository(
-                discovery = FakeDeviceDiscovery(flow),
-                scope = backgroundScope,
+        val component = buildComponentWithPickersByPeer(
+            pickersByPeer = mapOf(
+                deviceA.toPeerIdentity() to pickerA,
+                deviceB.toPeerIdentity() to pickerB,
             ),
-            peerTransferComponentFactory = { childCtx, childLifecycle, peer, onPeerChosen ->
-                val picker = pickersByPeer[peer.id] ?: FakeFilePicker(result = emptyList())
-                fakePeerTransferComponentFactory(
-                    coroutineScope = backgroundScope,
-                    filePicker = picker,
-                ).invoke(childCtx, childLifecycle, peer, onPeerChosen)
-            },
-            bannersComponentFactory = fakeBannersComponentFactory(backgroundScope),
-            deviceNameComponentFactory = fakeDeviceNameComponentFactory(backgroundScope),
-            isPickerModeChooserNeeded = true,
+            devices = flow,
             coroutineScope = backgroundScope,
         )
         runCurrent()
@@ -697,30 +702,12 @@ class PeerListComponentTest {
         val pickerA = FakeFilePicker(result = emptyList())
         val pickerB = FakeFilePicker(result = listOf(FakeFileSource("img.png", 50L)))
         val flow = MutableStateFlow(listOf(deviceA, deviceB))
-
-        val lifecycle = LifecycleRegistry()
-        val context = DefaultComponentContext(lifecycle)
-        lifecycle.resume()
-        val pickersByPeer = mapOf(
-            deviceA.toPeerIdentity() to pickerA,
-            deviceB.toPeerIdentity() to pickerB,
-        )
-        val component = PeerListComponent(
-            componentContext = context,
-            peersRepository = PeersRepository(
-                discovery = FakeDeviceDiscovery(flow),
-                scope = backgroundScope,
+        val component = buildComponentWithPickersByPeer(
+            pickersByPeer = mapOf(
+                deviceA.toPeerIdentity() to pickerA,
+                deviceB.toPeerIdentity() to pickerB,
             ),
-            peerTransferComponentFactory = { childCtx, childLifecycle, peer, onPeerChosen ->
-                val picker = pickersByPeer[peer.id] ?: FakeFilePicker(result = emptyList())
-                fakePeerTransferComponentFactory(
-                    coroutineScope = backgroundScope,
-                    filePicker = picker,
-                ).invoke(childCtx, childLifecycle, peer, onPeerChosen)
-            },
-            bannersComponentFactory = fakeBannersComponentFactory(backgroundScope),
-            deviceNameComponentFactory = fakeDeviceNameComponentFactory(backgroundScope),
-            isPickerModeChooserNeeded = true,
+            devices = flow,
             coroutineScope = backgroundScope,
         )
         runCurrent()
