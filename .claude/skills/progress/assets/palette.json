@@ -24,6 +24,7 @@
     "free":     { "fill": "#d4af37", "comment": "open, без блокеров, не сирый" },
     "blocked":  { "fill": "#c9302c", "comment": "open, в цепях" },
     "orphan":   { "fill": "#e8d070", "stroke": "#d4af37", "comment": "ни parent, ни blocked_by, ни blocks; яркий жёлтый чтобы не сливался с закрытыми" },
+    "epic":     { "fill": "#9b4dca", "stroke": "#c89bf0", "comment": "узел, у которого есть sub-issues (эпик / хаб); пурпур epic-rarity, крупнее остальных" },
     "closed":   { "fill": "#3a2e1c", "stroke": "#6a5a40" }
   },
   "graph_edges": {

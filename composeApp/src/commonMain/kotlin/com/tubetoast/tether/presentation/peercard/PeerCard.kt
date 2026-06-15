@@ -1,13 +1,19 @@
 package com.tubetoast.tether.presentation.peercard
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
+import com.tubetoast.tether.presentation.dialogs.LargeSelectionConfirmDialog
 import com.tubetoast.tether.presentation.transfer.PeerCardState
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
-import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.protocol.DeviceType
 import com.tubetoast.tether.transfer.PeerTransferState
 
@@ -19,6 +25,27 @@ fun PeerCard(
     val state by component.state.subscribeAsState()
     val isAutoSendEnabled by component.observeAutoSend().collectAsState(initial = false)
     val deviceType = component.deviceType
+
+    val cardModifier = modifier
+        .fillMaxWidth()
+        .clickable(onClick = component::onCardClick)
+        .semantics {
+            role = Role.Button
+            contentDescription = "Tap to interact with ${state.device.name}"
+        }
+
+    state.largeConfirm?.let { confirm ->
+        LargeSelectionConfirmDialog(
+            fileCount = confirm.summary.fileCount,
+            totalBytes = confirm.summary.totalBytes,
+            peerName = state.device.name,
+            dontShowAgain = confirm.dontShowAgain,
+            onDontShowAgainToggle = component::onUpdateLargeConfirmDontShowAgain,
+            onConfirm = { component.onConfirmLargeSelection(confirm.dontShowAgain) },
+            onDismiss = component::onDismissLargeSelection,
+        )
+    }
+
     val callbacks = PeerCardCallbacks(
         onToggleExpand = component::toggleExpanded,
         onToggleAutoSend = component::setAutoSend,
@@ -35,10 +62,8 @@ fun PeerCard(
     )
     PeerCardContent(
         state = state,
-        isOnline = component.peer.isOnline,
-        device = component.peer.device,
         callbacks = callbacks,
-        modifier = modifier,
+        modifier = cardModifier,
         isAutoSendEnabled = isAutoSendEnabled,
         // TODO(#10): wire isPaired from PeerTransferComponent once observeIsPaired() is available
         isPaired = false,
@@ -49,8 +74,6 @@ fun PeerCard(
 @Composable
 internal fun PeerCardContent(
     state: PeerCardState,
-    isOnline: Boolean,
-    device: Device,
     callbacks: PeerCardCallbacks,
     modifier: Modifier = Modifier,
     isAutoSendEnabled: Boolean = false,
@@ -61,8 +84,8 @@ internal fun PeerCardContent(
         is PeerTransferState.Idle -> PeerCardIdle(
             state = transfer,
             expanded = state.expanded,
-            device = device,
-            isOnline = isOnline,
+            device = state.device,
+            isOnline = state.isOnline,
             isAutoSendEnabled = isAutoSendEnabled,
             callbacks = callbacks,
             modifier = modifier,
@@ -71,7 +94,7 @@ internal fun PeerCardContent(
         )
         is PeerTransferState.ActiveOutbound -> PeerCardActiveOutbound(
             state = transfer,
-            device = device,
+            device = state.device,
             callbacks = callbacks,
             // TODO(#10): wire isPaired from PeerTransferComponent once observeIsPaired() is available
             isPaired = isPaired,
@@ -79,7 +102,7 @@ internal fun PeerCardContent(
         )
         is PeerTransferState.ActiveInbound -> PeerCardActiveInbound(
             state = transfer,
-            device = device,
+            device = state.device,
             callbacks = callbacks,
             // TODO(#10): wire isPaired from PeerTransferComponent once observeIsPaired() is available
             isPaired = isPaired,
@@ -87,14 +110,14 @@ internal fun PeerCardContent(
         )
         is PeerTransferState.Reconnecting -> PeerCardReconnecting(
             state = transfer,
-            device = device,
+            device = state.device,
             // TODO(#10): wire isPaired from PeerTransferComponent once observeIsPaired() is available
             isPaired = isPaired,
             modifier = modifier,
         )
         is PeerTransferState.Sent -> PeerCardSent(
             state = transfer,
-            device = device,
+            device = state.device,
             callbacks = callbacks,
             // TODO(#10): wire isPaired from PeerTransferComponent once observeIsPaired() is available
             isPaired = isPaired,
@@ -102,7 +125,7 @@ internal fun PeerCardContent(
         )
         is PeerTransferState.Received -> PeerCardReceived(
             state = transfer,
-            device = device,
+            device = state.device,
             callbacks = callbacks,
             // TODO(#10): wire isPaired from PeerTransferComponent once observeIsPaired() is available
             isPaired = isPaired,
@@ -110,7 +133,7 @@ internal fun PeerCardContent(
         )
         is PeerTransferState.Cancelled -> PeerCardCancelled(
             state = transfer,
-            device = device,
+            device = state.device,
             callbacks = callbacks,
             // TODO(#10): wire isPaired from PeerTransferComponent once observeIsPaired() is available
             isPaired = isPaired,
@@ -118,8 +141,8 @@ internal fun PeerCardContent(
         )
         is PeerTransferState.Error -> PeerCardError(
             state = transfer,
-            device = device,
-            isOnline = isOnline,
+            device = state.device,
+            isOnline = state.isOnline,
             callbacks = callbacks,
             // TODO(#10): wire isPaired from PeerTransferComponent once observeIsPaired() is available
             isPaired = isPaired,

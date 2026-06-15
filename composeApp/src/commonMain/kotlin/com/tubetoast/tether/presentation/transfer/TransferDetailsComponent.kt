@@ -9,6 +9,7 @@ class TransferDetailsComponent(
     private val onBack: () -> Unit,
 ) : ComponentContext by componentContext {
     val state: Value<PeerCardState> get() = peerComponent.state
+    val peerName: String get() = peerComponent.state.value.device.name
 
     fun onRetryFile(name: String) = peerComponent.onRetryFile(name)
 

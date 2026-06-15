@@ -20,6 +20,10 @@ Both platforms produce the same bytes for a given key.
 
 The exposed public key is **91 bytes of X.509 SubjectPublicKeyInfo for EC P-256**. The interoperability claim: the JVM EC public-key import API accepts the bytes and round-trips them to an equal public-key instance. Verified by a cross-format unit test on the JVM side and by simulator-bundle smoke that POSTs `/pair` against the running iOS app — the only environment where the Apple Keychain path actually runs, see [docs/knowledge/apple-platform.md](../knowledge/apple-platform.md).
 
+## Fingerprint
+
+The device **fingerprint** — the identifier carried in discovery announces and `/hello`, and (with pairing) the pinned trust key — is the hex-encoded SHA-256 of this 91-byte SPKI. It is derived at runtime from the public key, not persisted on its own: the keypair is the single source of truth, so the fingerprint cannot drift from the key it denotes. Same key produces the same fingerprint on every platform and every restart; a regenerated key produces a new one, and two installs sharing a key collide — a true signal of identity equivalence. Because the value is `SHA-256(public key)`, a receiver can verify an announced `(public key, fingerprint)` pair rather than trust it; this binding is what lets the visible fingerprint denote the pinned key in the [SAS pairing model](../security/threat-model.md#sas-pairing-model).
+
 ## Cross-cutting
 
 - **Lifecycle.** Generated lazily on first construction, persisted; subsequent constructions return the same bytes. Identity rotation is via uninstall (clearing the Keychain / the config directory).

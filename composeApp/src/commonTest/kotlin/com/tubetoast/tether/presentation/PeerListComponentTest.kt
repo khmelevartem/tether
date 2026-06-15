@@ -1,34 +1,23 @@
 package com.tubetoast.tether.presentation
 
-import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.decompose.DefaultComponentContext
 import com.arkivanov.essenty.lifecycle.LifecycleRegistry
 import com.arkivanov.essenty.lifecycle.resume
-import com.tubetoast.tether.config.DeviceNameStore
-import com.tubetoast.tether.config.EphemeralDeviceNamePersistence
 import com.tubetoast.tether.discovery.FakeDeviceDiscovery
 import com.tubetoast.tether.peer.FakePeersRepository
 import com.tubetoast.tether.peer.Peer
 import com.tubetoast.tether.peer.PeersRepository
-import com.tubetoast.tether.preferences.FakeFileTransferPreferences
-import com.tubetoast.tether.preferences.FakePeerPreferencesStore
-import com.tubetoast.tether.presentation.banners.BannersComponent
-import com.tubetoast.tether.presentation.banners.PeerConflictRelay
-import com.tubetoast.tether.presentation.devicename.DeviceNameComponent
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.FakeFilePicker
 import com.tubetoast.tether.transfer.FakeFileSource
-import com.tubetoast.tether.transfer.PeerTransferEngine
+import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PeerTransferState
-import com.tubetoast.tether.transfer.PendingFilesRepository
-import com.tubetoast.tether.transfer.fakeBatchSender
-import com.tubetoast.tether.transfer.fakePeerTransferEngineRegistry
+import com.tubetoast.tether.transfer.PickKind
 import com.tubetoast.tether.transfer.toPeerIdentity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -39,10 +28,16 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertSame
+import kotlin.test.assertTrue
+
+private val PeerTransferComponent.peerState get() = state.value
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PeerListComponentTest {
@@ -58,6 +53,7 @@ class PeerListComponentTest {
 
     private val deviceA = Device(name = "DeviceA", host = "192.168.1.1", port = 8080)
     private val deviceB = Device(name = "DeviceB", host = "192.168.1.2", port = 8080)
+    private val deviceC = Device(name = "DeviceC", host = "192.168.1.3", port = 8080)
 
     @Test
     fun `empty state when no devices discovered`() = runTest {
@@ -77,7 +73,7 @@ class PeerListComponentTest {
         assertEquals(
             setOf(deviceA, deviceB),
             component.state.value.rows
-                .map { it.peer.device }
+                .map { it.peerState.device }
                 .toSet(),
         )
     }
@@ -97,7 +93,7 @@ class PeerListComponentTest {
             deviceA,
             component.state.value.rows
                 .first()
-                .peer.device,
+                .peerState.device,
         )
     }
 
@@ -117,7 +113,7 @@ class PeerListComponentTest {
 
         assertNull(
             component.state.value.rows
-                .firstOrNull { it.peer.id == deviceA.toPeerIdentity() },
+                .firstOrNull { it.peerId == deviceA.toPeerIdentity() },
         )
         assertNull(component.peerTransferComponent(deviceA.toPeerIdentity()))
     }
@@ -133,7 +129,7 @@ class PeerListComponentTest {
 
         assertNull(
             component.state.value.rows
-                .firstOrNull { it.peer.id == deviceA.toPeerIdentity() },
+                .firstOrNull { it.peerId == deviceA.toPeerIdentity() },
         )
         assertNull(component.peerTransferComponent(deviceA.toPeerIdentity()))
     }
@@ -179,7 +175,7 @@ class PeerListComponentTest {
         assertNotNull(component.peerTransferComponent(deviceA.toPeerIdentity()))
         assertNotNull(
             component.state.value.rows
-                .firstOrNull { it.peer.id == deviceA.toPeerIdentity() },
+                .firstOrNull { it.peerId == deviceA.toPeerIdentity() },
         )
     }
 
@@ -202,7 +198,7 @@ class PeerListComponentTest {
 
         assertNotNull(
             component.state.value.rows
-                .firstOrNull { it.peer.id == deviceA.toPeerIdentity() },
+                .firstOrNull { it.peerId == deviceA.toPeerIdentity() },
         )
         val second = component.peerTransferComponent(deviceA.toPeerIdentity())
         assertNotNull(second)
@@ -220,7 +216,7 @@ class PeerListComponentTest {
         assertIs<PeerTransferState.Idle>(
             component.state.value.rows
                 .first()
-                .transferComponent.state.value.transfer,
+                .state.value.transfer,
         )
 
         val peerComponent = component.peerTransferComponent(deviceA.toPeerIdentity())
@@ -231,7 +227,7 @@ class PeerListComponentTest {
         assertIs<PeerTransferState.Sent>(
             component.state.value.rows
                 .first()
-                .transferComponent.state.value.transfer,
+                .state.value.transfer,
         )
     }
 
@@ -257,8 +253,8 @@ class PeerListComponentTest {
         assertEquals(
             true,
             component.state.value.rows
-                .first { it.peer.id == deviceA.toPeerIdentity() }
-                .peer.isOnline,
+                .first { it.peerId == deviceA.toPeerIdentity() }
+                .peerState.isOnline,
         )
     }
 
@@ -274,7 +270,7 @@ class PeerListComponentTest {
             false,
             component.state.value.rows
                 .first()
-                .peer.isOnline,
+                .peerState.isOnline,
         )
     }
 
@@ -297,7 +293,7 @@ class PeerListComponentTest {
             false,
             component.state.value.rows
                 .first()
-                .peer.isOnline,
+                .peerState.isOnline,
         )
     }
 
@@ -323,73 +319,35 @@ class PeerListComponentTest {
             false,
             component.state.value.rows
                 .first()
-                .peer.isOnline,
+                .peerState.isOnline,
         )
     }
-
-    private fun fakeDeviceNameComponentFactory(scope: CoroutineScope): (ComponentContext) -> DeviceNameComponent =
-        { deviceNameCtx ->
-            DeviceNameComponent(
-                componentContext = deviceNameCtx,
-                nameStore = DeviceNameStore(EphemeralDeviceNamePersistence()),
-                coroutineScope = scope,
-            )
-        }
 
     private fun buildComponent(
         initial: List<Device> = emptyList(),
         flow: MutableStateFlow<List<Device>> = MutableStateFlow(initial),
         coroutineScope: CoroutineScope,
         onDestroyContext: (String) -> Unit = {},
+        isPickerModeChooserNeeded: Boolean = false,
+        filePicker: FakeFilePicker = FakeFilePicker(result = emptyList()),
     ): PeerListComponent {
         val lifecycle = LifecycleRegistry()
         val context = DefaultComponentContext(lifecycle)
         lifecycle.resume()
-        val peersRepository = PeersRepository(
-            discovery = FakeDeviceDiscovery(flow),
-            scope = coroutineScope,
-        )
         return PeerListComponent(
             componentContext = context,
-            peersRepository = peersRepository,
-            peerTransferComponentFactory = { childCtx, childLifecycle, peer ->
-                val wrappedLifecycle = object : LifecycleRegistry by childLifecycle {
-                    override fun onDestroy() {
-                        onDestroyContext(peer.id.id)
-                        childLifecycle.onDestroy()
-                    }
-                }
-                val engine = PeerTransferEngine(
-                    peer = peer.id,
-                    batchSenderFactory = fakeBatchSender(),
-                    inboundEvents = MutableSharedFlow(),
-                    scope = coroutineScope,
-                    peerPreferencesStore = FakePeerPreferencesStore(),
-                )
-                PeerTransferComponent(
-                    componentContext = childCtx,
-                    peer = peer,
-                    lifecycleRegistry = wrappedLifecycle,
-                    engine = engine,
-                    onShowDetails = {},
-                    scope = coroutineScope,
-                    pendingFilesRepository = PendingFilesRepository(),
-                    filePicker = FakeFilePicker(result = emptyList()),
-                    conflictRelay = PeerConflictRelay(),
-                    fileTransferPreferences = FakeFileTransferPreferences(),
-                )
-            },
-            bannersComponentFactory = { bannersCtx ->
-                BannersComponent(
-                    componentContext = bannersCtx,
-                    pendingFilesRepository = PendingFilesRepository(),
-                    peersRepository = FakePeersRepository(),
-                    engineRegistry = fakePeerTransferEngineRegistry(coroutineScope),
-                    conflictRelay = PeerConflictRelay(),
-                    coroutineScope = coroutineScope,
-                )
-            },
+            peersRepository = PeersRepository(
+                discovery = FakeDeviceDiscovery(flow),
+                scope = coroutineScope,
+            ),
+            peerTransferComponentFactory = fakePeerTransferComponentFactory(
+                coroutineScope = coroutineScope,
+                onDestroyContext = onDestroyContext,
+                filePicker = filePicker,
+            ),
+            bannersComponentFactory = fakeBannersComponentFactory(coroutineScope),
             deviceNameComponentFactory = fakeDeviceNameComponentFactory(coroutineScope),
+            isPickerModeChooserNeeded = isPickerModeChooserNeeded,
             coroutineScope = coroutineScope,
         )
     }
@@ -398,6 +356,7 @@ class PeerListComponentTest {
         peerFlow: MutableStateFlow<List<Peer>>,
         coroutineScope: CoroutineScope,
         onDestroyContext: (String) -> Unit = {},
+        isPickerModeChooserNeeded: Boolean = false,
     ): PeerListComponent {
         val lifecycle = LifecycleRegistry()
         val context = DefaultComponentContext(lifecycle)
@@ -405,44 +364,39 @@ class PeerListComponentTest {
         return PeerListComponent(
             componentContext = context,
             peersRepository = FakePeersRepository(peerFlow),
-            peerTransferComponentFactory = { childCtx, childLifecycle, peer ->
-                val wrappedLifecycle = object : LifecycleRegistry by childLifecycle {
-                    override fun onDestroy() {
-                        onDestroyContext(peer.id.id)
-                        childLifecycle.onDestroy()
-                    }
-                }
-                val engine = PeerTransferEngine(
-                    peer = peer.id,
-                    batchSenderFactory = fakeBatchSender(),
-                    inboundEvents = MutableSharedFlow(),
-                    scope = coroutineScope,
-                    peerPreferencesStore = FakePeerPreferencesStore(),
-                )
-                PeerTransferComponent(
-                    componentContext = childCtx,
-                    peer = peer,
-                    lifecycleRegistry = wrappedLifecycle,
-                    engine = engine,
-                    onShowDetails = {},
-                    scope = coroutineScope,
-                    pendingFilesRepository = PendingFilesRepository(),
-                    filePicker = FakeFilePicker(result = emptyList()),
-                    conflictRelay = PeerConflictRelay(),
-                    fileTransferPreferences = FakeFileTransferPreferences(),
-                )
-            },
-            bannersComponentFactory = { bannersCtx ->
-                BannersComponent(
-                    componentContext = bannersCtx,
-                    pendingFilesRepository = PendingFilesRepository(),
-                    peersRepository = FakePeersRepository(),
-                    engineRegistry = fakePeerTransferEngineRegistry(coroutineScope),
-                    conflictRelay = PeerConflictRelay(),
-                    coroutineScope = coroutineScope,
-                )
-            },
+            peerTransferComponentFactory = fakePeerTransferComponentFactory(coroutineScope, onDestroyContext),
+            bannersComponentFactory = fakeBannersComponentFactory(coroutineScope),
             deviceNameComponentFactory = fakeDeviceNameComponentFactory(coroutineScope),
+            isPickerModeChooserNeeded = isPickerModeChooserNeeded,
+            coroutineScope = coroutineScope,
+        )
+    }
+
+    private fun buildComponentWithPickersByPeer(
+        pickersByPeer: Map<PeerIdentity, FakeFilePicker>,
+        devices: MutableStateFlow<List<Device>>,
+        coroutineScope: CoroutineScope,
+        isPickerModeChooserNeeded: Boolean = true,
+    ): PeerListComponent {
+        val lifecycle = LifecycleRegistry()
+        val context = DefaultComponentContext(lifecycle)
+        lifecycle.resume()
+        return PeerListComponent(
+            componentContext = context,
+            peersRepository = PeersRepository(
+                discovery = FakeDeviceDiscovery(devices),
+                scope = coroutineScope,
+            ),
+            peerTransferComponentFactory = { childCtx, childLifecycle, peer, onPeerChosen ->
+                val picker = pickersByPeer[peer.id] ?: FakeFilePicker(result = emptyList())
+                fakePeerTransferComponentFactory(
+                    coroutineScope = coroutineScope,
+                    filePicker = picker,
+                ).invoke(childCtx, childLifecycle, peer, onPeerChosen)
+            },
+            bannersComponentFactory = fakeBannersComponentFactory(coroutineScope),
+            deviceNameComponentFactory = fakeDeviceNameComponentFactory(coroutineScope),
+            isPickerModeChooserNeeded = isPickerModeChooserNeeded,
             coroutineScope = coroutineScope,
         )
     }
@@ -457,8 +411,8 @@ class PeerListComponentTest {
 
         val rows = component.state.value.rows
         assertEquals(2, rows.size)
-        assertEquals(true, rows.first { it.peer.id == deviceA.toPeerIdentity() }.peer.isOnline)
-        assertEquals(false, rows.first { it.peer.id == deviceB.toPeerIdentity() }.peer.isOnline)
+        assertEquals(true, rows.first { it.peerId == deviceA.toPeerIdentity() }.peerState.isOnline)
+        assertEquals(false, rows.first { it.peerId == deviceB.toPeerIdentity() }.peerState.isOnline)
     }
 
     @Test
@@ -495,5 +449,285 @@ class PeerListComponentTest {
 
         val after = component.peerTransferComponent(deviceA.toPeerIdentity())
         assertEquals(before, after)
+    }
+
+    @Test
+    fun `offline-online polarity — component stays same instance and final state is online`() = runTest {
+        val peerOnline = Peer(id = deviceA.toPeerIdentity(), device = deviceA, isOnline = true)
+        val peerFlow = MutableStateFlow(listOf(peerOnline))
+        val component = buildComponentWithPeers(peerFlow = peerFlow, coroutineScope = backgroundScope)
+        runCurrent()
+
+        val retained = component.peerTransferComponent(deviceA.toPeerIdentity())
+        assertNotNull(retained)
+
+        peerFlow.value = listOf(peerOnline.copy(isOnline = false))
+        runCurrent()
+        assertSame(retained, component.peerTransferComponent(deviceA.toPeerIdentity()))
+        assertEquals(false, retained.state.value.isOnline)
+
+        peerFlow.value = listOf(peerOnline.copy(isOnline = true))
+        runCurrent()
+        assertSame(retained, component.peerTransferComponent(deviceA.toPeerIdentity()))
+        assertEquals(true, retained.state.value.isOnline)
+    }
+
+    @Test
+    fun `device rename reactivity — state reflects updated device name on retained component`() = runTest {
+        val peerFlow = MutableStateFlow(
+            listOf(Peer(id = deviceA.toPeerIdentity(), device = deviceA, isOnline = true)),
+        )
+        val component = buildComponentWithPeers(peerFlow = peerFlow, coroutineScope = backgroundScope)
+        runCurrent()
+
+        val retained = component.peerTransferComponent(deviceA.toPeerIdentity())
+        assertNotNull(retained)
+        assertEquals(deviceA.name, retained.state.value.device.name)
+
+        val renamedDevice = deviceA.copy(name = "RenamedDevice")
+        peerFlow.value = listOf(Peer(id = deviceA.toPeerIdentity(), device = renamedDevice, isOnline = true))
+        runCurrent()
+
+        assertSame(retained, component.peerTransferComponent(deviceA.toPeerIdentity()))
+        assertEquals("RenamedDevice", retained.state.value.device.name)
+    }
+
+    @Test
+    fun `isPickerModeChooserNeeded true — onCardClick sets showPickerModeChooser without invoking picker`() = runTest {
+        val picker = FakeFilePicker(result = emptyList())
+        val flow = MutableStateFlow(listOf(deviceA))
+        val component = buildComponent(
+            flow = flow,
+            coroutineScope = backgroundScope,
+            isPickerModeChooserNeeded = true,
+            filePicker = picker,
+        )
+        runCurrent()
+
+        val row = component.state.value.rows
+            .first()
+        row.onCardClick()
+        runCurrent()
+
+        assertEquals(true, component.state.value.showPickerModeChooser)
+        assertFalse(picker.pickFilesCalled, "picker must not be invoked before mode is chosen")
+        assertFalse(picker.pickPhotosCalled)
+    }
+
+    @Test
+    fun `isPickerModeChooserNeeded — onChoosePickerMode Photos routes pick to tapped row`() = runTest {
+        val picker = FakeFilePicker(result = listOf(FakeFileSource("img.png", 50L)))
+        val flow = MutableStateFlow(listOf(deviceA))
+        val component = buildComponent(
+            flow = flow,
+            coroutineScope = backgroundScope,
+            isPickerModeChooserNeeded = true,
+            filePicker = picker,
+        )
+        runCurrent()
+
+        val row = component.state.value.rows
+            .first()
+        row.onCardClick()
+        runCurrent()
+        assertEquals(true, component.state.value.showPickerModeChooser)
+
+        component.onChoosePickerMode(PickKind.Photos)
+        runCurrent()
+
+        assertEquals(false, component.state.value.showPickerModeChooser)
+        assertTrue(picker.pickPhotosCalled, "Photos pick must be routed to the tapped row's picker")
+        assertIs<PeerTransferState.Sent>(row.state.value.transfer)
+    }
+
+    @Test
+    fun `isPickerModeChooserNeeded false — onCardClick invokes picker directly without showing chooser`() = runTest {
+        val picker = FakeFilePicker(result = emptyList())
+        val flow = MutableStateFlow(listOf(deviceA))
+        val component = buildComponent(
+            flow = flow,
+            coroutineScope = backgroundScope,
+            isPickerModeChooserNeeded = false,
+            filePicker = picker,
+        )
+        runCurrent()
+
+        val row = component.state.value.rows
+            .first()
+        row.onCardClick()
+        runCurrent()
+
+        assertEquals(false, component.state.value.showPickerModeChooser)
+        assertTrue(picker.pickFilesCalled, "picker must be invoked directly when chooser is not needed")
+    }
+
+    @Test
+    fun `onChoosePickerMode without prior tap throws IllegalStateException`() = runTest {
+        val component = buildComponent(coroutineScope = backgroundScope, isPickerModeChooserNeeded = true)
+
+        assertFailsWith<IllegalStateException> { component.onChoosePickerMode(PickKind.Files) }
+    }
+
+    @Test
+    fun `onChoosePickerMode null dismisses chooser without picking`() = runTest {
+        val picker = FakeFilePicker(result = emptyList())
+        val flow = MutableStateFlow(listOf(deviceA))
+        val component = buildComponent(
+            flow = flow,
+            coroutineScope = backgroundScope,
+            isPickerModeChooserNeeded = true,
+            filePicker = picker,
+        )
+        runCurrent()
+
+        val row = component.state.value.rows
+            .first()
+        row.onCardClick()
+        runCurrent()
+
+        assertEquals(true, component.state.value.showPickerModeChooser)
+
+        component.onChoosePickerMode(null)
+        runCurrent()
+
+        assertEquals(false, component.state.value.showPickerModeChooser)
+        assertFalse(picker.pickFilesCalled, "dismiss must not invoke picker")
+        assertFalse(picker.pickPhotosCalled, "dismiss must not invoke picker")
+        assertFalse(picker.pickFolderCalled, "dismiss must not invoke picker")
+        assertIs<PeerTransferState.Idle>(row.state.value.transfer)
+    }
+
+    @Test
+    fun `chooser re-arms on subsequent taps after choose and after dismiss`() = runTest {
+        // Empty picker result keeps engine Idle so onCardClick() proceeds on the second tap.
+        val picker = FakeFilePicker(result = emptyList())
+        val flow = MutableStateFlow(listOf(deviceA))
+        val component = buildComponent(
+            flow = flow,
+            coroutineScope = backgroundScope,
+            isPickerModeChooserNeeded = true,
+            filePicker = picker,
+        )
+        runCurrent()
+
+        val row = component.state.value.rows
+            .first()
+
+        row.onCardClick()
+        runCurrent()
+        assertEquals(true, component.state.value.showPickerModeChooser)
+
+        component.onChoosePickerMode(PickKind.Files)
+        runCurrent()
+
+        assertEquals(false, component.state.value.showPickerModeChooser)
+        assertIs<PeerTransferState.Idle>(row.state.value.transfer)
+
+        row.onCardClick()
+        runCurrent()
+
+        assertEquals(true, component.state.value.showPickerModeChooser)
+
+        component.onChoosePickerMode(null)
+        runCurrent()
+
+        assertEquals(false, component.state.value.showPickerModeChooser)
+
+        row.onCardClick()
+        runCurrent()
+
+        assertEquals(true, component.state.value.showPickerModeChooser)
+    }
+
+    @Test
+    fun `peer evicted while chooser open clears pendingPickComponent`() = runTest {
+        val peerA = Peer(id = deviceA.toPeerIdentity(), device = deviceA, isOnline = true)
+        val peerFlow = MutableStateFlow(listOf(peerA))
+        val component = buildComponentWithPeers(
+            peerFlow = peerFlow,
+            coroutineScope = backgroundScope,
+            isPickerModeChooserNeeded = true,
+        )
+        runCurrent()
+
+        val row = component.state.value.rows
+            .first()
+        row.onCardClick()
+        runCurrent()
+        assertEquals(true, component.state.value.showPickerModeChooser)
+
+        peerFlow.value = emptyList()
+        runCurrent()
+
+        assertEquals(false, component.state.value.showPickerModeChooser)
+        assertFailsWith<IllegalStateException> { component.onChoosePickerMode(PickKind.Files) }
+    }
+
+    @Test
+    fun `unrelated peer change does not close open chooser`() = runTest {
+        val pickerA = FakeFilePicker(result = emptyList())
+        val pickerB = FakeFilePicker(result = emptyList())
+        val flow = MutableStateFlow(listOf(deviceA, deviceB))
+        val component = buildComponentWithPickersByPeer(
+            pickersByPeer = mapOf(
+                deviceA.toPeerIdentity() to pickerA,
+                deviceB.toPeerIdentity() to pickerB,
+            ),
+            devices = flow,
+            coroutineScope = backgroundScope,
+        )
+        runCurrent()
+
+        val rowA = component.state.value.rows
+            .first { it.peerId == deviceA.toPeerIdentity() }
+        rowA.onCardClick()
+        runCurrent()
+        assertEquals(true, component.state.value.showPickerModeChooser)
+
+        // Emit a peer-list change that does NOT evict deviceA — add deviceC, drop deviceB.
+        flow.value = listOf(deviceA, deviceC)
+        runCurrent()
+
+        assertEquals(true, component.state.value.showPickerModeChooser)
+        // pendingPickComponent still points to deviceA — Files pick must reach its picker without throwing.
+        component.onChoosePickerMode(PickKind.Files)
+        runCurrent()
+
+        assertTrue(pickerA.pickFilesCalled, "Files pick must be routed to deviceA after unrelated peer churn")
+        assertFalse(pickerB.pickFilesCalled, "deviceB must not receive the pick")
+    }
+
+    @Test
+    fun `onChoosePickerMode routes pick to tapped row only`() = runTest {
+        val pickerA = FakeFilePicker(result = emptyList())
+        val pickerB = FakeFilePicker(result = listOf(FakeFileSource("img.png", 50L)))
+        val flow = MutableStateFlow(listOf(deviceA, deviceB))
+        val component = buildComponentWithPickersByPeer(
+            pickersByPeer = mapOf(
+                deviceA.toPeerIdentity() to pickerA,
+                deviceB.toPeerIdentity() to pickerB,
+            ),
+            devices = flow,
+            coroutineScope = backgroundScope,
+        )
+        runCurrent()
+
+        val rows = component.state.value.rows
+        assertEquals(2, rows.size)
+        val rowA = rows.first { it.peerId == deviceA.toPeerIdentity() }
+        val rowB = rows.first { it.peerId == deviceB.toPeerIdentity() }
+
+        rowB.onCardClick()
+        runCurrent()
+        assertEquals(true, component.state.value.showPickerModeChooser)
+
+        component.onChoosePickerMode(PickKind.Photos)
+        runCurrent()
+
+        assertEquals(false, component.state.value.showPickerModeChooser)
+        assertTrue(pickerB.pickPhotosCalled, "Photos pick must reach row B's picker")
+        assertFalse(pickerA.pickPhotosCalled, "row A must not receive the pick")
+        assertIs<PeerTransferState.Sent>(rowB.state.value.transfer)
+        assertIs<PeerTransferState.Idle>(rowA.state.value.transfer)
     }
 }

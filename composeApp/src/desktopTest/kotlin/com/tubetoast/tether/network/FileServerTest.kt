@@ -3,6 +3,9 @@ package com.tubetoast.tether.network
 import com.tubetoast.tether.preferences.TempDataStore
 import com.tubetoast.tether.security.DefaultTrustedDeviceStore
 import com.tubetoast.tether.security.DeviceKeyPair
+import com.tubetoast.tether.transfer.DefaultTransferActivityTracker
+import com.tubetoast.tether.transfer.NoOpTransferActivityTracker
+import com.tubetoast.tether.transfer.TransferActivityTracker
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
@@ -18,7 +21,10 @@ import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.utils.io.ByteWriteChannel
 import io.ktor.utils.io.writeFully
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -53,7 +59,7 @@ class FileServerTest {
 
     private fun newServer(
         downloadsDir: File? = null,
-        tracker: TransferActivityTracker = DefaultTransferActivityTracker(),
+        tracker: TransferActivityTracker = NoOpTransferActivityTracker,
     ): FileServer {
         val configDir = Files.createTempDirectory("tether-fs-test-keys").toFile().also(cleanupPaths::add)
         val temp = TempDataStore().also { cleanupTempStores += it }
@@ -269,7 +275,9 @@ class FileServerTest {
         val tmpDir = Files.createTempDirectory("tether-test").toFile().also(cleanupPaths::add)
         var enters = 0
         var exits = 0
+        val trackerScope = CoroutineScope(Dispatchers.Unconfined)
         val tracker = DefaultTransferActivityTracker(
+            scope = trackerScope,
             onFirstEnter = { enters++ },
             onLastExit = { exits++ },
         )
@@ -288,6 +296,7 @@ class FileServerTest {
             assertEquals(1, exits, "tracker.onLastExit must fire exactly once per upload")
         } finally {
             client.close()
+            trackerScope.cancel()
         }
     }
 

@@ -9,9 +9,11 @@ import com.tubetoast.tether.presentation.banners.BannersComponent
 import com.tubetoast.tether.presentation.banners.PeerConflictRelay
 import com.tubetoast.tether.presentation.devicename.DeviceNameComponent
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
+import com.tubetoast.tether.protocol.DeviceType
 import com.tubetoast.tether.transfer.FilePicker
 import com.tubetoast.tether.transfer.PeerTransferEngineRegistry
 import com.tubetoast.tether.transfer.PendingFilesRepository
+import com.tubetoast.tether.transfer.TransferActivityTracker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 
@@ -23,6 +25,8 @@ class RootComponentFactory(
     private val filePicker: FilePicker,
     private val fileTransferPreferences: FileTransferPreferences,
     private val nameStore: DeviceNameStore,
+    private val transferActivityTracker: TransferActivityTracker,
+    private val ownDeviceType: DeviceType,
 ) {
     fun create(componentContext: ComponentContext): RootComponent =
         RootComponent(
@@ -32,7 +36,7 @@ class RootComponentFactory(
                 PeerListComponent(
                     componentContext = ctx,
                     peersRepository = peersRepository,
-                    peerTransferComponentFactory = { childCtx, lifecycle, peer ->
+                    peerTransferComponentFactory = { childCtx, lifecycle, peer, onPeerChosen ->
                         val engine = peerTransferEngineRegistry.engineFor(peer.id)
                         val componentScope = CoroutineScope(Dispatchers.Main.immediate).withLifecycle(lifecycle)
                         PeerTransferComponent(
@@ -46,6 +50,7 @@ class RootComponentFactory(
                             filePicker = filePicker,
                             conflictRelay = peerConflictRelay,
                             fileTransferPreferences = fileTransferPreferences,
+                            onPeerChosen = onPeerChosen,
                         )
                     },
                     bannersComponentFactory = { bannersCtx ->
@@ -55,6 +60,8 @@ class RootComponentFactory(
                             peersRepository = peersRepository,
                             engineRegistry = peerTransferEngineRegistry,
                             conflictRelay = peerConflictRelay,
+                            transferActivityTracker = transferActivityTracker,
+                            ownDeviceType = ownDeviceType,
                         )
                     },
                     deviceNameComponentFactory = { deviceNameCtx ->

@@ -19,7 +19,7 @@ class DefaultSelfAnnouncementProvider(
 ) : SelfAnnouncementProvider {
     override suspend fun get() = PeerAnnouncement(
         alias = nameStore.name.first(),
-        fingerprint = deviceIdentityStore.getOrCreate(),
+        fingerprint = deviceIdentityStore.fingerprint(),
         port = fileServer.port,
         deviceType = ownDeviceType,
     )

@@ -24,7 +24,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class PeerFileSenderTest {
-    private val device = Device(name = "test-peer", host = "127.0.0.1", port = 9090)
+    private val device = Device(name = "test-peer", host = "127.0.0.1", port = 9090, fingerprint = "fp-test")
 
     private fun TestScope.clientWith(status: HttpStatusCode, body: String): FileClient =
         FileClient(
@@ -111,5 +111,40 @@ class PeerFileSenderTest {
             sender.send(device.toPeerIdentity(), source) { _, _ -> }
         }
         assertTrue(source.closeCalled, "source.close() must be called even when send fails")
+    }
+
+    @Test
+    fun `send resolves to updated host-port when peer reappears with same fingerprint on new port`() = runTest {
+        val oldDevice = Device(name = "test-peer", host = "127.0.0.1", port = 9090, fingerprint = "fp-test")
+        val newDevice = Device(name = "test-peer", host = "127.0.0.1", port = 9091, fingerprint = "fp-test")
+        val store = DiscoveredDevicesStore().also {
+            it.upsert(oldDevice)
+            it.upsert(newDevice)
+        }
+        var capturedPort: Int? = null
+        val client = FileClient(
+            client = HttpClient(MockEngine) {
+                install(ContentNegotiation) { json() }
+                engine {
+                    dispatcher = StandardTestDispatcher(testScheduler)
+                    addHandler { request ->
+                        capturedPort = request.url.port
+                        val ch = (request.body as OutgoingContent.ReadChannelContent).readFrom()
+                        val buf = ByteArray(8 * 1024)
+                        while (!ch.isClosedForRead) ch.readAvailable(buf)
+                        respond(
+                            content = """{"savedPath":"/s"}""",
+                            status = HttpStatusCode.OK,
+                            headers = headersOf(HttpHeaders.ContentType, "application/json"),
+                        )
+                    }
+                }
+            },
+        )
+        val source = FakeFileSource(name = "file.txt", sizeBytes = 4L)
+
+        PeerFileSender(client, store).send(oldDevice.toPeerIdentity(), source) { _, _ -> }
+
+        assertEquals(9091, capturedPort, "sender must use the new port from the store, not the old one")
     }
 }

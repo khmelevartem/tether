@@ -14,6 +14,7 @@ import com.tubetoast.tether.transfer.FilePicker
 import com.tubetoast.tether.transfer.FileSource
 import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PeerTransferEngine
+import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.Pending
 import com.tubetoast.tether.transfer.PendingFilesRepository
 import com.tubetoast.tether.transfer.PendingFilesSummary
@@ -36,7 +37,7 @@ data class PendingLargeConfirm(
 
 class PeerTransferComponent(
     componentContext: ComponentContext,
-    val peer: Peer,
+    peer: Peer,
     private val lifecycleRegistry: LifecycleRegistry,
     private val engine: PeerTransferEngine,
     onShowDetails: (PeerIdentity) -> Unit,
@@ -45,7 +46,16 @@ class PeerTransferComponent(
     private val filePicker: FilePicker,
     private val conflictRelay: PeerConflictRelay,
     private val fileTransferPreferences: FileTransferPreferences,
+    private val onPeerChosen: (PeerTransferComponent) -> Unit,
 ) : ComponentContext by componentContext {
+    val peerId: PeerIdentity = peer.id
+    private val mutablePeer = MutableStateFlow(peer)
+
+    internal fun updatePeer(peer: Peer) {
+        require(peer.id == peerId) { "updatePeer must not change peer identity" }
+        mutablePeer.update { peer }
+    }
+
     // TODO(#332): read from peer.device.deviceType once Device carries the field
     val deviceType: DeviceType? = null
 
@@ -56,26 +66,49 @@ class PeerTransferComponent(
     private val showDetailsCallback = onShowDetails
     private val expanded = MutableStateFlow(false)
     private val largeConfirm = MutableStateFlow<PendingLargeConfirm?>(null)
+
     private val mutableState = MutableValue(
-        PeerCardState(engine.state.value, expanded.value, largeConfirm.value),
+        PeerCardState(
+            transfer = engine.state.value,
+            expanded = expanded.value,
+            largeConfirm = largeConfirm.value,
+            isOnline = peer.isOnline,
+            device = peer.device,
+        ),
     )
     val state: Value<PeerCardState> = mutableState
 
     init {
-        combine(engine.state, expanded, largeConfirm) { transfer, exp, confirm ->
-            mutableState.update { PeerCardState(transfer, exp, confirm) }
+        combine(
+            engine.state,
+            expanded,
+            largeConfirm,
+            mutablePeer,
+        ) { transfer, exp, confirm, peer ->
+            mutableState.update {
+                PeerCardState(
+                    transfer = transfer,
+                    expanded = exp,
+                    largeConfirm = confirm,
+                    isOnline = peer.isOnline,
+                    device = peer.device,
+                )
+            }
         }.launchIn(scope)
     }
 
     fun startOutbound(sources: List<FileSource>) = engine.startOutbound(sources)
 
     fun onCardClick() {
+        if (engine.state.value !is PeerTransferState.Idle) return
+
         val pending = pendingFilesRepository.pending.value
-        if (pending == null) {
-            onPick(PickKind.Files)
+        if (pending != null) {
+            sendOrConfirmLarge(pending.sources, clearOnSuccess = pending)
             return
         }
-        sendOrConfirmLarge(pending.sources, clearOnSuccess = pending)
+
+        onPeerChosen(this)
     }
 
     // All access is main-thread-confined: onPick is called from UI and the coroutine body
@@ -140,7 +173,7 @@ class PeerTransferComponent(
         if (accepted) {
             clearOnSuccess?.let { pendingFilesRepository.clearIfMatches(it) }
         } else {
-            conflictRelay.reportBusyTap(peer.id)
+            conflictRelay.reportBusyTap(peerId)
         }
     }
 
@@ -160,5 +193,5 @@ class PeerTransferComponent(
 
     fun setAutoSend(enabled: Boolean) = engine.setAutoSend(enabled)
 
-    fun onShowDetails() = showDetailsCallback(peer.id)
+    fun onShowDetails() = showDetailsCallback(peerId)
 }

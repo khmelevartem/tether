@@ -1,7 +1,6 @@
 package com.tubetoast.tether.network
 
 import com.tubetoast.tether.discovery.DiscoveredDevicesStore
-import com.tubetoast.tether.identity.DataStoreFingerprintPersistence
 import com.tubetoast.tether.identity.DeviceIdentityStore
 import com.tubetoast.tether.preferences.TempDataStore
 import com.tubetoast.tether.protocol.Device
@@ -45,10 +44,7 @@ class HelloRouteTest {
     }
 
     private fun newServer(
-        identityStore: DeviceIdentityStore =
-            DeviceIdentityStore(
-                DataStoreFingerprintPersistence(TempDataStore().also { cleanupTempStores += it }.dataStore),
-            ),
+        identityStore: DeviceIdentityStore = DeviceIdentityStore(ByteArray(32) { it.toByte() }),
         store: DiscoveredDevicesStore = DiscoveredDevicesStore(),
     ): FileServer {
         val configDir = Files.createTempDirectory("tether-hello-test-keys").toFile().also(cleanupPaths::add)
@@ -111,14 +107,14 @@ class HelloRouteTest {
     @Test
     fun `hello with own fingerprint does not upsert into store`() {
         val store = DiscoveredDevicesStore()
-        val identityTemp = TempDataStore().also { cleanupTempStores += it }
-        val identityStore = DeviceIdentityStore(DataStoreFingerprintPersistence(identityTemp.dataStore))
+        val ownPubKey = ByteArray(32) { (it + 7).toByte() }
+        val identityStore = DeviceIdentityStore(ownPubKey)
         val server = newServer(identityStore = identityStore, store = store)
         val port = server.start()
         val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
         try {
             runBlocking {
-                val ownFingerprint = identityStore.getOrCreate()
+                val ownFingerprint = identityStore.fingerprint()
                 val response = client.post("http://localhost:$port/hello") {
                     contentType(ContentType.Application.Json)
                     setBody(

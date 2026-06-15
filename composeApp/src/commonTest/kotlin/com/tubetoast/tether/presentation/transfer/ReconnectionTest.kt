@@ -5,7 +5,6 @@ import com.tubetoast.tether.transfer.BatchProgress
 import com.tubetoast.tether.transfer.BatchSender
 import com.tubetoast.tether.transfer.FakeConnectionMonitor
 import com.tubetoast.tether.transfer.FakeFileSource
-import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PerFileStatus
 import com.tubetoast.tether.transfer.TransferErrorReason
 import kotlinx.coroutines.Dispatchers
@@ -22,8 +21,6 @@ import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ReconnectionTest {
-    private val peer = PeerIdentity("peer-reconnect")
-
     private fun sources(vararg names: String) = names.map { FakeFileSource(it, 100L) }
 
     @Test
@@ -49,7 +46,7 @@ class ReconnectionTest {
 
         val emitted = mutableListOf<BatchProgress>()
         val job = launch {
-            sender.run(sources("a.txt", "b.txt", "c.txt"), peer) { emitted.add(it) }
+            sender.run(sources("a.txt", "b.txt", "c.txt")) { emitted.add(it) }
         }
 
         runCurrent()
@@ -91,7 +88,7 @@ class ReconnectionTest {
 
         var outcome: BatchOutcome? = null
         val job = launch {
-            outcome = sender.run(sources("a.txt", "b.txt", "c.txt"), peer) {}
+            outcome = sender.run(sources("a.txt", "b.txt", "c.txt")) {}
         }
 
         runCurrent()
@@ -129,7 +126,7 @@ class ReconnectionTest {
 
         var outcome: BatchOutcome? = null
         val job = launch {
-            outcome = sender.run(sources("a.txt", "b.txt", "c.txt"), peer) {}
+            outcome = sender.run(sources("a.txt", "b.txt", "c.txt")) {}
         }
 
         runCurrent()

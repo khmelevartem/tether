@@ -7,8 +7,6 @@ import com.tubetoast.tether.config.DefaultDeviceNamePersistence
 import com.tubetoast.tether.config.DeviceNamePersistence
 import com.tubetoast.tether.discovery.DiscoveredDevicesStore
 import com.tubetoast.tether.discovery.MdnsDiscovery
-import com.tubetoast.tether.identity.DataStoreFingerprintPersistence
-import com.tubetoast.tether.identity.FingerprintPersistence
 import com.tubetoast.tether.preferences.DefaultFileTransferPreferences
 import com.tubetoast.tether.preferences.FileTransferPreferences
 import com.tubetoast.tether.protocol.DeviceType
@@ -35,8 +33,6 @@ open class DesktopAppContainer internal constructor(
     }
     override val namePersistence: DeviceNamePersistence = config.namePersistenceOverride
         ?: DefaultDeviceNamePersistence(dataStore)
-    override val fingerprintPersistence: FingerprintPersistence = config.fingerprintPersistenceOverride
-        ?: DataStoreFingerprintPersistence(dataStore)
     override val discoveredDevicesStore: DiscoveredDevicesStore = DiscoveredDevicesStore()
     override val mdnsDiscovery: MdnsDiscovery by lazy {
         MdnsDiscovery(platform.mdnsDelegate(discoveredDevicesStore, deviceIdentityStore))

@@ -14,7 +14,7 @@ Runs basic smoke scenarios across Tether targets and produces a human-readable r
 At the start of the run **tell the user** — coverage boundaries:
 
 - **Physical iPhone** — no, requires manual signing and certificate trust.
-- **macOS** — ships through the Desktop JVM target; smoke is covered by the Desktop block (the same jar is packaged into `.app`/`.dmg` via `packageReleaseDistributionForCurrentOS`).
+- **Packaged desktop installers** (jpackage `.dmg` / `.msi` / `.deb` and the `.app` image) — not covered. The Desktop block runs the CLI fat-jar on the full system JDK; the installer instead bundles a jlinked, stripped runtime and launches the Compose UI, a path that surfaces failures the jar never hits. Build and launch the installer manually — see [docs/knowledge/jpackage-jlink-modules.md](../../../docs/knowledge/jpackage-jlink-modules.md).
 - **iOS Local Network Privacy prompt** — on the first app launch on the simulator iOS may show "Allow Local Network access". Without Allow, `NSNetService.publish()` silently fails. If the iOS block fails on publish — check the prompt manually, grant Allow, restart the smoke.
 - **Android-initiated send (Android → Desktop)** — Android has no programmatic send trigger (intent / UI button / broadcast). The skill checks the reverse direction: Desktop → Android via CLI `send`.
 - **Tapping the Notification "Stop" button** — replaced by `am force-stop` or broadcast. That the *button is rendered and works* — verify manually.
@@ -116,7 +116,7 @@ Sends 3 files in one command. PASS if `[send] done — 3/3 sent` appears AND all
 
 Run: `./block-2.3-retry.sh`
 
-Stops B to provoke `[send] error`, restarts B, then issues `retry SmokeMacB`. **Skipped pending [#367](https://github.com/khmelevartem/tether/issues/367)** — a restarted CLI gets a fresh ephemeral fingerprint, so the failed transfer leaves no terminal state for `retry` to resume from. Re-enable when stable-across-restart identity lands.
+Stops B to provoke `[send] error`, restarts B with the same `--config-dir` it started with in 2.1, then issues `retry SmokeMacB`. B's `--config-dir` identity (name + fingerprint) survives the stop→restart, so A's transfer engine tracks it as the same peer and the failed transfer retains its terminal state for `retry` to resume from. PASS if the file lands byte-identical after retry.
 
 #### Scenario 2.4 — exit code on `quit`
 
@@ -175,7 +175,7 @@ Run: `./block-5-ios.sh`
 1. Resolve + boot simulator (default `iPhone 17`; override via `IOS_DEVICE` env var).
 2. `xcodebuild`, install, launch.
 3. mDNS publish — `dns-sd -B` for up to 30 s.
-4. TXT record — must return `23 66 70 3D` (`#fp=`).
+4. TXT record — must carry an `fp=` field (`66 70 3D`); length-agnostic, since the fingerprint is the hex SHA-256 of the public key.
 5. Cross-discovery — iOS peer must appear in Desktop A's log within 30 s.
 6. `/health` on the real iOS bundle — port discovered via `lsof` on the host loopback.
 7. `/pair` X.509 EC P-256 SPKI shape (91 bytes, `[0]=0x30`, `[26]=0x04`). Load-bearing gate for the class of Apple-Keychain regression that unit tests cannot reach — `simctl spawn` binaries have no app identity, so `SecItem*` returns "unavailable" regardless of correctness. See `docs/knowledge/apple-platform.md`.
@@ -191,7 +191,7 @@ Runs after the Android and iOS blocks — both need instance A alive for cross-d
 
 Sends `quit` to A, waits up to 8 s, checks exit. PASS if the process exited.
 
-Checks exit code = 0 (last send was AllSent after the retry scenario). The exit-code check SKIPs when the code is unobtainable: a force-killed process, or — the usual case — CLI A being a non-child of this block's shell (launched in Block 1), where `wait` returns 127. Graceful exit itself still PASS/FAILs normally.
+Checks exit code = 0 (last send was AllSent after the retry scenario). The exit code is read from the per-run exit file (`$EXIT_A`) written by block-1's launch-wrapper subshell — `wait` on a detached PID returns 127 and cannot be used. If the exit file never appears — FAIL. If the process had to be force-killed — exit-code check SKIP.
 
 ### Block 7: Cleanup
 
@@ -250,7 +250,7 @@ At the end of the run print a markdown report:
 | Android | force-stop | ✓ PASS | process killed |
 | iOS | xcodebuild + install | ✓ PASS | UDID=<...>, 28s |
 | iOS | launch | ✓ PASS | pid=<...> |
-| iOS | mDNS publish | ✓ PASS | service=<IOS_NAME>, TXT=23 66 70 3D |
+| iOS | mDNS publish | ✓ PASS | service=<IOS_NAME>, TXT carries fp= |
 | iOS | cross-discovery | ✓ PASS | seen on Desktop A in 4s |
 | iOS | /health (real bundle) | ✓ PASS | port=55171, "Tether OK" |
 | iOS | /pair X.509 EC P-256 | ✓ PASS | 91 bytes via real Keychain |
@@ -313,3 +313,4 @@ Don't ask the user for clarification — the skill must be "zero-question": ever
 - **Don't run `./gradlew clean`** — it will eat the cache and slow down the next run.
 - **Don't send anything over the network** other than localhost and `$ANDROID_IP` (the latter — only if an adb device is connected).
 - **Don't guess file destination paths** — verify by filename: walk `$DOWNLOADS_B` (Desktop receiver) or the app-private Tether dir (Android) for the expected filename, then diff against the source.
+- **Don't pin incidental format width** — assert the invariant under test, not a length a legitimate change can vary; and a FAIL right after a deliberate format/behaviour change is drift, not flakiness.

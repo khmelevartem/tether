@@ -11,12 +11,9 @@ import com.tubetoast.tether.discovery.MdnsDiscovery
 import com.tubetoast.tether.discovery.RendezvousAnnouncer
 import com.tubetoast.tether.discovery.SelfAnnouncementProvider
 import com.tubetoast.tether.identity.DeviceIdentityStore
-import com.tubetoast.tether.identity.FingerprintPersistence
-import com.tubetoast.tether.network.DefaultTransferActivityTracker
 import com.tubetoast.tether.network.FileClient
 import com.tubetoast.tether.network.FileServer
 import com.tubetoast.tether.network.PeerFileSender
-import com.tubetoast.tether.network.TransferActivityTracker
 import com.tubetoast.tether.peer.PeersRepository
 import com.tubetoast.tether.preferences.DefaultPeerPreferencesStore
 import com.tubetoast.tether.preferences.FileTransferPreferences
@@ -25,10 +22,12 @@ import com.tubetoast.tether.presentation.RootComponentFactory
 import com.tubetoast.tether.presentation.banners.PeerConflictRelay
 import com.tubetoast.tether.protocol.DeviceType
 import com.tubetoast.tether.security.DefaultTrustedDeviceStore
+import com.tubetoast.tether.security.DeviceKeyPair
 import com.tubetoast.tether.security.TrustedDeviceStore
 import com.tubetoast.tether.transfer.AutoSendDispatcher
 import com.tubetoast.tether.transfer.BatchSender
 import com.tubetoast.tether.transfer.ConnectionMonitor
+import com.tubetoast.tether.transfer.DefaultTransferActivityTracker
 import com.tubetoast.tether.transfer.FilePicker
 import com.tubetoast.tether.transfer.NoOpConnectionMonitor
 import com.tubetoast.tether.transfer.PeerIdentity
@@ -36,6 +35,7 @@ import com.tubetoast.tether.transfer.PeerTransferEngine
 import com.tubetoast.tether.transfer.PeerTransferEngineRegistry
 import com.tubetoast.tether.transfer.PendingFilesRepository
 import com.tubetoast.tether.transfer.ReconnectionTimeout
+import com.tubetoast.tether.transfer.TransferActivityTracker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -45,19 +45,19 @@ abstract class AppContainer {
     protected abstract val trustedDataStore: DataStore<Preferences>
 
     protected abstract val namePersistence: DeviceNamePersistence
-    protected abstract val fingerprintPersistence: FingerprintPersistence
+    protected abstract val deviceKeyPair: DeviceKeyPair
     open val nameStore: DeviceNameStore by lazy { DeviceNameStore(namePersistence) }
     abstract val fileServer: FileServer
     abstract val mdnsDiscovery: MdnsDiscovery
     open val discoveredDevicesStore: DiscoveredDevicesStore by lazy { DiscoveredDevicesStore() }
     open val nameRepublisher: DeviceNameRepublisher by lazy { DeviceNameRepublisher(nameStore, mdnsDiscovery) }
-    open val transferActivityTracker: TransferActivityTracker = DefaultTransferActivityTracker()
-    open val fileClient: FileClient by lazy { FileClient.default(transferActivityTracker) }
+    open val transferActivityTracker: TransferActivityTracker by lazy { DefaultTransferActivityTracker(appScope) }
+    open val fileClient: FileClient by lazy { FileClient.default() }
     open val trustedDeviceStore: TrustedDeviceStore by lazy { DefaultTrustedDeviceStore(trustedDataStore) }
     open val peerPreferencesStore: PeerPreferencesStore by lazy { DefaultPeerPreferencesStore(dataStore) }
     abstract val fileTransferPreferences: FileTransferPreferences
 
-    open val deviceIdentityStore: DeviceIdentityStore by lazy { DeviceIdentityStore(fingerprintPersistence) }
+    open val deviceIdentityStore: DeviceIdentityStore by lazy { DeviceIdentityStore(deviceKeyPair.publicKey) }
     protected abstract val ownDeviceType: DeviceType
 
     open val appScope: CoroutineScope by lazy { CoroutineScope(SupervisorJob() + Dispatchers.Default) }
@@ -80,6 +80,7 @@ abstract class AppContainer {
             BatchSender(
                 sendOne = { source, onProgress -> peerFileSender.send(peer, source, onProgress) },
                 connectionMonitor = connectionMonitor,
+                tracker = transferActivityTracker,
             )
         }
     }
@@ -131,6 +132,8 @@ abstract class AppContainer {
             filePicker = filePicker,
             fileTransferPreferences = fileTransferPreferences,
             nameStore = nameStore,
+            transferActivityTracker = transferActivityTracker,
+            ownDeviceType = ownDeviceType,
         )
     }
 }

@@ -7,8 +7,6 @@ import com.tubetoast.tether.config.DefaultDeviceNamePersistence
 import com.tubetoast.tether.config.DeviceNamePersistence
 import com.tubetoast.tether.discovery.DiscoveredDevicesStore
 import com.tubetoast.tether.discovery.MdnsDiscovery
-import com.tubetoast.tether.identity.DataStoreFingerprintPersistence
-import com.tubetoast.tether.identity.FingerprintPersistence
 import com.tubetoast.tether.network.AppleUploadStorageBackend
 import com.tubetoast.tether.network.FileServer
 import com.tubetoast.tether.network.FileUploadStorage
@@ -16,8 +14,9 @@ import com.tubetoast.tether.network.UploadStorage
 import com.tubetoast.tether.preferences.DefaultFileTransferPreferences
 import com.tubetoast.tether.preferences.FileTransferPreferences
 import com.tubetoast.tether.protocol.DeviceType
+import com.tubetoast.tether.security.DeviceKeyPair
 import com.tubetoast.tether.transfer.FilePicker
-import com.tubetoast.tether.transfer.NoOpFilePicker
+import com.tubetoast.tether.transfer.IosFilePicker
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.ObjCObjectVar
 import kotlinx.cinterop.alloc
@@ -42,10 +41,10 @@ open class AppleAppContainer(
         appSupportDir().toPath() / "tether_trusted_devices.preferences_pb"
     }
     override val namePersistence: DeviceNamePersistence = DefaultDeviceNamePersistence(dataStore)
-    override val fingerprintPersistence: FingerprintPersistence = DataStoreFingerprintPersistence(dataStore)
+    override val deviceKeyPair: DeviceKeyPair = config.deviceKeyPair
     override val discoveredDevicesStore: DiscoveredDevicesStore = DiscoveredDevicesStore()
     internal open val uploadStorage: UploadStorage by lazy {
-        val dir = defaultDownloadsDir()
+        val dir = documentsDir().ifEmpty { error("FileServer: NSDocumentDirectory unavailable") }
         FileUploadStorage(root = dir, backend = AppleUploadStorageBackend(dir))
     }
     override val fileServer: FileServer by lazy {
@@ -53,7 +52,7 @@ open class AppleAppContainer(
             configuredPort = 0,
             uploadStorage = uploadStorage,
             trustedDeviceStore = trustedDeviceStore,
-            deviceKeyPair = config.deviceKeyPair,
+            deviceKeyPair = deviceKeyPair,
             tracker = transferActivityTracker,
             deviceIdentityStore = deviceIdentityStore,
             discoveredDevicesStore = discoveredDevicesStore,
@@ -69,8 +68,11 @@ open class AppleAppContainer(
     )
     override val ownDeviceType: DeviceType = DeviceType.Ios
 
-    // TODO(#194): replace with real iOS file picker
-    override val filePicker: FilePicker = NoOpFilePicker
+    val iosViewControllerHolder = IosViewControllerHolder()
+
+    override val filePicker: FilePicker = IosFilePicker(
+        viewControllerProvider = iosViewControllerHolder::topmostPresenter,
+    )
 }
 
 @OptIn(ExperimentalForeignApi::class, kotlinx.cinterop.BetaInteropApi::class)
@@ -97,9 +99,4 @@ private fun appSupportDir(): String {
 private fun documentsDir(): String {
     val paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, true)
     return paths.firstOrNull() as? String ?: ""
-}
-
-private fun defaultDownloadsDir(): String {
-    val docs = documentsDir().ifEmpty { error("FileServer: NSDocumentDirectory unavailable") }
-    return "$docs/Tether"
 }

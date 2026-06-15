@@ -37,9 +37,14 @@ tether
 
 # custom name and port
 tether --name MyMac --port 8080
+
+# persist identity in a directory so it survives restart (default: ephemeral per process)
+tether --config-dir ~/.config/tether-cli
 ```
 
 Check the server is alive: `curl http://localhost:<port>/health` → `Tether OK`.
+
+By default each CLI process gets a fresh identity, so two instances on one host stay distinct; `--config-dir` opts into a persistent identity (name + fingerprint + key pair) stored in that directory — see [`docs/knowledge/cli-multi-instance.md`](docs/knowledge/cli-multi-instance.md).
 
 Logs (off by default on the CLI): `TETHER_LOG_DEBUG=true tether` or `-Dtether.log.debug=true` turns the logger on at DEBUG. Full rules and platform gates — [`docs/engineering/logging.md`](docs/engineering/logging.md).
 

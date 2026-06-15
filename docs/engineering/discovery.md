@@ -64,7 +64,7 @@ Two runtime locks are worth calling out here because they are easy to forget in 
 
 ### Self-suppression
 
-mDNS announces propagate back to the announcing host. The implementation filters by the registered service name compared to the device's own name (matching the existing Android NSD pattern: track the *resolved* name returned by `onServiceRegistered`, since the OS may modify it). Once stable identity exists (see [Identity](#identity-and-self-suppression)), self-suppression migrates to the fingerprint.
+mDNS announces propagate back to the announcing host. The implementation filters by the registered service name compared to the device's own name (matching the existing Android NSD pattern: track the *resolved* name returned by `onServiceRegistered`, since the OS may modify it). Once stable identity exists (see [Identity and self-suppression](#identity-and-self-suppression)), self-suppression migrates to the fingerprint.
 
 ## Layer 2 — `POST /hello` rendezvous
 
@@ -78,7 +78,7 @@ Content-Type: application/json
 
 {
   "alias":       string,           // user-visible device name
-  "fingerprint": string,           // see Identity below; interim placeholder allowed
+  "fingerprint": string,           // see Identity below
   "port":        integer,          // sender's FileServer port
   "deviceType":  "android"|"ios"|"desktop"|"cli",
   "version":     integer           // protocol version, currently 1
@@ -155,13 +155,13 @@ Any combination of failure modes Layers 1–3 cannot overcome, the user works ar
 
 ## Identity and self-suppression
 
-The `fingerprint` field in `/hello` and `PeerAnnouncement` carries a stable device identity. Its target is the EC P-256 public key fingerprint produced by [Pairing (#11)](https://github.com/khmelevartem/tether/issues/11) — the same identity used by [channel encryption](../security/README.md#channel-encryption) and pairing.
+The `fingerprint` field in `/hello` and `PeerAnnouncement` carries a stable device identity: the hex-encoded SHA-256 of the device's EC P-256 public key (X.509 SubjectPublicKeyInfo) — the same key used by [channel encryption](../security/README.md#channel-encryption) and [pairing (#11)](https://github.com/khmelevartem/tether/issues/11).
 
-Until pairing identity lands, the field carries a random opaque string sufficient for self-suppression but not for trust. No code path treats it as authentication; trust gating remains pairing.
+A peer is identified by its fingerprint, not by its transport address (`host:port`, which changes across restart) — so a peer that reappears on a new port resolves to the same identity, and its in-progress transfer and pending retry state survive the reconnect.
 
-For app installs (Android, iOS, Desktop UI) the string is persisted via DataStore and regenerated on reinstall, matching the user-visible "reinstall produces a new identity" behaviour of pairing. For the CLI (`tether-cli`) it is per-process ephemeral — never persisted, so two CLI processes on the same host get distinct identities. See [`docs/knowledge/cli-multi-instance.md`](../knowledge/cli-multi-instance.md).
+The fingerprint denotes identity, not trust: no code path treats it as authentication. Trust gating arrives with pairing (#11).
 
-This dependency is reflected as a `TODO` in the discovery implementation referencing [#11](https://github.com/khmelevartem/tether/issues/11). It is not reflected in this document beyond this section, because the *contract* of the `fingerprint` field does not change between interim and final identity — only the source.
+For app installs (Android, iOS, Desktop UI) the key pair lives in the platform secure store, so a reinstall regenerates it and the fingerprint changes — matching the user-visible "reinstall produces a new identity" behaviour. For the CLI (`tether-cli`) the identity is per-process ephemeral by default: each process generates a fresh key pair in a temporary directory, so two CLI processes on the same host derive distinct fingerprints; passing `--config-dir` persists the key pair so the identity survives restart. See [`docs/knowledge/cli-multi-instance.md`](../knowledge/cli-multi-instance.md).
 
 ## Liveness and TTL
 

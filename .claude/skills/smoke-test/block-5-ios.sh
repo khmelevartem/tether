@@ -46,9 +46,10 @@ for i in $(seq 1 30); do
 done
 [ -n "$IOS_NAME" ] && echo "PASS: mDNS publish — $IOS_NAME" || echo "FAIL: mDNS publish — no iOS service seen (check Local Network Privacy prompt)"
 
-# TXT record — expects #fp=<fingerprint> (23 66 70 3D prefix, 36 bytes)
+# TXT record — must carry an fp= field (66 70 3D = "fp="). Length-agnostic: the
+# fingerprint is the hex SHA-256 of the public key, so the record length depends on it.
 set +e
-TXT_LINE=$( ( dns-sd -q "${IOS_NAME}._tether._tcp.local." TXT & DNSSD=$!; sleep 3; kill $DNSSD 2>/dev/null ) 2>&1 | grep 'TXT.*IN.*36 bytes.*23 66 70 3D' | head -1)
+TXT_LINE=$( ( dns-sd -q "${IOS_NAME}._tether._tcp.local." TXT & DNSSD=$!; sleep 3; kill $DNSSD 2>/dev/null ) 2>&1 | grep -E 'TXT.*IN.*[0-9]+ bytes.* 66 70 3D' | head -1)
 set -e
 [ -n "$TXT_LINE" ] && echo "PASS: TXT publish — #fp fingerprint record present" || echo "FAIL: TXT publish — #fp record not seen"
 

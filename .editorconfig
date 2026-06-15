@@ -22,3 +22,9 @@ compose_preview_public_check = false
 
 # see docs/engineering/ui-style-guide.md
 compose_allowed_composition_locals = LocalTetherColors,LocalTetherTypography,LocalTetherSpacing,LocalTetherShapes
+
+# Generated sources (Compose resource accessors) use names ktlint's naming rules reject;
+# the gradle filter excludes them from check but not from format, so disable the rules by path.
+[**/build/generated/**/*.kt]
+ktlint_standard_class-naming = disabled
+ktlint_standard_function-naming = disabled

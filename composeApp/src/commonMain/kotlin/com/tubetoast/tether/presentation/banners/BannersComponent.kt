@@ -3,10 +3,12 @@ package com.tubetoast.tether.presentation.banners
 import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.essenty.lifecycle.coroutines.coroutineScope
 import com.tubetoast.tether.peer.PeersRepository
+import com.tubetoast.tether.protocol.DeviceType
 import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PeerTransferEngineRegistry
 import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.PendingFilesRepository
+import com.tubetoast.tether.transfer.TransferActivityTracker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -18,6 +20,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -29,6 +32,8 @@ class BannersComponent(
     private val peersRepository: PeersRepository,
     private val engineRegistry: PeerTransferEngineRegistry,
     private val conflictRelay: PeerConflictRelay,
+    transferActivityTracker: TransferActivityTracker,
+    ownDeviceType: DeviceType,
     coroutineScope: CoroutineScope = componentContext.coroutineScope(),
 ) : ComponentContext by componentContext {
     private val scope = coroutineScope
@@ -36,9 +41,9 @@ class BannersComponent(
     val dropFeedback: StateFlow<Boolean> get() = _dropFeedback
     private val _dropFeedback = MutableStateFlow(false)
 
-    // TODO(#194): wire visible = true while any transfer is active on iOS (UIApplication foreground state observer)
-    val showForegroundConstraint: StateFlow<Boolean> get() = _showForegroundConstraint
-    private val _showForegroundConstraint = MutableStateFlow(false)
+    val showForegroundConstraint: StateFlow<Boolean> = transferActivityTracker.active
+        .map { it && ownDeviceType == DeviceType.Ios }
+        .stateIn(scope, SharingStarted.Eagerly, false)
 
     private val selectedConflictPeer = MutableStateFlow<PeerIdentity?>(null)
 
@@ -95,7 +100,7 @@ class BannersComponent(
             .value
             .firstOrNull { it.id == peerId }
             ?.device
-            ?.name ?: peerId.id
+            ?.name ?: "the device"
 
     private fun conflictPeerEngineStateFlow(peerId: PeerIdentity?) =
         if (peerId != null) {

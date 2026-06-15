@@ -8,6 +8,8 @@ import com.tubetoast.tether.protocol.PairResponse
 import com.tubetoast.tether.protocol.PeerAnnouncement
 import com.tubetoast.tether.security.TrustedDeviceStore
 import com.tubetoast.tether.security.deviceIdFromPublicKey
+import com.tubetoast.tether.transfer.NoOpTransferActivityTracker
+import com.tubetoast.tether.transfer.TransferActivityTracker
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
@@ -68,7 +70,7 @@ internal fun Application.installFileServerRoutes(
     storage: UploadStorage,
     trustedDeviceStore: TrustedDeviceStore,
     serverPublicKey: ByteArray,
-    tracker: TransferActivityTracker = DefaultTransferActivityTracker(),
+    tracker: TransferActivityTracker = NoOpTransferActivityTracker,
     deviceIdentityStore: DeviceIdentityStore? = null,
     discoveredDevicesStore: DiscoveredDevicesStore? = null,
 ) {
@@ -87,7 +89,7 @@ internal fun Application.installFileServerRoutes(
                 call.respond(HttpStatusCode.BadRequest, mapOf("error" to "invalid_port"))
                 return@post
             }
-            if (deviceIdentityStore != null && body.fingerprint == deviceIdentityStore.getOrCreate()) {
+            if (deviceIdentityStore != null && body.fingerprint == deviceIdentityStore.fingerprint()) {
                 log.debug { "hello self-suppressed (own fingerprint) from ${body.alias}" }
                 call.respond(HttpStatusCode.OK, emptyMap<String, String>())
                 return@post

@@ -111,11 +111,7 @@ fun PerFileRow(
                 BodyText(text = status.name, maxLines = 1)
                 when (status) {
                     is PerFileStatus.InProgress -> ProgressBar(
-                        progress = if (status.size != null && status.size > 0) {
-                            (status.bytesDone.toFloat() / status.size.toFloat()).coerceIn(0f, 1f)
-                        } else {
-                            0f
-                        },
+                        progress = status.bytesDone.fractionOf(status.size) ?: 0f,
                         height = ProgressBarHeight,
                         modifier = Modifier
                             .fillMaxWidth()
