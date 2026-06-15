@@ -67,7 +67,8 @@ Runtime prompts only. Compile-time declarations are listed per platform below.
 | Android | File send / save | none | — | — |
 | iOS | Local network discovery | system Local Network | First mDNS browse on device-list entry (one-strike) | Empty state with "Open Settings"; no re-prompt |
 | iOS | Notifications | system notification authorisation | First completion notification | Transfer still completes; in-app receipt only |
-| iOS | File send / save | none | — | — |
+| iOS | File send / container save | none | — | — |
+| iOS | Save received media to Photos | system add-only Photos authorisation | First inbound media save with setting on | Silently stays in Files; recover via Settings → Privacy → Photos |
 | macOS (native, Sequoia 15+) | Local network discovery | system Local Network | First mDNS browse on device-list entry | Empty state with "Open Settings" |
 | macOS (native, Sonoma 14 and earlier) | Local network discovery | none | — | — |
 | macOS (native) | Notifications | system notification authorisation | First completion notification | In-app receipt only |
@@ -104,11 +105,13 @@ Runtime prompts only. Compile-time declarations are listed per platform below.
 - **`NSBonjourServices`** in Info.plist listing Tether's service type. The deployed Info.plist uses `_tether._tcp.`; this string must stay in sync between Info.plist, the local Bonjour browse/register, and the mDNS service name advertised by Android and Desktop. Apple's published examples use the form without a trailing dot — both forms are accepted in practice; consistency matters more than which form.
 - **Local Network runtime prompt.** Fires on the first mDNS browse — tied to entering the device list, not to app launch. Tether's rationale screen is shown immediately before. Single denial is functionally permanent: the OS does not re-show the dialog. Tether moves directly to the "Open Settings" empty state on the device list; the button deep-links to the app's permission page.
 - **System notification authorisation** (runtime). Triggered on the first attempt to schedule a transfer-completion notification. Tether's rationale screen precedes the OS prompt. On denial, transfers still complete; the in-app "Received" list is the only completion surface.
+- **`NSPhotoLibraryAddUsageDescription`** in Info.plist. Add-only access — explicitly not `NSPhotoLibraryUsageDescription`, which grants full-library read access Tether does not use. Verbatim text shown in the OS prompt: "Tether adds the photos and videos you receive to your Photos library."
+- **System add-only Photos authorisation** (runtime). Fires on the first inbound save of a photo or video while the "Save to Photos" setting is on. Tether's rationale screen precedes the OS prompt. On denial, the received media stays in Files (`On My iPhone → Tether/`) — the transfer is unaffected, the file is already saved there, and there is no blocking error. Denial is final (no re-prompt, as with Local Network); recovery is via iOS Settings → Privacy → Photos, surfaced as a caption on the Settings toggle.
 
 **Not required.**
 
 - File send — the system Photos picker is privacy-preserving since iOS 14, no `NSPhotoLibraryUsageDescription`. The system Files picker and the OS share sheet add no runtime prompt.
-- File save — Tether writes only to its own app container (`On My iPhone → Tether/`); no Photos write (`NSPhotoLibraryAddUsageDescription`), no Files access outside the container.
+- File save to the app container — writing received files to `On My iPhone → Tether/` needs no prompt; Tether reaches no Files location outside its own container.
 - Inbound and outbound TCP within the local network are gated by the Local Network grant alone. The same grant covers the UDP-broadcast and HTTP-subnet-scan fallbacks used in [hotspot-transfer.md](../../hotspot-transfer/spec.md); no separate prompt or entitlement is involved.
 
 ## macOS (native Compose target)
