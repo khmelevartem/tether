@@ -7,7 +7,7 @@
 
 ## Information architecture
 
-This feature introduces five new screens / dialogs plus one settings section, and extends the PeerCard component (baseline owned by [device-list/ux-brief.md](../device-list/ux-brief.md)) with transfer-active states. All per-peer transfer state — including in-progress transfers — is contained within PeerCard. The card is the sole transfer surface; there is no separate full-screen progress view.
+This feature introduces four new screens / dialogs plus one settings section, and extends the PeerCard component (baseline owned by [device-list/ux-brief.md](../device-list/ux-brief.md)) with transfer-active states. All per-peer transfer state — including in-progress transfers — is contained within PeerCard. The card is the sole transfer surface; there is no separate full-screen progress view.
 
 ```
 DeviceListScreen  (existing — touched)
@@ -53,7 +53,7 @@ DeviceListScreen  (existing — touched)
 SettingsSection — File Transfer  (inside the app's existing settings surface)
 ```
 
-Screens introduced: LargeSelectionConfirmDialog, TransferDetailsScreen, picker-mode chooser sheet, PhotosPermissionRationale (iOS only), SettingsSection — File Transfer.
+Screens introduced: LargeSelectionConfirmDialog, TransferDetailsScreen, picker-mode chooser sheet, SettingsSection — File Transfer.
 
 Screens touched: DeviceListScreen — extended with file-transfer banners and PeerCard state extensions (baseline owned by [device-list/ux-brief.md](../device-list/ux-brief.md)).
 
@@ -559,7 +559,7 @@ Auto-send is configured per-peer via the expanded PeerCard (see PeerCard § Idle
 
 **Save-to-Photos toggle states (iOS).**
 
-- **On (default):** received photos and videos are added to the Photos library in addition to staying in Files. The OS add-to-Photos consent prompt is requested at the first save while the toggle is On — see PhotosPermissionRationale and § Flows. The toggle reflects the user's intent; it does not by itself reflect whether Photos permission has been granted.
+- **On (default):** received photos and videos are added to the Photos library in addition to staying in Files. iOS's own add-to-Photos consent prompt is requested at the first inbound media save while the toggle is On — see § Flows. The toggle reflects the user's intent; it does not by itself reflect whether Photos permission has been granted.
 - **Off:** behaviour matches Files-only — received media stays in `On My iPhone → Tether/` and no Photos permission is requested. Flipping to Off after a grant does not remove already-saved gallery copies.
 - **On but Photos permission denied:** the toggle stays On (the user's intent is unchanged), and a caption variant appears beneath it: "To add to Photos, allow Tether access in iOS Settings → Privacy → Photos." Received media silently continues to Files only until access is granted.
 
@@ -595,47 +595,6 @@ Auto-send is configured per-peer via the expanded PeerCard (see PeerCard § Idle
 - Save location row (iOS, read-only): semantic label "Save location: On My iPhone → Tether/. This location cannot be changed on iOS."
 - Save-to-Photos toggle (iOS): semantic label "Save received photos and videos to Photos, currently \<On/Off\>". When the denied-permission caption is shown, it is part of the row's accessible description so a screen reader reads the recovery hint with the toggle.
 - Large-selection warning toggle: semantic label "Show large-selection warnings, currently \<On/Off\>".
-
----
-
-### PhotosPermissionRationale (iOS only)
-
-**Purpose.** The Tether-owned rationale that precedes the OS add-to-Photos consent prompt, per the permissions strategy's rationale-before-prompt invariant — see [system/permissions/spec.md](../system/permissions/spec.md). One sentence on what Tether is about to do, one sentence on what the OS will ask, one button to continue.
-
-**Entry points.** The first time received media is about to be saved to Photos while the save-to-Photos toggle is On and add-to-Photos access has not yet been requested. It does not block the file from reaching Files — Files saving proceeds regardless of how this screen resolves.
-
-**Layout.**
-
-- Brief screen (presentation — modal vs inline — follows the permissions strategy's rationale-screen realisation; see [system/permissions/spec.md](../system/permissions/spec.md) § Open product questions).
-- Title line naming the action; one body line naming what the OS will ask; one continue button.
-
-**States.**
-
-- **Default:** rationale shown with the continue button and a dismiss affordance.
-- **Continued:** screen dismisses and hands off to the OS add-to-Photos prompt.
-- **Dismissed without continuing:** screen closes, the OS prompt is not shown, this save lands in Files only; the rationale is eligible to appear again at the next save while the toggle stays On.
-
-**Interactions.**
-
-- Tap continue button: dismisses the rationale and triggers the OS add-to-Photos prompt.
-- Dismiss (back gesture / tap outside / Cancel): closes without prompting; media stays in Files only; no error.
-
-**Copy.**
-
-- "Save to your Photos library" (title)
-- "Tether will ask iOS for permission to add the photos and videos you receive to your Photos library. They stay in Files either way." (body)
-- "Continue" (continue button)
-- "Not now" (dismiss button)
-
-**Per-platform deltas.**
-
-- Android / macOS / Desktop: this screen does not exist — no add-to-Photos save on those platforms.
-
-**Accessibility.**
-
-- Screen is announced on appearance; focus moves to the continue button.
-- Continue button semantic label: "Continue to allow adding received media to Photos".
-- Dismiss button semantic label: "Not now — keep received media in Files only".
 
 ---
 
@@ -754,15 +713,15 @@ The drop is accepted at the window root — on any screen, not only DeviceListSc
 ### Flow 12 — iOS: receive media to Photos, first-time consent (iOS only)
 
 1. The save-to-Photos toggle is On (default). An inbound transfer carrying ≥1 photo or video completes on iOS. Each received file is first saved to Files (`On My iPhone → Tether/`) — that save is independent of Photos and always happens.
-2. For the photos and videos in the batch, Tether prepares to add them to the Photos library. Because add-to-Photos access has not been requested before, PhotosPermissionRationale appears.
-   - User taps "Continue" → the OS add-to-Photos prompt appears.
-   - User taps "Not now" → no OS prompt this time; the media stays in Files. The PeerCard still completes into its normal Received state. The rationale is eligible again on the next inbound media save while the toggle stays On.
-3. On the OS prompt:
+2. For the photos and videos in the batch, Tether adds them to the Photos library. Because add-to-Photos access has not been requested before, iOS's own add-to-Photos prompt appears.
+3. On the prompt:
    - **Granted:** the photos and videos are added to Photos in addition to Files. The PeerCard's Received state and its [Show details →] breakdown are unchanged — there is no separate "saved to Photos" surface; the gallery copy is silent and additive.
    - **Denied:** nothing is added to Photos; the media remains in Files only. No blocking error and no per-transfer alert — the Received state completes normally. The SettingsSection save-to-Photos row gains its denied-permission caption ("To add to Photos, allow Tether access in iOS Settings → Privacy → Photos.") as the recovery path; the toggle stays On reflecting the user's intent.
-4. After a grant, subsequent inbound media is added to Photos silently with no further rationale or prompt. After a denial, subsequent inbound media silently stays in Files only; Tether does not re-prompt (iOS does not re-show the add-to-Photos prompt once decided) and does not nag — the Settings caption is the only recovery surface. Non-media files in any batch always stay in Files regardless of the toggle or the permission outcome.
+4. After a grant, subsequent inbound media is added to Photos silently with no further prompt. After a denial, subsequent inbound media silently stays in Files only; Tether does not re-prompt (iOS does not re-show the add-to-Photos prompt once decided) and does not nag — the Settings caption is the only recovery surface. Non-media files in any batch always stay in Files regardless of the toggle or the permission outcome.
 
-With the toggle Off, none of the above runs: no rationale, no OS prompt, media goes to Files only — behaviour identical to a Files-only receiver.
+With the toggle Off, none of the above runs: no OS prompt, media goes to Files only — behaviour identical to a Files-only receiver.
+
+A Tether-owned rationale screen that precedes iOS's add-to-Photos prompt is tracked in a follow-up issue.
 
 ---
 
@@ -777,8 +736,6 @@ The **picker-mode chooser sheet** is a bottom-sheet modal overlaid on DeviceList
 **TransferDetailsScreen** is pushed onto the navigation stack from DeviceListScreen (triggered by tapping [Show details →] on a PeerCard in any non-Idle state). Back returns to DeviceListScreen; the PeerCard underneath retains its current state (active or terminal).
 
 **SettingsSection — File Transfer** lives within the existing settings navigation surface. It does not introduce a new navigation root.
-
-**PhotosPermissionRationale** (iOS only) is a transient modal interposed before the OS add-to-Photos prompt at the first inbound media save. It does not push a destination onto the navigation stack and does not block the rest of the receive flow; dismissing it returns the user to wherever they were.
 
 **PeerCard** is not a navigable destination — it is an inline component within DeviceListScreen's scrollable list. Its state transitions do not involve navigation stack changes.
 
@@ -834,7 +791,6 @@ The **picker-mode chooser sheet** is a bottom-sheet modal overlaid on DeviceList
 23. **Settings save-location row** — editable (with system folder picker disclosure) on Android/macOS/Desktop; read-only with explanatory caption on iOS.
 24. **Settings large-selection warning toggle** — toggle in SettingsSection — File Transfer; On by default; re-enables LargeSelectionConfirmDialog after "Don't show again" suppression.
 25. **Settings save-to-Photos toggle** — iOS-only toggle in SettingsSection — File Transfer; On by default; carries a caption that switches between the additive-explanation copy and the denied-permission recovery hint depending on add-to-Photos access state.
-26. **Permission rationale screen** — iOS-only brief screen interposed before the OS add-to-Photos consent prompt; one action sentence, one OS-ask sentence, one continue button plus a dismiss. Realises the permissions strategy's rationale-before-prompt invariant for the add-to-Photos resource.
 
 ---
 
