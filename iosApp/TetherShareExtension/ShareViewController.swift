@@ -5,6 +5,7 @@
 
 import UIKit
 import UniformTypeIdentifiers
+import UserNotifications
 
 // Must match APP_GROUP_ID in composeApp/src/iosMain/kotlin/com/tubetoast/tether/di/IosAppContainer.kt
 private let appGroupID = "group.com.tubetoast.tether"
@@ -88,11 +89,84 @@ class ShareViewController: UIViewController {
             guard let self else { return }
             if manifest.isEmpty {
                 try? FileManager.default.removeItem(at: tmpURL)
-            } else if self.publishBatch(manifest: manifest, from: tmpURL, to: inboxURL) == false {
-                try? FileManager.default.removeItem(at: tmpURL)
+                self.completeExtension()
+                return
             }
-            self.completeExtension()
+            guard self.publishBatch(manifest: manifest, from: tmpURL, to: inboxURL) else {
+                try? FileManager.default.removeItem(at: tmpURL)
+                self.completeExtension()
+                return
+            }
+            self.openHostApp(fileCount: manifest.count)
         }
+    }
+
+    // Attempts to bring Tether to the foreground after a batch is published.
+    // Order: responder-chain open → local notification → in-extension alert.
+    private func openHostApp(fileCount: Int) {
+        // Gray-area host-open from a share extension via the responder chain; public API,
+        // but Apple discourages it — hence the fallbacks below.
+        let url = URL(string: "tether://shared")!
+        if let app = responderChainApplication() {
+            app.open(url, options: [:]) { [weak self] opened in
+                guard let self else { return }
+                if opened {
+                    self.completeExtension()
+                } else {
+                    self.scheduleNotificationOrAlert(fileCount: fileCount)
+                }
+            }
+        } else {
+            scheduleNotificationOrAlert(fileCount: fileCount)
+        }
+    }
+
+    private func responderChainApplication() -> UIApplication? {
+        var responder: UIResponder? = self.next
+        while let r = responder {
+            if let app = r as? UIApplication { return app }
+            responder = r.next
+        }
+        return nil
+    }
+
+    private func scheduleNotificationOrAlert(fileCount: Int) {
+        UNUserNotificationCenter.current().getNotificationSettings { [weak self] settings in
+            guard let self else { return }
+            DispatchQueue.main.async {
+                switch settings.authorizationStatus {
+                case .authorized, .provisional:
+                    self.scheduleNotification(fileCount: fileCount)
+                default:
+                    self.showAlert(fileCount: fileCount)
+                }
+            }
+        }
+    }
+
+    private func scheduleNotification(fileCount: Int) {
+        let content = UNMutableNotificationContent()
+        content.body = "\(fileCount) \(fileCount == 1 ? "file" : "files") ready to send — tap to open Tether"
+        let request = UNNotificationRequest(
+            identifier: "tether.shared.\(UUID().uuidString)",
+            content: content,
+            trigger: nil
+        )
+        UNUserNotificationCenter.current().add(request) { [weak self] _ in
+            self?.completeExtension()
+        }
+    }
+
+    private func showAlert(fileCount: Int) {
+        let alert = UIAlertController(
+            title: nil,
+            message: "\u{2713} \(fileCount) \(fileCount == 1 ? "file" : "files") ready to send. Open Tether and pick a device.",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "OK", style: .default) { [weak self] _ in
+            self?.completeExtension()
+        })
+        present(alert, animated: true)
     }
 
     /// Writes manifest into the temp dir, then atomically renames it into inbox/.

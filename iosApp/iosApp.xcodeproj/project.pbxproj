@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		AC9117C32FDDC8AE00AC3FCF /* TetherShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = AC9117B92FDDC8AE00AC3FCF /* TetherShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		B1A3F0012FDDC8AE00AC3FCF /* UserNotifications.framework in Frameworks (iosApp) */ = {isa = PBXBuildFile; fileRef = B1A3F0002FDDC8AE00AC3FCF /* UserNotifications.framework */; };
+		B1A3F0032FDDC8AE00AC3FCF /* UserNotifications.framework in Frameworks (TetherShareExtension) */ = {isa = PBXBuildFile; fileRef = B1A3F0002FDDC8AE00AC3FCF /* UserNotifications.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -37,6 +39,7 @@
 /* Begin PBXFileReference section */
 		35AE4D5BAD6A02871874FB63 /* Tether.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tether.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AC9117B92FDDC8AE00AC3FCF /* TetherShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TetherShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		B1A3F0002FDDC8AE00AC3FCF /* UserNotifications.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UserNotifications.framework; path = System/Library/Frameworks/UserNotifications.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -85,6 +88,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B1A3F0012FDDC8AE00AC3FCF /* UserNotifications.framework in Frameworks (iosApp) */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -92,6 +96,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B1A3F0032FDDC8AE00AC3FCF /* UserNotifications.framework in Frameworks (TetherShareExtension) */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -105,6 +110,7 @@
 				1E88CD25248F97F2BB68024C /* iosApp */,
 				AC9117BA2FDDC8AE00AC3FCF /* TetherShareExtension */,
 				60349CFE151DDEA044F6E4D0 /* Products */,
+				B1A3F0042FDDC8AE00AC3FCF /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -115,6 +121,14 @@
 				AC9117B92FDDC8AE00AC3FCF /* TetherShareExtension.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		B1A3F0042FDDC8AE00AC3FCF /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				B1A3F0002FDDC8AE00AC3FCF /* UserNotifications.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
