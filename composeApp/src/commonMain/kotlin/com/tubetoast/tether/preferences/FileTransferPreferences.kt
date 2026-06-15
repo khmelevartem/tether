@@ -19,6 +19,10 @@ interface FileTransferPreferences {
      * @throws UnsupportedOperationException on platforms where the save location is fixed (e.g. iOS).
      */
     suspend fun setSaveLocation(path: String)
+
+    fun observeSaveToGallery(): Flow<Boolean>
+
+    suspend fun setSaveToGallery(enabled: Boolean)
 }
 
 class DefaultFileTransferPreferences(
@@ -41,8 +45,16 @@ class DefaultFileTransferPreferences(
         dataStore.edit { it[KEY_SAVE_LOCATION] = path }
     }
 
+    override fun observeSaveToGallery(): Flow<Boolean> =
+        dataStore.data.map { it[KEY_SAVE_TO_GALLERY] ?: true }
+
+    override suspend fun setSaveToGallery(enabled: Boolean) {
+        dataStore.edit { it[KEY_SAVE_TO_GALLERY] = enabled }
+    }
+
     private companion object {
         val KEY_LARGE_SELECTION_WARNING = booleanPreferencesKey("large_selection_warning")
         val KEY_SAVE_LOCATION = stringPreferencesKey("save_location")
+        val KEY_SAVE_TO_GALLERY = booleanPreferencesKey("save_to_gallery")
     }
 }

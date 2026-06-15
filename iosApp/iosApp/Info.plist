@@ -10,6 +10,8 @@
 	<true/>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Tether uses the local network to discover and connect to nearby devices for file transfer.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Tether adds the photos and videos you receive to your Photos library.</string>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_tether._tcp.</string>

@@ -10,6 +10,7 @@ import com.tubetoast.tether.discovery.MdnsDiscovery
 import com.tubetoast.tether.network.AppleUploadStorageBackend
 import com.tubetoast.tether.network.FileServer
 import com.tubetoast.tether.network.FileUploadStorage
+import com.tubetoast.tether.network.PhotosUploadStorageDecorator
 import com.tubetoast.tether.network.UploadStorage
 import com.tubetoast.tether.preferences.DefaultFileTransferPreferences
 import com.tubetoast.tether.preferences.FileTransferPreferences
@@ -23,6 +24,7 @@ import kotlinx.cinterop.alloc
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.value
+import kotlinx.coroutines.flow.first
 import okio.Path.Companion.toPath
 import platform.Foundation.NSApplicationSupportDirectory
 import platform.Foundation.NSDocumentDirectory
@@ -45,7 +47,11 @@ open class AppleAppContainer(
     override val discoveredDevicesStore: DiscoveredDevicesStore = DiscoveredDevicesStore()
     internal open val uploadStorage: UploadStorage by lazy {
         val dir = documentsDir().ifEmpty { error("FileServer: NSDocumentDirectory unavailable") }
-        FileUploadStorage(root = dir, backend = AppleUploadStorageBackend(dir))
+        PhotosUploadStorageDecorator(
+            delegate = FileUploadStorage(root = dir, backend = AppleUploadStorageBackend(dir)),
+            saveToGallery = { fileTransferPreferences.observeSaveToGallery().first() },
+            backgroundScope = appScope,
+        )
     }
     override val fileServer: FileServer by lazy {
         FileServer(
