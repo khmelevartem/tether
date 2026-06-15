@@ -101,7 +101,7 @@ Tables `#PR | title | value`, monospace numbers right-aligned. No RPG translatio
 - `planned ∩ closed` after cutoff — "By the Sprint Scroll"
 - `closed − planned` after cutoff — "Random Encounters"
 
-Three numbers + a two-colour stacked bar (gold ↔ purple) + the last 6 in each category.
+Three numbers + a two-colour stacked bar (gold ↔ purple).
 
 ### Quest Map — dependency graph
 Force-directed graph via D3 v7 with clustering by schools from `assets/schools.json`.

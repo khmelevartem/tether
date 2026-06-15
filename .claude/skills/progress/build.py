@@ -306,8 +306,6 @@ def seal_of_debt(issues: list, sprints_dir: Path, cutoff: date, keywords: dict) 
         by_scroll=by_scroll,
         random_enc=random_enc,
         total=total,
-        by_scroll_last6=by_scroll[-6:],
-        random_enc_last6=random_enc[-6:],
     )
 
 
@@ -1027,15 +1025,6 @@ def render_seal_of_debt(debt: dict) -> str:
     scroll_pct_str = f"{bar_scroll_pct}%"
     random_pct_str = f"{bar_random_pct}%"
 
-    def debt_list_items(items: list) -> str:
-        return "".join(
-            f'<li><span class="prnum mono">#{i["number"]}</span> {_e(i["title"][:65])}</li>'
-            for i in items
-        ) or "<li>—</li>"
-
-    last_scroll_html = debt_list_items(debt["by_scroll_last6"])
-    last_random_html = debt_list_items(debt["random_enc_last6"])
-
     return f"""<h2>Печать Долга — план vs импровизация</h2>
 <div class="frame">
   <div class="duty-summary">
@@ -1062,16 +1051,6 @@ def render_seal_of_debt(debt: dict) -> str:
   <div class="duty-legend mono">
     <span><i class="dot dot-planned"></i> Из планов спринтов</span>
     <span><i class="dot dot-wild"></i> Сверх плана — пойманные в пути</span>
-  </div>
-  <div class="duty-lists">
-    <div>
-      <h3 class="duty-h3">◈ Последние из плана</h3>
-      <ul class="duty-list">{last_scroll_html}</ul>
-    </div>
-    <div>
-      <h3 class="duty-h3">✦ Последние случайные</h3>
-      <ul class="duty-list">{last_random_html}</ul>
-    </div>
   </div>
 </div>"""
 
@@ -1369,11 +1348,6 @@ def render_html(
   .duty-legend .dot {{ display:inline-block; width:12px; height:12px; margin-right:6px; vertical-align:middle; }}
   .duty-legend .dot-planned {{ background:#d4af37; }}
   .duty-legend .dot-wild    {{ background:#9b4dca; }}
-  .duty-lists {{ display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-top:24px; }}
-  .duty-h3 {{ font-family:'{font_h}', serif; color:var(--gold); font-size:15px; margin:0 0 10px; letter-spacing:.05em; }}
-  .duty-list {{ list-style:none; padding:0; margin:0; }}
-  .duty-list li {{ padding:7px 0; border-bottom:1px solid #2a2018; font-size:14px; }}
-  .duty-list .prnum {{ display:inline-block; width:54px; color:var(--gold); }}
   .graph-legend {{ display:flex; flex-wrap:wrap; gap:18px 28px; margin-top:14px; font-size:13px; color:var(--muted); align-items:center; }}
   .schools-legend {{ display:grid; grid-template-columns:1fr 1fr; gap:6px 24px; margin-top:14px; padding-top:12px; border-top:1px dashed var(--gold-dim); font-size:13px; }}
   .schools-legend .school-name {{ font-family:'{font_h}', serif; color:var(--gold); letter-spacing:.05em; }}
