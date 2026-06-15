@@ -3,6 +3,7 @@
 package com.tubetoast.tether.share
 
 import com.tubetoast.tether.TempDirs
+import com.tubetoast.tether.transfer.ConfirmableFileSource
 import io.ktor.utils.io.readAvailable
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.usePinned
@@ -91,11 +92,18 @@ class SharedPendingFilesReaderTest {
         channel.readAvailable(buf)
         sources[0].close()
 
-        assertEquals(content.decodeToString(), buf.decodeToString())
+        assertTrue(
+            fm.fileExistsAtPath("$root/staging/batch-1"),
+            "staging must still exist after close() alone",
+        )
+
+        (sources[0] as ConfirmableFileSource).confirmDelivered()
         assertFalse(
             fm.fileExistsAtPath("$root/staging/batch-1"),
-            "staging batch must be deleted after all sources closed",
+            "staging must be deleted after confirmDelivered()",
         )
+
+        assertEquals(content.decodeToString(), buf.decodeToString())
     }
 
     @Test
@@ -110,14 +118,14 @@ class SharedPendingFilesReaderTest {
         val r = reader(root)
         val first = r.consume()
         assertEquals(1, first.size)
-        first.forEach { it.close() }
+        first.forEach { (it as ConfirmableFileSource).confirmDelivered() }
 
         val second = r.consume()
         assertTrue(second.isEmpty(), "second consume must return empty when inbox was cleared")
     }
 
     @Test
-    fun `consume with multiple files in one batch cleans staging after all closed`() = runTest {
+    fun `consume with multiple files in one batch cleans staging after all confirmed`() = runTest {
         val root = makeRoot()
         val inboxBatch = "$root/inbox/batch-3"
         makeDir(inboxBatch)
@@ -131,9 +139,14 @@ class SharedPendingFilesReaderTest {
         assertEquals(2, sources.size)
 
         sources[0].close()
-        assertTrue(fm.fileExistsAtPath("$root/staging/batch-3"), "staging must still exist after first close")
         sources[1].close()
-        assertFalse(fm.fileExistsAtPath("$root/staging/batch-3"), "staging must be deleted after last close")
+        assertTrue(fm.fileExistsAtPath("$root/staging/batch-3"), "staging must still exist after both closes")
+
+        (sources[0] as ConfirmableFileSource).confirmDelivered()
+        assertTrue(fm.fileExistsAtPath("$root/staging/batch-3"), "staging must still exist after first confirm")
+
+        (sources[1] as ConfirmableFileSource).confirmDelivered()
+        assertFalse(fm.fileExistsAtPath("$root/staging/batch-3"), "staging must be deleted after last confirm")
     }
 
     @Test
@@ -196,15 +209,15 @@ class SharedPendingFilesReaderTest {
         assertEquals(1, sources.size, "only the present file must be returned")
         assertEquals("present.txt", sources[0].name)
 
-        sources[0].close()
+        (sources[0] as ConfirmableFileSource).confirmDelivered()
         assertFalse(
             fm.fileExistsAtPath("$root/staging/batch-partial"),
-            "staging must be deleted after the only source is closed",
+            "staging must be deleted after the only source is confirmed",
         )
     }
 
     @Test
-    fun `double-close does not crash and onLastClose effects happen exactly once`() = runTest {
+    fun `double-confirm does not crash and deletion happens exactly once`() = runTest {
         val root = makeRoot()
         val inboxBatch = "$root/inbox/batch-double-close"
         makeDir(inboxBatch)
@@ -214,17 +227,113 @@ class SharedPendingFilesReaderTest {
         val sources = reader(root).consume()
         assertEquals(1, sources.size)
 
+        // close() alone must not delete
         sources[0].close()
-        assertFalse(
+        assertTrue(
             fm.fileExistsAtPath("$root/staging/batch-double-close"),
-            "staging must be gone after first close",
+            "staging must still exist after close()",
         )
 
-        sources[0].close()
+        val confirmable = sources[0] as ConfirmableFileSource
+        confirmable.confirmDelivered()
         assertFalse(
             fm.fileExistsAtPath("$root/staging/batch-double-close"),
-            "staging still gone after second close",
+            "staging must be gone after first confirmDelivered()",
         )
+
+        // Second confirm must not crash or re-delete (already gone)
+        confirmable.confirmDelivered()
+        assertFalse(
+            fm.fileExistsAtPath("$root/staging/batch-double-close"),
+            "staging still gone after second confirmDelivered()",
+        )
+    }
+
+    @Test
+    fun `failure-never-deletes — close without confirm leaves staging intact`() = runTest {
+        val root = makeRoot()
+        val inboxBatch = "$root/inbox/batch-fail"
+        makeDir(inboxBatch)
+        writeFile(inboxBatch, "f.txt", "data".encodeToByteArray())
+        writeManifest(inboxBatch, listOf("f.txt" to 4L))
+
+        val sources = reader(root).consume()
+        assertEquals(1, sources.size)
+
+        // Simulate a failed send attempt: PeerFileSender finally-closes the source but never
+        // calls confirmDelivered — staging must survive so retries can re-read the file.
+        sources[0].close()
+
+        assertTrue(
+            fm.fileExistsAtPath("$root/staging/batch-fail"),
+            "staging must survive close() without confirmDelivered() so retries work",
+        )
+    }
+
+    @Test
+    fun `retry-then-confirm — two-file batch survives first attempt and deletes on second confirm`() = runTest {
+        val root = makeRoot()
+        val inboxBatch = "$root/inbox/batch-retry"
+        makeDir(inboxBatch)
+        writeFile(inboxBatch, "a.txt", "aaa".encodeToByteArray())
+        writeFile(inboxBatch, "b.txt", "bbb".encodeToByteArray())
+        writeManifest(inboxBatch, listOf("a.txt" to 3L, "b.txt" to 3L))
+
+        val sources = reader(root).consume()
+        assertEquals(2, sources.size)
+        val confirmA = sources[0] as ConfirmableFileSource
+        val confirmB = sources[1] as ConfirmableFileSource
+
+        // Attempt 1: confirm A, close both (B failed)
+        confirmA.confirmDelivered()
+        sources[0].close()
+        sources[1].close()
+        assertTrue(
+            fm.fileExistsAtPath("$root/staging/batch-retry"),
+            "staging must survive after A confirmed and B not yet confirmed",
+        )
+
+        // Attempt 2: B succeeds — confirm B
+        confirmB.confirmDelivered()
+        assertFalse(
+            fm.fileExistsAtPath("$root/staging/batch-retry"),
+            "staging must be deleted after both sources confirmed",
+        )
+    }
+
+    @Test
+    fun `contamination guard — confirming one batch does not delete another batch's staging`() = runTest {
+        val root = makeRoot()
+
+        // Batch A
+        val inboxBatchA = "$root/inbox/batch-A"
+        makeDir(inboxBatchA)
+        writeFile(inboxBatchA, "file.txt", "aaaa".encodeToByteArray())
+        writeManifest(inboxBatchA, listOf("file.txt" to 4L))
+
+        // Batch B (same filename, different batchID)
+        val inboxBatchB = "$root/inbox/batch-B"
+        makeDir(inboxBatchB)
+        writeFile(inboxBatchB, "file.txt", "bbbb".encodeToByteArray())
+        writeManifest(inboxBatchB, listOf("file.txt" to 4L))
+
+        val r = reader(root)
+        val first = r.consume()
+        // Both batches were in inbox at the same time; consume moves both.
+        assertEquals(2, first.size)
+
+        // Find which source belongs to which staging dir by checking file content.
+        val stagingA = "$root/staging/batch-A"
+        val stagingB = "$root/staging/batch-B"
+        assertTrue(fm.fileExistsAtPath(stagingA), "staging A must exist")
+        assertTrue(fm.fileExistsAtPath(stagingB), "staging B must exist")
+
+        // Confirm only A's source (whichever reads from staging/batch-A).
+        val sourceA = first.first { fm.fileExistsAtPath("$stagingA/${it.name}") }
+        (sourceA as ConfirmableFileSource).confirmDelivered()
+
+        assertFalse(fm.fileExistsAtPath(stagingA), "staging A must be deleted after A's source confirmed")
+        assertTrue(fm.fileExistsAtPath(stagingB), "staging B must be untouched when only A was confirmed")
     }
 
     @Test
@@ -311,6 +420,6 @@ class SharedPendingFilesReaderTest {
             "second consume must not sweep live staging dirs from the first consume",
         )
 
-        first[0].close()
+        (first[0] as ConfirmableFileSource).confirmDelivered()
     }
 }

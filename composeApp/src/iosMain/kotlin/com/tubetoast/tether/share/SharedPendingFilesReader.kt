@@ -2,9 +2,9 @@
 
 package com.tubetoast.tether.share
 
+import com.tubetoast.tether.transfer.ConfirmableFileSource
 import com.tubetoast.tether.transfer.FileSource
 import com.tubetoast.tether.transfer.IosFileSource
-import com.tubetoast.tether.transfer.OnCloseFileSource
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.ObjCObjectVar
 import kotlinx.cinterop.alloc
@@ -144,7 +144,7 @@ internal class SharedPendingFilesReader(
                 sizeBytes = entry.size,
                 securityScoped = false,
             )
-            sources += OnCloseFileSource(inner) {
+            sources += ConfirmableFileSource(inner) {
                 if (remaining.addAndFetch(-1) == 0) deleteStagedBatch(batchPath)
             }
         }

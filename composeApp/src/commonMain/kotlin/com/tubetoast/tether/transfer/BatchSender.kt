@@ -190,6 +190,7 @@ class BatchSender(
                     }
                 }
 
+                (src as? ConfirmableFileSource)?.confirmDelivered()
                 perFile[i] = PerFileStatus.Done(src.name, src.sizeBytes)
                 i++
             }
