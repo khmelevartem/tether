@@ -113,7 +113,7 @@ Force-directed graph via D3 v7 with clustering by schools from `assets/schools.j
 **Colours** — `assets/palette.json#graph_nodes` and `#graph_edges`. Lone node = no parent, no blocked_by, no blocks, and not an epic (complete isolation). In chains = open AND at least one open `blocked_by` ancestor. Epic node = parents at least one sub-issue **and** has `EPIC:` in its title (both required — a hub without the `EPIC:` prefix is a plain node, just never "lone"); rendered larger (r 10 open / 7 closed) in `graph_nodes.epic` purple with a bright ring and a bigger bold label. Epic styling takes priority over free/blocked/orphan; a closed epic keeps the closed fill but a purple ring.
 
 **Interactivity:**
-- Node drag (D3 drag behaviour, fx/fy fixed during drag).
+- Node drag (D3 drag behaviour, fx/fy fixed during drag). A near-zero drag (< 4px) is treated as a click and opens the issue's `html_url` on GitHub in a new tab.
 - Scroll wheel / drag-on-empty-space → pan+zoom via `d3.zoom().scaleExtent([0.3, 4])`. Filter: do not zoom when the cursor is over a node.
 - `+ / − / ⤺` buttons for zoom.
 

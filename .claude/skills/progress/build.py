@@ -476,6 +476,7 @@ def build_graph_data(issues: list, blocked_by: dict, schools: list) -> dict:
         nodes.append({
             "id": num,
             "title": issue["title"],
+            "url": issue.get("html_url", ""),
             "state": issue.get("state", "open"),
             "school": classify_school(issue["title"], schools),
             "orphan": orphan,
@@ -990,7 +991,7 @@ def render_quest_map(graph: dict, schools_data: dict) -> str:
     node.on('mouseenter', (e, d) => {{
       const status = (d.epic ? 'эпик · ' : '') + (stateRu[d.state] || d.state)
         + (d.blocked ? ' · в цепях' : '') + (d.orphan ? ' · сирый' : '');
-      tip.innerHTML = `<div><span class="tt-num">#${{d.id}}</span>${{esc(d.title)}}</div><div class="tt-meta">${{d.school}} · ${{status}}</div>`;
+      tip.innerHTML = `<div><span class="tt-num">#${{d.id}}</span>${{esc(d.title)}}</div><div class="tt-meta">${{d.school}} · ${{status}} · ↗ клик откроет на GitHub</div>`;
       const r = box.getBoundingClientRect();
       tip.style.left = (e.clientX - r.left) + 'px';
       tip.style.top  = (e.clientY - r.top - 12) + 'px';
@@ -1020,9 +1021,13 @@ def render_quest_map(graph: dict, schools_data: dict) -> str:
       }});
 
     node.call(d3.drag()
-      .on('start', (e,d) => {{ if (!e.active) sim.alphaTarget(.3).restart(); d.fx=d.x; d.fy=d.y; }})
+      .on('start', (e,d) => {{ if (!e.active) sim.alphaTarget(.3).restart(); d.fx=d.x; d.fy=d.y; d._x0=e.x; d._y0=e.y; }})
       .on('drag',  (e,d) => {{ d.fx=e.x; d.fy=e.y; }})
-      .on('end',   (e,d) => {{ if (!e.active) sim.alphaTarget(0); d.fx=null; d.fy=null; }}));
+      .on('end',   (e,d) => {{
+        if (!e.active) sim.alphaTarget(0); d.fx=null; d.fy=null;
+        // a near-zero drag is a click → open the issue on GitHub
+        if (d.url && Math.hypot(e.x - d._x0, e.y - d._y0) < 4) window.open(d.url, '_blank', 'noopener');
+      }}));
   }}
 
   draw(false);
