@@ -88,8 +88,12 @@ class ShareViewController: UIViewController {
             }
         }
 
+        let ctx = extensionContext
         group.notify(queue: .main) { [weak self] in
-            guard let self else { return }
+            guard let self else {
+                ctx?.completeRequest(returningItems: [], completionHandler: nil)
+                return
+            }
             if manifest.isEmpty {
                 try? FileManager.default.removeItem(at: tmpURL)
                 self.completeExtension()
@@ -116,7 +120,7 @@ class ShareViewController: UIViewController {
                     // Capture ctx so completion fires even if self is deallocated.
                     if let self { self.completeExtension() } else { ctx?.completeRequest(returningItems: [], completionHandler: nil) }
                 } else {
-                    self?.scheduleNotificationOrShowConfirmation(fileCount: fileCount)
+                    if let self { self.scheduleNotificationOrShowConfirmation(fileCount: fileCount) } else { ctx?.completeRequest(returningItems: [], completionHandler: nil) }
                 }
             }
         } else {
@@ -134,14 +138,21 @@ class ShareViewController: UIViewController {
     }
 
     private func scheduleNotificationOrShowConfirmation(fileCount: Int) {
+        let ctx = extensionContext
         UNUserNotificationCenter.current().getNotificationSettings { [weak self] settings in
-            guard let self else { return }
+            guard let self else {
+                ctx?.completeRequest(returningItems: [], completionHandler: nil)
+                return
+            }
             switch settings.authorizationStatus {
             case .authorized, .provisional:
                 DispatchQueue.main.async { self.scheduleNotification(fileCount: fileCount) }
             case .notDetermined:
                 UNUserNotificationCenter.current().requestAuthorization(options: [.alert]) { [weak self] granted, _ in
-                    guard let self else { return }
+                    guard let self else {
+                        ctx?.completeRequest(returningItems: [], completionHandler: nil)
+                        return
+                    }
                     DispatchQueue.main.async {
                         if granted {
                             self.scheduleNotification(fileCount: fileCount)
@@ -230,6 +241,10 @@ class ShareViewController: UIViewController {
     }
 
     private func completeExtension() {
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { self.completeExtension() }
+            return
+        }
         guard !didComplete else { return }
         didComplete = true
         safetyTimer?.invalidate()
