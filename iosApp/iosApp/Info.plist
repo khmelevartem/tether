@@ -4,6 +4,10 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Tether uses the local network to discover and connect to nearby devices for file transfer.</string>
 	<key>NSBonjourServices</key>
