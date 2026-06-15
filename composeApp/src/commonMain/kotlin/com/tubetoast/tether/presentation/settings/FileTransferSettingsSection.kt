@@ -11,7 +11,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
-import com.tubetoast.tether.foundation.IsGalleryToggleShown
 import com.tubetoast.tether.ui.designsystem.BodyText
 import com.tubetoast.tether.ui.designsystem.CaptionText
 import com.tubetoast.tether.ui.designsystem.TitleText
@@ -54,7 +53,7 @@ internal fun FileTransferSettingsSectionContent(
             modifier = Modifier.fillMaxWidth(),
         )
 
-        if (IsGalleryToggleShown) {
+        if (state.showGalleryToggle) {
             SaveToPhotosRow(
                 enabled = state.saveToGallery,
                 onToggle = onSetSaveToGallery,

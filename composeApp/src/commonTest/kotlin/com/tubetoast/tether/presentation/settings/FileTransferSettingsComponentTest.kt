@@ -33,12 +33,14 @@ class FileTransferSettingsComponentTest {
     private fun buildComponent(
         preferences: FakeFileTransferPreferences = FakeFileTransferPreferences(),
         defaultSaveLocation: String = "",
+        showGalleryToggle: Boolean = false,
     ): FileTransferSettingsComponent {
         val lifecycle = LifecycleRegistry().also { it.resume() }
         return FileTransferSettingsComponent(
             componentContext = DefaultComponentContext(lifecycle),
             preferences = preferences,
             defaultSaveLocation = defaultSaveLocation,
+            showGalleryToggle = showGalleryToggle,
         )
     }
 
@@ -118,5 +120,17 @@ class FileTransferSettingsComponentTest {
         advanceUntilIdle()
 
         assertTrue(component.state.value.saveToGallery)
+    }
+
+    @Test
+    fun `showGalleryToggle true is reflected in initial state`() {
+        val component = buildComponent(showGalleryToggle = true)
+        assertTrue(component.state.value.showGalleryToggle)
+    }
+
+    @Test
+    fun `showGalleryToggle false is reflected in initial state`() {
+        val component = buildComponent(showGalleryToggle = false)
+        assertFalse(component.state.value.showGalleryToggle)
     }
 }

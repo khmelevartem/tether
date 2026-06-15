@@ -3,11 +3,14 @@
 package com.tubetoast.tether.network
 
 import io.ktor.utils.io.ByteReadChannel
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -125,7 +128,100 @@ class PhotosUploadStorageDecoratorTest {
         assertTrue(fakeStorage.ensureRootCalled)
     }
 
-    // --- file-always-remains: writeBody result from delegate is forwarded ---
+    // --- resolveAuthorization branches ---
+
+    @Test
+    fun authorized_status_triggers_save() = runTest {
+        val fakeLibrary = FakePhotosLibrary(status = PhotosAuthStatus.Authorized, saveResult = true)
+        val fakeStorage = FakeUploadStorage(bytesWritten = 1L)
+        val decorator = makeDecoratorWithLibrary(fakeStorage, fakeLibrary, this)
+        val handle = UploadHandle(destination = "/tmp/photo.jpg", createdDirs = emptyList())
+
+        decorator.writeBody(ByteReadChannel.Empty, handle)
+        advanceUntilIdle()
+
+        assertEquals(1, fakeLibrary.saveCallCount)
+        assertFalse(fakeLibrary.requestAuthCalled)
+    }
+
+    @Test
+    fun limited_status_triggers_save_not_prompt() = runTest {
+        val fakeLibrary = FakePhotosLibrary(status = PhotosAuthStatus.Limited, saveResult = true)
+        val fakeStorage = FakeUploadStorage(bytesWritten = 1L)
+        val decorator = makeDecoratorWithLibrary(fakeStorage, fakeLibrary, this)
+        val handle = UploadHandle(destination = "/tmp/photo.jpg", createdDirs = emptyList())
+
+        decorator.writeBody(ByteReadChannel.Empty, handle)
+        advanceUntilIdle()
+
+        assertEquals(1, fakeLibrary.saveCallCount)
+        assertFalse(fakeLibrary.requestAuthCalled)
+    }
+
+    @Test
+    fun denied_status_skips_save_and_prompt() = runTest {
+        val fakeLibrary = FakePhotosLibrary(status = PhotosAuthStatus.Denied)
+        val fakeStorage = FakeUploadStorage(bytesWritten = 1L)
+        val decorator = makeDecoratorWithLibrary(fakeStorage, fakeLibrary, this)
+        val handle = UploadHandle(destination = "/tmp/photo.jpg", createdDirs = emptyList())
+
+        decorator.writeBody(ByteReadChannel.Empty, handle)
+        advanceUntilIdle()
+
+        assertEquals(0, fakeLibrary.saveCallCount)
+        assertFalse(fakeLibrary.requestAuthCalled)
+    }
+
+    @Test
+    fun restricted_status_skips_save_and_prompt() = runTest {
+        val fakeLibrary = FakePhotosLibrary(status = PhotosAuthStatus.Restricted)
+        val fakeStorage = FakeUploadStorage(bytesWritten = 1L)
+        val decorator = makeDecoratorWithLibrary(fakeStorage, fakeLibrary, this)
+        val handle = UploadHandle(destination = "/tmp/photo.jpg", createdDirs = emptyList())
+
+        decorator.writeBody(ByteReadChannel.Empty, handle)
+        advanceUntilIdle()
+
+        assertEquals(0, fakeLibrary.saveCallCount)
+        assertFalse(fakeLibrary.requestAuthCalled)
+    }
+
+    @Test
+    fun not_determined_status_triggers_prompt_then_save_when_granted() = runTest {
+        val fakeLibrary = FakePhotosLibrary(
+            status = PhotosAuthStatus.NotDetermined,
+            promptResult = true,
+            saveResult = true,
+        )
+        val fakeStorage = FakeUploadStorage(bytesWritten = 1L)
+        val decorator = makeDecoratorWithLibrary(fakeStorage, fakeLibrary, this)
+        val handle = UploadHandle(destination = "/tmp/photo.jpg", createdDirs = emptyList())
+
+        decorator.writeBody(ByteReadChannel.Empty, handle)
+        advanceUntilIdle()
+
+        assertTrue(fakeLibrary.requestAuthCalled)
+        assertEquals(1, fakeLibrary.saveCallCount)
+    }
+
+    @Test
+    fun not_determined_status_triggers_prompt_then_skips_save_when_denied() = runTest {
+        val fakeLibrary = FakePhotosLibrary(
+            status = PhotosAuthStatus.NotDetermined,
+            promptResult = false,
+        )
+        val fakeStorage = FakeUploadStorage(bytesWritten = 1L)
+        val decorator = makeDecoratorWithLibrary(fakeStorage, fakeLibrary, this)
+        val handle = UploadHandle(destination = "/tmp/photo.jpg", createdDirs = emptyList())
+
+        decorator.writeBody(ByteReadChannel.Empty, handle)
+        advanceUntilIdle()
+
+        assertTrue(fakeLibrary.requestAuthCalled)
+        assertEquals(0, fakeLibrary.saveCallCount)
+    }
+
+    // --- file-always-remains invariant ---
 
     @Test
     fun writeBody_returns_exactly_the_bytes_the_delegate_reports() = runTest {
@@ -143,6 +239,76 @@ class PhotosUploadStorageDecoratorTest {
         assertEquals(1234L, result)
     }
 
+    @Test
+    fun delegate_bytes_preserved_when_save_fails() = runTest {
+        val fakeLibrary = FakePhotosLibrary(
+            status = PhotosAuthStatus.Authorized,
+            saveResult = false,
+        )
+        val fakeStorage = FakeUploadStorage(bytesWritten = 999L)
+        val decorator = makeDecoratorWithLibrary(fakeStorage, fakeLibrary, this)
+        val handle = UploadHandle(destination = "/tmp/photo.jpg", createdDirs = emptyList())
+
+        val result = decorator.writeBody(ByteReadChannel.Empty, handle)
+        advanceUntilIdle()
+
+        assertEquals(999L, result)
+        assertTrue(fakeStorage.writeBodyCalled)
+    }
+
+    @Test
+    fun delegate_bytes_preserved_when_save_throws() = runTest {
+        val throwingLibrary = object : FakePhotosLibrary(status = PhotosAuthStatus.Authorized) {
+            override suspend fun save(path: String, mediaType: MediaType): Boolean =
+                throw RuntimeException("codec unsupported")
+        }
+        val fakeStorage = FakeUploadStorage(bytesWritten = 512L)
+        val decorator = makeDecoratorWithLibrary(fakeStorage, throwingLibrary, this)
+        val handle = UploadHandle(destination = "/tmp/photo.jpg", createdDirs = emptyList())
+
+        val result = decorator.writeBody(ByteReadChannel.Empty, handle)
+        advanceUntilIdle()
+
+        assertEquals(512L, result)
+        assertTrue(fakeStorage.writeBodyCalled)
+    }
+
+    // --- de-dup: exactly one OS prompt for concurrent arrivals ---
+
+    @Test
+    fun concurrent_writes_with_not_determined_trigger_prompt_exactly_once() = runTest {
+        // The prompt gate must suspend (via authGate.await()) so the scheduler can interleave
+        // the second background coroutine into `promptForAuthorization` while the first is
+        // suspended inside `requestAddOnlyAuth`. Without this yield, virtual-time coroutines
+        // run sequentially and both see a cleared `pendingAuth`.
+        val authGate = CompletableDeferred<Boolean>()
+        val suspendingLibrary = object : FakePhotosLibrary(
+            status = PhotosAuthStatus.NotDetermined,
+            saveResult = true,
+        ) {
+            override suspend fun requestAddOnlyAuth(): Boolean {
+                super.requestAddOnlyAuth()
+                return authGate.await()
+            }
+        }
+        val fakeStorage = FakeUploadStorage(bytesWritten = 1L)
+        val decorator = makeDecoratorWithLibrary(fakeStorage, suspendingLibrary, this)
+        val handle1 = UploadHandle(destination = "/tmp/photo1.jpg", createdDirs = emptyList())
+        val handle2 = UploadHandle(destination = "/tmp/photo2.jpg", createdDirs = emptyList())
+
+        val d1 = async { decorator.writeBody(ByteReadChannel.Empty, handle1) }
+        val d2 = async { decorator.writeBody(ByteReadChannel.Empty, handle2) }
+        d1.await()
+        d2.await()
+        // Advance until both background coroutines are suspended at authGate.await(), then release.
+        advanceUntilIdle()
+        authGate.complete(true)
+        advanceUntilIdle()
+
+        assertEquals(1, suspendingLibrary.requestAuthCallCount)
+        assertEquals(2, suspendingLibrary.saveCallCount)
+    }
+
     // --- helpers ---
 
     private fun makeDecorator(
@@ -155,6 +321,45 @@ class PhotosUploadStorageDecoratorTest {
             backgroundScope = TestScope(),
             mediaClassifier = classifier,
         )
+
+    private fun makeDecoratorWithLibrary(
+        delegate: FakeUploadStorage,
+        library: PhotosLibrary,
+        scope: TestScope,
+    ): PhotosUploadStorageDecorator =
+        PhotosUploadStorageDecorator(
+            delegate = delegate,
+            saveToGallery = { true },
+            backgroundScope = scope,
+            mediaClassifier = { MediaType.Image },
+            photosLibrary = library,
+        )
+}
+
+private open class FakePhotosLibrary(
+    private val status: PhotosAuthStatus,
+    private val promptResult: Boolean = false,
+    private val saveResult: Boolean = false,
+) : PhotosLibrary {
+    var requestAuthCalled = false
+        private set
+    var requestAuthCallCount = 0
+        private set
+    var saveCallCount = 0
+        private set
+
+    override fun addOnlyAuthStatus(): PhotosAuthStatus = status
+
+    override suspend fun requestAddOnlyAuth(): Boolean {
+        requestAuthCalled = true
+        requestAuthCallCount++
+        return promptResult
+    }
+
+    override suspend fun save(path: String, mediaType: MediaType): Boolean {
+        saveCallCount++
+        return saveResult
+    }
 }
 
 private class FakeUploadStorage(

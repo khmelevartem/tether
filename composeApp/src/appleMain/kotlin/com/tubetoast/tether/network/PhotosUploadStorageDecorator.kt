@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalForeignApi::class, kotlinx.cinterop.BetaInteropApi::class)
+@file:OptIn(ExperimentalForeignApi::class)
 
 package com.tubetoast.tether.network
 
@@ -7,30 +7,17 @@ import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import platform.Foundation.NSURL
-import platform.Photos.PHAccessLevelAddOnly
-import platform.Photos.PHAssetCreationRequest
-import platform.Photos.PHAuthorizationStatusAuthorized
-import platform.Photos.PHAuthorizationStatusDenied
-import platform.Photos.PHAuthorizationStatusLimited
-import platform.Photos.PHAuthorizationStatusNotDetermined
-import platform.Photos.PHPhotoLibrary
 import platform.UniformTypeIdentifiers.UTType
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.info
 import ru.pocketbyte.kydra.log.warn
 import ru.pocketbyte.kydra.log.wrapper.withTag
-import kotlin.coroutines.resume
 
 private val log = KydraLog.withTag(default = "Tether.PhotosSave")
 
 /**
- * Wraps the iOS [UploadStorage] to copy received media into the Photos library after each
- * successful write. [resolveDestination] and [abort] delegate straight through.
- *
  * The Photos copy runs in [backgroundScope] after [writeBody] returns so the HTTP response
  * is never held open while an OS prompt is up. A Photos-copy failure never propagates as a
  * transfer failure — the received file in Documents/Tether is always preserved.
@@ -44,11 +31,11 @@ internal class PhotosUploadStorageDecorator(
     private val saveToGallery: suspend () -> Boolean,
     private val backgroundScope: CoroutineScope,
     private val mediaClassifier: (ext: String) -> MediaType? = ::classifyByUTType,
+    private val photosLibrary: PhotosLibrary = RealPhotosLibrary,
 ) : UploadStorage {
     private val authMutex = Mutex()
 
     /**
-     * Non-null while an iOS authorization prompt is in flight.
      * Guards a single prompt for concurrent media arrivals — others await the same deferred.
      */
     private var pendingAuth: CompletableDeferred<Boolean>? = null
@@ -62,7 +49,11 @@ internal class PhotosUploadStorageDecorator(
         val bytesWritten = delegate.writeBody(body, handle)
         val destination = handle.destination
         backgroundScope.launch {
-            trySaveToPhotos(destination)
+            try {
+                trySaveToPhotos(destination)
+            } catch (e: Exception) {
+                log.warn { "Photos copy failed — file stays in Files: ${e.message}" }
+            }
         }
         return bytesWritten
     }
@@ -73,7 +64,14 @@ internal class PhotosUploadStorageDecorator(
         if (!saveToGallery()) return
         val mediaType = detectMediaType(destination) ?: return
         if (!resolveAuthorization()) return
-        saveFile(destination, mediaType)
+        val success = photosLibrary.save(destination, mediaType)
+        if (success) {
+            log.info { "Photos: saved ${destination.substringAfterLast('/')}" }
+        } else {
+            log.warn {
+                "Photos: save failed for ${destination.substringAfterLast('/')} — file stays in Files"
+            }
+        }
     }
 
     internal fun detectMediaType(path: String): MediaType? {
@@ -81,43 +79,32 @@ internal class PhotosUploadStorageDecorator(
         return mediaClassifier(ext)
     }
 
-    private suspend fun resolveAuthorization(): Boolean {
-        val status = PHPhotoLibrary.authorizationStatusForAccessLevel(PHAccessLevelAddOnly)
-        return when (status) {
-            PHAuthorizationStatusAuthorized, PHAuthorizationStatusLimited -> true
-            PHAuthorizationStatusNotDetermined -> promptForAuthorization()
-            PHAuthorizationStatusDenied -> {
+    private suspend fun resolveAuthorization(): Boolean =
+        when (photosLibrary.addOnlyAuthStatus()) {
+            PhotosAuthStatus.Authorized, PhotosAuthStatus.Limited -> true
+            PhotosAuthStatus.NotDetermined -> promptForAuthorization()
+            PhotosAuthStatus.Denied -> {
                 log.info { "Photos add-only permission denied — file stays in Files" }
                 false
             }
-            else -> {
+            PhotosAuthStatus.Restricted -> {
                 log.info { "Photos authorization restricted — file stays in Files" }
                 false
             }
         }
-    }
 
     /**
-     * Surfaces iOS's own add-to-Photos prompt exactly once regardless of how many media files
-     * arrive concurrently while status is NotDetermined.
+     * Deduplicates the OS add-to-Photos prompt so concurrent media arrivals share one prompt
+     * and the same result.
      */
     private suspend fun promptForAuthorization(): Boolean {
-        authMutex.withLock {
-            val existing = pendingAuth
-            if (existing != null) {
-                // Another coroutine already launched the prompt — piggyback on it.
-                return existing.await()
-            }
-            pendingAuth = CompletableDeferred()
+        val existing = authMutex.withLock {
+            pendingAuth.also { if (it == null) pendingAuth = CompletableDeferred() }
         }
+        if (existing != null) return existing.await()
+
         // This coroutine owns the prompt.
-        val result = suspendCancellableCoroutine { cont ->
-            PHPhotoLibrary.requestAuthorizationForAccessLevel(PHAccessLevelAddOnly) { newStatus ->
-                val granted = newStatus == PHAuthorizationStatusAuthorized ||
-                    newStatus == PHAuthorizationStatusLimited
-                cont.resume(granted)
-            }
-        }
+        val result = photosLibrary.requestAddOnlyAuth()
         authMutex.withLock {
             pendingAuth!!.complete(result)
             pendingAuth = null
@@ -129,45 +116,15 @@ internal class PhotosUploadStorageDecorator(
         }
         return result
     }
-
-    private suspend fun saveFile(path: String, mediaType: MediaType) {
-        val url = NSURL.fileURLWithPath(path)
-        val (success, error) = suspendCancellableCoroutine { cont ->
-            PHPhotoLibrary.sharedPhotoLibrary().performChanges(
-                changeBlock = {
-                    when (mediaType) {
-                        MediaType.Image ->
-                            PHAssetCreationRequest.creationRequestForAssetFromImageAtFileURL(url)
-                                ?: log.warn { "Photos: unsupported image format for $path — file stays in Files" }
-                        MediaType.Video ->
-                            PHAssetCreationRequest.creationRequestForAssetFromVideoAtFileURL(url)
-                                ?: log.warn { "Photos: unsupported video format for $path — file stays in Files" }
-                    }
-                },
-                completionHandler = { success, error ->
-                    cont.resume(Pair(success, error))
-                },
-            )
-        }
-        if (success) {
-            log.info { "Photos: saved ${path.substringAfterLast('/')}" }
-        } else {
-            log.warn {
-                "Photos: save failed for ${path.substringAfterLast('/')} — " +
-                    (error?.localizedDescription ?: "unknown error") + " — file stays in Files"
-            }
-        }
-    }
 }
 
 internal enum class MediaType { Image, Video }
 
 /**
- * Maps a filename extension to [MediaType] using UTType conformance.
- *
  * Uses typeWithIdentifier: to construct the reference types instead of the NS_REFINED_FOR_SWIFT
  * global constants (UTTypeImage, UTTypeMovie) which are inaccessible from K/N platform stubs.
  */
+@OptIn(kotlinx.cinterop.BetaInteropApi::class)
 internal fun classifyByUTType(ext: String): MediaType? {
     val imageType = UTType.typeWithIdentifier("public.image") ?: return null
     val movieType = UTType.typeWithIdentifier("public.movie") ?: return null

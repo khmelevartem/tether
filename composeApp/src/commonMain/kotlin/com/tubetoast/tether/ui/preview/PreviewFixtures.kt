@@ -28,16 +28,19 @@ object PreviewFixtures {
             saveLocation = "On My iPhone → Tether/",
             largeSelectionWarning = true,
             saveToGallery = true,
+            showGalleryToggle = true,
         )
         val iosGalleryOff = FileTransferSettingsState(
             saveLocation = "On My iPhone → Tether/",
             largeSelectionWarning = true,
             saveToGallery = false,
+            showGalleryToggle = true,
         )
         val iosWarningOff = FileTransferSettingsState(
             saveLocation = "On My iPhone → Tether/",
             largeSelectionWarning = false,
             saveToGallery = true,
+            showGalleryToggle = true,
         )
     }
 
