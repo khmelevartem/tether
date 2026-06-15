@@ -136,7 +136,6 @@ private fun LargeSelectionWarningRow(
     modifier: Modifier = Modifier,
 ) {
     val spacing = TetherTheme.spacing
-    val stateLabel = if (enabled) "On" else "Off"
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -151,7 +150,7 @@ private fun LargeSelectionWarningRow(
         Toggle(
             checked = enabled,
             onCheckedChange = onToggle,
-            contentDescription = "Show large-selection warnings, currently $stateLabel",
+            contentDescription = "Show large-selection warnings, currently ${if (enabled) "On" else "Off"}",
         )
     }
 }

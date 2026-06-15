@@ -18,10 +18,8 @@ class FileTransferSettingsComponent(
     private val preferences: FileTransferPreferences,
     defaultSaveLocation: String = "",
     showGalleryToggle: Boolean = IsGalleryToggleShown,
-    coroutineScope: CoroutineScope = componentContext.coroutineScope(),
+    private val scope: CoroutineScope = componentContext.coroutineScope(),
 ) : ComponentContext by componentContext {
-    private val scope = coroutineScope
-
     private val _state = MutableValue(FileTransferSettingsState.initial(defaultSaveLocation, showGalleryToggle))
     val state: Value<FileTransferSettingsState> = _state
 
