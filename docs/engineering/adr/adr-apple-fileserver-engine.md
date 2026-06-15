@@ -27,7 +27,7 @@ This ADR records the engine choice for the Apple-side `FileServer.actual`.
 
 **The Apple `FileServer.actual` uses `ktor-server-cio` on Kotlin/Native**, mirroring the JVM implementation route-for-route. The server-stack dependencies (`ktor-server-core`, `ktor-server-cio`, `ktor-server-content-negotiation`) move from the `jvmMain` source set up to `commonMain`. Streaming the upload body to disk uses POSIX `fopen`/`fwrite` (the smallest dependency to express "write a `ByteReadChannel` to a file path on Native"). Filesystem metadata operations — directory creation, existence checks, deletion — go through `NSFileManager`.
 
-The server listens on port 0 (OS-assigned ephemeral) and writes received files to `<NSDocumentDirectory>/Tether/`. The downloads-directory choice and its UX implications (Files.app exposure via `UIFileSharingEnabled`, iCloud backup, receive-side notifications) are tracked as open product questions in [file-transfer.md](../../product/features/file-transfer/spec.md) — out of scope for this ADR.
+The server listens on port 0 (OS-assigned ephemeral) and writes received files to `<NSDocumentDirectory>/Tether/`. The downloads-directory choice and its UX implications (Files.app exposure via `UIFileSharingEnabled`, iCloud backup, receive-side notifications) are tracked as open product questions in [file-transfer.md](../../product/features/file-transfer/spec.md) — out of scope for this ADR. (See Amendment — 2026-06-15.)
 
 ### Why CIO Native over hand-rolled
 
@@ -51,6 +51,10 @@ The server listens on port 0 (OS-assigned ephemeral) and writes received files t
 - **CIO Native flakes in production** (linker issues on a platform we ship to, runtime hangs, throughput regressions vs JVM) — fall back to a hand-rolled NSStream/POSIX listener for Apple targets only, isolate via the existing `expect/actual` boundary.
 - **TLS / channel encryption lands.** Re-evaluate Network.framework for Apple targets — its first-class TLS may justify the bridge cost.
 - **The JVM `FileServer.actual` migrates off `java.io`.** Aligning both actuals on `kotlinx-io` could remove the POSIX helper here and unify the streaming-write code path.
+
+## Amendment — 2026-06-15
+
+The downloads root is the app's `Documents/` directory (not a `Tether/` subfolder). It is exposed to the on-device Files app via `UIFileSharingEnabled` + `LSSupportsOpeningDocumentsInPlace`. The root is `Documents/` itself rather than a subfolder to avoid a nested `Tether → Tether` path visible in Files.
 
 ## References
 

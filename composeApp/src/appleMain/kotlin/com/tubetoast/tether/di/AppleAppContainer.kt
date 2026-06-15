@@ -44,7 +44,7 @@ open class AppleAppContainer(
     override val deviceKeyPair: DeviceKeyPair = config.deviceKeyPair
     override val discoveredDevicesStore: DiscoveredDevicesStore = DiscoveredDevicesStore()
     internal open val uploadStorage: UploadStorage by lazy {
-        val dir = defaultDownloadsDir()
+        val dir = documentsDir().ifEmpty { error("FileServer: NSDocumentDirectory unavailable") }
         FileUploadStorage(root = dir, backend = AppleUploadStorageBackend(dir))
     }
     override val fileServer: FileServer by lazy {
@@ -99,9 +99,4 @@ private fun appSupportDir(): String {
 private fun documentsDir(): String {
     val paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, true)
     return paths.firstOrNull() as? String ?: ""
-}
-
-private fun defaultDownloadsDir(): String {
-    val docs = documentsDir().ifEmpty { error("FileServer: NSDocumentDirectory unavailable") }
-    return "$docs/Tether"
 }
