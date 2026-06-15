@@ -33,7 +33,7 @@ Note on `Status` here vs. GitHub Issues: an issue can exist (and even be in prog
 
 | Feature | Area | Status | Doc | Issues |
 |---------|------|--------|-----|--------|
-| mDNS peer discovery | Discovery | done | _tbd_ | #3 / #5 / #6 (done); #326 (idle-expiry) _open_ |
+| mDNS peer discovery | Discovery | done | _tbd_ | #3 / #5 / #6 (done); #326 (idle-expiry) |
 | Hotspot transfer | Discovery / Transfer | in progress | [hotspot-transfer/spec.md](hotspot-transfer/spec.md) | EPIC #459 |
 | Pairing | Pairing / Security | in progress | [pairing/spec.md](pairing/spec.md) | EPIC #457 |
 | Device list screen | UI | in progress | [device-list/spec.md](device-list/spec.md) | EPIC #458 |
