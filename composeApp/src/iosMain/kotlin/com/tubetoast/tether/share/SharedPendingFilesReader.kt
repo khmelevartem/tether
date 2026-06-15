@@ -36,12 +36,16 @@ private val log = KydraLog.withTag(default = "SharedPendingFilesReader")
 private const val TMP_STALE_THRESHOLD_SECONDS = 3600.0
 
 /**
- * Published batches are read at least once: a batch is moved to a staging directory before being
- * returned, so a crash between move and ingest causes it to be re-read on the next foreground
- * activation.
+ * Each `inbox/` batch is atomically moved to a staging directory before its files are returned, so
+ * a batch is ingested at most once; a batch still in `inbox/` after an interrupted [consume] (the
+ * move never happened) is picked up on the next activation.
  *
- * On first [consume] a startup sweep clears stale staging dirs and abandoned tmp dirs left over
- * from previous sessions.
+ * Staged files are deleted on confirmed delivery: the wrapping [ConfirmableFileSource] fires its
+ * hook once the send is acked (HTTP-200). A batch already moved to staging but whose process dies
+ * before delivery is **not** re-presented: on the
+ * first [consume] of the next process a startup sweep reclaims every leftover staging dir (and
+ * abandoned tmp dirs past [TMP_STALE_THRESHOLD_SECONDS]). The originals stay in the source app, so
+ * the user re-shares to recover.
  */
 internal class SharedPendingFilesReader(
     private val inboxDir: String,
