@@ -633,6 +633,29 @@ def render_mvp(chapters: list, issues_by_number: dict, weights: dict) -> str:
   </td>
 </tr>"""
 
+    # Coverage: open EPIC-titled hubs that no chapter references — surfaced so the
+    # table stays honest about what it does NOT cover (infra / Post-MVP / system).
+    referenced = set()
+    for ch in chapters:
+        e = ch.get("epic") or []
+        referenced.update([e] if isinstance(e, int) else e)
+    hub_nums = {_parent_num(i) for i in issues_by_number.values()} - {None}
+    uncovered = sorted(
+        n for n, i in issues_by_number.items()
+        if i.get("state") == "open" and "epic:" in i.get("title", "").lower()
+        and n in hub_nums and n not in referenced
+    )
+    if uncovered:
+        links = " · ".join(
+            f'<a href="{_e(issues_by_number[n].get("html_url", ""))}" '
+            f'target="_blank" rel="noopener">#{n}</a>'
+            for n in uncovered
+        )
+        coverage = (f"Вне MVP-хроники — эпики, не входящие в состав MVP "
+                    f"(инфраструктура, пост-MVP, системные фичи): {links}.")
+    else:
+        coverage = "Главы покрывают все открытые эпики продуктовых фич."
+
     table_cls = "mvp-table"
     toggle = ""
     if done_count:
@@ -655,7 +678,7 @@ def render_mvp(chapters: list, issues_by_number: dict, weights: dict) -> str:
     </tr></thead>
     <tbody>{rows}</tbody>
   </table>
-  <div class="mvp-coverage">Главы — продуктовые фичи MVP. Вне хроники намеренно: инфраструктура (эпик #17), пост-MVP (хотспот #459), системные (Wi-Fi #460, разрешения) и разовые задачи.</div>
+  <div class="mvp-coverage">{coverage}</div>
 </div>
 <script>
 (function(){{
@@ -1459,6 +1482,8 @@ def render_html(
 
   .show-done {{ display:inline-flex; align-items:center; gap:6px; margin-bottom:14px; font-size:13px; cursor:pointer; color:var(--muted); }}
   .mvp-coverage {{ margin-top:16px; font-size:12px; font-style:italic; color:var(--muted); }}
+  .mvp-coverage a {{ color:#c89bf0; text-decoration:none; font-style:normal; }}
+  .mvp-coverage a:hover {{ text-decoration:underline; }}
   table.mvp-table {{ width:100%; border-collapse:collapse; }}
   table.mvp-table.hide-done tbody tr.done {{ display:none; }}
   table.mvp-table thead th {{ font-family:'{font_h}', serif; font-size:10px; font-weight:400;
