@@ -12,6 +12,9 @@ private let appGroupID = "group.com.tubetoast.tether"
 
 class ShareViewController: UIViewController {
 
+    private var didComplete = false
+    private var safetyTimer: Timer?
+
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .clear
@@ -101,23 +104,23 @@ class ShareViewController: UIViewController {
         }
     }
 
-    // Attempts to bring Tether to the foreground after a batch is published.
-    // Order: responder-chain open → local notification → in-extension alert.
+    // Order: responder-chain open → local notification → in-extension confirmation.
     private func openHostApp(fileCount: Int) {
         // Gray-area host-open from a share extension via the responder chain; public API,
         // but Apple discourages it — hence the fallbacks below.
         let url = URL(string: "tether://shared")!
+        let ctx = extensionContext
         if let app = responderChainApplication() {
             app.open(url, options: [:]) { [weak self] opened in
-                guard let self else { return }
                 if opened {
-                    self.completeExtension()
+                    // Capture ctx so completion fires even if self is deallocated.
+                    if let self { self.completeExtension() } else { ctx?.completeRequest(returningItems: [], completionHandler: nil) }
                 } else {
-                    self.scheduleNotificationOrAlert(fileCount: fileCount)
+                    self?.scheduleNotificationOrShowConfirmation(fileCount: fileCount)
                 }
             }
         } else {
-            scheduleNotificationOrAlert(fileCount: fileCount)
+            scheduleNotificationOrShowConfirmation(fileCount: fileCount)
         }
     }
 
@@ -130,16 +133,25 @@ class ShareViewController: UIViewController {
         return nil
     }
 
-    private func scheduleNotificationOrAlert(fileCount: Int) {
+    private func scheduleNotificationOrShowConfirmation(fileCount: Int) {
         UNUserNotificationCenter.current().getNotificationSettings { [weak self] settings in
             guard let self else { return }
-            DispatchQueue.main.async {
-                switch settings.authorizationStatus {
-                case .authorized, .provisional:
-                    self.scheduleNotification(fileCount: fileCount)
-                default:
-                    self.showAlert(fileCount: fileCount)
+            switch settings.authorizationStatus {
+            case .authorized, .provisional:
+                DispatchQueue.main.async { self.scheduleNotification(fileCount: fileCount) }
+            case .notDetermined:
+                UNUserNotificationCenter.current().requestAuthorization(options: [.alert]) { [weak self] granted, _ in
+                    guard let self else { return }
+                    DispatchQueue.main.async {
+                        if granted {
+                            self.scheduleNotification(fileCount: fileCount)
+                        } else {
+                            self.showConfirmation(fileCount: fileCount)
+                        }
+                    }
                 }
+            default:
+                DispatchQueue.main.async { self.showConfirmation(fileCount: fileCount) }
             }
         }
     }
@@ -152,21 +164,47 @@ class ShareViewController: UIViewController {
             content: content,
             trigger: nil
         )
+        let ctx = extensionContext
         UNUserNotificationCenter.current().add(request) { [weak self] _ in
+            if let self { self.completeExtension() } else { ctx?.completeRequest(returningItems: [], completionHandler: nil) }
+        }
+    }
+
+    private func showConfirmation(fileCount: Int) {
+        let label = UILabel()
+        label.text = "✓ \(fileCount) \(fileCount == 1 ? "file" : "files") ready to send. Open Tether and pick a device."
+        label.numberOfLines = 0
+        label.textAlignment = .center
+        label.font = .preferredFont(forTextStyle: .body)
+        label.translatesAutoresizingMaskIntoConstraints = false
+
+        let button = UIButton(type: .system)
+        button.setTitle("Done", for: .normal)
+        button.titleLabel?.font = .preferredFont(forTextStyle: .headline)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.addTarget(self, action: #selector(confirmationDoneTapped), for: .touchUpInside)
+
+        let stack = UIStackView(arrangedSubviews: [label, button])
+        stack.axis = .vertical
+        stack.spacing = 24
+        stack.translatesAutoresizingMaskIntoConstraints = false
+
+        view.backgroundColor = .systemBackground
+        view.addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            stack.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            stack.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 32),
+            stack.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -32),
+        ])
+
+        safetyTimer = Timer.scheduledTimer(withTimeInterval: 10, repeats: false) { [weak self] _ in
             self?.completeExtension()
         }
     }
 
-    private func showAlert(fileCount: Int) {
-        let alert = UIAlertController(
-            title: nil,
-            message: "\u{2713} \(fileCount) \(fileCount == 1 ? "file" : "files") ready to send. Open Tether and pick a device.",
-            preferredStyle: .alert
-        )
-        alert.addAction(UIAlertAction(title: "OK", style: .default) { [weak self] _ in
-            self?.completeExtension()
-        })
-        present(alert, animated: true)
+    @objc private func confirmationDoneTapped() {
+        completeExtension()
     }
 
     /// Writes manifest into the temp dir, then atomically renames it into inbox/.
@@ -192,6 +230,10 @@ class ShareViewController: UIViewController {
     }
 
     private func completeExtension() {
+        guard !didComplete else { return }
+        didComplete = true
+        safetyTimer?.invalidate()
+        safetyTimer = nil
         extensionContext?.completeRequest(returningItems: [], completionHandler: nil)
     }
 }
