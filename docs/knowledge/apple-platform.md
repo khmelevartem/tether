@@ -154,3 +154,15 @@ CFRelease(dict)
 - The aggregate progress bar for a multi-photo batch is fully determinate only once the last file has materialized; per-file bars are determinate throughout.
 
 **Reference:** `LazyPhotoFileSource` and `IosFilePicker.PhotoPickerDelegate` in `transfer/`.
+
+---
+
+## Old-style pbxproj: build-setting values with `$(VAR)` must be quoted
+
+**Symptom:** after a hand-edit to `iosApp.xcodeproj/project.pbxproj`, the entire project becomes unparseable — `xcodebuild` reports the project "is damaged" with a parse error pointing uselessly at line 1. Brace/paren counts stay balanced and a text diff of the edit looks clean, so reading the pbxproj as text does not reveal it.
+
+**Root cause:** the project file is an old-style (NeXT-style) property list, where `(` and `)` are array delimiters. A build-setting value containing a `$(…)` macro — e.g. `PRODUCT_BUNDLE_IDENTIFIER = com.example.App$(TEAM_ID).Ext;` — opens an array mid-value and corrupts the parse of the whole file. The macro contributes a matched paren pair, so paren-balance heuristics and diff review both pass.
+
+**Fix:** wrap every build-setting value containing `$(…)`, `@`, spaces, or other non-word characters in double quotes, mirroring Xcode's own `PRODUCT_NAME = "$(TARGET_NAME)";`. After any hand-edit, confirm the file still parses with `xcodebuild -list -project iosApp/iosApp.xcodeproj` — the only reliable oracle, since `plutil` / `PlistBuddy` reject the `// !$*UTF8*$!` header regardless of validity.
+
+**Scope:** hand-editing pbxproj is the highest-risk part of iOS target work — prefer the Xcode GUI for structural changes. The quoting rule applies to any old-style plist build setting.

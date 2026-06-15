@@ -19,11 +19,16 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import platform.Foundation.NSNotificationCenter
+import platform.UIKit.UIApplicationDidBecomeActiveNotification
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.error
 import ru.pocketbyte.kydra.log.wrapper.withTag
 
 private val log = KydraLog.withTag(default = "Main.iOS")
+
+// Shared with iOSApp.swift (same string literal must match).
+private const val SHARED_FILES_AVAILABLE_NOTIFICATION = "com.tubetoast.tether.sharedFilesAvailable"
 
 @Suppress("ktlint:standard:function-naming")
 fun MainViewController() = run {
@@ -40,6 +45,19 @@ fun MainViewController() = run {
                 scope.cancel()
             }
             scope = CoroutineScope(SupervisorJob() + Dispatchers.Main + exceptionHandler)
+
+            val reader = container.sharedPendingFilesReader
+
+            fun drainSharedFiles() {
+                if (reader == null) return
+                scope.launch {
+                    val sources = reader.consume()
+                    if (sources.isNotEmpty()) {
+                        component.onFilesDropped(sources)
+                    }
+                }
+            }
+
             scope.launch {
                 container.nameStore.init()
                 val name = container.nameStore.name.first()
@@ -48,8 +66,24 @@ fun MainViewController() = run {
                 container.nameRepublisher.start(scope)
                 container.rendezvousAnnouncer.start(scope)
                 container.autoSendDispatcher.start()
+                drainSharedFiles()
             }
+
+            val becomeActiveObserver = NSNotificationCenter.defaultCenter.addObserverForName(
+                name = UIApplicationDidBecomeActiveNotification,
+                `object` = null,
+                queue = null,
+            ) { _ -> drainSharedFiles() }
+
+            val sharedFilesObserver = NSNotificationCenter.defaultCenter.addObserverForName(
+                name = SHARED_FILES_AVAILABLE_NOTIFICATION,
+                `object` = null,
+                queue = null,
+            ) { _ -> drainSharedFiles() }
+
             onDispose {
+                NSNotificationCenter.defaultCenter.removeObserver(becomeActiveObserver)
+                NSNotificationCenter.defaultCenter.removeObserver(sharedFilesObserver)
                 container.nameRepublisher.stop()
                 container.rendezvousAnnouncer.stop()
                 scope.cancel()
