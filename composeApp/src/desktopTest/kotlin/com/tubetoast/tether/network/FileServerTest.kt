@@ -19,7 +19,9 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.OutgoingContent
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
+import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.ByteWriteChannel
+import io.ktor.utils.io.jvm.javaio.toInputStream
 import io.ktor.utils.io.writeFully
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -297,6 +299,60 @@ class FileServerTest {
         } finally {
             client.close()
             trackerScope.cancel()
+        }
+    }
+
+    @Test
+    fun `commit failure on complete upload triggers abort`() {
+        val tmpDir = Files.createTempDirectory("tether-test").toFile().also(cleanupPaths::add)
+        val configDir = Files.createTempDirectory("tether-fs-test-keys").toFile().also(cleanupPaths::add)
+        val temp = TempDataStore().also { cleanupTempStores += it }
+        var abortCalled = false
+        val throwingStorage = object : UploadStorage {
+            override fun ensureRoot() = Unit
+
+            override fun resolveDestination(relativePath: String): UploadHandle =
+                UploadHandle(
+                    destination = File(tmpDir, relativePath).also { it.createNewFile() }.absolutePath,
+                    createdDirs = emptyList(),
+                )
+
+            override suspend fun writeBody(body: ByteReadChannel, handle: UploadHandle): Long {
+                val dest = File(handle.destination)
+                val bytes = body.toInputStream().readBytes()
+                dest.writeBytes(bytes)
+                return bytes.size.toLong()
+            }
+
+            override fun commit(handle: UploadHandle) {
+                error("simulated commit failure")
+            }
+
+            override fun abort(handle: UploadHandle) {
+                abortCalled = true
+            }
+        }
+        val server = FileServer(
+            configuredPort = 0,
+            uploadStorage = throwingStorage,
+            trustedDeviceStore = DefaultTrustedDeviceStore(temp.dataStore),
+            deviceKeyPair = DeviceKeyPair(configDir),
+        )
+        startedServer = server
+        val port = server.start()
+        val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
+        try {
+            val content = "complete payload".toByteArray()
+            runBlocking {
+                val response = client.post("http://localhost:$port/upload?name=test.txt") {
+                    contentType(ContentType.Application.OctetStream)
+                    setBody(content)
+                }
+                assertEquals(HttpStatusCode.InternalServerError, response.status)
+            }
+            assertTrue(abortCalled, "abort must be called when commit throws on a complete upload")
+        } finally {
+            client.close()
         }
     }
 

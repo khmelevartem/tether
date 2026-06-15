@@ -157,8 +157,8 @@ internal fun Application.installFileServerRoutes(
                     if (expected != null && bytesWritten < expected) {
                         error("FileServer: incomplete upload — got $bytesWritten of $expected bytes")
                     }
-                    uploadComplete = true
                     storage.commit(resolved)
+                    uploadComplete = true
                     log.info { "received '$relativePath' — $bytesWritten bytes → ${resolved.destination}" }
                     call.respond(HttpStatusCode.OK, mapOf("savedPath" to resolved.destination))
                 }
