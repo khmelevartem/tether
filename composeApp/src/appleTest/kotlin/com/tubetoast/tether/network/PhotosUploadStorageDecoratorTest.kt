@@ -4,6 +4,8 @@ package com.tubetoast.tether.network
 
 import io.ktor.utils.io.ByteReadChannel
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -254,6 +256,7 @@ class PhotosUploadStorageDecoratorTest {
 
         assertEquals(999L, result)
         assertTrue(fakeStorage.writeBodyCalled)
+        assertFalse(fakeStorage.abortCalled)
     }
 
     @Test
@@ -271,6 +274,7 @@ class PhotosUploadStorageDecoratorTest {
 
         assertEquals(512L, result)
         assertTrue(fakeStorage.writeBodyCalled)
+        assertFalse(fakeStorage.abortCalled)
     }
 
     // --- de-dup: exactly one OS prompt for concurrent arrivals ---
@@ -311,6 +315,9 @@ class PhotosUploadStorageDecoratorTest {
 
     // --- helpers ---
 
+    // backgroundScope is never reached by callers of this helper (they don't call writeBody).
+    // A CoroutineScope(SupervisorJob()) is explicit about not being a virtual-time scheduler,
+    // which avoids the latent trap of a disconnected TestScope.
     private fun makeDecorator(
         delegate: FakeUploadStorage = FakeUploadStorage(),
         classifier: (String) -> MediaType? = { null },
@@ -318,7 +325,7 @@ class PhotosUploadStorageDecoratorTest {
         PhotosUploadStorageDecorator(
             delegate = delegate,
             saveToGallery = { true },
-            backgroundScope = TestScope(),
+            backgroundScope = CoroutineScope(SupervisorJob()),
             mediaClassifier = classifier,
         )
 

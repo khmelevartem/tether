@@ -103,16 +103,23 @@ internal class PhotosUploadStorageDecorator(
         }
         if (existing != null) return existing.await()
 
-        // This coroutine owns the prompt.
-        val result = photosLibrary.requestAddOnlyAuth()
-        authMutex.withLock {
-            pendingAuth!!.complete(result)
-            pendingAuth = null
-        }
-        if (result) {
-            log.info { "Photos add-only permission granted" }
-        } else {
-            log.info { "Photos add-only permission denied after prompt — file stays in Files" }
+        // This coroutine owns the prompt. complete(false)+clear happens even on exception so
+        // awaiters never hang and the slot is ready for the next NotDetermined arrival.
+        var result = false
+        try {
+            result = photosLibrary.requestAddOnlyAuth()
+            if (result) {
+                log.info { "Photos add-only permission granted" }
+            } else {
+                log.info { "Photos add-only permission denied after prompt — file stays in Files" }
+            }
+        } catch (e: Exception) {
+            log.warn { "Photos auth request threw — treating as denied: ${e.message}" }
+        } finally {
+            authMutex.withLock {
+                pendingAuth!!.complete(result)
+                pendingAuth = null
+            }
         }
         return result
     }

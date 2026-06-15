@@ -42,6 +42,12 @@ object PreviewFixtures {
             saveToGallery = true,
             showGalleryToggle = true,
         )
+        val nonIosDefault = FileTransferSettingsState(
+            saveLocation = "~/Downloads/Tether/",
+            largeSelectionWarning = true,
+            saveToGallery = false,
+            showGalleryToggle = false,
+        )
     }
 
     object DeviceName {

@@ -191,3 +191,15 @@ private fun PreviewIosWarningOff(@PreviewParameter(Themes::class) dark: Boolean)
             modifier = Modifier.fillMaxWidth(),
         )
     }
+
+@Preview(name = "FileTransferSettings — non-iOS (gallery row absent)")
+@Composable
+private fun PreviewNonIosDefault(@PreviewParameter(Themes::class) dark: Boolean) =
+    PreviewSurface(darkTheme = dark) {
+        FileTransferSettingsSectionContent(
+            state = PreviewFixtures.FileTransferSettings.nonIosDefault,
+            onSetLargeSelectionWarning = {},
+            onSetSaveToGallery = {},
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
