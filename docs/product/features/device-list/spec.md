@@ -25,6 +25,9 @@ Every row on the device list is one of four cases, by reachability × pairing:
 - **Online & unpaired** — standard row. Tappable, leads to file-send.
 - **Online & paired** — standard row with the peer-identity accent (the warm copper/amber hue Tether uses for peer identity elsewhere, see [design.md](../../design.md)). Tappable, leads to file-send.
 - **Offline & paired** — dimmed standard row with the same peer-identity accent. Tapping surfaces an inline hint ("Not on this network. Make sure Wi-Fi is on and Tether is running on it."), not a transfer flow.
+
+  > **Extended by [clipboard transfer](../clipboard-transfer/ux-brief.md#owned-extension-the-offline-paired-row-becomes-expandable-while-it-holds-clipboard-items):** while an offline-paired row holds pending received clipboard items, it becomes expandable — gaining an expand chevron and unread badge — so a received clipboard item stays reachable regardless of whether its sender is currently online. With no pending items the row keeps the hint-only behaviour above.
+
 - **Offline & unpaired** — not shown.
 
 Within the list, reachable peers come first; offline-paired rows are sorted below them, **last-seen first** (most recently online → top of the offline section). A paired device coming online transitions in place from the offline row to the online row — no insertion/removal, no position jump. Going offline is the same in reverse.

@@ -61,7 +61,7 @@
 ### Dispatchers
 - [ ] `Main` / `IO` / `Default` / `Unconfined` — когда что, размеры пулов
 - [ ] `IO` vs `Default` — IO расширяется до 64, Default = кол-во CPU
-- [ ] `withContext` — создаёт ли новую корутину? (нет — switch контекста)
+- [x] `withContext` — создаёт ли новую корутину? (нет — switch контекста)
 - [ ] `MainCoroutineDispatcher.immediate` — что делает, зачем
 - [ ] Кастомные диспетчеры через `Executors.asCoroutineDispatcher()`
 

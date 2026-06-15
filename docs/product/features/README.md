@@ -39,6 +39,7 @@ Note on `Status` here vs. GitHub Issues: an issue can exist (and even be in prog
 | Device list screen | UI | in progress | [device-list/spec.md](device-list/spec.md) | EPIC #458 |
 | File transfer | Transfer / UI | in progress | [file-transfer/spec.md](file-transfer/spec.md) | EPIC #8 (UI / flow), EPIC #119 (transport reliability) |
 | Device name bootstrapping | Onboarding | done | [device-name-bootstrapping/spec.md](device-name-bootstrapping/spec.md) | #120 / #147 / #148 (done) |
+| Clipboard transfer | Transfer / UI | scoped | [clipboard-transfer/spec.md](clipboard-transfer/spec.md) | EPIC #469 |
 
 ### System integration
 
