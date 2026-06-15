@@ -18,9 +18,9 @@ import ru.pocketbyte.kydra.log.wrapper.withTag
 private val log = KydraLog.withTag(default = "Tether.PhotosSave")
 
 /**
- * The Photos copy runs in [backgroundScope] after [writeBody] returns so the HTTP response
- * is never held open while an OS prompt is up. A Photos-copy failure never propagates as a
- * transfer failure — the received file in Documents/Tether is always preserved.
+ * The Photos copy runs in [backgroundScope] after [commit] so the HTTP response is never held
+ * open while an OS prompt is up. A Photos-copy failure never propagates as a transfer failure —
+ * the received file in Documents/Tether is always preserved.
  *
  * @param mediaClassifier maps a file-path extension to [MediaType], or null if not media.
  *   Defaults to the UTType-based implementation; override in tests to avoid the live
@@ -45,8 +45,11 @@ internal class PhotosUploadStorageDecorator(
     override fun resolveDestination(relativePath: String): UploadHandle =
         delegate.resolveDestination(relativePath)
 
-    override suspend fun writeBody(body: ByteReadChannel, handle: UploadHandle): Long {
-        val bytesWritten = delegate.writeBody(body, handle)
+    override suspend fun writeBody(body: ByteReadChannel, handle: UploadHandle): Long =
+        delegate.writeBody(body, handle)
+
+    override fun commit(handle: UploadHandle) {
+        delegate.commit(handle)
         val destination = handle.destination
         backgroundScope.launch {
             try {
@@ -55,7 +58,6 @@ internal class PhotosUploadStorageDecorator(
                 log.warn { "Photos copy failed — file stays in Files: ${e.message}" }
             }
         }
-        return bytesWritten
     }
 
     override fun abort(handle: UploadHandle) = delegate.abort(handle)

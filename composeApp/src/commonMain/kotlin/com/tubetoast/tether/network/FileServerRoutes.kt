@@ -63,6 +63,12 @@ internal interface UploadStorage {
 
     suspend fun writeBody(body: ByteReadChannel, handle: UploadHandle): Long
 
+    /**
+     * Called exactly once on the success path, after the route confirms the body is complete
+     * and decides not to abort. Mutually exclusive with [abort] for a given handle. Default no-op.
+     */
+    fun commit(handle: UploadHandle) = Unit
+
     fun abort(handle: UploadHandle)
 }
 
@@ -152,6 +158,7 @@ internal fun Application.installFileServerRoutes(
                         error("FileServer: incomplete upload — got $bytesWritten of $expected bytes")
                     }
                     uploadComplete = true
+                    storage.commit(resolved)
                     log.info { "received '$relativePath' — $bytesWritten bytes → ${resolved.destination}" }
                     call.respond(HttpStatusCode.OK, mapOf("savedPath" to resolved.destination))
                 }

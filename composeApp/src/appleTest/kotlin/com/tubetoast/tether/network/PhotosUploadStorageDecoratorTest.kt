@@ -70,6 +70,7 @@ class PhotosUploadStorageDecoratorTest {
         val handle = UploadHandle(destination = "/tmp/photo.jpg", createdDirs = emptyList())
 
         val result = decorator.writeBody(ByteReadChannel.Empty, handle)
+        decorator.commit(handle)
         advanceUntilIdle()
 
         assertEquals(42L, result)
@@ -91,6 +92,7 @@ class PhotosUploadStorageDecoratorTest {
         val handle = UploadHandle(destination = "/tmp/doc.pdf", createdDirs = emptyList())
 
         val result = decorator.writeBody(ByteReadChannel.Empty, handle)
+        decorator.commit(handle)
         advanceUntilIdle()
 
         assertEquals(7L, result)
@@ -140,6 +142,7 @@ class PhotosUploadStorageDecoratorTest {
         val handle = UploadHandle(destination = "/tmp/photo.jpg", createdDirs = emptyList())
 
         decorator.writeBody(ByteReadChannel.Empty, handle)
+        decorator.commit(handle)
         advanceUntilIdle()
 
         assertEquals(1, fakeLibrary.saveCallCount)
@@ -154,6 +157,7 @@ class PhotosUploadStorageDecoratorTest {
         val handle = UploadHandle(destination = "/tmp/photo.jpg", createdDirs = emptyList())
 
         decorator.writeBody(ByteReadChannel.Empty, handle)
+        decorator.commit(handle)
         advanceUntilIdle()
 
         assertEquals(1, fakeLibrary.saveCallCount)
@@ -168,6 +172,7 @@ class PhotosUploadStorageDecoratorTest {
         val handle = UploadHandle(destination = "/tmp/photo.jpg", createdDirs = emptyList())
 
         decorator.writeBody(ByteReadChannel.Empty, handle)
+        decorator.commit(handle)
         advanceUntilIdle()
 
         assertEquals(0, fakeLibrary.saveCallCount)
@@ -182,6 +187,7 @@ class PhotosUploadStorageDecoratorTest {
         val handle = UploadHandle(destination = "/tmp/photo.jpg", createdDirs = emptyList())
 
         decorator.writeBody(ByteReadChannel.Empty, handle)
+        decorator.commit(handle)
         advanceUntilIdle()
 
         assertEquals(0, fakeLibrary.saveCallCount)
@@ -200,6 +206,7 @@ class PhotosUploadStorageDecoratorTest {
         val handle = UploadHandle(destination = "/tmp/photo.jpg", createdDirs = emptyList())
 
         decorator.writeBody(ByteReadChannel.Empty, handle)
+        decorator.commit(handle)
         advanceUntilIdle()
 
         assertTrue(fakeLibrary.requestAuthCalled)
@@ -217,6 +224,7 @@ class PhotosUploadStorageDecoratorTest {
         val handle = UploadHandle(destination = "/tmp/photo.jpg", createdDirs = emptyList())
 
         decorator.writeBody(ByteReadChannel.Empty, handle)
+        decorator.commit(handle)
         advanceUntilIdle()
 
         assertTrue(fakeLibrary.requestAuthCalled)
@@ -252,6 +260,7 @@ class PhotosUploadStorageDecoratorTest {
         val handle = UploadHandle(destination = "/tmp/photo.jpg", createdDirs = emptyList())
 
         val result = decorator.writeBody(ByteReadChannel.Empty, handle)
+        decorator.commit(handle)
         advanceUntilIdle()
 
         assertEquals(999L, result)
@@ -270,11 +279,29 @@ class PhotosUploadStorageDecoratorTest {
         val handle = UploadHandle(destination = "/tmp/photo.jpg", createdDirs = emptyList())
 
         val result = decorator.writeBody(ByteReadChannel.Empty, handle)
+        decorator.commit(handle)
         advanceUntilIdle()
 
         assertEquals(512L, result)
         assertTrue(fakeStorage.writeBodyCalled)
         assertFalse(fakeStorage.abortCalled)
+    }
+
+    // --- regression: truncated upload must never reach Photos ---
+
+    @Test
+    fun aborted_upload_never_launches_photos_save() = runTest {
+        val fakeLibrary = FakePhotosLibrary(status = PhotosAuthStatus.Authorized, saveResult = true)
+        val fakeStorage = FakeUploadStorage(bytesWritten = 10L)
+        val decorator = makeDecoratorWithLibrary(fakeStorage, fakeLibrary, this)
+        val handle = UploadHandle(destination = "/tmp/photo.jpg", createdDirs = emptyList())
+
+        decorator.writeBody(ByteReadChannel.Empty, handle)
+        decorator.abort(handle)
+        advanceUntilIdle()
+
+        assertTrue(fakeStorage.abortCalled)
+        assertEquals(0, fakeLibrary.saveCallCount)
     }
 
     // --- de-dup: exactly one OS prompt for concurrent arrivals ---
@@ -304,6 +331,8 @@ class PhotosUploadStorageDecoratorTest {
         val d2 = async { decorator.writeBody(ByteReadChannel.Empty, handle2) }
         d1.await()
         d2.await()
+        decorator.commit(handle1)
+        decorator.commit(handle2)
         // Advance until both background coroutines are suspended at authGate.await(), then release.
         advanceUntilIdle()
         authGate.complete(true)
@@ -375,6 +404,7 @@ private class FakeUploadStorage(
     var ensureRootCalled = false
     var resolveDestinationCalled = false
     var writeBodyCalled = false
+    var commitCalled = false
     var abortCalled = false
 
     override fun ensureRoot() {
@@ -389,6 +419,10 @@ private class FakeUploadStorage(
     override suspend fun writeBody(body: ByteReadChannel, handle: UploadHandle): Long {
         writeBodyCalled = true
         return bytesWritten
+    }
+
+    override fun commit(handle: UploadHandle) {
+        commitCalled = true
     }
 
     override fun abort(handle: UploadHandle) {
