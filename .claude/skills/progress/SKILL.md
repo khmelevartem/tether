@@ -37,23 +37,20 @@ What it gathers, and the quirks baked into the script:
 
 ## MVP chapters — compose in chat
 
-Read `docs/product/roadmap.md` §MVP and `docs/product/features/README.md`. One chapter per roadmap §MVP item (currently 8 — keep the chapter set aligned with the roadmap, not a fixed count). For each, judge the completion percent from evidence and name the backing epic where the feature has one. Write the result to `/tmp/tether-progress-mvp.json`:
+Read `docs/product/roadmap.md` §MVP and `docs/product/features/README.md`. One chapter per roadmap §MVP item (currently 8 — keep the chapter set aligned with the roadmap, not a fixed count). For each, name the backing epic where the feature has one. Write the result to `/tmp/tether-progress-mvp.json`:
 
 ```json
 [
-  { "title": "Шепчущие Маяки", "subtitle": "эпичная строка-одностишие", "percent": 60, "epic": [457] },
+  { "title": "Обряд Узнавания", "subtitle": "эпичная строка-одностишие", "epic": [457] },
+  { "title": "Шепчущие Маяки", "subtitle": "…", "percent": 85 },
   …
 ]
 ```
 
 Text is in Russian (the whole report is). `title` — just the evocative chapter name (the seal column already renders the Roman numeral, so no `Глава N:` prefix). `subtitle` — a one-line flavour caption.
 
-- `epic` (optional) — list of backing issue numbers from `docs/product/features/README.md`, e.g. `[457]` or `[8, 119]`. Each renders as the issue's **full title**, clickable, linking to GitHub (resolved from the collected issues by number). Omit for roadmap items with no backing issue (e.g. shipped mDNS / device-name). The chapters table has no free-text evidence column — put the backing issues here, not prose.
-- `percent` — prefer the backing epic's sub-issue completion (closed children ÷ total) as the anchor, then adjust for platform/layer coverage. Scale:
-  - 100% — feature `done` + merged PRs across all platforms.
-  - 50–80% — partial (one of the layers / some platforms).
-  - 20–40% — only spec scoped.
-  - 5% — no code, no decision.
+- `epic` (optional) — list of backing issue numbers from `docs/product/features/README.md`, e.g. `[457]` or `[8, 119]`. Each renders as the issue's **full title**, clickable, linking to GitHub. The chapters table has no free-text evidence column — put the backing issues here, not prose.
+- `percent` — **auto-computed when omitted**: `build.py` takes the size-weighted completion of the epics' direct sub-issues (`Σ weight(closed) ÷ Σ weight(all)`, weights from `.claude/sizing-bands.json`, `unlabeled`→`valor_size.unlabeled`). Prefer this — it's the answer to "progress by tasks, not by eye". Supply an explicit `percent` only to **override**: chapters with no epic (shipped mDNS / device-name → manual), a subset of a shared epic (live-progress draws on #8 but isn't all of it), or a decision-plus-impl pair (#123/#140) where the weighted child count misreads. When you do override, that's a judgement call — keep it honest.
 
 ## Build the snapshot
 

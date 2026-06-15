@@ -330,11 +330,38 @@ def _issue_size(pr: dict, issues_by_number: dict) -> str:
     if m:
         issue = issues_by_number.get(int(m.group(1)))
         if issue:
-            for lbl in issue.get("labels", []):
-                name = lbl.get("name", "")
-                if name in ("size:S", "size:M", "size:L"):
-                    return name.split(":")[1]
+            return _size_of(issue)
     return "unlabeled"
+
+
+def _size_of(issue: dict) -> str:
+    for lbl in issue.get("labels", []):
+        if lbl.get("name") in ("size:S", "size:M", "size:L"):
+            return lbl["name"].split(":")[1]
+    return "unlabeled"
+
+
+def _parent_num(issue: dict):
+    m = re.search(r"/issues/(\d+)$", issue.get("parent_issue_url") or "")
+    return int(m.group(1)) if m else None
+
+
+def chapter_progress(epic_refs: list, issues_by_number: dict, weights: dict):
+    """Size-weighted completion of the backing epics' direct sub-issues.
+
+    Returns None when the refs have no sub-issues, so the caller can fall back
+    to a manually supplied percent (chapters with no epic, or a fuzzy mapping)."""
+    refs = set(epic_refs)
+    kids = {i["number"]: i for i in issues_by_number.values() if _parent_num(i) in refs}
+    if not kids:
+        return None
+
+    def w(issue):
+        return weights.get(_size_of(issue), weights["unlabeled"])
+
+    total = sum(w(i) for i in kids.values())
+    done = sum(w(i) for i in kids.values() if i.get("state") == "closed")
+    return round(100 * done / total) if total else 0
 
 
 def glory_of_days(prs_merged: list, issues_by_number: dict, keywords: dict,
@@ -550,10 +577,19 @@ def render_character_sheet(lx: dict, shares: dict, cls_name: str, cls_lore: str,
 </div>"""
 
 
-def render_mvp(chapters: list, issues_by_number: dict) -> str:
+def render_mvp(chapters: list, issues_by_number: dict, weights: dict) -> str:
     rows = ""
     for idx, ch in enumerate(chapters):
-        pct = ch.get("percent", 0)
+        epic_refs = ch.get("epic") or []
+        if isinstance(epic_refs, int):
+            epic_refs = [epic_refs]
+
+        # Manual percent wins; otherwise derive it from the backing epics' sub-issues.
+        pct = ch.get("percent")
+        if pct is None:
+            pct = chapter_progress(epic_refs, issues_by_number, weights)
+            pct = pct if pct is not None else 0
+
         if pct >= 100:
             row_cls = "done"
             stat_word = "Завершено ✓"
@@ -563,10 +599,6 @@ def render_mvp(chapters: list, issues_by_number: dict) -> str:
         else:
             row_cls = "active"
             stat_word = "В пути"
-
-        epic_refs = ch.get("epic") or []
-        if isinstance(epic_refs, int):
-            epic_refs = [epic_refs]
         links = []
         for n in epic_refs:
             issue = issues_by_number.get(n, {})
@@ -1240,6 +1272,10 @@ def render_html(
 
     issues_by_number = {i["number"]: i for i in issues}
 
+    size_weights = {"S": 1, "M": 3, "L": 8, "unlabeled": 2}
+    size_weights.update(_palette.get("valor_size", {}))
+    size_weights.update(_sizing_bands())
+
     top5 = top_artifacts(merged)
     glory = glory_of_days(merged, issues_by_number, kw, cutoff, today)
     spread = artifact_spread(merged, issues_by_number)
@@ -1275,7 +1311,7 @@ def render_html(
         render_header(today)
         + render_character_sheet(lx, shares, cls_name, cls_lore, balance, merged, issues, sprint_title)
         + render_current_chapter(sprint_title, sprint_issues, issues_by_number)
-        + render_mvp(mvp_chapters, issues_by_number)
+        + render_mvp(mvp_chapters, issues_by_number, size_weights)
         + render_locations(loc, assets["locations"])
         + render_quest_map(graph, assets["schools"])
         + render_seal_of_debt(debt)
