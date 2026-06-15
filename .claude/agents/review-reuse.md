@@ -62,7 +62,7 @@ For every external API call introduced or changed (Ktor, Coroutines, Compose, An
 
 ### 3a. Cross-feature contract claims
 
-When a doc claims it **inherits or extends another feature's contract** — phrasings like "baseline owned by X", "inherited from Y", "X already provides Z", "extends W's row/state contract" — verify the claim against the cited source doc, not just that the link resolves. A claim the source doc does not actually support is a finding, even when nothing in the current diff contradicts it on its face: the drift is doc-vs-doc, across feature boundaries, and the per-dimension reviewers each see only their slice. If the diff genuinely adds behaviour the source lacks, it must be labelled as an owned extension of this feature, not asserted as inherited baseline. Example: a brief stating a row variant "already has an expand chevron (owned by file-transfer)" when that sibling brief gives the variant no chevron.
+When a doc claims it inherits or extends another feature's contract ("baseline owned by X", "inherited from Y", "extends W's contract"), verify the claim against the cited source doc — not just that the link resolves. A claim the source does not support is a finding; behaviour the source lacks must be labelled an owned extension, not asserted as inherited.
 
 ### 4. Entry-point hygiene
 
