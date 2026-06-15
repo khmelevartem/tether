@@ -18,7 +18,7 @@ DeviceListScreen (root, owned by device-list)
 └── scrollable list of PeerCards
       └── PeerCard
             ├── Idle (collapsed)              ← owned by device-list / file-transfer
-            │     └── + unread-clipboard indicator   ← THIS BRIEF (when items pending for this peer)
+            │     └── + unread-clipboard indicator on the expand chevron ▾  ← THIS BRIEF (when items pending for this peer)
             └── Idle (expanded)               ← owned by file-transfer (Auto-send toggle)
                   ├── + Clipboard controls    ← THIS BRIEF
                   │     ├── "Send clipboard" action  → fire-and-forget toast
@@ -191,7 +191,7 @@ This is a per-peer receive setting, symmetric to that peer's send switch and ort
 - Tapping the **[Copy]** action on the clipboard-received OS notification copies directly (no navigation needed — see the notification screen).
 - Tapping the **body** of the clipboard-received OS notification opens the source peer's PeerCard, expanded, scrolled to its Clipboard inbox section.
 - Expanding the source peer's PeerCard at any time from the device list — the section is there whenever that peer has pending items, so items are recoverable even if the notification was never seen. This is the notification-independent path, load-bearing on Linux where notification clicks are unreliable.
-- An **unread-clipboard indicator** on the collapsed PeerCard (see below) signals which peer has pending items, so the user knows where to look without hunting.
+- An **unread-clipboard indicator** badged on the collapsed PeerCard's expand chevron (see below) signals which peer has pending items and that expanding reveals them, so the user knows where to look — and which gesture reaches the inbox — without hunting and without mistakenly tapping the body (which sends a file).
 
 **Layout.**
 - The section sits below the Clipboard controls in the expanded card, under its own short label **"Clipboard inbox"**.
@@ -199,7 +199,10 @@ This is a per-peer receive setting, symmetric to that peer's send switch and ort
 - The most-recent item also carries a dismissible **auto-apply hint** (see state 4) when this peer is not yet set to auto-apply.
 
 **Unread-clipboard indicator (collapsed PeerCard).**
-- When a peer has one or more pending inbox items, its collapsed PeerCard shows a small unread marker (a count or dot) in the peer-identity accent, so the device list reveals at a glance which peer is holding clipboard items. The marker clears when the peer's last pending item is copied or dismissed. This reuses the device-list row contract; it adds a clipboard-pending state, it does not redefine the row.
+- When a peer has one or more pending inbox items, its collapsed PeerCard shows a small unread marker (a count or dot) in the peer-identity accent, **anchored to the expand chevron `▾`** (the affordance that opens the expanded card and its Clipboard inbox section) — a badge *on the chevron*, not floating on the card body. The device list reveals at a glance which peer is holding clipboard items, and the badge's placement teaches the gesture: the cue sits exactly on the control that reaches the inbox, so the user expands rather than tapping the card body to reach it.
+- **Why on the chevron, not the body.** The collapsed row's body tap initiates a file-send (owned by device-list / file-transfer). A cue floating on the card body would invite the user to tap the body — triggering a file-send — while reaching for their incoming clipboard. Anchoring the badge to the chevron disambiguates "expand to reach my incoming clipboard" from "tap the body to send a file" without any explanatory copy.
+- **Chevron is always present where an unread item can exist.** Unread clipboard items exist only for trusted/paired peers (clipboard transfer is gated on pairing — only paired devices are ever sources). The expand chevron is a trailing affordance on every paired collapsed PeerCard — both online-paired (Case 2) and offline-paired (Case 3), since the expanded card holds per-peer settings meaningful even while the peer is offline (chevron baseline owned by [file-transfer/ux-brief.md](../file-transfer/ux-brief.md)). So the chevron is present in every collapsed state where an unread item can exist; no fallback anchor is needed.
+- The marker clears when the peer's last pending item is copied or dismissed. This reuses the device-list row contract; it adds a clipboard-pending state on the chevron affordance, it does not redefine the row.
 
 **States.**
 
@@ -247,7 +250,7 @@ This is a per-peer receive setting, symmetric to that peer's send switch and ort
 - Masked item: the accessible label states "Sensitive content, hidden" — a screen reader must **not** read the masked content aloud (defeats the mask). [Copy] still places the real content into the clipboard; the screen reader announces the action, not the secret.
 - Copy confirmation announced politely; Dismiss announced as the item being removed.
 - Auto-apply hint: announced as a tip (polite, not assertive), with its [Turn on auto-apply] and dismiss actions exposed; it must not steal focus from the Copy/Dismiss actions of the item it sits under.
-- Unread-clipboard indicator: the collapsed PeerCard's accessible label includes the pending count for the peer ("\<peer\>, 2 clipboard items waiting") so it is not a vision-only cue.
+- Unread-clipboard indicator: the badge rides on the expand chevron, so the count is folded into the chevron's own accessible label rather than the row body — the screen reader announces the affordance *and* the pending count together: **"Expand \<peer\> settings, 2 clipboard items waiting"** (singular "1 clipboard item waiting"). This extends the chevron's base label "Expand \<peer\> settings" (owned by [file-transfer/ux-brief.md](../file-transfer/ux-brief.md)) only while items are pending; with no pending items the chevron keeps its base label. Folding the count into the expand control (not the body) keeps the screen-reader path aligned with the visual one — focus the chevron, hear there are items, activate to reach them — so it is not a vision-only cue and does not steer toward the body's file-send action.
 - Focus order (Desktop, expanded card): Clipboard controls → inbox items top to bottom, each item Copy then Dismiss, then the auto-apply hint's action then its dismiss → end of card.
 
 ---
@@ -314,7 +317,7 @@ Terminal state: the user understands the limit and falls back to **Send clipboar
 
 ### Flow 4 — Receiving in Notify mode (default receive mode)
 1. An item arrives from a peer whose receive mode is Notify (the default for every peer).
-2. A notification shows a preview (masked if sensitive) and carries a **[Copy]** action. The item also lands in the source peer's Clipboard inbox section, and the peer's collapsed card shows the unread-clipboard indicator.
+2. A notification shows a preview (masked if sensitive) and carries a **[Copy]** action. The item also lands in the source peer's Clipboard inbox section, and the peer's collapsed card shows the unread-clipboard indicator badged on its expand chevron.
 3. Fast path: user taps the notification's **[Copy]** → real content goes onto their clipboard with no navigation; the item leaves the peer's inbox section.
 4. Alternative path: user taps the notification body → the source peer's PeerCard opens expanded at its Clipboard inbox section; or the user expands that peer's card from the device list independently. There they tap **[Copy]** (toast "Copied to clipboard") or **[Dismiss]**. Either way the item leaves the section.
 5. First time through (and until dismissed per peer), the most-recent inbox item shows a dismissible auto-apply hint inviting the user to let this peer's clipboard land automatically.
@@ -345,8 +348,8 @@ Terminal state: sensitive value reaches the trusted peer, never shown in clear i
 
 ### Flow 9 — Notify item missed / dismissed-by-mistake (recovery)
 1. Notify-mode item arrives; user misses or swipes away the notification.
-2. The item is still in the source peer's Clipboard inbox section (notification dismissal does not drop it); the peer's collapsed card carries the unread-clipboard indicator.
-3. User spots the unread indicator on the device list, expands that peer's PeerCard, and copies the item from its Clipboard inbox section.
+2. The item is still in the source peer's Clipboard inbox section (notification dismissal does not drop it); the peer's collapsed card carries the unread-clipboard indicator on its expand chevron.
+3. User spots the unread indicator on the chevron in the device list, taps the chevron to expand that peer's PeerCard (the badge teaches the gesture; tapping the body would start a file send), and copies the item from its Clipboard inbox section.
 Terminal state: item recovered and copied, or explicitly dismissed.
 
 ### Flow 10 — Peer unreachable on manual send (failure)
@@ -395,7 +398,7 @@ No new top-level navigation and no new screen. The clipboard controls (Send clip
 6. **Clipboard receive-mode choice** — a per-peer two-option control (Auto-apply / Notify) inside the expanded PeerCard's Clipboard controls block, defaulting to Notify for every peer; symmetric to that peer's Clipboard sync send switch.
 7. **Clipboard-received notification** — an OS notification carrying source peer + preview (masked-where-sensitive), a direct **Copy** action that places the real content on the clipboard, and a body tap that opens the source peer's PeerCard.
 8. **Clipboard inbox section** — a per-peer list of that peer's pending received items inside the expanded PeerCard, with per-item Copy / Dismiss, masked-preview item variant, and the auto-apply hint; absent when the peer has no pending items. Not a standalone screen.
-9. **Unread-clipboard indicator** — a per-peer marker on the collapsed PeerCard (count/dot in the peer-identity accent) signalling pending inbox items; clears when the peer's last item is gone. Extends the device-list row's state set, does not redefine the row.
+9. **Unread-clipboard indicator** — a per-peer badge **on the collapsed PeerCard's expand chevron** (count/dot in the peer-identity accent) signalling pending inbox items; the chevron is the affordance that opens the inbox, so the badge teaches "expand to reach incoming clipboard" and stays off the body's file-send tap target. Clears when the peer's last item is gone; its count folds into the chevron's accessible label. Extends the device-list row's state set and the chevron affordance, does not redefine the row.
 10. **Auto-apply hint** — a dismissible, non-nagging caption under a peer's most-recent inbox item, inviting a switch to Auto-apply; "don't show again" per peer, no dark patterns.
 11. **Masked preview** — a display-only dotted rendering of sensitive content used in both the notification and the inbox-section item; the real payload is still copied verbatim by any Copy affordance, and assistive tech must not read the secret aloud.
 12. **Peer-identity accent (reused)** — the existing `peerIdentity` marker, reused on the unread-clipboard indicator and the PeerCard to identify the source peer; baseline owned by [device-list/ux-brief.md](../device-list/ux-brief.md), not redefined here.
@@ -415,7 +418,7 @@ _None outstanding._ The three prior open questions are decided:
 ## Implementer layout calls
 
 - **Echo suppression for Clipboard sync (send-only model).** An item that arrived via clipboard transfer and was auto-applied (Auto-apply mode) must not itself re-trigger an outbound auto-send back toward the sender. The suppression mechanism (e.g. tagging auto-applied content, or distinguishing local-user copy events from programmatic clipboard writes) is the implementer's; the user-visible requirement is simply "no echo loop". This is the behavioural backbone of the send-only decision.
-- **Unread-clipboard indicator shape.** The collapsed PeerCard's pending marker (count vs dot, exact placement within the row) is the implementer's idiom call, as long as it reads in the peer-identity accent, clears when the peer's last item is gone, and its accessible label states the pending count. It is the notification-independent recovery cue — load-bearing on Linux where notification clicks are unreliable.
+- **Unread-clipboard indicator shape.** The collapsed PeerCard's pending marker (count vs dot, exact badge geometry on the chevron) is the implementer's idiom call, as long as it is **anchored to the expand chevron `▾`** (not the card body, which taps to file-send), reads in the peer-identity accent, clears when the peer's last item is gone, and its count folds into the chevron's accessible label ("Expand \<peer\> settings, N clipboard items waiting"). It is the notification-independent recovery cue — load-bearing on Linux where notification clicks are unreliable.
 - **Auto-apply hint placement within the inbox section.** The hint attaches to the most-recent item by default; exact rendering (inline caption vs trailing affordance) is the implementer's call, provided it stays quiet, never blocks Copy/Dismiss, is dismissible per peer, and shows only in Notify mode. No dark patterns.
 - **Receive-mode control shape.** Segmented control on Desktop/macOS, two radio rows on mobile, by default; per peer, defaults to Notify. Either idiom is acceptable as long as the two captions (especially the Auto-apply caution) are visible at choice time and the control sits within the peer's Clipboard controls block.
 - **Send-clipboard vs Auto-send visual separation.** The "Clipboard" section label plus the button-vs-switch shape contrast is the required disambiguation. If a divider/label proves too heavy in the expanded card, fall back to clear grouping spacing — but the user must never confuse the file Auto-send toggle with the Clipboard sync switch.
