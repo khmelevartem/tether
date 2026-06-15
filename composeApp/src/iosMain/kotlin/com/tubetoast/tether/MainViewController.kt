@@ -27,6 +27,9 @@ import ru.pocketbyte.kydra.log.wrapper.withTag
 
 private val log = KydraLog.withTag(default = "Main.iOS")
 
+// Shared with iOSApp.swift (same string literal must match).
+private const val SHARED_FILES_AVAILABLE_NOTIFICATION = "com.tubetoast.tether.sharedFilesAvailable"
+
 @Suppress("ktlint:standard:function-naming")
 fun MainViewController() = run {
     initLogging()
@@ -66,14 +69,21 @@ fun MainViewController() = run {
                 drainSharedFiles()
             }
 
-            val observer = NSNotificationCenter.defaultCenter.addObserverForName(
+            val becomeActiveObserver = NSNotificationCenter.defaultCenter.addObserverForName(
                 name = UIApplicationDidBecomeActiveNotification,
                 `object` = null,
                 queue = null,
             ) { _ -> drainSharedFiles() }
 
+            val sharedFilesObserver = NSNotificationCenter.defaultCenter.addObserverForName(
+                name = SHARED_FILES_AVAILABLE_NOTIFICATION,
+                `object` = null,
+                queue = null,
+            ) { _ -> drainSharedFiles() }
+
             onDispose {
-                NSNotificationCenter.defaultCenter.removeObserver(observer)
+                NSNotificationCenter.defaultCenter.removeObserver(becomeActiveObserver)
+                NSNotificationCenter.defaultCenter.removeObserver(sharedFilesObserver)
                 container.nameRepublisher.stop()
                 container.rendezvousAnnouncer.stop()
                 scope.cancel()

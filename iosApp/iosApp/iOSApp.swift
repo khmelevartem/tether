@@ -1,5 +1,8 @@
 import SwiftUI
 
+// Shared with MainViewController.kt (same string literal must match).
+let sharedFilesAvailableNotification = "com.tubetoast.tether.sharedFilesAvailable"
+
 @main
 struct iOSApp: App {
 
@@ -7,8 +10,13 @@ struct iOSApp: App {
         WindowGroup {
             ContentView()
                 .onOpenURL { _ in
-                    // No-op: opening the app foregrounds it, which fires
-                    // UIApplicationDidBecomeActiveNotification → drainSharedFiles().
+                    // iPad multitasking: Tether may already be foreground when the
+                    // share URL arrives, so UIApplicationDidBecomeActiveNotification
+                    // does not fire. Post explicitly so the Kotlin side drains.
+                    NotificationCenter.default.post(
+                        name: NSNotification.Name(sharedFilesAvailableNotification),
+                        object: nil
+                    )
                 }
         }
     }
