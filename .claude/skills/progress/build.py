@@ -580,6 +580,7 @@ def render_character_sheet(lx: dict, shares: dict, cls_name: str, cls_lore: str,
 
 def render_mvp(chapters: list, issues_by_number: dict, weights: dict) -> str:
     rows = ""
+    done_count = 0
     for idx, ch in enumerate(chapters):
         epic_refs = ch.get("epic") or []
         if isinstance(epic_refs, int):
@@ -594,6 +595,7 @@ def render_mvp(chapters: list, issues_by_number: dict, weights: dict) -> str:
         if pct >= 100:
             row_cls = "done"
             stat_word = "Завершено ✓"
+            done_count += 1
         elif pct == 0:
             row_cls = "todo"
             stat_word = "Не начато"
@@ -631,9 +633,20 @@ def render_mvp(chapters: list, issues_by_number: dict, weights: dict) -> str:
   </td>
 </tr>"""
 
+    table_cls = "mvp-table"
+    toggle = ""
+    if done_count:
+        table_cls += " hide-done"
+        toggle = (
+            '<label class="show-done">'
+            '<input type="checkbox" id="show-done-chapters"> '
+            f'показать завершённые главы ({done_count})</label>'
+        )
+
     return f"""<h2>Главный Сюжет — Хроника MVP</h2>
 <div class="frame">
-  <table class="mvp-table">
+  {toggle}
+  <table id="mvp-table" class="{table_cls}">
     <thead><tr>
       <th class="th-seal">Печать</th>
       <th>Глава</th>
@@ -642,7 +655,15 @@ def render_mvp(chapters: list, issues_by_number: dict, weights: dict) -> str:
     </tr></thead>
     <tbody>{rows}</tbody>
   </table>
-</div>"""
+  <div class="mvp-coverage">Главы — продуктовые фичи MVP. Вне хроники намеренно: инфраструктура (эпик #17), пост-MVP (хотспот #459), системные (Wi-Fi #460, разрешения) и разовые задачи.</div>
+</div>
+<script>
+(function(){{
+  const cb = document.getElementById('show-done-chapters');
+  const t = document.getElementById('mvp-table');
+  if (cb && t) cb.addEventListener('change', () => t.classList.toggle('hide-done', !cb.checked));
+}})();
+</script>"""
 
 
 def render_locations(loc: dict, locations_data: dict) -> str:
@@ -1436,7 +1457,10 @@ def render_html(
   .chart-box.tall {{ height:360px; }}
   .chart-box.short {{ height:240px; }}
 
+  .show-done {{ display:inline-flex; align-items:center; gap:6px; margin-bottom:14px; font-size:13px; cursor:pointer; color:var(--muted); }}
+  .mvp-coverage {{ margin-top:16px; font-size:12px; font-style:italic; color:var(--muted); }}
   table.mvp-table {{ width:100%; border-collapse:collapse; }}
+  table.mvp-table.hide-done tbody tr.done {{ display:none; }}
   table.mvp-table thead th {{ font-family:'{font_h}', serif; font-size:10px; font-weight:400;
     letter-spacing:.2em; text-transform:uppercase; color:var(--gold-dim); text-align:left;
     padding:0 14px 10px; border-bottom:1px solid var(--gold-dim); }}

@@ -37,7 +37,7 @@ What it gathers, and the quirks baked into the script:
 
 ## MVP chapters — compose in chat
 
-Read `docs/product/roadmap.md` §MVP and `docs/product/features/README.md`. One chapter per roadmap §MVP item (currently 8 — keep the chapter set aligned with the roadmap, not a fixed count). For each, name the backing epic where the feature has one. Write the result to `/tmp/tether-progress-mvp.json`:
+Read `docs/product/roadmap.md` §MVP and `docs/product/features/README.md`. **One chapter per MVP product feature** (the feature index is the unit, *not* the roadmap bullet): merge roadmap bullets that belong to the same feature — multi-file transfer + live progress + cancel + receiver are all one *File transfer* chapter, backed by its epic(s). A feature may legitimately span more than one epic (File transfer = `#8` UI + `#119` reliability); that's fine, list both. Aim for ≤ 8 chapters. Completed (100 %) chapters are hidden behind a "показать завершённые" toggle by default, so keep them in the list — don't drop them. Chapters cover MVP *product* features only; infra (`#17`), Post-MVP (hotspot `#459`), and system-integration (`#460`) epics stay out, and the table prints a coverage caption saying so. For each chapter name the backing epic where the feature has one. Write the result to `/tmp/tether-progress-mvp.json`:
 
 ```json
 [
@@ -81,7 +81,7 @@ One class per the rules in `assets/classes.json` (ordinal matching, first match 
 Per `assets/keywords.json`. Used in the Chronicle of Deeds, Seal of Debt, hero class.
 
 ### MVP (Main Quest)
-One chapter per roadmap §MVP item (see §MVP chapters above), each with an epic subtitle and an optional backing-epic ref. Each gets a completion %. Progress bars: `gold.primary` fill for >0%, `text.muted_dim` for 0%.
+One chapter per MVP product feature (see §MVP chapters above), each with an epic subtitle and backing-epic refs. Four-column table: seal medallion (numeral + status ring), name + subtitle, clickable epic titles, percent + 10-pip track. Completed (100 %) chapters hidden by default behind a toggle; a coverage caption lists which epics are intentionally out of MVP scope.
 
 ### Artifacts (top-5 PRs)
 Weight: `commits·2 + comments + review_threads·3 + (additions+deletions)/200`. Top-5 with rarity-colour frames per `assets/palette.json#artifact_rarity`. Inside each card: commits, discussions (`comments + review_threads`), `+/−` lines.
