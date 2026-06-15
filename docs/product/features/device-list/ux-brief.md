@@ -47,6 +47,7 @@ All rows share the same height, internal padding, and typographic hierarchy. The
 - Hint text: "Not on this network. Make sure Wi-Fi is on and Tether is running on it."
 - Hint is dismissible (tap elsewhere on mobile, click elsewhere on desktop).
 - No spinner, no "retry" affordance on the row. Recovery is automatic.
+- **Extended by [clipboard transfer](../clipboard-transfer/ux-brief.md):** while this row holds pending received clipboard items, it becomes expandable (gains the expand chevron and unread badge, role "button"), so the receiver can reach those items even after the sender goes offline. With no pending items the row keeps the hint-only, non-button behaviour above. The expandability and chevron are an owned extension by clipboard transfer; see its brief for the source of the addition.
 
 **Case 4: Offline & unpaired**
 - Not shown. The row does not appear in the list.
