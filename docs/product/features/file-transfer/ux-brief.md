@@ -561,7 +561,8 @@ Auto-send is configured per-peer via the expanded PeerCard (see PeerCard § Idle
 
 - **On (default):** received photos and videos are added to the Photos library in addition to staying in Files. iOS's own add-to-Photos consent prompt is requested at the first inbound media save while the toggle is On — see § Flows. The toggle reflects the user's intent; it does not by itself reflect whether Photos permission has been granted.
 - **Off:** behaviour matches Files-only — received media stays in `On My iPhone → Tether/` and no Photos permission is requested. Flipping to Off after a grant does not remove already-saved gallery copies.
-- **On but Photos permission denied:** the toggle stays On (the user's intent is unchanged), and a caption variant appears beneath it: "To add to Photos, allow Tether access in iOS Settings → Privacy → Photos." Received media silently continues to Files only until access is granted.
+
+The denied-permission recovery caption (a caption variant shown beneath the On toggle when add-to-Photos access has been denied) is tracked with the deferred Photos-permission UX.
 
 **Interactions.**
 
@@ -578,8 +579,7 @@ Auto-send is configured per-peer via the expanded PeerCard (see PeerCard § Idle
 - "On My iPhone → Tether/" (iOS)
 - "iOS does not allow changing this location."
 - "Save photos & videos to Photos" (iOS toggle label)
-- "Received photos and videos are also added to your Photos library. They're always kept in Files too." (iOS toggle caption, permission granted or not yet requested)
-- "To add to Photos, allow Tether access in iOS Settings → Privacy → Photos." (iOS toggle caption, permission denied)
+- "Received photos and videos are also added to your Photos library. They're always kept in Files too." (iOS toggle caption)
 - "Show large-selection warnings"
 
 **Per-platform deltas.**
@@ -593,7 +593,7 @@ Auto-send is configured per-peer via the expanded PeerCard (see PeerCard § Idle
 
 - Save location row (editable): semantic label "Change save location, currently \<path\>".
 - Save location row (iOS, read-only): semantic label "Save location: On My iPhone → Tether/. This location cannot be changed on iOS."
-- Save-to-Photos toggle (iOS): semantic label "Save received photos and videos to Photos, currently \<On/Off\>". When the denied-permission caption is shown, it is part of the row's accessible description so a screen reader reads the recovery hint with the toggle.
+- Save-to-Photos toggle (iOS): semantic label "Save received photos and videos to Photos, currently \<On/Off\>".
 - Large-selection warning toggle: semantic label "Show large-selection warnings, currently \<On/Off\>".
 
 ---
@@ -716,8 +716,8 @@ The drop is accepted at the window root — on any screen, not only DeviceListSc
 2. For the photos and videos in the batch, Tether adds them to the Photos library. Because add-to-Photos access has not been requested before, iOS's own add-to-Photos prompt appears.
 3. On the prompt:
    - **Granted:** the photos and videos are added to Photos in addition to Files. The PeerCard's Received state and its [Show details →] breakdown are unchanged — there is no separate "saved to Photos" surface; the gallery copy is silent and additive.
-   - **Denied:** nothing is added to Photos; the media remains in Files only. No blocking error and no per-transfer alert — the Received state completes normally. The SettingsSection save-to-Photos row gains its denied-permission caption ("To add to Photos, allow Tether access in iOS Settings → Privacy → Photos.") as the recovery path; the toggle stays On reflecting the user's intent.
-4. After a grant, subsequent inbound media is added to Photos silently with no further prompt. After a denial, subsequent inbound media silently stays in Files only; Tether does not re-prompt (iOS does not re-show the add-to-Photos prompt once decided) and does not nag — the Settings caption is the only recovery surface. Non-media files in any batch always stay in Files regardless of the toggle or the permission outcome.
+   - **Denied:** nothing is added to Photos; the media remains in Files only. No blocking error and no per-transfer alert — the Received state completes normally. The toggle stays On reflecting the user's intent. The denied-permission recovery surface is tracked with the deferred Photos-permission UX.
+4. After a grant, subsequent inbound media is added to Photos silently with no further prompt. After a denial, subsequent inbound media silently stays in Files only; Tether does not re-prompt (iOS does not re-show the add-to-Photos prompt once decided) and does not nag. Non-media files in any batch always stay in Files regardless of the toggle or the permission outcome.
 
 With the toggle Off, none of the above runs: no OS prompt, media goes to Files only — behaviour identical to a Files-only receiver.
 
@@ -790,7 +790,7 @@ The **picker-mode chooser sheet** is a bottom-sheet modal overlaid on DeviceList
 22. **macOS/Desktop window-close transfer warning** — sheet attached to the window when the user closes Tether mid-transfer.
 23. **Settings save-location row** — editable (with system folder picker disclosure) on Android/macOS/Desktop; read-only with explanatory caption on iOS.
 24. **Settings large-selection warning toggle** — toggle in SettingsSection — File Transfer; On by default; re-enables LargeSelectionConfirmDialog after "Don't show again" suppression.
-25. **Settings save-to-Photos toggle** — iOS-only toggle in SettingsSection — File Transfer; On by default; carries a caption that switches between the additive-explanation copy and the denied-permission recovery hint depending on add-to-Photos access state.
+25. **Settings save-to-Photos toggle** — iOS-only toggle in SettingsSection — File Transfer; On by default; carries the additive-explanation caption that the gallery copy stays in Files too.
 
 ---
 
