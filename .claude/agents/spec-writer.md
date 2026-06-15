@@ -53,6 +53,7 @@ Create `docs/product/features/<slug>/spec.md` from the template (creating the pe
 - **One spec per feature, all platforms.** Don't write "Android X" + "iOS X" separately — see template comment.
 - **No module names, file paths, gradle tasks** in the spec. If a sentence reads like a how-to, it belongs in the issue, not here.
 - **Scope cohesion pass before showing the diff.** Re-read each section and ask: "does this section depend on the feature's central invariant?". If a section describes a concept that survives without that invariant — it belongs to another feature. Move it to the right spec and leave a `Not in this feature` bullet here with the new owner's link.
+- **Settled product/behavioural decisions live here, not in the ux-brief.** A decision and its rationale (which direction, which default, which mode) belong in the spec; the ux-brief references the spec and covers interaction only. Never leave a decision recorded only in the brief, and never carry it in the spec as an open question "resolved in the brief" — if it's settled, state it here.
 - **Status: `scoped`** once written and answered. `idea` is for unfilled specs; `in progress` once the implementing issue is open.
 - **Link the issue** in `GitHub Issues:` line.
 - **Update `docs/product/features/README.md`** — add a row in the table with the new file, status, and issue.

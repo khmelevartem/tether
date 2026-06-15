@@ -60,6 +60,10 @@ Flag every doc location where the framing implies one state but the issue is in 
 
 For every external API call introduced or changed (Ktor, Coroutines, Compose, Android SDK, ObjC frameworks), verify claims against the actual library. If author says "X returns non-null / throws / suspends / has lifecycle Y" — check source or docs (WebFetch if needed). Examples: "ServerSocket is non-blocking", "cancellation propagates here", "AVAudioSession auto-activates" — all suspect until verified.
 
+### 3a. Cross-feature contract claims
+
+When a doc claims it **inherits or extends another feature's contract** — phrasings like "baseline owned by X", "inherited from Y", "X already provides Z", "extends W's row/state contract" — verify the claim against the cited source doc, not just that the link resolves. A claim the source doc does not actually support is a finding, even when nothing in the current diff contradicts it on its face: the drift is doc-vs-doc, across feature boundaries, and the per-dimension reviewers each see only their slice. If the diff genuinely adds behaviour the source lacks, it must be labelled as an owned extension of this feature, not asserted as inherited baseline. Example: a brief stating a row variant "already has an expand chevron (owned by file-transfer)" when that sibling brief gives the variant no chevron.
+
 ### 4. Entry-point hygiene
 
 Search for code reachable from no entry point (dead code added "for future use"):
