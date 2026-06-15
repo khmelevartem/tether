@@ -109,6 +109,8 @@ Re-read and verify: every screen has every state with real copy, every interacti
 - Name code components (composables, classes, files). `ui-expert` owns the mapping concept → composable.
 - Read the existing UI code. `review-reuse` catches duplication on the code side.
 - Re-debate product decisions the spec already settled. Surface a divergence as an "Open UX question" instead of silently overriding.
+- House a settled product or behavioural **decision and its rationale** in the brief. Those belong in the spec; the brief references the spec and covers interaction only. If you find a decision settled only in the brief (or a spec still calling it an open question "resolved in the brief"), that is a divergence to fix — move the decision to the spec, leave a pointer.
+- Assert another feature's contract as inherited baseline without checking that feature's doc. When you extend a sibling feature's contract (a row variant, a screen state, an affordance), verify the baseline against its source doc and label your addition as an **owned extension** of this feature — never present new behaviour as something the sibling already provides.
 
 ## Output to caller
 

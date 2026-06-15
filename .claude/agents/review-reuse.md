@@ -60,6 +60,10 @@ Flag every doc location where the framing implies one state but the issue is in 
 
 For every external API call introduced or changed (Ktor, Coroutines, Compose, Android SDK, ObjC frameworks), verify claims against the actual library. If author says "X returns non-null / throws / suspends / has lifecycle Y" — check source or docs (WebFetch if needed). Examples: "ServerSocket is non-blocking", "cancellation propagates here", "AVAudioSession auto-activates" — all suspect until verified.
 
+### 3a. Cross-feature contract claims
+
+When a doc claims it inherits or extends another feature's contract ("baseline owned by X", "inherited from Y", "extends W's contract"), verify the claim against the cited source doc — not just that the link resolves. A claim the source does not support is a finding; behaviour the source lacks must be labelled an owned extension, not asserted as inherited.
+
 ### 4. Entry-point hygiene
 
 Search for code reachable from no entry point (dead code added "for future use"):
