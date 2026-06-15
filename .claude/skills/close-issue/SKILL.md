@@ -59,9 +59,9 @@ Ask the user explicitly:
 
 One question to the user to check understanding of principles actually applied in this task: architecture / code / mechanism / library / platform behavior. The goal is interview prep for Senior Android / KMP, not a merge-readiness audit.
 
-**Source of the question:**
-- First open the [interview prep checklist](../../../docs/interview-prep-checklist.md) and find an uncompleted item (`- [ ]`) that thematically matches what changed in the PR. If there is a match — ask based on it.
-- If no uncompleted item matches the context of the task — formulate your own question based on the actual implementation (what was specifically done in the PR and why).
+**Source of the question — always from the checklist:**
+- Open the [interview prep checklist](../../../docs/interview-prep-checklist.md) and find an uncompleted item (`- [ ]`) that thematically matches what changed in the PR. If there is a match — ask based on it.
+- If no uncompleted item matches the task's context — still ask from the checklist: pick any uncompleted item, even one unrelated to this task. Do not formulate a self-authored question.
 
 **Format:**
 - Exactly one question per run, not a series. Not "tell me about X and Y and Z".
@@ -69,7 +69,7 @@ One question to the user to check understanding of principles actually applied i
 
 **After the user's answer:**
 - Assess correctness: what is right, what is missing, what is imprecise or wrong. Without leniency and without aggression — like a technical interviewer giving honest feedback.
-- If the answer was based on an item from the checklist — mark it as completed (`- [ ]` → `- [x]`) directly in `docs/interview-prep-checklist.md` via Edit. If the question was your own (not from the checklist) — add it to the "Additional questions from tasks" section at the end of the checklist as `- [x] <question>` via Edit.
+- Mark the answered item as completed (`- [ ]` → `- [x]`) directly in `docs/interview-prep-checklist.md` via Edit.
 - **Commit the checklist edit into the current PR branch and push, before the Step 8 merge.**
 
 **This is not a stop-point based on the content of the answer** — a weak answer does not block the merge. The user decides themselves whether to proceed or explore the topic further. The stop-point is only the fact that the question was asked and an answer was received.

@@ -1,8 +1,8 @@
 # Device name bootstrapping
 
 **Area:** Onboarding / Identity
-**Status:** `scoped`
-**GitHub Issues:** _tbd_
+**Status:** `done`
+**GitHub Issues:** #120 (spec), #147 (backend), #148 (UI)
 
 ---
 

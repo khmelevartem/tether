@@ -1,11 +1,11 @@
 {
-  "_doc": "Кластеры для force-clustering графа зависимостей в /progress. Порядок фиксирован — определяет угловое размещение на радиальной окружности. Названия — стилизованные имена «школ», ассоциируются с предметной областью. keywords — case-insensitive подстроки в title issue для классификации.",
+  "_doc": "Кластеры для force-clustering графа зависимостей в /progress. Порядок фиксирован — определяет угловое размещение на радиальной окружности. Названия — стилизованные имена «школ», ассоциируются с предметной областью. keywords — матчатся по началу слова (\\b<kw>, case-insensitive): «ui» ловит «UI»/«UI-control», но не «bUIld»/«gUIde». Первое совпадение по порядку школ выигрывает.",
   "schools": [
     {
       "id": "discovery",
       "name": "Школа Зова",
       "summary": "mDNS, peer discovery, NSD, Bonjour, JmDNS",
-      "keywords": ["mdns", "discovery", "peer", "nsd", "bonjour", "jmdns"]
+      "keywords": ["mdns", "discovery", "nsd", "bonjour", "jmdns"]
     },
     {
       "id": "transfer",
@@ -16,26 +16,26 @@
     {
       "id": "pairing",
       "name": "Школа Печатей",
-      "summary": "pairing, PIN, ключи, доверие, TLS, шифрование",
-      "keywords": ["pair", "pin", "key", "trust", "encryption", "tls", "handshake", "security"]
+      "summary": "pairing, PIN, ключи, доверие, SAS, TLS, шифрование",
+      "keywords": ["pair", "pin", "key exchange", "trust", "encryption", "tls", "handshake", "security", "sas"]
     },
     {
       "id": "ui",
       "name": "Школа Иллюзий",
-      "summary": "экраны, Compose, picker, list, progress, onboarding",
-      "keywords": ["ui", "screen", "compose", "picker", "list", "progress", "share", "onboarding"]
+      "summary": "экраны, Compose, picker, list, dialog, settings, progress, onboarding",
+      "keywords": ["ui", "screen", "compose", "picker", "list", "dialog", "settings", "progress", "share", "onboarding"]
     },
     {
       "id": "system",
       "name": "Школа Хранителей",
-      "summary": "foreground service, wakelock, Wi-Fi, разрешения, device name",
-      "keywords": ["foreground", "wakelock", "wifi", "permission", "manifest", "device name", "android", "background", "service"]
+      "summary": "foreground service, wakelock, Wi-Fi, local network, разрешения, device name",
+      "keywords": ["foreground", "wakelock", "wifi", "wi-fi", "localnetwork", "local-network", "permission", "manifest", "device name", "android", "background", "service"]
     },
     {
       "id": "infra",
       "name": "Школа Ритуалов",
-      "summary": "скиллы, агенты, спринты, CI, ретро, доки, ADR, ревью",
-      "keywords": ["skill", "agent", "claude", "sprint", "ci", "retro", "doc", "spec", "adr", "engineering", "review", "grooming", "workflow", "hook", "template", "rule", "gradle"]
+      "summary": "скиллы, агенты, спринты, CI, ретро, доки, ADR, ревью, layering, архитектура",
+      "keywords": ["skill", "agent", "claude", "sprint", "ci", "retro", "doc", "spec", "adr", "engineering", "review", "grooming", "workflow", "hook", "template", "rule", "gradle", "layering", "architecture"]
     },
     {
       "id": "other",

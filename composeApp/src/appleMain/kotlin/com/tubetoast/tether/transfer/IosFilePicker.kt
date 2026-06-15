@@ -227,30 +227,12 @@ internal class IosFilePicker(
         // Ref-count the folder scope: release exactly once when the last child is closed.
         val remaining = AtomicInt(result.size)
         return result.map { child ->
-            FolderChildFileSource(child, onLastClose = {
+            OnCloseFileSource(child, onLastClose = {
                 if (remaining.addAndFetch(-1) == 0) {
                     onScopeReleased()
                 }
             })
         }
-    }
-}
-
-/**
- * Fires [onLastClose] exactly once on [close], regardless of how many times [close] is called.
- * This ensures the shared folder security scope is released exactly once when the last sibling is closed.
- */
-private class FolderChildFileSource(
-    private val delegate: IosFileSource,
-    private val onLastClose: () -> Unit,
-) : FileSource by delegate {
-    private var closed = false
-
-    override fun close() {
-        if (closed) return
-        closed = true
-        delegate.close()
-        onLastClose()
     }
 }
 

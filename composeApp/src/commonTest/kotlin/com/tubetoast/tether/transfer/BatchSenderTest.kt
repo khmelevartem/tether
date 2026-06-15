@@ -214,6 +214,85 @@ class BatchSenderTest {
     }
 
     @Test
+    fun `connection drop then reconnect fails — confirmDelivered stays 0 for staged file`() = runTest {
+        var confirmCount = 0
+        val inner = FakeFileSource("a.txt", 100L)
+        val confirmable = ConfirmableFileSource(inner) { confirmCount++ }
+
+        val pauseChannel = Channel<Unit>(0)
+        val monitor = FakeConnectionMonitor()
+        var sendCallCount = 0
+        val sender = BatchSender(
+            sendOne = { _, onProgress ->
+                sendCallCount++
+                if (sendCallCount == 1) pauseChannel.receive()
+                onProgress(100L, 100L)
+            },
+            connectionMonitor = monitor,
+            progressThrottle = 100.milliseconds,
+            dispatcher = Dispatchers.Unconfined,
+        )
+
+        val job = launch {
+            sender.run(listOf(confirmable)) {}
+        }
+
+        runCurrent()
+        monitor.drop()
+        runCurrent()
+        monitor.reconnect(false)
+        runCurrent()
+
+        job.join()
+
+        assertEquals(
+            0,
+            confirmCount,
+            "confirmDelivered must not fire when network is lost — file must survive for retry",
+        )
+    }
+
+    @Test
+    fun `connection drop then reconnect succeeds — confirmDelivered fires exactly once`() = runTest {
+        var confirmCount = 0
+        val inner = FakeFileSource("a.txt", 100L)
+        val confirmable = ConfirmableFileSource(inner) { confirmCount++ }
+
+        val pauseChannel = Channel<Unit>(0)
+        val monitor = FakeConnectionMonitor()
+        var sendCallCount = 0
+        val sender = BatchSender(
+            sendOne = { _, onProgress ->
+                sendCallCount++
+                if (sendCallCount == 1) pauseChannel.receive()
+                onProgress(100L, 100L)
+            },
+            connectionMonitor = monitor,
+            progressThrottle = 100.milliseconds,
+            dispatcher = Dispatchers.Unconfined,
+        )
+
+        val job = launch {
+            sender.run(listOf(confirmable)) {}
+        }
+
+        runCurrent()
+        monitor.drop()
+        runCurrent()
+        monitor.reconnect(true)
+        runCurrent()
+        advanceUntilIdle()
+
+        job.join()
+
+        assertEquals(
+            1,
+            confirmCount,
+            "confirmDelivered must fire exactly once after the resumed send — not per loop iteration",
+        )
+    }
+
+    @Test
     fun `empty source list returns AllSent without emitting`() = runTest {
         val emitted = mutableListOf<BatchProgress>()
         val outcome = makeSender().run(emptyList()) { emitted.add(it) }
@@ -597,6 +676,67 @@ class BatchSenderTest {
         val cancelled = last.outcome
         assertIs<BatchOutcome.Cancelled>(cancelled)
         assertTrue("photo.jpg" in cancelled.remaining, "a lazy source cancelled mid-preparing is left unsent")
+    }
+
+    @Test
+    fun `ConfirmableFileSource confirmDelivered fires exactly once on successful send`() = runTest {
+        var confirmCount = 0
+        val inner = FakeFileSource("a.txt", 100L)
+        val confirmable = ConfirmableFileSource(inner) { confirmCount++ }
+
+        makeSender().run(listOf(confirmable)) {}
+
+        assertEquals(1, confirmCount, "confirmDelivered must fire exactly once on successful delivery")
+    }
+
+    @Test
+    fun `ConfirmableFileSource confirmDelivered does not fire on failed send`() = runTest {
+        var confirmCount = 0
+        val inner = FakeFileSource("a.txt", 100L)
+        val confirmable = ConfirmableFileSource(inner) { confirmCount++ }
+        val sender = makeSender(
+            sendOne = { _, _ -> throw UnreadableSourceException("a.txt") },
+        )
+
+        sender.run(listOf(confirmable)) {}
+
+        assertEquals(0, confirmCount, "confirmDelivered must not fire when sendOne throws")
+    }
+
+    @Test
+    fun `ConfirmableFileSource confirmDelivered does not fire on cancel`() = runTest {
+        var confirmCount = 0
+        val inner = FakeFileSource("a.txt", 100L)
+        val confirmable = ConfirmableFileSource(inner) { confirmCount++ }
+        val pauseChannel = Channel<Unit>(0)
+        val sender = BatchSender(
+            sendOne = { _, _ -> pauseChannel.receive() },
+            connectionMonitor = FakeConnectionMonitor(),
+            progressThrottle = 100.milliseconds,
+            dispatcher = Dispatchers.Unconfined,
+        )
+
+        val job = launch { sender.run(listOf(confirmable)) {} }
+        runCurrent()
+        job.cancel()
+        runCurrent()
+
+        assertEquals(0, confirmCount, "confirmDelivered must not fire when batch is cancelled")
+    }
+
+    @Test
+    fun `ConfirmableFileSource confirmDelivered fires once per file in multi-file batch`() = runTest {
+        var aCount = 0
+        var bCount = 0
+        val sources = listOf(
+            ConfirmableFileSource(FakeFileSource("a.txt", 10L)) { aCount++ },
+            ConfirmableFileSource(FakeFileSource("b.txt", 20L)) { bCount++ },
+        )
+
+        makeSender().run(sources) {}
+
+        assertEquals(1, aCount, "a.txt confirmDelivered must fire once")
+        assertEquals(1, bCount, "b.txt confirmDelivered must fire once")
     }
 
     private class LateSizeSource(

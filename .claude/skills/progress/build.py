@@ -306,8 +306,6 @@ def seal_of_debt(issues: list, sprints_dir: Path, cutoff: date, keywords: dict) 
         by_scroll=by_scroll,
         random_enc=random_enc,
         total=total,
-        by_scroll_last6=by_scroll[-6:],
-        random_enc_last6=random_enc[-6:],
     )
 
 
@@ -332,11 +330,42 @@ def _issue_size(pr: dict, issues_by_number: dict) -> str:
     if m:
         issue = issues_by_number.get(int(m.group(1)))
         if issue:
-            for lbl in issue.get("labels", []):
-                name = lbl.get("name", "")
-                if name in ("size:S", "size:M", "size:L"):
-                    return name.split(":")[1]
+            return _size_of(issue)
     return "unlabeled"
+
+
+def _size_of(issue: dict) -> str:
+    for lbl in issue.get("labels", []):
+        if lbl.get("name") in ("size:S", "size:M", "size:L"):
+            return lbl["name"].split(":")[1]
+    return "unlabeled"
+
+
+def _parent_num(issue: dict):
+    m = re.search(r"/issues/(\d+)$", issue.get("parent_issue_url") or "")
+    return int(m.group(1)) if m else None
+
+
+def chapter_progress(epic_refs: list, issues_by_number: dict, weights: dict):
+    """Size-weighted completion of the backing epics' direct sub-issues.
+
+    Returns None when the refs have no sub-issues, so the caller can fall back
+    to a manually supplied percent (chapters with no epic, or a fuzzy mapping)."""
+    refs = set(epic_refs)
+    kids = {i["number"]: i for i in issues_by_number.values() if _parent_num(i) in refs}
+    if not kids:
+        return None
+
+    def w(issue):
+        return weights.get(_size_of(issue), weights["unlabeled"])
+
+    total = sum(w(i) for i in kids.values())
+    if not total:
+        return 0
+    done = sum(w(i) for i in kids.values() if i.get("state") == "closed")
+    pct = round(100 * done / total)
+    # never round up to a "done" reading while a sub-issue is still open
+    return 99 if pct >= 100 and done < total else pct
 
 
 def glory_of_days(prs_merged: list, issues_by_number: dict, keywords: dict,
@@ -394,10 +423,13 @@ def artifact_spread(prs_merged: list, issues_by_number: dict) -> dict:
 
 
 def classify_school(title: str, schools: list) -> str:
+    # Leading word-boundary match: a keyword must start a word, so "ui" hits
+    # "UI" / "UI-control" but not "bUIld" / "gUIde", and "ci" not "deCIsion".
+    # Inflections still match (\bfile → "files", \bpair → "paired").
     t = title.lower()
     for school in schools:
         for kw in school.get("keywords", []):
-            if kw in t:
+            if re.search(r"\b" + re.escape(kw), t):
                 return school["id"]
     return "other"
 
@@ -408,6 +440,9 @@ def build_graph_data(issues: list, blocked_by: dict, schools: list) -> dict:
 
     issue_map = {i["number"]: i for i in issues}
     has_parent = set()
+    # Issues that parent at least one sub-issue (graph hubs). Hub-ness alone keeps a
+    # node out of "lone"; the visual epic flag additionally requires an `EPIC:` title.
+    epic_nums: set[int] = set()
     # Only issues with at least one *open* blocker are considered "in chains".
     has_active_blocked_by: set[int] = set()
     # Only open issues that actively block something open are marked as blockers.
@@ -423,12 +458,11 @@ def build_graph_data(issues: list, blocked_by: dict, schools: list) -> dict:
                 edges.append({"source": b, "target": num, "type": "block"})
 
     for issue in issues:
-        if issue.get("parent_issue_url"):
-            m = re.search(r"/issues/(\d+)$", issue["parent_issue_url"])
-            if m:
-                parent_num = int(m.group(1))
-                has_parent.add(issue["number"])
-                edges.append({"source": parent_num, "target": issue["number"], "type": "parent"})
+        parent_num = _parent_num(issue)
+        if parent_num is not None:
+            has_parent.add(issue["number"])
+            epic_nums.add(parent_num)
+            edges.append({"source": parent_num, "target": issue["number"], "type": "parent"})
 
     for issue in issues:
         num = issue["number"]
@@ -437,16 +471,19 @@ def build_graph_data(issues: list, blocked_by: dict, schools: list) -> dict:
             num not in has_parent
             and num not in has_active_blocked_by
             and num not in has_active_blocks
+            and num not in epic_nums
         )
         orphan = is_open and isolated
         blocked = is_open and num in has_active_blocked_by
         nodes.append({
             "id": num,
             "title": issue["title"],
+            "url": issue.get("html_url", ""),
             "state": issue.get("state", "open"),
             "school": classify_school(issue["title"], schools),
             "orphan": orphan,
             "blocked": blocked,
+            "epic": num in epic_nums and "epic:" in issue["title"].lower(),
         })
 
     return dict(nodes=nodes, edges=edges)
@@ -543,40 +580,114 @@ def render_character_sheet(lx: dict, shares: dict, cls_name: str, cls_lore: str,
 </div>"""
 
 
-def render_mvp(chapters: list) -> str:
+def render_mvp(chapters: list, issues_by_number: dict, weights: dict) -> str:
     rows = ""
+    done_count = 0
     for idx, ch in enumerate(chapters):
-        pct = ch.get("percent", 0)
+        epic_refs = ch.get("epic") or []
+        if isinstance(epic_refs, int):
+            epic_refs = [epic_refs]
+
+        pct = ch.get("percent")
+        if pct is None:
+            pct = chapter_progress(epic_refs, issues_by_number, weights)
+            pct = pct if pct is not None else 0
+
         if pct >= 100:
             row_cls = "done"
             stat_word = "Завершено ✓"
+            done_count += 1
         elif pct == 0:
             row_cls = "todo"
             stat_word = "Не начато"
         else:
             row_cls = "active"
             stat_word = "В пути"
+        links = []
+        for n in epic_refs:
+            issue = issues_by_number.get(n, {})
+            url = issue.get("html_url", f"https://github.com/issues/{n}")
+            title = issue.get("title", f"#{n}")
+            links.append(
+                f'<a class="qepic-ref" href="{_e(url)}" target="_blank" rel="noopener">'
+                f'#{n} — {_e(title)}</a>'
+            )
+        epics_cell = "".join(links) if links else '<span class="noepic">—</span>'
 
-        note = _e(ch.get("note", ""))
-        chapter_label = f"Глава {_roman(idx + 1)}"
+        filled = 10 if pct >= 100 else min(9, pct // 10)
+        pips = "".join(
+            f'<span class="pip{" on" if k < filled else ""}"></span>' for k in range(10)
+        )
         rows += f"""<tr class="{row_cls}">
-  <td class="ch">{_e(chapter_label)}</td>
-  <td>
+  <td class="ch">
+    <div class="seal seal-{row_cls}"><span class="seal-num">{_roman(idx + 1)}</span></div>
+  </td>
+  <td class="qmain">
     <div class="qname">{_e(ch["title"])}</div>
     <div class="qepic">{_e(ch.get("subtitle", ""))}</div>
   </td>
+  <td class="qepics-col">{epics_cell}</td>
   <td class="qstat">
-    <div>{_e(stat_word)}</div>
-    <div class="mvp-bar"><div class="mvp-fill" style="width:{pct}%"></div></div>
-    <div class="mvp-pct mono">{pct}%</div>
+    <div class="mvp-pct mono">{pct}<span class="pct-sign">%</span></div>
+    <div class="piptrack">{pips}</div>
+    <div class="stat-word">{_e(stat_word)}</div>
   </td>
-  <td class="qev">{note}</td>
 </tr>"""
+
+    # Coverage: open EPIC-titled hubs that no chapter references — surfaced so the
+    # table stays honest about what it does NOT cover (infra / Post-MVP / system).
+    referenced = set()
+    for ch in chapters:
+        e = ch.get("epic") or []
+        referenced.update([e] if isinstance(e, int) else e)
+    hub_nums = {_parent_num(i) for i in issues_by_number.values()} - {None}
+    uncovered = sorted(
+        n for n, i in issues_by_number.items()
+        if i.get("state") == "open" and "epic:" in i.get("title", "").lower()
+        and n in hub_nums and n not in referenced
+    )
+    if uncovered:
+        links = " · ".join(
+            f'<a href="{_e(issues_by_number[n].get("html_url", ""))}" '
+            f'target="_blank" rel="noopener">#{n}</a>'
+            for n in uncovered
+        )
+        coverage = (f"Вне MVP-хроники — эпики, не входящие в состав MVP "
+                    f"(инфраструктура, пост-MVP, системные фичи): {links}.")
+    else:
+        coverage = "Главы покрывают все открытые эпики продуктовых фич."
+
+    table_cls = "mvp-table"
+    toggle = ""
+    if done_count:
+        table_cls += " hide-done"
+        toggle = (
+            '<label class="show-done">'
+            '<input type="checkbox" id="show-done-chapters"> '
+            f'показать завершённые главы ({done_count})</label>'
+        )
 
     return f"""<h2>Главный Сюжет — Хроника MVP</h2>
 <div class="frame">
-  <table class="scroll"><tbody>{rows}</tbody></table>
-</div>"""
+  {toggle}
+  <table id="mvp-table" class="{table_cls}">
+    <thead><tr>
+      <th class="th-seal">Печать</th>
+      <th>Глава</th>
+      <th>Эпики</th>
+      <th class="th-stat">Странствие</th>
+    </tr></thead>
+    <tbody>{rows}</tbody>
+  </table>
+  <div class="mvp-coverage">{coverage}</div>
+</div>
+<script>
+(function(){{
+  const cb = document.getElementById('show-done-chapters');
+  const t = document.getElementById('mvp-table');
+  if (cb && t) cb.addEventListener('change', () => t.classList.toggle('hide-done', !cb.checked));
+}})();
+</script>"""
 
 
 def render_locations(loc: dict, locations_data: dict) -> str:
@@ -795,6 +906,8 @@ def render_quest_map(graph: dict, schools_data: dict) -> str:
     orphan_fill = gn["orphan"]["fill"]
     closed_fill = gn["closed"]["fill"]
     closed_stroke = gn["closed"]["stroke"]
+    epic_fill = gn["epic"]["fill"]
+    epic_stroke = gn["epic"]["stroke"]
     parent_stroke = ge["parent"]["stroke"]
     block_stroke = ge["block"]["stroke"]
 
@@ -837,6 +950,7 @@ def render_quest_map(graph: dict, schools_data: dict) -> str:
     <svg id="quest_map_svg" style="width:100%;height:100%;cursor:grab;background:#15100c;border:1px solid #2a2018;"></svg>
   </div>
   <div class="graph-legend mono">
+    <span><i class="dot" style="background:{epic_fill}; border:2px solid {epic_stroke}; border-radius:50%; display:inline-block; width:13px; height:13px; margin-right:6px; vertical-align:middle;"></i> эпик (есть sub-issues)</span>
     <span><i class="dot" style="background:{free_fill}; border-radius:50%; display:inline-block; width:11px; height:11px; margin-right:6px; vertical-align:middle;"></i> открыт, свободен</span>
     <span><i class="dot" style="background:{blocked_fill}; border-radius:50%; display:inline-block; width:11px; height:11px; margin-right:6px; vertical-align:middle;"></i> открыт, в цепях</span>
     <span><i class="dot" style="background:{orphan_fill}; border:1px solid {pal("gold.primary")}; border-radius:50%; display:inline-block; width:11px; height:11px; margin-right:6px; vertical-align:middle;"></i> сирый (без связей)</span>
@@ -909,18 +1023,20 @@ def render_quest_map(graph: dict, schools_data: dict) -> str:
 
     const node = layer.append('g').selectAll('g').data(nodes).join('g').attr('class','gn');
     node.append('circle')
-      .attr('r', d => d.state === 'closed' ? 4 : (d.orphan ? 4 : 6))
-      .attr('class', d => d.state === 'closed' ? 'gn-closed' : (d.blocked ? 'gn-blocked' : (d.orphan ? 'gn-orphan' : 'gn-free')));
+      .attr('r', d => d.epic ? (d.state === 'closed' ? 7 : 10) : (d.state === 'closed' ? 4 : (d.orphan ? 4 : 6)))
+      .attr('class', d => d.state === 'closed'
+        ? (d.epic ? 'gn-closed gn-epic-closed' : 'gn-closed')
+        : (d.epic ? 'gn-epic' : (d.blocked ? 'gn-blocked' : (d.orphan ? 'gn-orphan' : 'gn-free'))));
 
     const labelLayer = layer.append('g').attr('class','labels');
     const label = labelLayer.selectAll('text').data(nodes).join('text')
-      .attr('class','gn-label').attr('dx', 8).attr('dy', 3)
+      .attr('class', d => d.epic ? 'gn-label gn-label-epic' : 'gn-label').attr('dx', 8).attr('dy', 3)
       .text(d => '#' + d.id);
 
     node.on('mouseenter', (e, d) => {{
-      const status = (stateRu[d.state] || d.state)
+      const status = (d.epic ? 'эпик · ' : '') + (stateRu[d.state] || d.state)
         + (d.blocked ? ' · в цепях' : '') + (d.orphan ? ' · сирый' : '');
-      tip.innerHTML = `<div><span class="tt-num">#${{d.id}}</span>${{esc(d.title)}}</div><div class="tt-meta">${{d.school}} · ${{status}}</div>`;
+      tip.innerHTML = `<div><span class="tt-num">#${{d.id}}</span>${{esc(d.title)}}</div><div class="tt-meta">${{d.school}} · ${{status}} · ↗ клик откроет на GitHub</div>`;
       const r = box.getBoundingClientRect();
       tip.style.left = (e.clientX - r.left) + 'px';
       tip.style.top  = (e.clientY - r.top - 12) + 'px';
@@ -950,9 +1066,13 @@ def render_quest_map(graph: dict, schools_data: dict) -> str:
       }});
 
     node.call(d3.drag()
-      .on('start', (e,d) => {{ if (!e.active) sim.alphaTarget(.3).restart(); d.fx=d.x; d.fy=d.y; }})
+      .on('start', (e,d) => {{ if (!e.active) sim.alphaTarget(.3).restart(); d.fx=d.x; d.fy=d.y; d._x0=e.x; d._y0=e.y; }})
       .on('drag',  (e,d) => {{ d.fx=e.x; d.fy=e.y; }})
-      .on('end',   (e,d) => {{ if (!e.active) sim.alphaTarget(0); d.fx=null; d.fy=null; }}));
+      .on('end',   (e,d) => {{
+        if (!e.active) sim.alphaTarget(0); d.fx=null; d.fy=null;
+        // a near-zero drag is a click → open the issue on GitHub
+        if (d.url && Math.hypot(e.x - d._x0, e.y - d._y0) < 4) window.open(d.url, '_blank', 'noopener');
+      }}));
   }}
 
   draw(false);
@@ -987,15 +1107,6 @@ def render_seal_of_debt(debt: dict) -> str:
     scroll_pct_str = f"{bar_scroll_pct}%"
     random_pct_str = f"{bar_random_pct}%"
 
-    def debt_list_items(items: list) -> str:
-        return "".join(
-            f'<li><span class="prnum mono">#{i["number"]}</span> {_e(i["title"][:65])}</li>'
-            for i in items
-        ) or "<li>—</li>"
-
-    last_scroll_html = debt_list_items(debt["by_scroll_last6"])
-    last_random_html = debt_list_items(debt["random_enc_last6"])
-
     return f"""<h2>Печать Долга — план vs импровизация</h2>
 <div class="frame">
   <div class="duty-summary">
@@ -1022,16 +1133,6 @@ def render_seal_of_debt(debt: dict) -> str:
   <div class="duty-legend mono">
     <span><i class="dot dot-planned"></i> Из планов спринтов</span>
     <span><i class="dot dot-wild"></i> Сверх плана — пойманные в пути</span>
-  </div>
-  <div class="duty-lists">
-    <div>
-      <h3 class="duty-h3">◈ Последние из плана</h3>
-      <ul class="duty-list">{last_scroll_html}</ul>
-    </div>
-    <div>
-      <h3 class="duty-h3">✦ Последние случайные</h3>
-      <ul class="duty-list">{last_random_html}</ul>
-    </div>
   </div>
 </div>"""
 
@@ -1178,10 +1279,10 @@ def render_book_of_knowledge() -> str:
     )
     col2 = (
         entry("◇ Главы MVP — прогресс",
-              "0–100% по доказательствам",
-              "Каждая глава имеет процент готовности — оценка по статусу feature в features/README.md, "
-              "наличию смерженных PR, парности по платформам.",
-              "100% — done на всех платформах; 50–80% — частично; 30% — только spec; 5% — ни кода, ни решения.")
+              "Σ вес(закрытых) ÷ Σ вес(всех)",
+              "Процент главы считается по под-задачам её эпика, взвешенным по размеру "
+              "(S/M/L из sizing-bands, нелейбленные → valor_size.unlabeled).",
+              "Главы без эпика или со спорным маппингом задают процент вручную. Завершённые (100%) скрыты под тогглом.")
         + entry("⚔ Жаркие Сражения / Тяжёлые Походы",
                 "Жаркие: top-5 по sum(comments + review_threads). Тяжёлые: top-5 по additions + deletions.")
         + entry("❧ Локации",
@@ -1221,6 +1322,10 @@ def render_html(
 
     issues_by_number = {i["number"]: i for i in issues}
 
+    size_weights = {"S": 1, "M": 3, "L": 8, "unlabeled": 2}
+    size_weights.update(_palette.get("valor_size", {}))
+    size_weights.update(_sizing_bands())
+
     top5 = top_artifacts(merged)
     glory = glory_of_days(merged, issues_by_number, kw, cutoff, today)
     spread = artifact_spread(merged, issues_by_number)
@@ -1256,16 +1361,16 @@ def render_html(
         render_header(today)
         + render_character_sheet(lx, shares, cls_name, cls_lore, balance, merged, issues, sprint_title)
         + render_current_chapter(sprint_title, sprint_issues, issues_by_number)
-        + render_mvp(mvp_chapters)
+        + render_mvp(mvp_chapters, issues_by_number, size_weights)
         + render_locations(loc, assets["locations"])
-        + render_artifacts(top5)
-        + render_hot_heavy(prs_all)
         + render_quest_map(graph, assets["schools"])
         + render_seal_of_debt(debt)
         + f'<div class="two-col" style="margin-top:48px;">'
         + render_glory_of_days(glory)
         + render_artifact_spread(spread)
         + "</div>"
+        + render_artifacts(top5)
+        + render_hot_heavy(prs_all)
         + render_book_of_knowledge()
         + '<div class="footer">Пусть Восемь хранят сборку.</div>'
     )
@@ -1329,11 +1434,6 @@ def render_html(
   .duty-legend .dot {{ display:inline-block; width:12px; height:12px; margin-right:6px; vertical-align:middle; }}
   .duty-legend .dot-planned {{ background:#d4af37; }}
   .duty-legend .dot-wild    {{ background:#9b4dca; }}
-  .duty-lists {{ display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-top:24px; }}
-  .duty-h3 {{ font-family:'{font_h}', serif; color:var(--gold); font-size:15px; margin:0 0 10px; letter-spacing:.05em; }}
-  .duty-list {{ list-style:none; padding:0; margin:0; }}
-  .duty-list li {{ padding:7px 0; border-bottom:1px solid #2a2018; font-size:14px; }}
-  .duty-list .prnum {{ display:inline-block; width:54px; color:var(--gold); }}
   .graph-legend {{ display:flex; flex-wrap:wrap; gap:18px 28px; margin-top:14px; font-size:13px; color:var(--muted); align-items:center; }}
   .schools-legend {{ display:grid; grid-template-columns:1fr 1fr; gap:6px 24px; margin-top:14px; padding-top:12px; border-top:1px dashed var(--gold-dim); font-size:13px; }}
   .schools-legend .school-name {{ font-family:'{font_h}', serif; color:var(--gold); letter-spacing:.05em; }}
@@ -1366,33 +1466,66 @@ def render_html(
   #graph-box .gn-free {{ fill:#d4af37; }}
   #graph-box .gn-blocked {{ fill:#c9302c; }}
   #graph-box .gn-orphan {{ fill:#e8d070; stroke:#d4af37; stroke-width:1; }}
+  #graph-box .gn-epic {{ fill:#9b4dca; stroke:#c89bf0; stroke-width:2; }}
   #graph-box .gn-closed {{ fill:#3a2e1c; stroke:#6a5a40; stroke-width:1; }}
+  #graph-box .gn-closed.gn-epic-closed {{ stroke:#9b4dca; stroke-width:1.5; }}
   #graph-box .gn-label {{
     font-family:'{font_n}', monospace; font-size:9px;
     fill:#e8d8a8; pointer-events:none;
     paint-order:stroke; stroke:#15100c; stroke-width:3px; stroke-linejoin:round;
   }}
+  #graph-box .gn-label-epic {{ fill:#e0c2ff; font-size:11px; font-weight:bold; }}
   #graph-box .ge-parent {{ stroke:#8a7028; stroke-width:1; opacity:.6; }}
   #graph-box .ge-block {{ stroke:#c9302c; stroke-width:1.2; stroke-dasharray:4 3; opacity:.7; }}
   .chart-box {{ position:relative; height:300px; }}
   .chart-box.tall {{ height:360px; }}
   .chart-box.short {{ height:240px; }}
 
-  table.scroll {{ width:100%; border-collapse:collapse; }}
-  table.scroll td, table.scroll th {{ padding:10px 12px; border-bottom:1px solid #2a2018; vertical-align:top; }}
-  table.scroll tr.done td {{ color:var(--gold-dim); }}
-  table.scroll tr.active td {{ color:var(--gold); }}
-  table.scroll tr.todo td {{ color:var(--muted); font-style:italic; }}
-  .ch {{ font-family:'{font_h}', serif; width:90px; }}
-  .qname {{ font-family:'{font_h}', serif; font-size:17px; }}
-  .qepic {{ font-style:italic; color:var(--muted); font-size:14px; }}
-  .qstat {{ width:170px; }}
-  .mvp-bar {{ height:6px; background:#0d0907; border:1px solid #2a2018; margin-top:6px; }}
-  .mvp-fill {{ height:100%; background:linear-gradient(90deg,#6a5418,#d4af37); }}
-  tr.done .mvp-fill {{ background:linear-gradient(90deg,#8a6820,#d4af37); }}
-  tr.todo .mvp-fill {{ background:#3a2e1c; }}
-  .mvp-pct {{ font-size:12px; color:var(--muted); margin-top:3px; }}
-  .qev {{ font-size:13px; color:var(--muted); max-width:340px; }}
+  .show-done {{ display:inline-flex; align-items:center; gap:6px; margin-bottom:14px; font-size:13px; cursor:pointer; color:var(--muted); }}
+  .mvp-coverage {{ margin-top:16px; font-size:12px; font-style:italic; color:var(--muted); }}
+  .mvp-coverage a {{ color:#c89bf0; text-decoration:none; font-style:normal; }}
+  .mvp-coverage a:hover {{ text-decoration:underline; }}
+  table.mvp-table {{ width:100%; border-collapse:collapse; }}
+  table.mvp-table.hide-done tbody tr.done {{ display:none; }}
+  table.mvp-table thead th {{ font-family:'{font_h}', serif; font-size:10px; font-weight:400;
+    letter-spacing:.2em; text-transform:uppercase; color:var(--gold-dim); text-align:left;
+    padding:0 14px 10px; border-bottom:1px solid var(--gold-dim); }}
+  table.mvp-table th.th-seal {{ text-align:center; }}
+  table.mvp-table th.th-stat {{ text-align:right; }}
+  table.mvp-table td {{ padding:16px 14px; border-bottom:1px solid #2a2018; vertical-align:middle; }}
+  table.mvp-table tr:last-child td {{ border-bottom:none; }}
+  table.mvp-table tr.done td {{ color:var(--gold-dim); }}
+  table.mvp-table tr.active td {{ color:var(--text); }}
+  table.mvp-table tr.todo td {{ color:var(--muted); }}
+  /* seal medallion — chapter numeral inside a status-coloured ring */
+  .ch {{ width:72px; text-align:center; }}
+  .seal {{ width:38px; height:38px; border-radius:50%; border:2px solid; margin:0 auto;
+    display:flex; align-items:center; justify-content:center; }}
+  .seal-num {{ font-family:'{font_h}', serif; font-size:15px; line-height:1; }}
+  .seal-done {{ border-color:#d4af37; box-shadow:inset 0 0 9px rgba(212,175,55,.30); }}
+  .seal-done .seal-num {{ color:#e8d070; }}
+  .seal-active {{ border-color:#9c7826; }}
+  .seal-active .seal-num {{ color:var(--gold); }}
+  .seal-todo {{ border-color:#3a2e1c; }}
+  .seal-todo .seal-num {{ color:var(--muted); }}
+  .qname {{ font-family:'{font_h}', serif; font-size:16px; color:var(--text); }}
+  tr.todo .qname {{ color:var(--muted); }}
+  .qepic {{ font-family:Georgia, 'Times New Roman', serif; font-style:italic; color:var(--muted); font-size:14.5px; line-height:1.5; margin-top:5px; }}
+  .qepics-col {{ width:450px; }}
+  .qepic-ref {{ display:block; color:#c89bf0; font-size:12.5px; line-height:1.35; margin-top:5px; letter-spacing:.02em; text-decoration:none; }}
+  .qepic-ref:first-child {{ margin-top:0; }}
+  .qepic-ref:hover {{ text-decoration:underline; color:#e0c2ff; }}
+  .noepic {{ color:var(--gold-dim); }}
+  .qstat {{ width:152px; }}
+  .mvp-pct {{ font-size:18px; line-height:1; color:var(--gold); text-align:right; }}
+  .pct-sign {{ font-size:11px; color:var(--muted); margin-left:1px; }}
+  tr.todo .mvp-pct {{ color:var(--muted); }}
+  /* runic progress track — 10 pips */
+  .piptrack {{ display:flex; gap:3px; margin-top:10px; }}
+  .pip {{ flex:1; height:9px; background:#0d0907; border:1px solid #2a2018; border-radius:2px; }}
+  .pip.on {{ background:linear-gradient(180deg,#d4af37,#6a5418); border-color:#8a6820; }}
+  tr.done .pip.on {{ background:linear-gradient(180deg,#e8d070,#8a6820); }}
+  .stat-word {{ font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); text-align:right; margin-top:9px; }}
 
   .locations {{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }}
   .loc {{ border:1px solid var(--gold-dim); padding:14px; background:#1f1812; }}

@@ -37,20 +37,20 @@ What it gathers, and the quirks baked into the script:
 
 ## MVP chapters — compose in chat
 
-Read `docs/product/roadmap.md` §MVP and `docs/product/features/README.md`. For each of the 7 chapters, judge the completion percent from evidence (merged PRs, feature status files, spec presence). Write the result to `/tmp/tether-progress-mvp.json`:
+Read `docs/product/roadmap.md` §MVP and `docs/product/features/README.md`. **One chapter per MVP product feature** (the feature index is the unit, *not* the roadmap bullet): merge roadmap bullets that belong to the same feature — multi-file transfer + live progress + cancel + receiver are all one *File transfer* chapter, backed by its epic(s). A feature may legitimately span more than one epic (File transfer = `#8` UI + `#119` reliability); that's fine, list both. Aim for ≤ 8 chapters. Completed (100 %) chapters are hidden behind a "показать завершённые" toggle by default, so keep them in the list — don't drop them. Chapters cover MVP *product* features only; infra, Post-MVP, and system-integration epics stay out. The coverage caption under the table is **computed** — it lists every open `EPIC:`-titled hub no chapter references, so it never goes stale when new epics appear (you don't hand-maintain that list). For each chapter name the backing epic where the feature has one. Write the result to `/tmp/tether-progress-mvp.json`:
 
 ```json
 [
-  { "title": "Chapter I: …", "subtitle": "epic one-liner", "percent": 60, "note": "optional one-liner" },
+  { "title": "Обряд Узнавания", "subtitle": "эпичная строка-одностишие", "epic": [457] },
+  { "title": "Шепчущие Маяки", "subtitle": "…", "percent": 85 },
   …
 ]
 ```
 
-`percent` scale:
-- 100% — feature `done` + merged PRs across all platforms.
-- 50–80% — partial (one of the layers / some platforms).
-- 20–40% — only spec scoped.
-- 5% — no code, no decision.
+Text is in Russian (the whole report is). `title` — just the evocative chapter name (the seal column already renders the Roman numeral, so no `Глава N:` prefix). `subtitle` — a one-line flavour caption.
+
+- `epic` (optional) — list of backing issue numbers from `docs/product/features/README.md`, e.g. `[457]` or `[8, 119]`. Each renders as the issue's **full title**, clickable, linking to GitHub. The chapters table has no free-text evidence column — put the backing issues here, not prose.
+- `percent` — **auto-computed when omitted**: `build.py` takes the size-weighted completion of the epics' direct sub-issues (`Σ weight(closed) ÷ Σ weight(all)`, weights from `.claude/sizing-bands.json`, `unlabeled`→`valor_size.unlabeled`). Prefer this — it's the answer to "progress by tasks, not by eye". Supply an explicit `percent` only to **override**: chapters with no epic (shipped mDNS / device-name → manual), a subset of a shared epic (live-progress draws on #8 but isn't all of it), or a decision-plus-impl pair (#123/#140) where the weighted child count misreads. When you do override, that's a judgement call — keep it honest.
 
 ## Build the snapshot
 
@@ -81,7 +81,7 @@ One class per the rules in `assets/classes.json` (ordinal matching, first match 
 Per `assets/keywords.json`. Used in the Chronicle of Deeds, Seal of Debt, hero class.
 
 ### MVP (Main Quest)
-7 chapters from the roadmap with epic subtitles. Each gets a completion % (see §MVP chapters above). Progress bars: `gold.primary` fill for >0%, `text.muted_dim` for 0%.
+One chapter per MVP product feature (see §MVP chapters above), each with an epic subtitle and backing-epic refs. Four-column table: seal medallion (numeral + status ring), name + subtitle, clickable epic titles, percent + 10-pip track. Completed (100 %) chapters hidden by default behind a toggle; a coverage caption lists which epics are intentionally out of MVP scope.
 
 ### Artifacts (top-5 PRs)
 Weight: `commits·2 + comments + review_threads·3 + (additions+deletions)/200`. Top-5 with rarity-colour frames per `assets/palette.json#artifact_rarity`. Inside each card: commits, discussions (`comments + review_threads`), `+/−` lines.
@@ -98,7 +98,7 @@ Tables `#PR | title | value`, monospace numbers right-aligned. No RPG translatio
 - `planned ∩ closed` after cutoff — "By the Sprint Scroll"
 - `closed − planned` after cutoff — "Random Encounters"
 
-Three numbers + a two-colour stacked bar (gold ↔ purple) + the last 6 in each category.
+Three numbers + a two-colour stacked bar (gold ↔ purple).
 
 ### Quest Map — dependency graph
 Force-directed graph via D3 v7 with clustering by schools from `assets/schools.json`.
@@ -110,20 +110,20 @@ Force-directed graph via D3 v7 with clustering by schools from `assets/schools.j
 - Charge `-50`, link distance `38`, collide `13`, alphaDecay `.025`.
 - Node coordinates clamped to `[PAD, W-PAD]` × `[PAD, H-PAD]` on each tick.
 
-**Colours** — `assets/palette.json#graph_nodes` and `#graph_edges`. Lone node = no parent, no blocked_by, no blocks (complete isolation). In chains = open AND at least one open `blocked_by` ancestor.
+**Colours** — `assets/palette.json#graph_nodes` and `#graph_edges`. Lone node = no parent, no blocked_by, no blocks, and not an epic (complete isolation). In chains = open AND at least one open `blocked_by` ancestor. Epic node = parents at least one sub-issue **and** has `EPIC:` in its title (both required — a hub without the `EPIC:` prefix is a plain node, just never "lone"); rendered larger (r 10 open / 7 closed) in `graph_nodes.epic` purple with a bright ring and a bigger bold label. Epic styling takes priority over free/blocked/orphan; a closed epic keeps the closed fill but a purple ring.
 
 **Interactivity:**
-- Node drag (D3 drag behaviour, fx/fy fixed during drag).
+- Node drag (D3 drag behaviour, fx/fy fixed during drag). A near-zero drag (< 4px) is treated as a click and opens the issue's `html_url` on GitHub in a new tab.
 - Scroll wheel / drag-on-empty-space → pan+zoom via `d3.zoom().scaleExtent([0.3, 4])`. Filter: do not zoom when the cursor is over a node.
 - `+ / − / ⤺` buttons for zoom.
 
-**Tooltip** — appears on `mouseenter` with opacity transition. Contains: `#N`, full title, cluster, status (`open`/`closed`, `in chains`/`lone`).
+**Tooltip** — appears on `mouseenter` with opacity transition. Contains: `#N`, full title, cluster, status (`эпик` prefix when the node is an epic, then `open`/`closed`, `in chains`/`lone`).
 
 **Node labels** in `JetBrains Mono 9px` with stroke halo for readability.
 
 **Summary above the graph** — 3 cards: free open nodes, in chains, lone open nodes.
 
-**Below the graph** — two legends: node/edge colours; school descriptions (name + `summary` from `schools.json`).
+**Below the graph** — two legends: node/edge colours (epic swatch first); school descriptions (name + `summary` from `schools.json`).
 
 ### Glory of Days — daily hero speed
 
