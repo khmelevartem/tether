@@ -33,12 +33,12 @@ Note on `Status` here vs. GitHub Issues: an issue can exist (and even be in prog
 
 | Feature | Area | Status | Doc | Issues |
 |---------|------|--------|-----|--------|
-| mDNS peer discovery | Discovery | done | _tbd_ | #6 (iOS/macOS) |
-| Hotspot transfer | Discovery / Transfer | scoped | [hotspot-transfer/spec.md](hotspot-transfer/spec.md) | [#170](https://github.com/khmelevartem/tether/issues/170) (design); implementation _tbd_ |
-| Pairing | Pairing / Security | scoped | [pairing/spec.md](pairing/spec.md) | #9 (key exchange), #10 (SAS + CLI), #11 (Android UI); iOS, Desktop UI _tbd_ |
-| Device list screen | UI | in progress | [device-list/spec.md](device-list/spec.md) | #7 — Android + iOS done; Desktop _tbd_ |
-| File transfer | Transfer / UI | scoped | [file-transfer/spec.md](file-transfer/spec.md) | #8 (Android send UI), #81 (iOS FileServer receive), #193 (Desktop send UI), #194 (iOS send UI); receive-side UI _tbd_ |
-| Device name bootstrapping | Onboarding | done | [device-name-bootstrapping/spec.md](device-name-bootstrapping/spec.md) | #147 (backend), #148 (UI) |
+| mDNS peer discovery | Discovery | done | _tbd_ | #3 / #5 / #6 (done); #326 (idle-expiry) |
+| Hotspot transfer | Discovery / Transfer | in progress | [hotspot-transfer/spec.md](hotspot-transfer/spec.md) | EPIC #459 |
+| Pairing | Pairing / Security | in progress | [pairing/spec.md](pairing/spec.md) | EPIC #457 |
+| Device list screen | UI | in progress | [device-list/spec.md](device-list/spec.md) | EPIC #458 |
+| File transfer | Transfer / UI | in progress | [file-transfer/spec.md](file-transfer/spec.md) | EPIC #8 (UI / flow), EPIC #119 (transport reliability) |
+| Device name bootstrapping | Onboarding | done | [device-name-bootstrapping/spec.md](device-name-bootstrapping/spec.md) | #120 / #147 / #148 (done) |
 
 ### System integration
 
@@ -46,8 +46,8 @@ Small, separate features about how Tether reacts to the OS state around it. Each
 
 | Feature | Status | Doc | Issues |
 |---------|--------|-----|--------|
-| Permissions | scoped | [system/permissions/spec.md](system/permissions/spec.md) | _tbd_ |
-| Wi-Fi availability | scoped | [system/wifi-availability/spec.md](system/wifi-availability/spec.md) | _tbd_ |
+| Permissions | scoped | [system/permissions/spec.md](system/permissions/spec.md) | #122 (spec); implementation _tbd_ |
+| Wi-Fi availability | scoped | [system/wifi-availability/spec.md](system/wifi-availability/spec.md) | EPIC #460 |
 
 ---
 
