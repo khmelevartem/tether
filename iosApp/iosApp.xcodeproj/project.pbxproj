@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		AC9117C32FDDC8AE00AC3FCF /* TetherShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = AC9117B92FDDC8AE00AC3FCF /* TetherShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		B1A3F0012FDDC8AE00AC3FCF /* UserNotifications.framework in Frameworks (iosApp) */ = {isa = PBXBuildFile; fileRef = B1A3F0002FDDC8AE00AC3FCF /* UserNotifications.framework */; };
 		B1A3F0032FDDC8AE00AC3FCF /* UserNotifications.framework in Frameworks (TetherShareExtension) */ = {isa = PBXBuildFile; fileRef = B1A3F0002FDDC8AE00AC3FCF /* UserNotifications.framework */; };
 /* End PBXBuildFile section */
 
@@ -88,7 +87,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B1A3F0012FDDC8AE00AC3FCF /* UserNotifications.framework in Frameworks (iosApp) */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -242,7 +242,7 @@ class ShareViewController: UIViewController {
 
     private func completeExtension() {
         guard Thread.isMainThread else {
-            DispatchQueue.main.async { self.completeExtension() }
+            DispatchQueue.main.async { [weak self] in self?.completeExtension() }
             return
         }
         guard !didComplete else { return }
