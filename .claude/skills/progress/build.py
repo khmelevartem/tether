@@ -360,8 +360,12 @@ def chapter_progress(epic_refs: list, issues_by_number: dict, weights: dict):
         return weights.get(_size_of(issue), weights["unlabeled"])
 
     total = sum(w(i) for i in kids.values())
+    if not total:
+        return 0
     done = sum(w(i) for i in kids.values() if i.get("state") == "closed")
-    return round(100 * done / total) if total else 0
+    pct = round(100 * done / total)
+    # never round up to a "done" reading while a sub-issue is still open
+    return 99 if pct >= 100 and done < total else pct
 
 
 def glory_of_days(prs_merged: list, issues_by_number: dict, keywords: dict,
@@ -454,13 +458,11 @@ def build_graph_data(issues: list, blocked_by: dict, schools: list) -> dict:
                 edges.append({"source": b, "target": num, "type": "block"})
 
     for issue in issues:
-        if issue.get("parent_issue_url"):
-            m = re.search(r"/issues/(\d+)$", issue["parent_issue_url"])
-            if m:
-                parent_num = int(m.group(1))
-                has_parent.add(issue["number"])
-                epic_nums.add(parent_num)
-                edges.append({"source": parent_num, "target": issue["number"], "type": "parent"})
+        parent_num = _parent_num(issue)
+        if parent_num is not None:
+            has_parent.add(issue["number"])
+            epic_nums.add(parent_num)
+            edges.append({"source": parent_num, "target": issue["number"], "type": "parent"})
 
     for issue in issues:
         num = issue["number"]
@@ -586,7 +588,6 @@ def render_mvp(chapters: list, issues_by_number: dict, weights: dict) -> str:
         if isinstance(epic_refs, int):
             epic_refs = [epic_refs]
 
-        # Manual percent wins; otherwise derive it from the backing epics' sub-issues.
         pct = ch.get("percent")
         if pct is None:
             pct = chapter_progress(epic_refs, issues_by_number, weights)
@@ -613,7 +614,7 @@ def render_mvp(chapters: list, issues_by_number: dict, weights: dict) -> str:
             )
         epics_cell = "".join(links) if links else '<span class="noepic">—</span>'
 
-        filled = round(pct / 10)
+        filled = 10 if pct >= 100 else min(9, pct // 10)
         pips = "".join(
             f'<span class="pip{" on" if k < filled else ""}"></span>' for k in range(10)
         )
@@ -1278,10 +1279,10 @@ def render_book_of_knowledge() -> str:
     )
     col2 = (
         entry("◇ Главы MVP — прогресс",
-              "0–100% по доказательствам",
-              "Каждая глава имеет процент готовности — оценка по статусу feature в features/README.md, "
-              "наличию смерженных PR, парности по платформам.",
-              "100% — done на всех платформах; 50–80% — частично; 30% — только spec; 5% — ни кода, ни решения.")
+              "Σ вес(закрытых) ÷ Σ вес(всех)",
+              "Процент главы считается по под-задачам её эпика, взвешенным по размеру "
+              "(S/M/L из sizing-bands, нелейбленные → valor_size.unlabeled).",
+              "Главы без эпика или со спорным маппингом задают процент вручную. Завершённые (100%) скрыты под тогглом.")
         + entry("⚔ Жаркие Сражения / Тяжёлые Походы",
                 "Жаркие: top-5 по sum(comments + review_threads). Тяжёлые: top-5 по additions + deletions.")
         + entry("❧ Локации",
