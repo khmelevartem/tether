@@ -285,14 +285,18 @@ class PhotosUploadStorageDecoratorTest {
         assertEquals(999L, result)
         assertTrue(fakeStorage.writeBodyCalled)
         assertFalse(fakeStorage.abortCalled)
+        assertEquals(1, fakeLibrary.saveCallCount)
         assertTrue(deletedPaths.isEmpty())
     }
 
     @Test
     fun delegate_bytes_preserved_when_save_throws() = runTest {
+        var saveCallCount = 0
         val throwingLibrary = object : FakePhotosLibrary(status = PhotosAuthStatus.Authorized) {
-            override suspend fun save(path: String, mediaType: MediaType): Boolean =
+            override suspend fun save(path: String, mediaType: MediaType): Boolean {
+                saveCallCount++
                 throw RuntimeException("codec unsupported")
+            }
         }
         val fakeStorage = FakeUploadStorage(bytesWritten = 512L)
         val deletedPaths = mutableListOf<String>()
@@ -306,6 +310,7 @@ class PhotosUploadStorageDecoratorTest {
         assertEquals(512L, result)
         assertTrue(fakeStorage.writeBodyCalled)
         assertFalse(fakeStorage.abortCalled)
+        assertEquals(1, saveCallCount)
         assertTrue(deletedPaths.isEmpty())
     }
 

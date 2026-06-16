@@ -1,14 +1,21 @@
-@file:OptIn(ExperimentalForeignApi::class)
+@file:OptIn(ExperimentalForeignApi::class, kotlinx.cinterop.BetaInteropApi::class)
 
 package com.tubetoast.tether.network
 
 import io.ktor.utils.io.ByteReadChannel
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.ObjCObjectVar
+import kotlinx.cinterop.alloc
+import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.ptr
+import kotlinx.cinterop.value
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import platform.Foundation.NSError
 import platform.Foundation.NSFileManager
 import platform.UniformTypeIdentifiers.UTType
 import ru.pocketbyte.kydra.log.KydraLog
@@ -57,6 +64,8 @@ internal class PhotosUploadStorageDecorator(
         backgroundScope.launch {
             try {
                 trySaveToPhotos(destination)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 log.warn { "Photos copy failed — file stays in Files: ${e.message}" }
             }
@@ -149,8 +158,16 @@ internal fun classifyByUTType(ext: String): MediaType? {
 }
 
 internal fun removeReceivedFile(path: String) {
-    val ok = NSFileManager.defaultManager.removeItemAtPath(path, error = null)
-    if (!ok) {
-        log.warn { "Photos: delete after save failed for ${path.substringAfterLast('/')} — duplicate stays in Files" }
+    memScoped {
+        val errorPtr = alloc<ObjCObjectVar<NSError?>>()
+        val ok = NSFileManager.defaultManager.removeItemAtPath(path, error = errorPtr.ptr)
+        if (!ok) {
+            val desc = errorPtr.value?.localizedDescription ?: "unknown error"
+            log.warn {
+                "Photos: delete after save failed for ${path.substringAfterLast(
+                    '/',
+                )} — duplicate stays in Files: $desc"
+            }
+        }
     }
 }
