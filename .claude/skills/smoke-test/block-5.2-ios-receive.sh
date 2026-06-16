@@ -2,6 +2,7 @@
 set -euo pipefail
 
 # Requires: block-1 (CLI A alive at $LOG_A / fifo $FIFO_A) and block-5.1 (iOS app launched + discovered).
+# Sends .txt (stays in Files), .jpg (moved to Photos), and .mp4 (moved to Photos) to the iOS peer.
 
 . "$(dirname "${BASH_SOURCE[0]}")/smoke-env.sh"
 
@@ -70,8 +71,10 @@ set +e; LAST_PEERS=$(grep '^\[peers\]' "$LOG_A" 2>/dev/null | tail -1); set -e
 TS=$(date +%s)
 TXT_NAME="${SMOKE_SEND_PREFIX}-ios-recv-${TS}.txt"
 JPG_NAME="${SMOKE_SEND_PREFIX}-ios-recv-${TS}.jpg"
+MP4_NAME="${SMOKE_SEND_PREFIX}-ios-recv-${TS}.mp4"
 TXT_SRC="$SMOKE_DIR/$TXT_NAME"
 JPG_SRC="$SMOKE_DIR/$JPG_NAME"
+MP4_SRC="$SMOKE_DIR/$MP4_NAME"
 
 echo "smoke-ios-receive-$TS" > "$TXT_SRC"
 
@@ -91,7 +94,18 @@ PYEOF
 sips -s format jpeg "$PNG_TMP" --out "$JPG_SRC" >/dev/null 2>&1
 rm -f "$PNG_TMP"
 
-echo "Send files prepared: $TXT_NAME, $JPG_NAME"
+# Generate a short H.264 test video via ffmpeg (public.movie → Photos).
+MP4_AVAILABLE=0
+if command -v ffmpeg >/dev/null 2>&1; then
+  ffmpeg -f lavfi -i testsrc=duration=1:size=320x240:rate=15 -pix_fmt yuv420p -c:v libx264 \
+    -y "$MP4_SRC" >/dev/null 2>&1 \
+    && MP4_AVAILABLE=1 \
+    || echo "NOTE: ffmpeg present but video generation failed — video assertion skipped"
+else
+  echo "NOTE: ffmpeg not found — video assertion skipped"
+fi
+
+echo "Send files prepared: $TXT_NAME, $JPG_NAME$([ $MP4_AVAILABLE -eq 1 ] && echo ", $MP4_NAME" || true)"
 
 # Snapshot the iOS log before sending so we can isolate new lines.
 IOS_LOG_BEFORE="$SMOKE_DIR/ios-log-before-recv.txt"
@@ -123,7 +137,21 @@ for i in $(seq 1 30); do
   sleep 1
 done
 
-# Give iOS time to write to Files and move the JPEG to Photos.
+# Send .mp4 to iOS peer (if generated); wait for [send] done.
+MP4_DONE=0
+if [ "$MP4_AVAILABLE" -eq 1 ]; then
+  DONE_BEFORE_MP4=$(grep -c '^\[send\] done' "$LOG_A" 2>/dev/null || true)
+  DONE_BEFORE_MP4="${DONE_BEFORE_MP4:-0}"
+  echo "send \"$IOS_NAME\" $MP4_SRC" > "$FIFO_A" &
+  for i in $(seq 1 30); do
+    set +e; DONE_NOW=$(grep -c '^\[send\] done' "$LOG_A" 2>/dev/null || true); set -e
+    DONE_NOW="${DONE_NOW:-0}"
+    [ "$DONE_NOW" -gt "$DONE_BEFORE_MP4" ] && MP4_DONE=1 && break
+    sleep 1
+  done
+fi
+
+# Give iOS time to write to Files and move media to Photos.
 sleep 5
 
 # Locate app data container.
@@ -168,5 +196,26 @@ else
     echo "  log: $PHOTOS_LOG"
   else
     echo "PASS: iOS receive .jpg — absent from Documents/ (move to Photos inferred by absence; Tether.PhotosSave not surfaced via simctl)"
+  fi
+fi
+
+# Assert .mp4: must be ABSENT from Documents/ (moved to Photos); skip if ffmpeg was unavailable.
+if [ "$MP4_AVAILABLE" -eq 0 ]; then
+  echo "SKIP: iOS receive .mp4 — ffmpeg not available, video not generated"
+elif [ "$MP4_DONE" -eq 0 ]; then
+  echo "FAIL: iOS receive .mp4 — [send] done not seen in CLI A log"
+elif [ -z "$CONTAINER" ]; then
+  echo "FAIL: iOS receive .mp4 — could not resolve app container"
+elif [ -f "$DOCS_DIR/$MP4_NAME" ]; then
+  echo "FAIL: iOS receive .mp4 — file still present in Documents/ after settle (expected move to Photos)"
+else
+  set +e
+  PHOTOS_LOG_MP4=$(echo "$NEW_LOG" | grep -i "PhotosSave" | grep -i "saved" | grep "$MP4_NAME" | head -1 || true)
+  set -e
+  if [ -n "$PHOTOS_LOG_MP4" ]; then
+    echo "PASS: iOS receive .mp4 — absent from Documents/ + Tether.PhotosSave log confirmed"
+    echo "  log: $PHOTOS_LOG_MP4"
+  else
+    echo "PASS: iOS receive .mp4 — absent from Documents/ (move to Photos inferred by absence; Tether.PhotosSave not surfaced via simctl)"
   fi
 fi

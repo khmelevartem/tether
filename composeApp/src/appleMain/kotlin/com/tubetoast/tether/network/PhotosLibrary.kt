@@ -10,7 +10,12 @@ import platform.Photos.PHAuthorizationStatusDenied
 import platform.Photos.PHAuthorizationStatusLimited
 import platform.Photos.PHAuthorizationStatusNotDetermined
 import platform.Photos.PHPhotoLibrary
+import ru.pocketbyte.kydra.log.KydraLog
+import ru.pocketbyte.kydra.log.warn
+import ru.pocketbyte.kydra.log.wrapper.withTag
 import kotlin.coroutines.resume
+
+private val log = KydraLog.withTag(default = "Tether.PhotosSave")
 
 /** Maps [PHAuthorizationStatus] to a K/N-friendly enum so tests don't depend on PhotoKit constants. */
 internal enum class PhotosAuthStatus { Authorized, Limited, NotDetermined, Denied, Restricted }
@@ -59,7 +64,17 @@ internal object RealPhotosLibrary : PhotosLibrary {
                             PHAssetCreationRequest.creationRequestForAssetFromVideoAtFileURL(url)
                     }
                 },
-                completionHandler = { success, _ -> cont.resume(success) },
+                completionHandler = { success, error ->
+                    if (!success) {
+                        log.warn {
+                            "PhotosLibrary.save failed:" +
+                                " domain=${error?.domain}" +
+                                " code=${error?.code}" +
+                                " desc=${error?.localizedDescription}"
+                        }
+                    }
+                    cont.resume(success)
+                },
             )
         }
     }

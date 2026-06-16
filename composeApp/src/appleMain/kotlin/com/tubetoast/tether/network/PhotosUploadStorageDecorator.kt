@@ -18,6 +18,7 @@ import kotlinx.coroutines.sync.withLock
 import platform.Foundation.NSError
 import platform.Foundation.NSFileManager
 import platform.UniformTypeIdentifiers.UTType
+import platform.UniformTypeIdentifiers.conformsToType
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.info
 import ru.pocketbyte.kydra.log.warn
@@ -141,14 +142,21 @@ internal enum class MediaType { Image, Video }
 /**
  * Uses typeWithIdentifier: to construct the reference types instead of the NS_REFINED_FOR_SWIFT
  * global constants (UTTypeImage, UTTypeMovie) which are inaccessible from K/N platform stubs.
+ *
+ * The single-arg typeWithFilenameExtension: is used to resolve the canonical UTType for the
+ * extension first, then conformsToType: is called explicitly. The two-arg
+ * typeWithFilenameExtension:conformingToType: must NOT be used: the K/N binding synthesises a
+ * dynamic UTType declared to conform to the requested supertype for any input, so the Video branch
+ * is unreachable — every extension matches Image.
  */
 @OptIn(kotlinx.cinterop.BetaInteropApi::class)
 internal fun classifyByUTType(ext: String): MediaType? {
     val imageType = UTType.typeWithIdentifier("public.image") ?: return null
     val movieType = UTType.typeWithIdentifier("public.movie") ?: return null
+    val extType = UTType.typeWithFilenameExtension(ext) ?: return null
     return when {
-        UTType.typeWithFilenameExtension(ext, conformingToType = imageType) != null -> MediaType.Image
-        UTType.typeWithFilenameExtension(ext, conformingToType = movieType) != null -> MediaType.Video
+        extType.conformsToType(movieType) -> MediaType.Video
+        extType.conformsToType(imageType) -> MediaType.Image
         else -> null
     }
 }

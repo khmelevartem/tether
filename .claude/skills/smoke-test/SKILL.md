@@ -191,12 +191,14 @@ Run: `./block-5.2-ios-receive.sh`
 Prerequisite chain: `0 → 1 → 5.1 → 5.2` (CLI A alive, iOS app launched and discovered).
 
 1. Pre-grants `photos-add` via `xcrun simctl privacy … grant photos-add` so the OS Photos save is not prompt-blocked.
-2. Sends two files from CLI A to the iOS peer:
+2. Sends three files from CLI A to the iOS peer:
    - A `.txt` (non-media) — reads the iOS peer name from `$SMOKE_DIR/ios-name.txt` (written by block-5.1), sends via FIFO.
    - A `.jpg` (1×1 real JPEG generated via Python + sips) — UTType classifies it as `public.image`.
+   - A `.mp4` (1-second H.264 test clip generated via `ffmpeg`) — UTType classifies it as `public.movie`. SKIP if `ffmpeg` is absent.
 3. Assertions:
    - **`.txt` PASS** — file is present at `<container>/Documents/<name>` (non-media files land directly in `Documents/`, not in a `Tether/` subdirectory) and byte-identical to source. Confirms iOS receive works for non-media files.
    - **`.jpg` PASS** — file is **absent** from `<container>/Documents/` after a settle period (moved to Photos), and the iOS app log shows `Tether.PhotosSave … saved` for it. If `Tether.PhotosSave` does not surface via `simctl spawn log show` (KydraLog may not route to os_log on simulator), the block falls back to asserting absence alone and notes the log-line is inferred.
+   - **`.mp4` PASS / SKIP** — file is **absent** from `<container>/Documents/` (moved to Photos), same log/inferred fallback as `.jpg`. SKIP if `ffmpeg` was unavailable.
 
 ### Block 6: Graceful quit of instance A — and `lastExit` propagation
 
@@ -272,6 +274,7 @@ At the end of the run print a markdown report:
 | iOS | Keychain persistence | ✓ PASS | publicKey identical across cold launches |
 | iOS receive | .txt lands in Files | ✓ PASS | byte-identical in Documents/ |
 | iOS receive | .jpg moved to Photos | ✓ PASS | absent from Documents/; Tether.PhotosSave log confirmed / inferred |
+| iOS receive | .mp4 moved to Photos | ✓ PASS | absent from Documents/; Tether.PhotosSave log confirmed / inferred |
 | Cleanup | teardown self-check | ✓ PASS | no CLI processes or `$SMOKE_DIR` left after block-7 |
 
 ## Failures
@@ -281,9 +284,9 @@ At the end of the run print a markdown report:
 ## Manual verification required (not covered by smoke)
 
 - Physical iPhone — install via Xcode, verify cross-discovery with Desktop.
-- iOS receive — gallery: open Photos on the device and confirm the transferred image appears in Camera Roll. Smoke asserts absence from Files and the Photos-save log (where available), not gallery visibility.
+- iOS receive — gallery: open Photos on the device and confirm the transferred image and video appear in Camera Roll. Smoke asserts absence from Files and the Photos-save log (where available), not gallery visibility.
 - iOS receive — real Photos prompt UX: smoke pre-grants `photos-add` via `simctl privacy`; the actual OS permission dialog shown to a real user is not exercised.
-- iOS receive — denied / unsupported codec: smoke only covers the happy path (grant + supported JPEG). Denied permission or unsupported codec leaves the file in Files; verify manually.
+- iOS receive — denied / unsupported codec: smoke only covers the happy path (grant + supported JPEG/H.264). Denied permission or unsupported codec leaves the file in Files; verify manually.
 - **Android-initiated send (Android → Desktop)** — no CLI on Android, the skill checks the reverse direction.
 - Notification "Stop" button on Android — verify tap manually; smoke uses `am force-stop`.
 - Sleep/wake real device — `adb input keyevent` ≠ real power state.
