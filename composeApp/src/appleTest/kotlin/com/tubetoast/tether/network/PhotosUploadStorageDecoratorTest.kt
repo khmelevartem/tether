@@ -6,7 +6,6 @@ import io.ktor.utils.io.ByteReadChannel
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.async
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -55,7 +54,7 @@ class PhotosUploadStorageDecoratorTest {
     // --- toggle-off: Photos API must not be reached, delegate bytes returned, no delete ---
 
     @Test
-    fun writeBody_with_toggle_off_delegates_and_returns_bytes() = runTest {
+    fun commit_with_toggle_off_skips_save_and_keeps_file() = runTest {
         val fakeStorage = FakeUploadStorage(bytesWritten = 42L)
         var saveToGalleryCalled = false
         val deletedPaths = mutableListOf<String>()
@@ -84,7 +83,7 @@ class PhotosUploadStorageDecoratorTest {
     // --- non-media: Photos API skipped, delegate still called, no delete ---
 
     @Test
-    fun writeBody_with_non_media_file_delegates_and_returns_bytes() = runTest {
+    fun commit_with_non_media_file_skips_save_and_keeps_file() = runTest {
         val fakeStorage = FakeUploadStorage(bytesWritten = 7L)
         val deletedPaths = mutableListOf<String>()
         val decorator = PhotosUploadStorageDecorator(
@@ -334,11 +333,12 @@ class PhotosUploadStorageDecoratorTest {
     // --- de-dup: exactly one OS prompt for concurrent arrivals ---
 
     @Test
-    fun concurrent_writes_with_not_determined_trigger_prompt_exactly_once() = runTest {
-        // The prompt gate must suspend (via authGate.await()) so the scheduler can interleave
-        // the second background coroutine into `promptForAuthorization` while the first is
-        // suspended inside `requestAddOnlyAuth`. Without this yield, virtual-time coroutines
-        // run sequentially and both see a cleared `pendingAuth`.
+    fun concurrent_commits_with_not_determined_trigger_prompt_exactly_once() = runTest {
+        // Two commits launch two background coroutines; the de-dup happens between them, not in
+        // the pass-through writeBody. The prompt gate must suspend (via authGate.await()) so the
+        // scheduler can interleave the second coroutine into `promptForAuthorization` while the
+        // first is suspended inside `requestAddOnlyAuth`. Without this yield, virtual-time
+        // coroutines run sequentially and both see a cleared `pendingAuth`.
         val authGate = CompletableDeferred<Boolean>()
         val suspendingLibrary = object : FakePhotosLibrary(
             status = PhotosAuthStatus.NotDetermined,
@@ -355,10 +355,8 @@ class PhotosUploadStorageDecoratorTest {
         val handle1 = UploadHandle(destination = "/tmp/photo1.jpg", createdDirs = emptyList())
         val handle2 = UploadHandle(destination = "/tmp/photo2.jpg", createdDirs = emptyList())
 
-        val d1 = async { decorator.writeBody(ByteReadChannel.Empty, handle1) }
-        val d2 = async { decorator.writeBody(ByteReadChannel.Empty, handle2) }
-        d1.await()
-        d2.await()
+        decorator.writeBody(ByteReadChannel.Empty, handle1)
+        decorator.writeBody(ByteReadChannel.Empty, handle2)
         decorator.commit(handle1)
         decorator.commit(handle2)
         // Advance until both background coroutines are suspended at authGate.await(), then release.
