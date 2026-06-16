@@ -63,6 +63,8 @@ If the framing is itself unclear — escalate to the orchestrator immediately as
 
 Enumerate the **architecturally distinct** options for solving the problem. Three is the minimum healthy count for a non-trivial choice; if you can only think of two, work harder — there's usually a third that lives outside your first frame (different layer, different invariant, "do nothing and accept the trade-off").
 
+A **negative capability claim** — «platform / library X cannot do Y» — that drops or demotes an option must be cheaply falsified (authoritative doc or a throwaway probe) before it prunes the palette; «impossible» from memory is not grounds to drop an option. This bites hardest when an option promises a real win but its workability is in doubt: the doubt is a reason to probe it, not to discard its value unseen. The strongest option is the costliest to exclude wrongly — its rejected branch never reaches review.
+
 For each option, capture:
 - one-paragraph mechanism description (what we'd build);
 - what it **closes** (which problem properties it nails down);
