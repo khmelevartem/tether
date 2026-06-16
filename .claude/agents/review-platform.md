@@ -32,6 +32,8 @@ Read the diff top to bottom. For each meaningful platform-touching change, write
 
 Output 2–4 such assumptions per significant change. Lean toward writing more rather than fewer — a missed assumption costs a review round.
 
+Any claim about platform capability or limitation that a decision rests on is verified against reality — current authoritative docs or a cheap probe, never accepted from memory — and across the OS versions in scope, since a capability present on one version can be absent on another. A workaround or fallback in the diff is one visible trace of such a claim, but the claim is in scope whether or not it left one.
+
 ## Phase 2 — Concrete checklist
 
 Walk [`docs/engineering/platform-concerns.md`](../../docs/engineering/platform-concerns.md). For each item that touches the diff, verify it. Items that don't touch the diff do not need an entry in the output.
