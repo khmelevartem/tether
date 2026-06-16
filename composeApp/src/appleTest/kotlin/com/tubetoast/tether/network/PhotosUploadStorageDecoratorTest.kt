@@ -52,12 +52,13 @@ class PhotosUploadStorageDecoratorTest {
         assertNull(decorator.detectMediaType("/tmp/noextension"))
     }
 
-    // --- toggle-off: Photos API must not be reached, delegate bytes returned ---
+    // --- toggle-off: Photos API must not be reached, delegate bytes returned, no delete ---
 
     @Test
     fun writeBody_with_toggle_off_delegates_and_returns_bytes() = runTest {
         val fakeStorage = FakeUploadStorage(bytesWritten = 42L)
         var saveToGalleryCalled = false
+        val deletedPaths = mutableListOf<String>()
         val decorator = PhotosUploadStorageDecorator(
             delegate = fakeStorage,
             saveToGallery = {
@@ -66,6 +67,7 @@ class PhotosUploadStorageDecoratorTest {
             },
             backgroundScope = this,
             mediaClassifier = { MediaType.Image },
+            deleteFile = { deletedPaths.add(it) },
         )
         val handle = UploadHandle(destination = "/tmp/photo.jpg", createdDirs = emptyList())
 
@@ -76,18 +78,21 @@ class PhotosUploadStorageDecoratorTest {
         assertEquals(42L, result)
         assertTrue(fakeStorage.writeBodyCalled)
         assertTrue(saveToGalleryCalled)
+        assertTrue(deletedPaths.isEmpty())
     }
 
-    // --- non-media: Photos API skipped, delegate still called ---
+    // --- non-media: Photos API skipped, delegate still called, no delete ---
 
     @Test
     fun writeBody_with_non_media_file_delegates_and_returns_bytes() = runTest {
         val fakeStorage = FakeUploadStorage(bytesWritten = 7L)
+        val deletedPaths = mutableListOf<String>()
         val decorator = PhotosUploadStorageDecorator(
             delegate = fakeStorage,
             saveToGallery = { true },
             backgroundScope = this,
             mediaClassifier = { null },
+            deleteFile = { deletedPaths.add(it) },
         )
         val handle = UploadHandle(destination = "/tmp/doc.pdf", createdDirs = emptyList())
 
@@ -97,6 +102,7 @@ class PhotosUploadStorageDecoratorTest {
 
         assertEquals(7L, result)
         assertTrue(fakeStorage.writeBodyCalled)
+        assertTrue(deletedPaths.isEmpty())
     }
 
     // --- delegate pass-through for resolveDestination and abort ---
@@ -135,10 +141,11 @@ class PhotosUploadStorageDecoratorTest {
     // --- resolveAuthorization branches ---
 
     @Test
-    fun authorized_status_triggers_save() = runTest {
+    fun authorized_status_triggers_save_and_deletes_source() = runTest {
         val fakeLibrary = FakePhotosLibrary(status = PhotosAuthStatus.Authorized, saveResult = true)
         val fakeStorage = FakeUploadStorage(bytesWritten = 1L)
-        val decorator = makeDecoratorWithLibrary(fakeStorage, fakeLibrary, this)
+        val deletedPaths = mutableListOf<String>()
+        val decorator = makeDecoratorWithLibrary(fakeStorage, fakeLibrary, this, deletedPaths)
         val handle = UploadHandle(destination = "/tmp/photo.jpg", createdDirs = emptyList())
 
         decorator.writeBody(ByteReadChannel.Empty, handle)
@@ -147,13 +154,15 @@ class PhotosUploadStorageDecoratorTest {
 
         assertEquals(1, fakeLibrary.saveCallCount)
         assertFalse(fakeLibrary.requestAuthCalled)
+        assertEquals(listOf("/tmp/photo.jpg"), deletedPaths)
     }
 
     @Test
-    fun limited_status_triggers_save_not_prompt() = runTest {
+    fun limited_status_triggers_save_not_prompt_and_deletes_source() = runTest {
         val fakeLibrary = FakePhotosLibrary(status = PhotosAuthStatus.Limited, saveResult = true)
         val fakeStorage = FakeUploadStorage(bytesWritten = 1L)
-        val decorator = makeDecoratorWithLibrary(fakeStorage, fakeLibrary, this)
+        val deletedPaths = mutableListOf<String>()
+        val decorator = makeDecoratorWithLibrary(fakeStorage, fakeLibrary, this, deletedPaths)
         val handle = UploadHandle(destination = "/tmp/photo.jpg", createdDirs = emptyList())
 
         decorator.writeBody(ByteReadChannel.Empty, handle)
@@ -162,13 +171,15 @@ class PhotosUploadStorageDecoratorTest {
 
         assertEquals(1, fakeLibrary.saveCallCount)
         assertFalse(fakeLibrary.requestAuthCalled)
+        assertEquals(listOf("/tmp/photo.jpg"), deletedPaths)
     }
 
     @Test
-    fun denied_status_skips_save_and_prompt() = runTest {
+    fun denied_status_skips_save_and_prompt_no_delete() = runTest {
         val fakeLibrary = FakePhotosLibrary(status = PhotosAuthStatus.Denied)
         val fakeStorage = FakeUploadStorage(bytesWritten = 1L)
-        val decorator = makeDecoratorWithLibrary(fakeStorage, fakeLibrary, this)
+        val deletedPaths = mutableListOf<String>()
+        val decorator = makeDecoratorWithLibrary(fakeStorage, fakeLibrary, this, deletedPaths)
         val handle = UploadHandle(destination = "/tmp/photo.jpg", createdDirs = emptyList())
 
         decorator.writeBody(ByteReadChannel.Empty, handle)
@@ -177,13 +188,15 @@ class PhotosUploadStorageDecoratorTest {
 
         assertEquals(0, fakeLibrary.saveCallCount)
         assertFalse(fakeLibrary.requestAuthCalled)
+        assertTrue(deletedPaths.isEmpty())
     }
 
     @Test
-    fun restricted_status_skips_save_and_prompt() = runTest {
+    fun restricted_status_skips_save_and_prompt_no_delete() = runTest {
         val fakeLibrary = FakePhotosLibrary(status = PhotosAuthStatus.Restricted)
         val fakeStorage = FakeUploadStorage(bytesWritten = 1L)
-        val decorator = makeDecoratorWithLibrary(fakeStorage, fakeLibrary, this)
+        val deletedPaths = mutableListOf<String>()
+        val decorator = makeDecoratorWithLibrary(fakeStorage, fakeLibrary, this, deletedPaths)
         val handle = UploadHandle(destination = "/tmp/photo.jpg", createdDirs = emptyList())
 
         decorator.writeBody(ByteReadChannel.Empty, handle)
@@ -192,17 +205,19 @@ class PhotosUploadStorageDecoratorTest {
 
         assertEquals(0, fakeLibrary.saveCallCount)
         assertFalse(fakeLibrary.requestAuthCalled)
+        assertTrue(deletedPaths.isEmpty())
     }
 
     @Test
-    fun not_determined_status_triggers_prompt_then_save_when_granted() = runTest {
+    fun not_determined_status_triggers_prompt_then_save_and_deletes_source_when_granted() = runTest {
         val fakeLibrary = FakePhotosLibrary(
             status = PhotosAuthStatus.NotDetermined,
             promptResult = true,
             saveResult = true,
         )
         val fakeStorage = FakeUploadStorage(bytesWritten = 1L)
-        val decorator = makeDecoratorWithLibrary(fakeStorage, fakeLibrary, this)
+        val deletedPaths = mutableListOf<String>()
+        val decorator = makeDecoratorWithLibrary(fakeStorage, fakeLibrary, this, deletedPaths)
         val handle = UploadHandle(destination = "/tmp/photo.jpg", createdDirs = emptyList())
 
         decorator.writeBody(ByteReadChannel.Empty, handle)
@@ -211,16 +226,18 @@ class PhotosUploadStorageDecoratorTest {
 
         assertTrue(fakeLibrary.requestAuthCalled)
         assertEquals(1, fakeLibrary.saveCallCount)
+        assertEquals(listOf("/tmp/photo.jpg"), deletedPaths)
     }
 
     @Test
-    fun not_determined_status_triggers_prompt_then_skips_save_when_denied() = runTest {
+    fun not_determined_status_triggers_prompt_then_skips_save_and_no_delete_when_denied() = runTest {
         val fakeLibrary = FakePhotosLibrary(
             status = PhotosAuthStatus.NotDetermined,
             promptResult = false,
         )
         val fakeStorage = FakeUploadStorage(bytesWritten = 1L)
-        val decorator = makeDecoratorWithLibrary(fakeStorage, fakeLibrary, this)
+        val deletedPaths = mutableListOf<String>()
+        val decorator = makeDecoratorWithLibrary(fakeStorage, fakeLibrary, this, deletedPaths)
         val handle = UploadHandle(destination = "/tmp/photo.jpg", createdDirs = emptyList())
 
         decorator.writeBody(ByteReadChannel.Empty, handle)
@@ -229,6 +246,7 @@ class PhotosUploadStorageDecoratorTest {
 
         assertTrue(fakeLibrary.requestAuthCalled)
         assertEquals(0, fakeLibrary.saveCallCount)
+        assertTrue(deletedPaths.isEmpty())
     }
 
     // --- file-always-remains invariant ---
@@ -256,7 +274,8 @@ class PhotosUploadStorageDecoratorTest {
             saveResult = false,
         )
         val fakeStorage = FakeUploadStorage(bytesWritten = 999L)
-        val decorator = makeDecoratorWithLibrary(fakeStorage, fakeLibrary, this)
+        val deletedPaths = mutableListOf<String>()
+        val decorator = makeDecoratorWithLibrary(fakeStorage, fakeLibrary, this, deletedPaths)
         val handle = UploadHandle(destination = "/tmp/photo.jpg", createdDirs = emptyList())
 
         val result = decorator.writeBody(ByteReadChannel.Empty, handle)
@@ -266,6 +285,7 @@ class PhotosUploadStorageDecoratorTest {
         assertEquals(999L, result)
         assertTrue(fakeStorage.writeBodyCalled)
         assertFalse(fakeStorage.abortCalled)
+        assertTrue(deletedPaths.isEmpty())
     }
 
     @Test
@@ -275,7 +295,8 @@ class PhotosUploadStorageDecoratorTest {
                 throw RuntimeException("codec unsupported")
         }
         val fakeStorage = FakeUploadStorage(bytesWritten = 512L)
-        val decorator = makeDecoratorWithLibrary(fakeStorage, throwingLibrary, this)
+        val deletedPaths = mutableListOf<String>()
+        val decorator = makeDecoratorWithLibrary(fakeStorage, throwingLibrary, this, deletedPaths)
         val handle = UploadHandle(destination = "/tmp/photo.jpg", createdDirs = emptyList())
 
         val result = decorator.writeBody(ByteReadChannel.Empty, handle)
@@ -285,6 +306,7 @@ class PhotosUploadStorageDecoratorTest {
         assertEquals(512L, result)
         assertTrue(fakeStorage.writeBodyCalled)
         assertFalse(fakeStorage.abortCalled)
+        assertTrue(deletedPaths.isEmpty())
     }
 
     // --- regression: truncated upload must never reach Photos ---
@@ -323,7 +345,8 @@ class PhotosUploadStorageDecoratorTest {
             }
         }
         val fakeStorage = FakeUploadStorage(bytesWritten = 1L)
-        val decorator = makeDecoratorWithLibrary(fakeStorage, suspendingLibrary, this)
+        val deletedPaths = mutableListOf<String>()
+        val decorator = makeDecoratorWithLibrary(fakeStorage, suspendingLibrary, this, deletedPaths)
         val handle1 = UploadHandle(destination = "/tmp/photo1.jpg", createdDirs = emptyList())
         val handle2 = UploadHandle(destination = "/tmp/photo2.jpg", createdDirs = emptyList())
 
@@ -340,6 +363,7 @@ class PhotosUploadStorageDecoratorTest {
 
         assertEquals(1, suspendingLibrary.requestAuthCallCount)
         assertEquals(2, suspendingLibrary.saveCallCount)
+        assertEquals(2, deletedPaths.size)
     }
 
     // --- helpers ---
@@ -356,12 +380,14 @@ class PhotosUploadStorageDecoratorTest {
             saveToGallery = { true },
             backgroundScope = CoroutineScope(SupervisorJob()),
             mediaClassifier = classifier,
+            deleteFile = {},
         )
 
     private fun makeDecoratorWithLibrary(
         delegate: FakeUploadStorage,
         library: PhotosLibrary,
         scope: TestScope,
+        deletedPaths: MutableList<String> = mutableListOf(),
     ): PhotosUploadStorageDecorator =
         PhotosUploadStorageDecorator(
             delegate = delegate,
@@ -369,6 +395,7 @@ class PhotosUploadStorageDecoratorTest {
             backgroundScope = scope,
             mediaClassifier = { MediaType.Image },
             photosLibrary = library,
+            deleteFile = { deletedPaths.add(it) },
         )
 }
 

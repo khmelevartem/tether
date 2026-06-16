@@ -119,8 +119,7 @@ private fun SaveToPhotosRow(
             )
         }
         CaptionText(
-            text = "Received photos and videos are also added to your Photos library. " +
-                "They're always kept in Files too.",
+            text = "Received photos and videos go to your Photos library instead of Files.",
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = spacing.lg)

@@ -9,6 +9,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import platform.Foundation.NSFileManager
 import platform.UniformTypeIdentifiers.UTType
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.info
@@ -18,13 +19,14 @@ import ru.pocketbyte.kydra.log.wrapper.withTag
 private val log = KydraLog.withTag(default = "Tether.PhotosSave")
 
 /**
- * The Photos copy runs in [backgroundScope] after [commit] so the HTTP response is never held
- * open while an OS prompt is up. A Photos-copy failure never propagates as a transfer failure —
- * the received file in Documents/Tether is always preserved.
+ * On a confirmed-successful Photos save the source file is deleted from Documents/Tether (move
+ * semantics). Anything that cannot reach Photos — toggle off, non-media, auth denied, save
+ * failure — stays in Files.
  *
  * @param mediaClassifier maps a file-path extension to [MediaType], or null if not media.
  *   Defaults to the UTType-based implementation; override in tests to avoid the live
  *   UTType database which is absent in the headless KN test runner.
+ * @param deleteFile removes the source file after a confirmed save; override in tests.
  */
 internal class PhotosUploadStorageDecorator(
     private val delegate: UploadStorage,
@@ -32,6 +34,7 @@ internal class PhotosUploadStorageDecorator(
     private val backgroundScope: CoroutineScope,
     private val mediaClassifier: (ext: String) -> MediaType? = ::classifyByUTType,
     private val photosLibrary: PhotosLibrary = RealPhotosLibrary,
+    private val deleteFile: (path: String) -> Unit = ::removeReceivedFile,
 ) : UploadStorage {
     private val authMutex = Mutex()
 
@@ -69,6 +72,7 @@ internal class PhotosUploadStorageDecorator(
         val success = photosLibrary.save(destination, mediaType)
         if (success) {
             log.info { "Photos: saved ${destination.substringAfterLast('/')}" }
+            deleteFile(destination)
         } else {
             log.warn {
                 "Photos: save failed for ${destination.substringAfterLast('/')} — file stays in Files"
@@ -141,5 +145,12 @@ internal fun classifyByUTType(ext: String): MediaType? {
         UTType.typeWithFilenameExtension(ext, conformingToType = imageType) != null -> MediaType.Image
         UTType.typeWithFilenameExtension(ext, conformingToType = movieType) != null -> MediaType.Video
         else -> null
+    }
+}
+
+internal fun removeReceivedFile(path: String) {
+    val ok = NSFileManager.defaultManager.removeItemAtPath(path, error = null)
+    if (!ok) {
+        log.warn { "Photos: delete after save failed for ${path.substringAfterLast('/')} — duplicate stays in Files" }
     }
 }
