@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Requires: block-1 (CLI A alive at $LOG_A / fifo $FIFO_A) and block-5 (iOS app launched + discovered).
+# Requires: block-1 (CLI A alive at $LOG_A / fifo $FIFO_A) and block-5.1 (iOS app launched + discovered).
 
 . "$(dirname "${BASH_SOURCE[0]}")/smoke-env.sh"
 
@@ -30,12 +30,12 @@ set +e; xcrun simctl privacy "$UDID" grant photos-add "$IOS_BUNDLE_ID" 2>/dev/nu
   && echo "PASS: photos-add pre-granted" \
   || echo "SKIP: photos-add grant returned non-zero (will proceed; Photos framework may still work)"
 
-# Resolve the iOS peer name — block-5 writes it to $SMOKE_DIR/ios-name.txt after dns-sd discovery.
+# Resolve the iOS peer name — block-5.1 writes it to $SMOKE_DIR/ios-name.txt after dns-sd discovery.
 IOS_NAME=$(cat "$SMOKE_DIR/ios-name.txt" 2>/dev/null | tr -d '\n' || true)
-[ -n "$IOS_NAME" ] || { echo "FAIL: iOS peer name not found ($SMOKE_DIR/ios-name.txt missing) — run block-5 first"; exit 1; }
+[ -n "$IOS_NAME" ] || { echo "FAIL: iOS peer name not found ($SMOKE_DIR/ios-name.txt missing) — run block-5.1 first"; exit 1; }
 echo "iOS peer: $IOS_NAME"
 
-# block-5's Keychain test leaves the app in a state where CLI A tracks it via the IPv6 loopback
+# block-5.1's Keychain test leaves the app in a state where CLI A tracks it via the IPv6 loopback
 # address (0:0:0:0:0:0:0:1), which Ktor rejects as an unparseable URL. Terminate and cold-start
 # the app so mDNS runs a clean browse cycle that resolves to a routable address.
 xcrun simctl terminate "$UDID" "$IOS_BUNDLE_ID" 2>/dev/null || true

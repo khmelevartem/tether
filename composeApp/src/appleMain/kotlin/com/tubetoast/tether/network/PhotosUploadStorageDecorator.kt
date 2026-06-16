@@ -108,10 +108,6 @@ internal class PhotosUploadStorageDecorator(
             }
         }
 
-    /**
-     * Deduplicates the OS add-to-Photos prompt so concurrent media arrivals share one prompt
-     * and the same result.
-     */
     private suspend fun promptForAuthorization(): Boolean {
         val existing = authMutex.withLock {
             pendingAuth.also { if (it == null) pendingAuth = CompletableDeferred() }

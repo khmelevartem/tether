@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.launch
 
-/** Hosted by the Settings surface (#222). */
 class FileTransferSettingsComponent(
     componentContext: ComponentContext,
     private val preferences: FileTransferPreferences,

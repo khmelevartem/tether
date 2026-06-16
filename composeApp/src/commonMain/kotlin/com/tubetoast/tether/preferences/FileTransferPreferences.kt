@@ -16,7 +16,7 @@ interface FileTransferPreferences {
     fun observeSaveLocation(): Flow<String>
 
     /**
-     * @throws UnsupportedOperationException on platforms where the save location is fixed (e.g. iOS).
+     * @throws UnsupportedOperationException on platforms where the save location is fixed.
      */
     suspend fun setSaveLocation(path: String)
 

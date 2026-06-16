@@ -58,11 +58,11 @@ To re-run or debug part of the suite, run the `block-*.sh` scripts directly — 
 | Target block | Needs alive first | Minimal prefix |
 |---|---|---|
 | 1 (CLI A) | jar built | `0 → 1` |
-| 2.1, 4 (Android), 5 (iOS), 6 (quit) | CLI A | `0 → 1 → <target>` |
+| 2.1, 4 (Android), 5.1 (iOS), 6 (quit) | CLI A | `0 → 1 → <target>` |
 | 2.2, 2.3, 3.5 | CLI A + B | `0 → 1 → 2.1 → <target>` |
 | 3 (same-name) | CLI A + B | `0 → 1 → 2.1 → 3` |
 | 3.1, 3.2 | CLI A + B + C | `0 → 1 → 2.1 → 3 → <target>` |
-| 5.5 (iOS receive) | CLI A + iOS app | `0 → 1 → 5 → 5.5` |
+| 5.2 (iOS receive) | CLI A + iOS app | `0 → 1 → 5.1 → 5.2` |
 
 Two constraints when running by hand:
 
@@ -169,9 +169,9 @@ SKIP if no adb device connected. If present:
 6. Send Desktop → Android via CLI `send`. SKIP if emulator with QEMU NAT (`10.0.2.x`) or Android peer not discovered.
 7. `force-stop`.
 
-### Block 5: iOS simulator runtime
+### Block 5.1: iOS simulator runtime
 
-Run: `./block-5-ios.sh`
+Run: `./block-5.1-ios.sh`
 
 1. Resolve + boot simulator (default `iPhone 17`; override via `IOS_DEVICE` env var).
 2. `xcodebuild`, install, launch.
@@ -184,15 +184,15 @@ Run: `./block-5-ios.sh`
 
 iOS cleanup — in Block 7.
 
-### Block 5.5: iOS receive (Files + move-to-Photos)
+### Block 5.2: iOS receive (Files + move-to-Photos)
 
-Run: `./block-5.5-ios-receive.sh`
+Run: `./block-5.2-ios-receive.sh`
 
-Prerequisite chain: `0 → 1 → 5 → 5.5` (CLI A alive, iOS app launched and discovered).
+Prerequisite chain: `0 → 1 → 5.1 → 5.2` (CLI A alive, iOS app launched and discovered).
 
 1. Pre-grants `photos-add` via `xcrun simctl privacy … grant photos-add` so the OS Photos save is not prompt-blocked.
 2. Sends two files from CLI A to the iOS peer:
-   - A `.txt` (non-media) — reads the iOS peer name from `$SMOKE_DIR/ios-name.txt` (written by block-5), sends via FIFO.
+   - A `.txt` (non-media) — reads the iOS peer name from `$SMOKE_DIR/ios-name.txt` (written by block-5.1), sends via FIFO.
    - A `.jpg` (1×1 real JPEG generated via Python + sips) — UTType classifies it as `public.image`.
 3. Assertions:
    - **`.txt` PASS** — file is present at `<container>/Documents/<name>` (non-media files land directly in `Documents/`, not in a `Tether/` subdirectory) and byte-identical to source. Confirms iOS receive works for non-media files.
