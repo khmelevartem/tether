@@ -18,7 +18,7 @@ The goal is not a report for its own sake and not a catalog of pointwise mistake
 A retro run in the same context that produced the work inherits that work's framing: the agent just argued for these decisions and will rationalise them, and the signals it is least able to see from inside — an option pruned, an approach abandoned — are the most valuable ones. Reset before analysing.
 
 ```bash
-python3 .claude/scripts/retro-context-gate.py
+python3 .claude/skills/retro/retro-context-gate.py
 ```
 
 It measures the **current** main-thread context (not peak, which stays high after a compaction). On `ABORT`, stop the retro immediately and ask the user to `/compact` or start a fresh session, then re-invoke `/retro` — a biased pass is worse than a delayed one. A freshly compacted or fresh session clears the gate; Step 1 then re-derives the facts from the transcript and commit sequence, not from the compaction summary. On `UNKNOWN`, proceed but lean hard on Step 1's primary sources.
