@@ -79,6 +79,10 @@ Android, macOS, and Desktop JVM all support listening sockets in the background 
 
 The closest open-source architectural analog — LocalSend, a Flutter-based cross-platform P2P file transfer app — reaches the same conclusion. Their iOS build declares no `UIBackgroundModes` and accepts foreground-only behaviour. LocalSend [issue #1468 "iOS/iPadOS run in background"](https://github.com/localsend/localsend/issues/1468) is the maintainer's standing position: a 24/7-listening peer is not possible on iOS, and the workarounds the community proposes (location-services trick, Live Activities, PiP video) either fail App Review or do not actually enable a TCP listener. Tether's "iOS = foreground-active only" stance is the industry-standard outcome for this class of architecture, not a Tether-specific compromise.
 
+## Testing caveat: simulator ≠ device
+
+The Simulator stops receiving the moment the app leaves the foreground. A device keeps receiving for the ~30 s background-execution grace window after backgrounding/lock, so a small file sent within that window still arrives — that is the grace window, not background receive. To confirm the foreground-only constraint on a device, send **>30 s after locking**: the file does not arrive until the app is foregrounded again.
+
 ## References
 
 - Apple, "URL Loading System — Downloading Files in the Background." Search Apple Developer Documentation, not linked here — link rot.
