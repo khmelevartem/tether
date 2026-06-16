@@ -45,6 +45,7 @@ for i in $(seq 1 30); do
   sleep 1
 done
 [ -n "$IOS_NAME" ] && echo "PASS: mDNS publish — $IOS_NAME" || echo "FAIL: mDNS publish — no iOS service seen (check Local Network Privacy prompt)"
+echo "$IOS_NAME" > "$SMOKE_DIR/ios-name.txt"
 
 # TXT record — must carry an fp= field (66 70 3D = "fp="). Length-agnostic: the
 # fingerprint is the hex SHA-256 of the public key, so the record length depends on it.

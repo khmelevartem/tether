@@ -62,6 +62,7 @@ To re-run or debug part of the suite, run the `block-*.sh` scripts directly — 
 | 2.2, 2.3, 3.5 | CLI A + B | `0 → 1 → 2.1 → <target>` |
 | 3 (same-name) | CLI A + B | `0 → 1 → 2.1 → 3` |
 | 3.1, 3.2 | CLI A + B + C | `0 → 1 → 2.1 → 3 → <target>` |
+| 5.5 (iOS receive) | CLI A + iOS app | `0 → 1 → 5 → 5.5` |
 
 Two constraints when running by hand:
 
@@ -183,6 +184,20 @@ Run: `./block-5-ios.sh`
 
 iOS cleanup — in Block 7.
 
+### Block 5.5: iOS receive (Files + move-to-Photos)
+
+Run: `./block-5.5-ios-receive.sh`
+
+Prerequisite chain: `0 → 1 → 5 → 5.5` (CLI A alive, iOS app launched and discovered).
+
+1. Pre-grants `photos-add` via `xcrun simctl privacy … grant photos-add` so the OS Photos save is not prompt-blocked.
+2. Sends two files from CLI A to the iOS peer:
+   - A `.txt` (non-media) — reads the iOS peer name from `$SMOKE_DIR/ios-name.txt` (written by block-5), sends via FIFO.
+   - A `.jpg` (1×1 real JPEG generated via Python + sips) — UTType classifies it as `public.image`.
+3. Assertions:
+   - **`.txt` PASS** — file is present at `<container>/Documents/<name>` (non-media files land directly in `Documents/`, not in a `Tether/` subdirectory) and byte-identical to source. Confirms iOS receive works for non-media files.
+   - **`.jpg` PASS** — file is **absent** from `<container>/Documents/` after a settle period (moved to Photos), and the iOS app log shows `Tether.PhotosSave … saved` for it. If `Tether.PhotosSave` does not surface via `simctl spawn log show` (KydraLog may not route to os_log on simulator), the block falls back to asserting absence alone and notes the log-line is inferred.
+
 ### Block 6: Graceful quit of instance A — and `lastExit` propagation
 
 Run: `./block-6-graceful-quit.sh`
@@ -255,6 +270,8 @@ At the end of the run print a markdown report:
 | iOS | /health (real bundle) | ✓ PASS | port=55171, "Tether OK" |
 | iOS | /pair X.509 EC P-256 | ✓ PASS | 91 bytes via real Keychain |
 | iOS | Keychain persistence | ✓ PASS | publicKey identical across cold launches |
+| iOS receive | .txt lands in Files | ✓ PASS | byte-identical in Documents/ |
+| iOS receive | .jpg moved to Photos | ✓ PASS | absent from Documents/; Tether.PhotosSave log confirmed / inferred |
 | Cleanup | teardown self-check | ✓ PASS | no CLI processes or `$SMOKE_DIR` left after block-7 |
 
 ## Failures
@@ -264,7 +281,9 @@ At the end of the run print a markdown report:
 ## Manual verification required (not covered by smoke)
 
 - Physical iPhone — install via Xcode, verify cross-discovery with Desktop.
-- iOS receive (FileServer.apple — stub) — skipped by design.
+- iOS receive — gallery: open Photos on the device and confirm the transferred image appears in Camera Roll. Smoke asserts absence from Files and the Photos-save log (where available), not gallery visibility.
+- iOS receive — real Photos prompt UX: smoke pre-grants `photos-add` via `simctl privacy`; the actual OS permission dialog shown to a real user is not exercised.
+- iOS receive — denied / unsupported codec: smoke only covers the happy path (grant + supported JPEG). Denied permission or unsupported codec leaves the file in Files; verify manually.
 - **Android-initiated send (Android → Desktop)** — no CLI on Android, the skill checks the reverse direction.
 - Notification "Stop" button on Android — verify tap manually; smoke uses `am force-stop`.
 - Sleep/wake real device — `adb input keyevent` ≠ real power state.

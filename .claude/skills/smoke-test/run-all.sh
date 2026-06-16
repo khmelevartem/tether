@@ -56,12 +56,14 @@ run BLOCK3.2 ./block-3.2-same-name-distinct.sh
 run BLOCK3.5 ./block-3.5-rename.sh
 run BLOCK4-Android ./block-4-android.sh
 
-# block-4-android self-skips without a device; block-5-ios does not, so guard it.
+# block-4-android self-skips without a device; block-5-ios and block-5.5 do not, so guard both.
 if command -v xcodebuild >/dev/null 2>&1 \
    && xcrun simctl list devices available 2>/dev/null | grep -q "${IOS_DEVICE:-iPhone 17}"; then
   run BLOCK5-iOS ./block-5-ios.sh
+  run BLOCK5.5-iOS-Receive ./block-5.5-ios-receive.sh
 else
   run BLOCK5-iOS echo "SKIP: iOS — Xcode or simulator '${IOS_DEVICE:-iPhone 17}' unavailable"
+  run BLOCK5.5-iOS-Receive echo "SKIP: iOS receive — Xcode or simulator '${IOS_DEVICE:-iPhone 17}' unavailable"
 fi
 
 run BLOCK6 ./block-6-graceful-quit.sh
