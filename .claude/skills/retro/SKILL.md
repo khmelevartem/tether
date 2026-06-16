@@ -31,6 +31,8 @@ git log --oneline <merge-commit> -1  # if already merged
 
 Read the full history: issue, comments, review, conversation in the PR.
 
+Reconstruct the **path**, not only the end-state: walk the PR's commit sequence and the session transcript for an approach that was built then replaced, or an option declared off-limits. The costliest signals — a wrong-axis decision, redone — leave no trace in the final diff; they live only in the order of the work. If the session was compacted, its summary is a lossy secondary source that drops the decision-path and can reframe a process failure as a success — read the actual transcript (or, if it is gone, the surviving sub-agent logs plus the commit sequence), never run the retro off the summary alone.
+
 ---
 
 ## Step 2 — Systemic analysis
@@ -42,6 +44,7 @@ Focus: **system → action**, not "agent → attentiveness".
 - **Where the human was the safety net.** Every point where the user had to correct, re-explain, repeat a request, or run a manual audit is a systemic signal — the system leaned on the user where a doc / skill / prompt / check should have carried it. Recurrence — the same kind of correction needed more than once — raises the priority.
 - **Wrong question, not wrong answer.** Look for framing/axis mismatches — the answer was locally fine but the question was on the wrong axis (mechanism asked when the user cared about the observable outcome). These hide because every step looks correct in isolation.
 - **The whole arc.** Spread the scan across design → implement → review → feedback → close; one phase rarely holds all the signals.
+- **No trace in the end-state.** A signal that left nothing in the final diff (an option pruned, an approach abandoned, a premise that removed work before it was written) is invisible to a review of the merged artifacts and is exactly where the heaviest cost hides. Reconstruct it from the sequence, not the result.
 
 **Systemic gaps:**
 - A gap in `CLAUDE.md` / `docs/engineering/` / a skill / a template that made the mistake *programmatic*?
