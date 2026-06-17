@@ -156,7 +156,7 @@ docs-track: layer ordering is already resolved as `docLayers` at Step 2. No sepa
 
 **active-when:** always
 
-**Purpose:** iteratively produce and fast-review artifacts until all fast-reviewer findings are resolved.
+**Purpose:** produce the artifacts. Code-track additionally fast-reviews and iterates; docs-track dispatches producers only and defers all review to Step 8 (the inner reviewer loop is code-track only).
 
 **Producer dispatch — code-track.** For each track (or sequentially if single):
 
@@ -174,13 +174,15 @@ docs-track: layer ordering is already resolved as `docLayers` at Step 2. No sepa
    - **tech-doc / ADR / knowledge** → `architect`
 3. **.claude prompt** → orchestrator writes inline. No sub-agent (an agent editing its own definition would race itself). Match tone and structure of siblings in `.claude/skills/*/SKILL.md`, `.claude/agents/*.md`, `.claude/commands/*.md`. Apply `CLAUDE.md §Code style` and `docs/engineering/long-lived-artifacts.md`. If the prompt change encodes a non-trivial behavioural choice — dispatch `architect` first to converge the choice and produce an ADR; only then write the prompt edit.
 
+Docs-track ends here: producers return their artifacts; an open question a producer could not converge on → G-sub-agent open question gate. No fast reviewer wave on docs-track — proceed to Step 7, then the single review wave at Step 8.
+
 **Prose discipline carry-forward.** Every dispatch brief must instruct the producing agent to load `docs/engineering/long-lived-artifacts.md` before writing and apply it to every paragraph.
 
 **Commit before reviewer wave** — see SKILL.md §The shared engine → Review-wave engine.
 
-**Fast reviewer wave.** Dispatch the `fast` column from [`rosters.md`](rosters.md), filtered by each reviewer's predicate against the current profile and diff. Dispatch in parallel. See SKILL.md §The shared engine → Review-wave engine for fan-out, `[REQUIRED]` aggregation, and delta re-review rules.
+**Fast reviewer wave — `track==code`.** Dispatch the `fast` column from [`rosters.md`](rosters.md), filtered by each reviewer's predicate against the current profile and diff. Dispatch in parallel. See SKILL.md §The shared engine → Review-wave engine for fan-out, `[REQUIRED]` aggregation, and delta re-review rules.
 
-**Iteration loop:**
+**Iteration loop (code-track):**
 
 1. Producer(s) produce → commit → fast reviewer wave.
 2. If all reviewers `APPROVE` and zero `[REQUIRED]` → step done.
@@ -195,7 +197,7 @@ docs-track: layer ordering is already resolved as `docLayers` at Step 2. No sepa
 
    Go back to step 1.
 
-**Iteration limit.** From [`config.md`](config.md) §Iteration limits: 4 for code-track, 2 for docs-track. If not converged → escalate to user with remaining findings; signals a plan/scope problem the loop cannot fix.
+**Iteration limit (code-track).** From [`config.md`](config.md) §Iteration limits: 4. If not converged → escalate to user with remaining findings; signals a plan/scope problem the loop cannot fix.
 
 ---
 

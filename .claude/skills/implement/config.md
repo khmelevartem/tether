@@ -161,7 +161,7 @@ Write the complete body to a temp file and pass `--body-file` to `gh pr create` 
 
 | Loop | code-track | docs-track |
 |---|---|---|
-| Inner loop (Step 5) | 4 | 2 |
+| Inner loop (Step 5) | 4 | n/a (no inner reviewer loop on docs-track) |
 | Full review (Step 8) | 2 | 2 |
 
 ---
