@@ -17,7 +17,7 @@ One screen — DeviceListScreen, the root of the app. This brief specifies the *
 
 **Layout.**
 
-- Top bar: app name / title; no action buttons relevant to this brief.
+- Top bar: app name / title in the leading region; a gear control in the trailing region that opens the settings surface ([settings/ux-brief.md](../settings/ux-brief.md)). The app name / title is always shown — the bar is present in every state of the screen (searching, populated, offline-paired). The gear is the only top-bar action; no other action buttons belong here. Title alignment and gear placement follow the platform idiom (see Per-platform deltas).
 - Banner stack region: a slot directly below the top bar reserved for cross-feature banners contributed by other briefs (e.g. file-transfer's pending-outbound banner and iOS foreground constraint banner; wifi-availability's no-network state replaces the whole screen and does not use this slot). Banners stack vertically; their order, copy, and dismiss semantics are owned by the contributing brief.
 - Scrollable list of PeerCards, filling the available screen area below the banner stack (or below the top bar when no banners are present).
 - No pinned action at the bottom — actions are row-level.
@@ -74,6 +74,7 @@ All rows share the same height, internal padding, and typographic hierarchy. The
 
 **Interactions.**
 
+- Tap / click the top-bar gear: push the settings surface ([settings/ux-brief.md](../settings/ux-brief.md)).
 - Tap Case 1 / Case 2 row: enter file-send flow (owned by another feature).
 - Tap Case 3 row: expand the inline hint. Does NOT enter file-send. Exception: while the row holds pending clipboard items, clipboard transfer's owned extension makes it a button whose tap (via the chevron) expands the PeerCard instead — see the Case 3 note above.
 - Long-press (mobile) / right-click (desktop) on any row: opens a context menu or detail sheet. Contents (rename, unpair, etc.) are out of scope for this brief; this brief only requires the affordance exists and is reachable.
@@ -87,11 +88,11 @@ All rows share the same height, internal padding, and typographic hierarchy. The
 
 **Per-platform deltas.**
 
-- Android: long-press on row → bottom sheet with row actions. Material long-press pattern adapted to Tether's visual language.
-- iOS: long-press on row → iOS 13+ context menu.
-- macOS: right-click on row → context menu popover.
-- Desktop (JVM): right-click or application key → context menu.
-- All platforms: tap/click behaviour on Cases 1–2 and Case 3 is identical.
+- Android: long-press on row → bottom sheet with row actions. Material long-press pattern adapted to Tether's visual language. Top bar: title left-aligned in the leading region; gear in the trailing region.
+- iOS: long-press on row → iOS 13+ context menu. Top bar: title follows iOS HIG (centered); gear in the trailing region, per the iOS convention of trailing navigation-bar actions.
+- macOS: right-click on row → context menu popover. Top bar: title centered; gear in the trailing region.
+- Desktop (JVM): right-click or application key → context menu. Top bar: title centered; gear in the trailing region; the gear is keyboard-focusable.
+- All platforms: tap/click behaviour on Cases 1–2 and Case 3 is identical. The gear control occupies the trailing region on every platform; only title alignment differs.
 
 **Accessibility.**
 
@@ -99,7 +100,8 @@ All rows share the same height, internal padding, and typographic hierarchy. The
 - Case 3 rows: semantic role "list item" (not button). Label: "[Device name], offline, paired. Tap for hint." Screen reader announces that the row is not available for sending.
 - The peer-identity accent is a non-text affordance. It must not be the only signal of pairing state — "paired" must also be conveyed in the semantic label.
 - Inline hint (Case 3 tap): announced by screen reader as an alert or live region update.
-- Focus order (Desktop): top bar → list rows top to bottom → (if hint is open) hint text → rest of list. Hint text does not trap focus.
+- Top-bar gear: semantic label "Settings". Role "button". On Desktop it is the first focusable element in the top bar.
+- Focus order (Desktop): top bar (gear) → list rows top to bottom → (if hint is open) hint text → rest of list. Hint text does not trap focus.
 
 ## Flows
 
@@ -129,7 +131,7 @@ All rows share the same height, internal padding, and typographic hierarchy. The
 
 ## Navigation
 
-DeviceListScreen is the root screen. Row variants and transitions are within-screen — no push navigation, no modals for the row contract itself. The context menu (long-press / right-click) opens an overlay or sheet; its contents are owned by a separate brief.
+DeviceListScreen is the root screen. Row variants and transitions are within-screen — no push navigation, no modals for the row contract itself. The context menu (long-press / right-click) opens an overlay or sheet; its contents are owned by a separate brief. The top-bar gear pushes the settings surface onto the stack ([settings/ux-brief.md](../settings/ux-brief.md)); back returns to this root.
 
 ## Conceptual components
 
@@ -138,6 +140,7 @@ DeviceListScreen is the root screen. Row variants and transitions are within-scr
 3. **Dimmed PeerCard** — the offline-paired row variant: same structure as the standard row, rendered at reduced opacity with the peer-identity accent retained.
 4. **Offline row inline hint** — an in-place expansion (below the row, non-modal) triggered by tapping a dimmed row. Plain-language hint about the absent peer. Dismisses on tap/click elsewhere.
 5. **Row state transition** — the animated in-place dimming/brightening when a row moves between Case 2 and Case 3 (200–300 ms ease-out).
+6. **Device-list top bar** — the screen top bar carrying the app name / title (leading) and the settings gear (trailing). Present in every state of the screen. The gear is the only action it carries; it enters the settings surface.
 
 ## Implementer layout calls
 

@@ -1,7 +1,9 @@
 package com.tubetoast.tether.presentation
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -17,6 +19,7 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.composables.core.SheetDetent
 import com.composables.core.rememberModalBottomSheetState
+import com.tubetoast.tether.foundation.IsTopBarTitleCentered
 import com.tubetoast.tether.presentation.banners.BannersSection
 import com.tubetoast.tether.presentation.banners.PendingOutboundBanner
 import com.tubetoast.tether.presentation.banners.PendingOutboundBannerState
@@ -33,6 +36,8 @@ import com.tubetoast.tether.transfer.PickKind
 import com.tubetoast.tether.ui.designsystem.BodyText
 import com.tubetoast.tether.ui.designsystem.BrandMark
 import com.tubetoast.tether.ui.designsystem.BrandMarkState
+import com.tubetoast.tether.ui.designsystem.SettingsIconButton
+import com.tubetoast.tether.ui.designsystem.TitleText
 import com.tubetoast.tether.ui.preview.PreviewFixtures
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
@@ -44,6 +49,10 @@ fun PeerListScreen(component: PeerListComponent, modifier: Modifier = Modifier) 
     val state by component.state.subscribeAsState()
 
     Column(modifier = modifier.fillMaxSize()) {
+        DeviceListTopBar(
+            onOpenSettings = component::openSettings,
+            modifier = Modifier.fillMaxWidth(),
+        )
         BannersSection(
             component = component.bannersComponent,
             modifier = Modifier.fillMaxWidth(),
@@ -58,6 +67,37 @@ fun PeerListScreen(component: PeerListComponent, modifier: Modifier = Modifier) 
         PickerModeChooser(
             showPickerModeChooser = state.showPickerModeChooser,
             onChoosePickerMode = component::onChoosePickerMode,
+        )
+    }
+}
+
+@Composable
+private fun DeviceListTopBar(
+    onOpenSettings: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val spacing = TetherTheme.spacing
+
+    Row(
+        modifier = modifier.padding(horizontal = spacing.sm, vertical = spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (IsTopBarTitleCentered) {
+            Box(modifier = Modifier.padding(horizontal = spacing.sm))
+            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                TitleText(text = "Tether")
+            }
+        } else {
+            TitleText(
+                text = "Tether",
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = spacing.sm),
+            )
+        }
+        SettingsIconButton(
+            onClick = onOpenSettings,
+            contentDescription = "Settings",
         )
     }
 }
@@ -199,6 +239,7 @@ private fun PeerListContentPreview(
     val spacing = TetherTheme.spacing
 
     Column(modifier = Modifier.fillMaxSize()) {
+        DeviceListTopBar(onOpenSettings = {}, modifier = Modifier.fillMaxWidth())
         ThisDeviceStripContent(
             state = PreviewFixtures.DeviceName.display,
             onEditClick = {},
