@@ -188,25 +188,19 @@ class DiscoveredDevicesStoreTest {
 
     // ── idle-expiry (DoD) ──────────────────────────────────────────────────────
 
-    // upsertMdns never stamps lastSeen, so an mDNS-only peer has no mark in evictIdle's
-    // iteration — it is absent from expiry, not merely guarded. This asserts that property
-    // directly: even with a lastSeen entry from a prior upsert that has since been removed,
-    // an mDNS-only peer has no lastSeen mark so evictIdle cannot touch it.
+    // staleGrace=10s but lastSeen is null for an mDNS-only peer, so the guard never fires.
+    // If upsertMdns wrongly stamped lastSeen, the guard would suppress the removal.
     @Test
-    fun `upsertMdns does not stamp lastSeen so mDNS-only peer has no idle-expiry mark`() {
+    fun `mDNS-only peer is removed by serviceLost even within staleGrace because upsertMdns leaves no lastSeen mark`() {
         val clock = TestTimeSource()
-        val timedStore = DiscoveredDevicesStore(idleWindow = 5.minutes, staleGrace = Duration.ZERO, timeSource = clock)
+        val timedStore = DiscoveredDevicesStore(idleWindow = 5.minutes, staleGrace = 10.seconds, timeSource = clock)
         val d = device("Peer", fingerprint = "fp1")
 
-        // Add via hello (stamps lastSeen), then remove the hello mark by re-adding via mDNS only.
-        timedStore.upsert(d)
-        timedStore.removeByFingerprint("fp1")
         timedStore.upsertMdns(d)
+        // clock not advanced — within staleGrace window
+        timedStore.removeByName("Peer")
 
-        clock += 5.minutes + 1.seconds
-        timedStore.evictIdle()
-
-        assertEquals(1, timedStore.devices.value.size, "mDNS-only peer has no lastSeen mark — evictIdle skips it")
+        assertTrue(timedStore.devices.value.isEmpty())
     }
 
     @Test
