@@ -29,6 +29,8 @@ User-facing concepts. The vocabulary [`spec-writer`](../.claude/agents/spec-writ
 Engineering concepts. The vocabulary [`architect`](../.claude/agents/architect.md), `coder`, and the review agents use.
 
 - **Discovery** — the layer that announces a device's presence and finds peers on the local network. _Avoid:_ announce (verb only). (see [discovery.md](engineering/discovery.md))
+- **Idle-expiry** — the removal of a peer learned through `/hello` or a fallback channel from the live store after the idle window elapses with no successful contact or rediscovery; distinct from the mDNS `serviceLost` removal path. (see [discovery.md §Liveness and TTL](engineering/discovery.md#liveness-and-ttl))
+- **Idle window** — the configurable duration of inactivity (no successful contact and no rediscovery via any discovery layer) after which a peer is subject to idle-expiry. (see [discovery.md §Liveness and TTL](engineering/discovery.md#liveness-and-ttl))
 - **Rendezvous** — a post-discovery `/hello` mechanism that resolves asymmetric discovery (one side saw the other but not vice versa), primarily for the hotspot scenario. Distinct from Discovery itself.
 - **Peer** — a device visible through discovery, regardless of pairing status. _Avoid:_ node, neighbour; device when pairing status matters (use **Trusted device** then).
 - **Outbound** — a transfer this device initiates and sends to a peer. _Avoid:_ upload, send (verb only).

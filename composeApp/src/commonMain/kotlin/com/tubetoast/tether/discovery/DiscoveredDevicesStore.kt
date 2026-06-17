@@ -2,11 +2,14 @@ package com.tubetoast.tether.discovery
 
 import com.tubetoast.tether.protocol.Device
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalForInheritanceCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -36,36 +39,57 @@ class DiscoveredDevicesStore(
     private val staleGrace: Duration = 10.seconds,
     private val timeSource: TimeSource = TimeSource.Monotonic,
 ) {
-    private val _devices = MutableStateFlow<List<Device>>(emptyList())
-    val devices: StateFlow<List<Device>> = _devices.asStateFlow()
+    private data class State(
+        val devices: List<Device>,
+        val lastSeen: Map<String, TimeMark>,
+    )
 
-    // CAS-based map update mirrors _devices pattern — synchronized is unavailable in commonMain
-    // and Mutex cannot guard non-suspend callers (mDNS callbacks).
-    private val lastSeenMarks = MutableStateFlow<Map<String, TimeMark>>(emptyMap())
+    private val combinedState = MutableStateFlow(State(emptyList(), emptyMap()))
+
+    @OptIn(ExperimentalForInheritanceCoroutinesApi::class)
+    val devices: StateFlow<List<Device>> = object : StateFlow<List<Device>> {
+        override val replayCache: List<List<Device>> get() = listOf(value)
+        override val value: List<Device> get() = combinedState.value.devices
+
+        override suspend fun collect(collector: FlowCollector<List<Device>>): Nothing {
+            combinedState.map { it.devices }.distinctUntilChanged().collect(collector)
+            error("StateFlow collection never completes")
+        }
+    }
 
     @Volatile private var janitorJob: Job? = null
 
     fun upsert(device: Device) {
         val fp = device.fingerprint
-        if (fp != null) stampNow(fp)
-        _devices.update { prev ->
-            prev.replaceMatchingFingerprint(device) ?: (prev + device)
+        combinedState.update { prev ->
+            val newDevices = prev.devices.replaceMatchingFingerprint(device) ?: (prev.devices + device)
+            val newLastSeen = if (fp != null) prev.lastSeen + (fp to timeSource.markNow()) else prev.lastSeen
+            prev.copy(devices = newDevices, lastSeen = newLastSeen)
         }
     }
 
-    /** No-op when [fingerprint] is null — entries without a fingerprint are not tracked. */
     fun touch(fingerprint: String?) {
         if (fingerprint == null) return
-        lastSeenMarks.update { prev ->
-            if (prev.containsKey(fingerprint)) prev + (fingerprint to timeSource.markNow()) else prev
+        combinedState.update { prev ->
+            if (prev.devices.any { it.fingerprint == fingerprint }) {
+                prev.copy(lastSeen = prev.lastSeen + (fingerprint to timeSource.markNow()))
+            } else {
+                prev
+            }
         }
     }
 
-    fun nameFor(fingerprint: String): String? = _devices.value.firstOrNull { it.fingerprint == fingerprint }?.name
+    fun nameFor(fingerprint: String): String? = combinedState.value.devices
+        .firstOrNull { it.fingerprint == fingerprint }
+        ?.name
 
     fun removeByFingerprint(fingerprint: String) {
-        lastSeenMarks.update { it - fingerprint }
-        _devices.update { prev -> prev.filter { it.fingerprint != fingerprint } }
+        combinedState.update { prev ->
+            prev.copy(
+                devices = prev.devices.filter { it.fingerprint != fingerprint },
+                lastSeen = prev.lastSeen - fingerprint,
+            )
+        }
     }
 
     /**
@@ -74,23 +98,24 @@ class DiscoveredDevicesStore(
      * fresh /hello upsert or active-reuse touch has superseded this serviceLost notification.
      */
     fun removeByName(name: String) {
-        _devices.update { prev ->
-            val fp = prev.firstOrNull { it.name == name }?.fingerprint
+        combinedState.update { prev ->
+            val fp = prev.devices.firstOrNull { it.name == name }?.fingerprint
             if (fp == null) return@update prev
-            val mark = lastSeenMarks.value[fp]
+            val mark = prev.lastSeen[fp]
             if (mark != null && mark.elapsedNow() < staleGrace) return@update prev
-            lastSeenMarks.update { it - fp }
-            prev.filter { it.fingerprint != fp }
+            prev.copy(
+                devices = prev.devices.filter { it.fingerprint != fp },
+                lastSeen = prev.lastSeen - fp,
+            )
         }
     }
 
     fun clear() {
-        lastSeenMarks.value = emptyMap()
-        _devices.update { emptyList() }
+        combinedState.value = State(emptyList(), emptyMap())
     }
 
     fun start(scope: CoroutineScope) {
-        if (janitorJob != null) return
+        if (janitorJob?.isActive == true) return
         janitorJob = scope.launch {
             while (isActive) {
                 delay(sweepInterval)
@@ -105,19 +130,19 @@ class DiscoveredDevicesStore(
     }
 
     internal fun evictIdle() {
-        val snapshot = lastSeenMarks.value
-        val expired = snapshot.entries
-            .filter { (_, mark) -> mark.elapsedNow() >= idleWindow }
-            .map { it.key }
-            .toSet()
-        if (expired.isEmpty()) return
-        lastSeenMarks.update { prev -> prev - expired }
-        _devices.update { prev -> prev.filter { it.fingerprint !in expired } }
-        log.info { "idle-expired ${expired.size} peer(s): $expired" }
-    }
-
-    private fun stampNow(fingerprint: String) {
-        lastSeenMarks.update { prev -> prev + (fingerprint to timeSource.markNow()) }
+        combinedState.update { prev ->
+            val expired = prev.lastSeen.entries
+                .filter { (_, mark) -> mark.elapsedNow() >= idleWindow }
+                .map { it.key }
+                .toSet()
+            if (expired.isEmpty()) return@update prev
+            val newState = prev.copy(
+                devices = prev.devices.filter { it.fingerprint !in expired },
+                lastSeen = prev.lastSeen - expired,
+            )
+            log.info { "idle-expired ${expired.size} peer(s): $expired" }
+            newState
+        }
     }
 
     private fun List<Device>.replaceMatchingFingerprint(device: Device): List<Device>? {

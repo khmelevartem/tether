@@ -256,10 +256,107 @@ class DiscoveredDevicesStoreTest {
         timedStore.upsert(device("Peer", fingerprint = "fp1"))
         timedStore.start(this)
 
+        // Advance TestTimeSource first so evictIdle sees elapsed marks, then advance virtual
+        // time so the janitor's delay fires.
         clock += 5.minutes + 30.seconds
         advanceTimeBy(5.minutes + 30.seconds)
 
         assertTrue(timedStore.devices.value.isEmpty())
+        timedStore.stop()
+    }
+
+    // ── Finding-7 edge cases ───────────────────────────────────────────────────
+
+    @Test
+    fun `touch for unknown fingerprint does not create a mark and is a no-op`() {
+        val clock = TestTimeSource()
+        val timedStore = DiscoveredDevicesStore(idleWindow = 5.minutes, timeSource = clock)
+        timedStore.touch("ghost-fp")
+
+        // No device was ever added — touch must not plant a mark that evictIdle could act on.
+        clock += 5.minutes
+        timedStore.evictIdle()
+
+        assertTrue(timedStore.devices.value.isEmpty())
+    }
+
+    @Test
+    fun `removeByName boundary at exactly staleGrace evicts the entry`() {
+        val clock = TestTimeSource()
+        // staleGrace guard is elapsedNow() < staleGrace, so at exactly staleGrace the entry IS evicted.
+        val timedStore = DiscoveredDevicesStore(staleGrace = 10.seconds, timeSource = clock)
+        timedStore.upsert(device("Peer", fingerprint = "fp1"))
+
+        clock += 10.seconds
+        timedStore.removeByName("Peer")
+
+        assertTrue(
+            timedStore.devices.value.isEmpty(),
+            "entry at exactly staleGrace must be evicted (guard is strict <)",
+        )
+    }
+
+    @Test
+    fun `touch within staleGrace protects peer from subsequent removeByName`() {
+        val clock = TestTimeSource()
+        val timedStore = DiscoveredDevicesStore(staleGrace = 10.seconds, timeSource = clock)
+        timedStore.upsert(device("Peer", fingerprint = "fp1"))
+
+        // Advance past staleGrace so the upsert mark is stale, then touch to refresh.
+        clock += 11.seconds
+        timedStore.touch("fp1")
+
+        // removeByName arrives immediately after touch — touch mark is within staleGrace.
+        timedStore.removeByName("Peer")
+
+        assertEquals(1, timedStore.devices.value.size, "touch within staleGrace must protect the peer")
+    }
+
+    @Test
+    fun `no-fingerprint device is stored but never expired by evictIdle or removeByName`() {
+        val clock = TestTimeSource()
+        val timedStore = DiscoveredDevicesStore(idleWindow = 5.minutes, staleGrace = 10.seconds, timeSource = clock)
+        val noFp = Device(name = "NoFp", host = "1.2.3.4", port = 8080, fingerprint = null)
+        timedStore.upsert(noFp)
+
+        assertEquals(1, timedStore.devices.value.size)
+
+        clock += 10.minutes
+        timedStore.evictIdle()
+        assertEquals(1, timedStore.devices.value.size, "no-fingerprint peer must not be idle-expired")
+
+        timedStore.removeByName("NoFp")
+        assertEquals(
+            1,
+            timedStore.devices.value.size,
+            "removeByName without staleGrace guard must not evict no-fingerprint peer",
+        )
+    }
+
+    @Test
+    fun `janitor double-start is a no-op and stop-start cycle re-arms the janitor`() = runTest {
+        val clock = TestTimeSource()
+        val timedStore = DiscoveredDevicesStore(
+            idleWindow = 5.minutes,
+            sweepInterval = 30.seconds,
+            timeSource = clock,
+        )
+        timedStore.upsert(device("Peer", fingerprint = "fp1"))
+        timedStore.start(this)
+        timedStore.start(this) // second start must be a no-op
+
+        clock += 5.minutes + 30.seconds
+        advanceTimeBy(5.minutes + 30.seconds)
+        assertTrue(timedStore.devices.value.isEmpty(), "janitor must fire exactly once")
+
+        // Re-arm: stop then start should allow the janitor to run again.
+        timedStore.stop()
+        timedStore.upsert(device("Peer2", fingerprint = "fp2"))
+        timedStore.start(this)
+
+        clock += 5.minutes + 30.seconds
+        advanceTimeBy(5.minutes + 30.seconds)
+        assertTrue(timedStore.devices.value.isEmpty(), "re-armed janitor must expire the new peer")
         timedStore.stop()
     }
 }
