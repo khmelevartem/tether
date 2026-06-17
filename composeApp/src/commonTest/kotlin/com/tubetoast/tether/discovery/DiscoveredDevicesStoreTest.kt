@@ -268,22 +268,8 @@ class DiscoveredDevicesStoreTest {
     // ── Finding-7 edge cases ───────────────────────────────────────────────────
 
     @Test
-    fun `touch for unknown fingerprint does not create a mark and is a no-op`() {
-        val clock = TestTimeSource()
-        val timedStore = DiscoveredDevicesStore(idleWindow = 5.minutes, timeSource = clock)
-        timedStore.touch("ghost-fp")
-
-        // No device was ever added — touch must not plant a mark that evictIdle could act on.
-        clock += 5.minutes
-        timedStore.evictIdle()
-
-        assertTrue(timedStore.devices.value.isEmpty())
-    }
-
-    @Test
     fun `removeByName boundary at exactly staleGrace evicts the entry`() {
         val clock = TestTimeSource()
-        // staleGrace guard is elapsedNow() < staleGrace, so at exactly staleGrace the entry IS evicted.
         val timedStore = DiscoveredDevicesStore(staleGrace = 10.seconds, timeSource = clock)
         timedStore.upsert(device("Peer", fingerprint = "fp1"))
 

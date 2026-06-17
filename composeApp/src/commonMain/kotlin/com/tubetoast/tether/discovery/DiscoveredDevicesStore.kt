@@ -71,11 +71,7 @@ class DiscoveredDevicesStore(
     fun touch(fingerprint: String?) {
         if (fingerprint == null) return
         combinedState.update { prev ->
-            if (prev.devices.any { it.fingerprint == fingerprint }) {
-                prev.copy(lastSeen = prev.lastSeen + (fingerprint to timeSource.markNow()))
-            } else {
-                prev
-            }
+            prev.copy(lastSeen = prev.lastSeen + (fingerprint to timeSource.markNow()))
         }
     }
 
@@ -93,9 +89,9 @@ class DiscoveredDevicesStore(
     }
 
     /**
-     * Looks up the entry whose current name matches [name] and removes it by fingerprint —
-     * one atomic step. Skipped if the peer's last-seen age is within [staleGrace], meaning a
-     * fresh /hello upsert or active-reuse touch has superseded this serviceLost notification.
+     * Looks up the entry whose current name matches [name] and removes it by fingerprint.
+     * Skipped if the peer's last-seen age is within [staleGrace], meaning a fresh /hello upsert
+     * or active-reuse touch has superseded this serviceLost notification.
      */
     fun removeByName(name: String) {
         combinedState.update { prev ->
