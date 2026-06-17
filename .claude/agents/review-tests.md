@@ -85,6 +85,15 @@ Per `testing.md §Real time vs virtual time`, flag as `[REQUIRED]`:
 - a real-thread integration test that synchronizes by a fixed delay ("wait long enough") instead of awaiting an observable condition (completion signal / state transition);
 - an assertion on a side-effect produced by another thread (a file the peer writes, a log line) where the operation's contract already implies it, or that polls for the side-effect to appear.
 
+### 12. Unit-untestable platform branches relocate coverage; they don't excuse it
+
+When the unit runner cannot exercise a feature's divergent platform branches — a headless
+test process resolves a platform API differently than a real device — the coverage
+obligation moves to the runtime/smoke layer; it does not vanish. Require a guard that drives
+**each** input class to its observable outcome, not one representative assumed to vouch for
+its siblings. A branch that looks correct but is never run, in any test layer, is
+`[REQUIRED]`: name the class that lacks a guard.
+
 ## What you do NOT check
 
 - AC coverage → review-dod

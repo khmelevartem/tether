@@ -26,8 +26,9 @@ If the issue references a feature spec in `docs/product/features/` — read it; 
    - `DONE` — the diff visibly implements it (point to file:line)
    - `MISSING` — no trace in the diff
    - `UNVERIFIABLE` — requires runtime / manual check; record as an explicit question
-3. **Scope creep:** flag files in the diff that don't map to any criterion. Out-of-scope changes are findings, not virtues.
-4. **PR body — dependency disclosure:** if the diff adds production dependencies, the PR body must call them out (any phrasing). Missing disclosure → REQUIRED finding. Smoke verdict in the body is optional — orchestrators gate on green smoke pre-push, so absence is not a finding.
+3. **Enumerated-class criteria — check each class, not a representative.** When a criterion names several input classes (media types, file kinds, peer states) routed through separate branches, check each one. Proving a single case is not `DONE` for its siblings — a class whose outcome the diff cannot show, because it rests on runtime platform behaviour, is `UNVERIFIABLE` with an explicit question, never `DONE` by association.
+4. **Scope creep:** flag files in the diff that don't map to any criterion. Out-of-scope changes are findings, not virtues.
+5. **PR body — dependency disclosure:** if the diff adds production dependencies, the PR body must call them out (any phrasing). Missing disclosure → REQUIRED finding. Smoke verdict in the body is optional — orchestrators gate on green smoke pre-push, so absence is not a finding.
 
 ## What you do NOT check
 
