@@ -27,8 +27,7 @@ A symbol from the code that also names a stable engineering concept (the server,
 
 `review-glossary` runs in every PR review wave:
 
-- `/implement` Step 4 (inner-loop reviewer wave) and Step 6 (full pre-PR review wave A);
-- `/implement` Step 8 (full pre-PR review wave);
+- `/implement` Step 5 (inner-loop reviewer wave) and Step 8 (full pre-PR review wave A);
 - `create-issue` Step 4 (before showing the draft to the user).
 
 The agent samples load-bearing nouns in the prose surfaces of the diff (KDoc, docstrings, comments, every touched file under `docs/` and `.claude/`), compares against the glossary, and emits `[REQUIRED]` findings for drift and for new domain terms without an entry.

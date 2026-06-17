@@ -126,7 +126,7 @@ After everything converges and (code-track) smoke is 🟢: commit, push, create 
 
 ## Runtime verification recipe
 
-### Smoke (7a) — diff-touches → blocks
+### Smoke (9a) — diff-touches → blocks
 
 | Diff touches | Run |
 |---|---|
@@ -138,7 +138,7 @@ After everything converges and (code-track) smoke is 🟢: commit, push, create 
 
 If the PR introduces a new critical happy-path not covered by smoke (start-time failure point, cross-platform UI, new external interface) — extend `.claude/skills/smoke-test/SKILL.md` in this same PR before running.
 
-### Enforcement-probe (7b) — static check is wired in
+### Enforcement-probe (9b) — static check is wired in
 
 1. Create a minimal artifact violating the check in a real location (where the enforcer should fire — `src/.../Test.kt` for a ktlint rule, `.github/workflows/` for a CI guard).
 2. Run the corresponding task (`./gradlew ktlintCheck`, `./gradlew <task>`, `git commit` for a pre-commit hook).

@@ -176,7 +176,7 @@ docs-track: layer ordering is already resolved as `docLayers` at Step 2. No sepa
 
 **Prose discipline carry-forward.** Every dispatch brief must instruct the producing agent to load `docs/engineering/long-lived-artifacts.md` before writing and apply it to every paragraph.
 
-**Commit before reviewer wave.** Before dispatching the reviewer wave — commit the producer's changes on the branch. Reviewers read `git diff main...HEAD` and the working tree must have no uncommitted changes. One commit per inner-loop iteration. See SKILL.md §The shared engine → Review-wave engine.
+**Commit before reviewer wave** — see SKILL.md §The shared engine → Review-wave engine.
 
 **Fast reviewer wave.** Dispatch the `fast` column from [`rosters.md`](rosters.md), filtered by each reviewer's predicate against the current profile and diff. Dispatch in parallel. See SKILL.md §The shared engine → Review-wave engine for fan-out, `[REQUIRED]` aggregation, and delta re-review rules.
 
@@ -214,7 +214,7 @@ After all code-track inner loops converge, dispatch the implementing agent once 
 
 If anything was simplified — commit the simplification, then re-review the simplified diff with a **delta set**: `review-reuse` always, plus only the reviewers whose domain the simplification touched (`review-correctness` / `review-tests` if logic moved; `review-design-system` / `review-visual` if Compose changed). The authoritative full-roster pass is Step 8, immediately after — do not duplicate it here.
 
-docs-track: inactive. Today's docs-track has no simplify step.
+docs-track: inactive.
 
 ---
 
@@ -296,7 +296,7 @@ git push -u origin <branch>
 gh pr create --title "<title>" --body-file <path>
 ```
 
-Read the PR template at the path in [`config.md`](config.md) §PR template path before composing the body. Write the complete body to a temp file and pass `--body-file` — never `--body` with an in-shell-built string, which silently corrupts multiline markdown (a dropped `Closes #<N>` then leaves the issue open after merge).
+Read the PR template and follow the `--body-file` discipline from [`config.md`](config.md) §PR template before composing the body.
 
 `Closes #<N>` is required. `👀 Sanity-check` must list every defer-decision made during the run (skipped scope, TODO/FIXME left in diff, follow-up issue planned, open question parked, layer skipped). Do not bury defer-decisions at the bottom; they belong in `Sanity-check` so the user can redirect defer-vs-do-now from that section. Add smoke verdict + `## Dependency check` (code-track) as trailing sections only when non-trivial.
 
