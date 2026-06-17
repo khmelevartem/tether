@@ -206,7 +206,7 @@ internal class MdnsDiscoveryJmdns(
                 val peerFingerprint = info.getPropertyString("fp") ?: return
                 if (isOwnAnnounce(peerFingerprint)) return
                 val ipv4 = resolveIPv4(info, event.name) ?: return
-                store.upsert(
+                store.upsertMdns(
                     Device(
                         name = event.name,
                         host = ipv4,

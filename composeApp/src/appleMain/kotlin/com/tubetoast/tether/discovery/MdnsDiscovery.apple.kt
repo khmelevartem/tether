@@ -211,7 +211,7 @@ actual class MdnsDiscovery(
         )
 
         log.info { "peer discovered: ${device.name}@${device.host}:${device.port}" }
-        store.upsert(device)
+        store.upsertMdns(device)
     }
 
     private fun extractFingerprintFromTxt(service: NSNetService): String? {

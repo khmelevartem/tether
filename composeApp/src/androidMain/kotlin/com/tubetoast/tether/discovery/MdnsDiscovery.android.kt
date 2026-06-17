@@ -143,7 +143,7 @@ actual class MdnsDiscovery(
                 fingerprint = peerFingerprint,
             )
             log.debug { "NSD peer discovered: $device" }
-            store.upsert(device)
+            store.upsertMdns(device)
             onResolveComplete()
         }
     }

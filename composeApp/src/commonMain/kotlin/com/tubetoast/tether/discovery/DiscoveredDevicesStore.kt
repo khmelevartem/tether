@@ -42,9 +42,10 @@ class DiscoveredDevicesStore(
     private data class State(
         val devices: List<Device>,
         val lastSeen: Map<String, TimeMark>,
+        val mdnsPresent: Set<String>,
     )
 
-    private val combinedState = MutableStateFlow(State(emptyList(), emptyMap()))
+    private val combinedState = MutableStateFlow(State(emptyList(), emptyMap(), emptySet()))
 
     @OptIn(ExperimentalForInheritanceCoroutinesApi::class)
     val devices: StateFlow<List<Device>> = object : StateFlow<List<Device>> {
@@ -62,9 +63,23 @@ class DiscoveredDevicesStore(
     fun upsert(device: Device) {
         val fp = device.fingerprint
         combinedState.update { prev ->
-            val newDevices = prev.devices.replaceMatchingFingerprint(device) ?: (prev.devices + device)
+            val newDevices = updatedDeviceList(prev.devices, device)
             val newLastSeen = if (fp != null) prev.lastSeen + (fp to timeSource.markNow()) else prev.lastSeen
             prev.copy(devices = newDevices, lastSeen = newLastSeen)
+        }
+    }
+
+    /**
+     * mDNS-backed entry: same device-list update as [upsert] but adds the fingerprint to
+     * [State.mdnsPresent] instead of stamping [State.lastSeen]. mDNS-present peers are exempt
+     * from idle-expiry and are removed only via serviceLost → [removeByName].
+     */
+    fun upsertMdns(device: Device) {
+        val fp = device.fingerprint
+        combinedState.update { prev ->
+            val newDevices = updatedDeviceList(prev.devices, device)
+            val newMdnsPresent = if (fp != null) prev.mdnsPresent + fp else prev.mdnsPresent
+            prev.copy(devices = newDevices, mdnsPresent = newMdnsPresent)
         }
     }
 
@@ -84,6 +99,7 @@ class DiscoveredDevicesStore(
             prev.copy(
                 devices = prev.devices.filter { it.fingerprint != fingerprint },
                 lastSeen = prev.lastSeen - fingerprint,
+                mdnsPresent = prev.mdnsPresent - fingerprint,
             )
         }
     }
@@ -102,12 +118,13 @@ class DiscoveredDevicesStore(
             prev.copy(
                 devices = prev.devices.filter { it.fingerprint != fp },
                 lastSeen = prev.lastSeen - fp,
+                mdnsPresent = prev.mdnsPresent - fp,
             )
         }
     }
 
     fun clear() {
-        combinedState.value = State(emptyList(), emptyMap())
+        combinedState.value = State(emptyList(), emptyMap(), emptySet())
     }
 
     fun start(scope: CoroutineScope) {
@@ -128,7 +145,7 @@ class DiscoveredDevicesStore(
     internal fun evictIdle() {
         combinedState.update { prev ->
             val expired = prev.lastSeen.entries
-                .filter { (_, mark) -> mark.elapsedNow() >= idleWindow }
+                .filter { (fp, mark) -> mark.elapsedNow() >= idleWindow && fp !in prev.mdnsPresent }
                 .map { it.key }
                 .toSet()
             if (expired.isEmpty()) return@update prev
@@ -141,9 +158,9 @@ class DiscoveredDevicesStore(
         }
     }
 
-    private fun List<Device>.replaceMatchingFingerprint(device: Device): List<Device>? {
-        val fp = device.fingerprint ?: return null
-        val idx = indexOfFirst { it.fingerprint == fp }
-        return if (idx >= 0) toMutableList().also { it[idx] = device } else null
+    private fun updatedDeviceList(devices: List<Device>, device: Device): List<Device> {
+        val fp = device.fingerprint ?: return devices + device
+        val idx = devices.indexOfFirst { it.fingerprint == fp }
+        return if (idx >= 0) devices.toMutableList().also { it[idx] = device } else devices + device
     }
 }
