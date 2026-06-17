@@ -1,6 +1,7 @@
 package com.tubetoast.tether.discovery
 
 import com.tubetoast.tether.config.DeviceNameStore
+import com.tubetoast.tether.util.ScopedJob
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.drop
 

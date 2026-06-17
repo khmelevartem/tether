@@ -1,4 +1,4 @@
-package com.tubetoast.tether.discovery
+package com.tubetoast.tether.util
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -6,8 +6,8 @@ import kotlinx.coroutines.launch
 import kotlin.concurrent.Volatile
 
 /**
- * Wraps a single background [Job] with guarded start/stop semantics.
  * Double-[start] while active is a no-op; [start] after [stop] re-launches the block.
+ * Not safe for concurrent callers: the check-then-launch in [start] is not atomic.
  */
 class ScopedJob {
     @Volatile private var job: Job? = null

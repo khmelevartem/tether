@@ -1,12 +1,14 @@
-package com.tubetoast.tether.discovery
+package com.tubetoast.tether.util
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ScopedJobTest {
@@ -27,7 +29,7 @@ class ScopedJobTest {
         // Block suspends so the job remains active when the second start is attempted.
         job.start(scope) {
             runs++
-            kotlinx.coroutines.awaitCancellation()
+            awaitCancellation()
         }
         job.start(scope) { runs++ }
         job.stop()
@@ -39,15 +41,22 @@ class ScopedJobTest {
     fun `stop cancels the running job`() {
         val scope = TestScope(UnconfinedTestDispatcher())
         val job = ScopedJob()
-        var runs = 0
-        // Block suspends indefinitely; stop should cancel it before it completes.
+        var cancelled = false
         job.start(scope) {
-            kotlinx.coroutines.awaitCancellation()
-            runs++
+            try {
+                awaitCancellation()
+            } finally {
+                cancelled = true
+            }
         }
         job.stop()
         scope.advanceUntilIdle()
-        assertEquals(0, runs)
+        assertTrue(cancelled)
+    }
+
+    @Test
+    fun `stop on a never-started ScopedJob is a no-op`() {
+        ScopedJob().stop()
     }
 
     @Test
