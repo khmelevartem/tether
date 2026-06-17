@@ -1,6 +1,7 @@
 package com.tubetoast.tether.presentation.settings
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,6 +22,7 @@ import com.tubetoast.tether.ui.preview.PreviewFixtures
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
 import com.tubetoast.tether.ui.theme.TetherTheme
+import com.tubetoast.tether.ui.theme.tetherMinTouchTarget
 
 @Composable
 fun SettingsScreen(component: SettingsComponent, modifier: Modifier = Modifier) {
@@ -77,6 +79,7 @@ private fun SettingsTopBar(
                 modifier = Modifier.semantics { heading() },
             )
         }
+        Box(modifier = Modifier.tetherMinTouchTarget())
     }
 }
 
