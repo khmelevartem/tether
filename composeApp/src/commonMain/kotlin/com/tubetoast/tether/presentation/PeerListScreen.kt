@@ -42,6 +42,7 @@ import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
 import com.tubetoast.tether.ui.preview.TransferPreviewFixtures
 import com.tubetoast.tether.ui.theme.TetherTheme
+import com.tubetoast.tether.ui.theme.tetherMinTouchTarget
 
 @Composable
 fun PeerListScreen(component: PeerListComponent, modifier: Modifier = Modifier) {
@@ -82,7 +83,7 @@ private fun DeviceListTopBar(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Box(modifier = Modifier.padding(horizontal = spacing.sm))
+        Box(modifier = Modifier.tetherMinTouchTarget())
         Box(
             modifier = Modifier.weight(1f).padding(horizontal = spacing.sm),
             contentAlignment = Alignment.Center,
