@@ -70,9 +70,8 @@ class DiscoveredDevicesStore(
     }
 
     /**
-     * mDNS-backed entry: same device-list update as [upsert] but adds the fingerprint to
-     * [State.mdnsPresent] instead of stamping [State.lastSeen]. mDNS-present peers are exempt
-     * from idle-expiry and are removed only via serviceLost → [removeByName].
+     * mDNS-present peers are exempt from idle-expiry and are removed only via
+     * serviceLost → [removeByName].
      */
     fun upsertMdns(device: Device) {
         val fp = device.fingerprint
@@ -105,20 +104,24 @@ class DiscoveredDevicesStore(
     }
 
     /**
-     * Looks up the entry whose current name matches [name] and removes it by fingerprint.
-     * Skipped if the peer's last-seen age is within [staleGrace], meaning a fresh /hello upsert
-     * or active-reuse touch has superseded this serviceLost notification.
+     * Looks up the entry whose current name matches [name] and removes it.
+     * mDNS backing is revoked unconditionally. The device and its lastSeen mark are
+     * retained when the peer's last-seen age is within [staleGrace] — a fresh /hello
+     * still vouches, so the peer transitions to idle-eligible rather than disappearing.
      */
     fun removeByName(name: String) {
         combinedState.update { prev ->
             val fp = prev.devices.firstOrNull { it.name == name }?.fingerprint
             if (fp == null) return@update prev
+            val newMdnsPresent = prev.mdnsPresent - fp
             val mark = prev.lastSeen[fp]
-            if (mark != null && mark.elapsedNow() < staleGrace) return@update prev
+            if (mark != null && mark.elapsedNow() < staleGrace) {
+                return@update prev.copy(mdnsPresent = newMdnsPresent)
+            }
             prev.copy(
                 devices = prev.devices.filter { it.fingerprint != fp },
                 lastSeen = prev.lastSeen - fp,
-                mdnsPresent = prev.mdnsPresent - fp,
+                mdnsPresent = newMdnsPresent,
             )
         }
     }
