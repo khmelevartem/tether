@@ -145,7 +145,7 @@ Linking PR ↔ issue by the `#N:` prefix in the PR title. If the PR is a retro /
 Rendered as a Chart.js stacked area chart by day (from sprint cutoff to `--today`). Two stacked areas: feature (`gold.primary`) and infra (`gold.dim`). Below: three cards — total valour / average daily valour / most glorious day.
 
 ### Artifact Spread
-Doughnut of merged PRs by size: S / M / L / unlabeled. Size derived from the `size:S|M|L` label on the linked issue (via `#N:` title prefix); PRs without a matching issue or label → "unlabeled".
+Doughnut of merged PRs by size: S / M / L / ретро-планнинг / прочее. Process PRs are split off first — a title starting with `retro` or `plan sprint` → "process" (own purple sector), since they have no backing issue and would otherwise swamp the grey remainder. For the rest, size is derived from the `size:S|M|L` label on the linked issue (via `#N:` title prefix); a PR without a matching issue or label → "unlabeled" (shown as "прочее" — early/service PRs before the `#N:` convention).
 
 ### Balance of the Week — feature share over the last 7 days
 

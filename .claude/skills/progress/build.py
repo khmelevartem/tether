@@ -415,8 +415,12 @@ def glory_of_days(prs_merged: list, issues_by_number: dict, keywords: dict,
 
 
 def artifact_spread(prs_merged: list, issues_by_number: dict) -> dict:
-    counts = {"S": 0, "M": 0, "L": 0, "unlabeled": 0}
+    counts = {"S": 0, "M": 0, "L": 0, "process": 0, "unlabeled": 0}
     for pr in prs_merged:
+        title = pr.get("title", "").lower()
+        if title.startswith("retro") or title.startswith("plan sprint"):
+            counts["process"] += 1
+            continue
         size = _issue_size(pr, issues_by_number)
         counts[size] = counts.get(size, 0) + 1
     return counts
@@ -1212,9 +1216,11 @@ def render_artifact_spread(spread: dict) -> str:
     txt_m = pal("text.muted")
     bg_card = pal("background.card")
 
-    labels = ["S", "M", "L", "unlabeled"]
-    colors = [pal("gold.primary"), pal("gold.secondary"), pal("gold.tertiary"), pal("text.muted_dim")]
-    data = [spread.get(l, 0) for l in labels]
+    keys = ["S", "M", "L", "process", "unlabeled"]
+    labels = ["S", "M", "L", "ретро/планнинг", "прочее"]
+    colors = [pal("gold.primary"), pal("gold.secondary"), pal("gold.tertiary"),
+              pal("graph_nodes.epic.fill"), pal("text.muted_dim")]
+    data = [spread.get(k, 0) for k in keys]
     labels_js = _to_script_json(labels)
     data_js = _to_script_json(data)
     colors_js = _to_script_json(colors)
