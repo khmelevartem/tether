@@ -70,9 +70,9 @@ private fun SettingsTopBar(
             onClick = onBack,
             contentDescription = "Back",
         )
-        Column(
+        Box(
             modifier = Modifier.weight(1f).padding(horizontal = spacing.sm),
-            horizontalAlignment = Alignment.CenterHorizontally,
+            contentAlignment = Alignment.Center,
         ) {
             TitleText(
                 text = "Settings",

@@ -83,9 +83,9 @@ private fun DeviceListTopBar(
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Box(modifier = Modifier.padding(horizontal = spacing.sm))
-        Column(
+        Box(
             modifier = Modifier.weight(1f).padding(horizontal = spacing.sm),
-            horizontalAlignment = Alignment.CenterHorizontally,
+            contentAlignment = Alignment.Center,
         ) {
             TitleText(text = "Tether")
         }
