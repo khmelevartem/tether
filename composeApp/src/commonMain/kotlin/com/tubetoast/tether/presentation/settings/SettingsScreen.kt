@@ -1,6 +1,6 @@
 package com.tubetoast.tether.presentation.settings
 
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,7 +15,6 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
-import com.tubetoast.tether.foundation.IsTopBarTitleCentered
 import com.tubetoast.tether.ui.designsystem.BackChevronButton
 import com.tubetoast.tether.ui.designsystem.TitleText
 import com.tubetoast.tether.ui.preview.PreviewFixtures
@@ -63,29 +62,19 @@ private fun SettingsTopBar(
     Row(
         modifier = modifier.padding(horizontal = spacing.sm, vertical = spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         BackChevronButton(
             onClick = onBack,
             contentDescription = "Back",
         )
-        if (IsTopBarTitleCentered) {
-            Box(
-                modifier = Modifier.weight(1f),
-                contentAlignment = Alignment.Center,
-            ) {
-                TitleText(
-                    text = "Settings",
-                    modifier = Modifier.semantics { heading() },
-                )
-            }
-            Box(modifier = Modifier.padding(horizontal = spacing.md))
-        } else {
+        Column(
+            modifier = Modifier.weight(1f).padding(horizontal = spacing.sm),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
             TitleText(
                 text = "Settings",
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = spacing.sm)
-                    .semantics { heading() },
+                modifier = Modifier.semantics { heading() },
             )
         }
     }

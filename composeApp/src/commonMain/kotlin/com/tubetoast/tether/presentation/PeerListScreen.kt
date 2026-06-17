@@ -19,7 +19,6 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.composables.core.SheetDetent
 import com.composables.core.rememberModalBottomSheetState
-import com.tubetoast.tether.foundation.IsTopBarTitleCentered
 import com.tubetoast.tether.presentation.banners.BannersSection
 import com.tubetoast.tether.presentation.banners.PendingOutboundBanner
 import com.tubetoast.tether.presentation.banners.PendingOutboundBannerState
@@ -81,19 +80,14 @@ private fun DeviceListTopBar(
     Row(
         modifier = modifier.padding(horizontal = spacing.sm, vertical = spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        if (IsTopBarTitleCentered) {
-            Box(modifier = Modifier.padding(horizontal = spacing.sm))
-            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                TitleText(text = "Tether")
-            }
-        } else {
-            TitleText(
-                text = "Tether",
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = spacing.sm),
-            )
+        Box(modifier = Modifier.padding(horizontal = spacing.sm))
+        Column(
+            modifier = Modifier.weight(1f).padding(horizontal = spacing.sm),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            TitleText(text = "Tether")
         }
         SettingsIconButton(
             onClick = onOpenSettings,

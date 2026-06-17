@@ -17,7 +17,7 @@ One screen — DeviceListScreen, the root of the app. This brief specifies the *
 
 **Layout.**
 
-- Top bar: app name / title in the leading region; a gear control in the trailing region that opens the settings surface ([settings/ux-brief.md](../settings/ux-brief.md)). The app name / title is always shown — the bar is present in every state of the screen (searching, populated, offline-paired). The gear is the only top-bar action; no other action buttons belong here. Title alignment and gear placement follow the platform idiom (see Per-platform deltas).
+- Top bar: app name / title, centered; a gear control in the trailing region that opens the settings surface ([settings/ux-brief.md](../settings/ux-brief.md)). The app name / title is always shown — the bar is present in every state of the screen (searching, populated, offline-paired). The gear is the only top-bar action; no other action buttons belong here. Title alignment (centered) and gear placement (trailing) are identical on every platform per the locked visual language.
 - Banner stack region: a slot directly below the top bar reserved for cross-feature banners contributed by other briefs (e.g. file-transfer's pending-outbound banner and iOS foreground constraint banner; wifi-availability's no-network state replaces the whole screen and does not use this slot). Banners stack vertically; their order, copy, and dismiss semantics are owned by the contributing brief.
 - Scrollable list of PeerCards, filling the available screen area below the banner stack (or below the top bar when no banners are present).
 - No pinned action at the bottom — actions are row-level.
@@ -86,13 +86,13 @@ All rows share the same height, internal padding, and typographic hierarchy. The
 - Offline-paired row hint: "Not on this network. Make sure Wi-Fi is on and Tether is running on it."
 - Hint dismiss: no explicit button — tap/click elsewhere dismisses.
 
-**Per-platform deltas.**
+**Per-platform deltas.** Visual treatment (top-bar layout, centered title, trailing gear) is identical everywhere — see Layout. Only the input affordance that opens the per-row context menu differs:
 
-- Android: long-press on row → bottom sheet with row actions. Material long-press pattern adapted to Tether's visual language. Top bar: title left-aligned in the leading region; gear in the trailing region.
-- iOS: long-press on row → iOS 13+ context menu. Top bar: title follows iOS HIG (centered); gear in the trailing region, per the iOS convention of trailing navigation-bar actions.
-- macOS: right-click on row → context menu popover. Top bar: title centered; gear in the trailing region.
-- Desktop (JVM): right-click or application key → context menu. Top bar: title centered; gear in the trailing region; the gear is keyboard-focusable.
-- All platforms: tap/click behaviour on Cases 1–2 and Case 3 is identical. The gear control occupies the trailing region on every platform; only title alignment differs.
+- Android: long-press on row → bottom sheet with row actions.
+- iOS: long-press on row → context menu.
+- macOS: right-click on row → context menu popover.
+- Desktop (JVM): right-click or application key → context menu; the gear is keyboard-focusable.
+- All platforms: tap/click behaviour on Cases 1–2 and Case 3 is identical.
 
 **Accessibility.**
 
@@ -140,7 +140,7 @@ DeviceListScreen is the root screen. Row variants and transitions are within-scr
 3. **Dimmed PeerCard** — the offline-paired row variant: same structure as the standard row, rendered at reduced opacity with the peer-identity accent retained.
 4. **Offline row inline hint** — an in-place expansion (below the row, non-modal) triggered by tapping a dimmed row. Plain-language hint about the absent peer. Dismisses on tap/click elsewhere.
 5. **Row state transition** — the animated in-place dimming/brightening when a row moves between Case 2 and Case 3 (200–300 ms ease-out).
-6. **Device-list top bar** — the screen top bar carrying the app name / title (leading) and the settings gear (trailing). Present in every state of the screen. The gear is the only action it carries; it enters the settings surface.
+6. **Device-list top bar** — the screen top bar carrying the centered app name / title and the settings gear (trailing). Present in every state of the screen. The gear is the only action it carries; it enters the settings surface.
 
 ## Implementer layout calls
 

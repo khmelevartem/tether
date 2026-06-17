@@ -27,7 +27,7 @@ Sections rendered: SettingsSection — File Transfer, owned by [file-transfer/ux
 
 **Layout.**
 
-- Top bar: back affordance in the leading position; "Settings" as the title.
+- Top bar: back affordance (a single chevron-left glyph) in the leading position; "Settings" as the title, centered. Layout and iconography are identical on every platform per the locked visual language.
 - Content area below the top bar: a vertically scrolling stack of feature-owned settings sections in fixed order. With one section present, the content is that section rendered directly; the host adds no section header, divider, or padding chrome of its own beyond the standard content inset.
 
 **States.**
@@ -47,12 +47,12 @@ There is no loading state (sections render synchronously from local state), no e
 
 - "Settings"
 
-**Per-platform deltas.**
+**Per-platform deltas.** Visual treatment (layout, title alignment, back glyph) is identical everywhere — see Layout. Only the input affordances that pop the screen differ:
 
-- Android: top-bar back arrow in the leading position; title left-aligned next to it. Hardware and predictive back pop the screen.
-- iOS: top-bar back chevron in the leading position following iOS HIG; title centered. Swipe-back gesture pops the screen.
-- macOS: top-bar back button (◀) in the leading position; title centered.
-- Desktop JVM: top-bar back button (◀) in the leading position; title centered. The back button is keyboard-focusable; Esc is not bound to back (no platform convention for it here).
+- Android: hardware back and predictive back pop the screen.
+- iOS: edge swipe-back gesture pops the screen.
+- macOS: window/title-bar back control and standard keyboard back pop the screen.
+- Desktop JVM: the back affordance is keyboard-focusable; Esc is not bound to back (no platform convention for it here).
 
 **Accessibility.**
 
@@ -75,7 +75,7 @@ SettingsScreen is a push onto the navigation stack from DeviceListScreen, not a 
 
 ## Conceptual components
 
-1. **Settings host top bar** — a screen top bar carrying a leading back affordance and the "Settings" title. Title alignment follows the platform idiom (left on Android, centered on iOS/macOS/Desktop). The same screen-chrome pattern recurs across pushed screens; this brief uses it for SettingsScreen.
+1. **Settings host top bar** — a screen top bar carrying a leading back affordance (chevron-left glyph) and the centered "Settings" title. The same screen-chrome pattern recurs across pushed screens; this brief uses it for SettingsScreen.
 2. **Settings section stack** — the vertical, fixed-order container of feature-owned settings sections. Owns no section content; renders the typed sequence and scrolls when content overflows.
 
 ## Open UX questions
