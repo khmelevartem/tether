@@ -34,27 +34,62 @@ class AndroidFileServerWiringTest {
     }
 
     @Test
-    fun `writeBody streams bytes and clears IS_PENDING`() = runTest {
+    fun `writeBody streams bytes but does NOT publish — row stays IS_PENDING=1`() = runTest {
         val fakeUri = Uri.parse("content://media/external/downloads/99")
         val outputStream = java.io.ByteArrayOutputStream()
         Shadows.shadowOf(contentResolver).registerOutputStream(fakeUri, outputStream)
 
         val handle = UploadHandle(destination = fakeUri.toString(), createdDirs = emptyList())
         val bytes = "hello".toByteArray()
-        val channel = ByteReadChannel(bytes)
 
-        val written = storage.writeBody(channel, handle)
+        val written = storage.writeBody(ByteReadChannel(bytes), handle)
         assertEquals(bytes.size.toLong(), written)
         assertEquals("hello", outputStream.toString(Charsets.UTF_8.name()))
 
+        // Regression: writeBody must NOT clear IS_PENDING — publish is gated on commit().
         val updates = Shadows.shadowOf(contentResolver).getUpdateStatements()
-        val pendingClear = updates.lastOrNull { it.uri == fakeUri }
-        checkNotNull(pendingClear) { "expected an update for $fakeUri but none found" }
-        assertEquals(
-            0,
-            pendingClear.contentValues.getAsInteger(MediaStore.Downloads.IS_PENDING),
-            "IS_PENDING must be cleared to 0 after writeBody",
-        )
+        val pendingClear = updates.any { stmt ->
+            stmt.uri == fakeUri &&
+                stmt.contentValues.getAsInteger(MediaStore.Downloads.IS_PENDING) == 0
+        }
+        assertTrue(!pendingClear, "writeBody must not set IS_PENDING=0; that belongs in commit()")
+    }
+
+    @Test
+    fun `commit publishes the row by setting IS_PENDING=0 exactly once`() = runTest {
+        val fakeUri = Uri.parse("content://media/external/downloads/100")
+        val outputStream = java.io.ByteArrayOutputStream()
+        Shadows.shadowOf(contentResolver).registerOutputStream(fakeUri, outputStream)
+
+        val handle = UploadHandle(destination = fakeUri.toString(), createdDirs = emptyList())
+        storage.writeBody(ByteReadChannel("data".toByteArray()), handle)
+        storage.commit(handle)
+
+        val updates = Shadows.shadowOf(contentResolver).getUpdateStatements()
+        val publishUpdates = updates.filter { stmt ->
+            stmt.uri == fakeUri &&
+                stmt.contentValues.getAsInteger(MediaStore.Downloads.IS_PENDING) == 0
+        }
+        assertEquals(1, publishUpdates.size, "commit must set IS_PENDING=0 exactly once")
+    }
+
+    @Test
+    fun `abort after writeBody deletes the row and never publishes`() = runTest {
+        val fakeUri = Uri.parse("content://media/external/downloads/101")
+        val outputStream = java.io.ByteArrayOutputStream()
+        Shadows.shadowOf(contentResolver).registerOutputStream(fakeUri, outputStream)
+
+        val handle = UploadHandle(destination = fakeUri.toString(), createdDirs = emptyList())
+        storage.writeBody(ByteReadChannel("partial".toByteArray()), handle)
+        storage.abort(handle)
+
+        val shadow = Shadows.shadowOf(contentResolver)
+        assertTrue(shadow.deletedUris.contains(fakeUri), "abort must delete the MediaStore row")
+        val published = shadow.getUpdateStatements().any { stmt ->
+            stmt.uri == fakeUri &&
+                stmt.contentValues.getAsInteger(MediaStore.Downloads.IS_PENDING) == 0
+        }
+        assertTrue(!published, "abort path must never publish (IS_PENDING=0)")
     }
 
     @Test

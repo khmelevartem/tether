@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.tubetoast.tether.presentation.devicename.DeviceNameState
+import com.tubetoast.tether.presentation.settings.FileTransferSettingsState
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.ui.theme.TetherTheme
 
@@ -21,6 +22,33 @@ object PreviewFixtures {
         Device(name = "Bob's Laptop", host = "192.168.1.55", port = 7070),
         Device(name = "Carol's iPad", host = "192.168.1.88", port = 7070),
     )
+
+    object FileTransferSettings {
+        val iosDefault = FileTransferSettingsState(
+            saveLocation = "On My iPhone → Tether/",
+            largeSelectionWarning = true,
+            saveToGallery = true,
+            showGalleryToggle = true,
+        )
+        val iosGalleryOff = FileTransferSettingsState(
+            saveLocation = "On My iPhone → Tether/",
+            largeSelectionWarning = true,
+            saveToGallery = false,
+            showGalleryToggle = true,
+        )
+        val iosWarningOff = FileTransferSettingsState(
+            saveLocation = "On My iPhone → Tether/",
+            largeSelectionWarning = false,
+            saveToGallery = true,
+            showGalleryToggle = true,
+        )
+        val nonIosDefault = FileTransferSettingsState(
+            saveLocation = "~/Downloads/Tether/",
+            largeSelectionWarning = true,
+            saveToGallery = false,
+            showGalleryToggle = false,
+        )
+    }
 
     object DeviceName {
         val display = DeviceNameState.Display("Alice's MacBook")

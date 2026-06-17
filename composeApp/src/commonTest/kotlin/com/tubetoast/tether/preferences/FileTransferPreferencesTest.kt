@@ -65,4 +65,24 @@ class FileTransferPreferencesTest {
     fun `setSaveLocation when not writable throws UnsupportedOperationException`() = runTest {
         assertFailsWith<UnsupportedOperationException> { readOnlyPrefs().setSaveLocation("/any/path") }
     }
+
+    @Test
+    fun `observeSaveToGallery default is true`() = runTest {
+        assertTrue(writablePrefs().observeSaveToGallery().first())
+    }
+
+    @Test
+    fun `setSaveToGallery false then observeSaveToGallery emits false`() = runTest {
+        val p = writablePrefs()
+        p.setSaveToGallery(false)
+        assertFalse(p.observeSaveToGallery().first())
+    }
+
+    @Test
+    fun `setSaveToGallery true then observeSaveToGallery emits true`() = runTest {
+        val p = writablePrefs()
+        p.setSaveToGallery(false)
+        p.setSaveToGallery(true)
+        assertTrue(p.observeSaveToGallery().first())
+    }
 }

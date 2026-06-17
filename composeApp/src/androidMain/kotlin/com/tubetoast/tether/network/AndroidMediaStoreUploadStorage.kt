@@ -49,10 +49,15 @@ internal class AndroidMediaStoreUploadStorage(
                 }
             }
         }
+        log.info { "wrote $bytesWritten bytes → $uri (pending)" }
+        return bytesWritten
+    }
+
+    override fun commit(handle: UploadHandle) {
+        val uri = Uri.parse(handle.destination)
         val updated = ContentValues().apply { put(MediaStore.Downloads.IS_PENDING, 0) }
         contentResolver.update(uri, updated, null, null)
-        log.info { "wrote $bytesWritten bytes → $uri" }
-        return bytesWritten
+        log.info { "published MediaStore row → $uri" }
     }
 
     override fun abort(handle: UploadHandle) {

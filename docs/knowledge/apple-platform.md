@@ -166,3 +166,28 @@ CFRelease(dict)
 **Fix:** wrap every build-setting value containing `$(…)`, `@`, spaces, or other non-word characters in double quotes, mirroring Xcode's own `PRODUCT_NAME = "$(TARGET_NAME)";`. After any hand-edit, confirm the file still parses with `xcodebuild -list -project iosApp/iosApp.xcodeproj` — the only reliable oracle, since `plutil` / `PlistBuddy` reject the `// !$*UTF8*$!` header regardless of validity.
 
 **Scope:** hand-editing pbxproj is the highest-risk part of iOS target work — prefer the Xcode GUI for structural changes. The quoting rule applies to any old-style plist build setting.
+
+---
+
+## `UTType.typeWithFilenameExtension(ext, conformingToType:)` always matches
+
+**Symptom:** classifying a file by extension always returns the first candidate type. Code like "is this a movie? else is it an image?" reports *every* extension — `mp4`, `mov`, `pdf`, `txt` — as the first type tested. A received video then gets routed down the image path (`creationRequestForAssetFromImageAtFileURL`) and PhotoKit rejects it with `PHPhotosErrorDomain` code `3302` (observed; an invalid-resource error — the raw codes are not in Apple's public docs).
+
+**Root cause:** the two-argument `typeWithFilenameExtension(ext, conformingToType:)` **never returns null** for a non-empty extension. When no registered type matches, the OS synthesises a *dynamic* `UTType` (`dyn.…`) declared to conform to the requested supertype — so `typeWithFilenameExtension(ext, conformingToType: imageType) != null` is true for any input, including a video. The discrimination predicate is degenerate.
+
+**Fix:** resolve the canonical type for the extension with the single-arg `typeWithFilenameExtension(ext)` (which *does* return null for unknown extensions), then test `conformsToType` explicitly:
+
+```kotlin
+val extType = UTType.typeWithFilenameExtension(ext) ?: return null
+when {
+    extType.conformsToType(movieType) -> MediaType.Video
+    extType.conformsToType(imageType) -> MediaType.Image
+    else -> null
+}
+```
+
+`conformsToType:` is an ObjC category method, so K/N exposes it as a package-level extension function — needs an explicit `import platform.UniformTypeIdentifiers.conformsToType`.
+
+**Not unit-testable:** in the bare K/N test runner (`iosSimulatorArm64Test`) `typeWithIdentifier("public.image")` resolves, but `typeWithFilenameExtension(ext)` returns null for *every* extension — extension→type resolution has no app-bundle type database behind it there. So the real `classifyByUTType` returns null for all input in tests and the bug cannot even reproduce; the regression guard is the iOS-receive smoke block (booted app, real DB), not an `appleTest`. The decorator's injectable `mediaClassifier` seam exists to test the orchestration (auth gate, de-dup, delete-on-success) with a fake — it does not cover `classifyByUTType` itself, which has no unit coverage by design.
+
+**Reference:** `classifyByUTType` in `network/PhotosUploadStorageDecorator.kt`; smoke block `block-5.2-ios-receive.sh`.

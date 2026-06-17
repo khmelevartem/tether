@@ -536,7 +536,7 @@ Each row is a single component with a stable layout across all statuses:
 
 ### SettingsSection — File Transfer
 
-**Purpose.** The settings area where the user configures the save location and large-selection warning preferences. The per-peer auto-send toggle lives in the expanded PeerCard, not here.
+**Purpose.** The settings area where the user configures the save location, whether received media goes to the iOS Photos library, and the large-selection warning. The per-peer auto-send toggle lives in the expanded PeerCard, not here.
 
 **Entry points.** App settings surface (existing) — a dedicated "File Transfer" section within it.
 
@@ -544,22 +544,31 @@ Each row is a single component with a stable layout across all statuses:
 
 - Section header: "File Transfer"
 - Save location row: label "Save location"; value shows the current path (e.g. "Downloads/Tether/"); on editable platforms, a disclosure affordance (chevron or "Change" link) opens the system folder picker. On iOS: read-only, no disclosure affordance.
+- Save-to-Photos toggle row (**iOS only**): label "Save photos & videos to Photos"; toggle control (On by default); caption beneath the label: "Received photos and videos go to your Photos library instead of Files." Sits directly beneath the Save location row — both rows describe where received media lands, and the caption distinguishes the gallery destination from the Files destination named above.
 - Large-selection warning toggle row: label "Show large-selection warnings"; toggle control (On by default). When Off, LargeSelectionConfirmDialog is suppressed globally.
 
 Auto-send is configured per-peer via the expanded PeerCard (see PeerCard § Idle expanded).
 
 **States.**
 
-- **Android (editable):** save location shows current path; tap row → system folder picker to change.
-- **iOS (read-only):** save location shows "On My iPhone → Tether/"; no change affordance. A caption beneath: "iOS does not allow changing this location."
-- **macOS (editable):** save location shows current path (default: "~/Downloads/Tether/"); disclosure affordance → system folder picker (Open Panel).
-- **Desktop JVM (editable):** save location shows current path (default: "Downloads/Tether/"); disclosure affordance → system folder picker.
+- **Android (editable):** save location shows current path; tap row → system folder picker to change. No save-to-Photos row.
+- **iOS (read-only):** save location shows "On My iPhone → Tether/"; no change affordance. A caption beneath: "iOS does not allow changing this location." The save-to-Photos row is present.
+- **macOS (editable):** save location shows current path (default: "~/Downloads/Tether/"); disclosure affordance → system folder picker (Open Panel). No save-to-Photos row.
+- **Desktop JVM (editable):** save location shows current path (default: "Downloads/Tether/"); disclosure affordance → system folder picker. No save-to-Photos row.
 - All platforms: large-selection warning toggle is present and functions identically.
+
+**Save-to-Photos toggle states (iOS).**
+
+- **On (default):** received photos and videos are saved to the Photos library; once the save is confirmed, the file is removed from Files so the media lives only in the gallery. iOS's own add-to-Photos consent prompt is requested at the first inbound media save while the toggle is On — see § Flows. The toggle reflects the user's intent; it does not by itself reflect whether Photos permission has been granted. If the save cannot complete (permission denied, unsupported codec, or save failure), the file stays in Files — it is never lost.
+- **Off:** received media stays in `On My iPhone → Tether/` and no Photos permission is requested. Flipping to Off after a grant does not move newly received media — from that point it stays in Files.
+
+The denied-permission recovery caption (a caption variant shown beneath the On toggle when add-to-Photos access has been denied) is tracked with the deferred Photos-permission UX.
 
 **Interactions.**
 
 - Tap save location row (editable platforms): opens system folder picker. On confirmation, path updates in the row.
 - Tap save location row (iOS): no action.
+- Tap save-to-Photos toggle (iOS): flips On/Off immediately, no confirm dialog. Flipping On does not itself trigger the OS prompt — the prompt fires at the next actual media save (see § Flows). Flipping Off stops future gallery copies; it requests no permission and removes nothing already saved.
 - Tap large-selection warning toggle: flips On/Off immediately. When flipped to On, re-enables LargeSelectionConfirmDialog for future large selections.
 
 **Copy.**
@@ -569,19 +578,22 @@ Auto-send is configured per-peer via the expanded PeerCard (see PeerCard § Idle
 - "Downloads/Tether/" (or platform-specific default path)
 - "On My iPhone → Tether/" (iOS)
 - "iOS does not allow changing this location."
+- "Save photos & videos to Photos" (iOS toggle label)
+- "Received photos and videos go to your Photos library instead of Files." (iOS toggle caption)
 - "Show large-selection warnings"
 
 **Per-platform deltas.**
 
-- Android: save location editable via the OS folder picker.
-- iOS: save location read-only with explanatory caption.
-- macOS: save location editable via system folder picker (Open Panel, folder selection mode).
-- Desktop JVM: save location editable via system folder picker.
+- Android: save location editable via the OS folder picker. No save-to-Photos row — received media already lands in a gallery-indexed, user-reachable location.
+- iOS: save location read-only with explanatory caption. Save-to-Photos toggle row present, On by default.
+- macOS: save location editable via system folder picker (Open Panel, folder selection mode). No save-to-Photos row.
+- Desktop JVM: save location editable via system folder picker. No save-to-Photos row.
 
 **Accessibility.**
 
 - Save location row (editable): semantic label "Change save location, currently \<path\>".
 - Save location row (iOS, read-only): semantic label "Save location: On My iPhone → Tether/. This location cannot be changed on iOS."
+- Save-to-Photos toggle (iOS): semantic label "Save received photos and videos to Photos, currently \<On/Off\>".
 - Large-selection warning toggle: semantic label "Show large-selection warnings, currently \<On/Off\>".
 
 ---
@@ -698,6 +710,19 @@ The drop is accepted at the window root — on any screen, not only DeviceListSc
 7. Sender-side: user taps a Failed row → that file is re-sent; row's status transitions Failed → In progress → Done (or back to Failed). [Retry all →] CTA re-sends every Failed file at once. Row positions remain stable.
 8. User taps back → returns to DeviceListScreen; PeerCard underneath retains its current state.
 
+### Flow 12 — iOS: receive media to Photos, first-time consent (iOS only)
+
+1. The save-to-Photos toggle is On (default). An inbound transfer carrying ≥1 photo or video completes on iOS. Each received file first lands in Files (`On My iPhone → Tether/`) as the holding location.
+2. For the photos and videos in the batch, Tether saves them to the Photos library. Because add-to-Photos access has not been requested before, iOS's own add-to-Photos prompt appears.
+3. On the prompt:
+   - **Granted:** the photos and videos are saved to Photos; once each save is confirmed, that file is removed from Files so the media lives only in the gallery. The PeerCard's Received state and its [Show details →] breakdown are unchanged — there is no separate "saved to Photos" surface; the move is silent.
+   - **Denied:** nothing is saved to Photos; the media stays in Files. No blocking error and no per-transfer alert — the Received state completes normally. The toggle stays On reflecting the user's intent. The denied-permission recovery surface is tracked with the deferred Photos-permission UX.
+4. After a grant, subsequent inbound media is moved to Photos silently with no further prompt. After a denial, subsequent inbound media silently stays in Files; Tether does not re-prompt (iOS does not re-show the add-to-Photos prompt once decided) and does not nag. A photo or video whose Photos save fails for any other reason (e.g. unsupported codec) also stays in Files — it is never lost. Non-media files in any batch always stay in Files regardless of the toggle or the permission outcome.
+
+With the toggle Off, none of the above runs: no OS prompt, media stays in Files only — behaviour identical to a Files-only receiver.
+
+A Tether-owned rationale screen that precedes iOS's add-to-Photos prompt is tracked in a follow-up issue.
+
 ---
 
 ## Navigation
@@ -765,6 +790,7 @@ The **picker-mode chooser sheet** is a bottom-sheet modal overlaid on DeviceList
 22. **macOS/Desktop window-close transfer warning** — sheet attached to the window when the user closes Tether mid-transfer.
 23. **Settings save-location row** — editable (with system folder picker disclosure) on Android/macOS/Desktop; read-only with explanatory caption on iOS.
 24. **Settings large-selection warning toggle** — toggle in SettingsSection — File Transfer; On by default; re-enables LargeSelectionConfirmDialog after "Don't show again" suppression.
+25. **Settings save-to-Photos toggle** — iOS-only toggle in SettingsSection — File Transfer; On by default; carries the move-explanation caption that received media goes to the gallery instead of Files.
 
 ---
 
