@@ -28,8 +28,7 @@ class BonjourStateTest {
         }
     }
 
-    // staleGrace=ZERO so mDNS serviceLost (BrowseRemove) always evicts in unit tests,
-    // matching real-world timing where serviceLost arrives seconds after resolution.
+    // staleGrace=ZERO so mDNS serviceLost (BrowseRemove) always evicts in unit tests.
     private val store = DiscoveredDevicesStore(staleGrace = Duration.ZERO)
     private val sink = RecordingSink()
     private val state = BonjourState(store, sink, ownFingerprint = "") { _, _ -> false }

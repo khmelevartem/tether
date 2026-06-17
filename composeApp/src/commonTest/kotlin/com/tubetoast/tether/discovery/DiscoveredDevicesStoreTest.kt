@@ -17,7 +17,7 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TestTimeSource
 
 class DiscoveredDevicesStoreTest {
-    // staleGrace=ZERO so removeByName always evicts in structural tests that predate idle-expiry.
+    // staleGrace=ZERO so removeByName always evicts.
     private val store = DiscoveredDevicesStore(staleGrace = Duration.ZERO)
 
     private fun device(name: String, host: String = "1.2.3.4", port: Int = 8080, fingerprint: String = "fp-$name") =
