@@ -334,6 +334,41 @@ class HelloRouteTest {
     }
 
     @Test
+    fun `fresh hello survives mdns serviceLost within staleGrace (issue 326)`() {
+        // staleGrace=10s (default) — the /hello stamps lastSeen, so an immediate removeByName must NOT evict.
+        val store = DiscoveredDevicesStore()
+        val server = newServer(store = store)
+        val port = server.start()
+        val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
+        try {
+            runBlocking {
+                client.post("http://localhost:$port/hello") {
+                    contentType(ContentType.Application.Json)
+                    setBody(
+                        PeerAnnouncement(
+                            alias = "PeerGrace",
+                            fingerprint = "fp-grace",
+                            port = 5100,
+                            deviceType = DeviceType.Android,
+                        ),
+                    )
+                }
+            }
+            assertTrue(store.devices.value.isNotEmpty(), "device must be upserted after /hello")
+
+            // Simulate an older mDNS serviceLost firing for the same name immediately after.
+            store.removeByName("PeerGrace")
+
+            assertTrue(
+                store.devices.value.any { it.fingerprint == "fp-grace" },
+                "fresh /hello must not be displaced by a stale mDNS serviceLost within staleGrace",
+            )
+        } finally {
+            client.close()
+        }
+    }
+
+    @Test
     fun `hello uses TCP remoteAddress not body ip for device host`() {
         val store = DiscoveredDevicesStore()
         val server = newServer(store = store)
