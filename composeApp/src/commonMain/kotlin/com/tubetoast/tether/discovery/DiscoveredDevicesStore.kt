@@ -3,7 +3,6 @@ package com.tubetoast.tether.discovery
 import com.tubetoast.tether.protocol.Device
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalForInheritanceCoroutinesApi
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,11 +11,9 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.info
 import ru.pocketbyte.kydra.log.wrapper.withTag
-import kotlin.concurrent.Volatile
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
@@ -58,7 +55,7 @@ class DiscoveredDevicesStore(
         }
     }
 
-    @Volatile private var janitorJob: Job? = null
+    private val janitor = ScopedJob()
 
     fun upsert(device: Device) {
         val fp = device.fingerprint
@@ -131,8 +128,7 @@ class DiscoveredDevicesStore(
     }
 
     fun start(scope: CoroutineScope) {
-        if (janitorJob?.isActive == true) return
-        janitorJob = scope.launch {
+        janitor.start(scope) {
             while (isActive) {
                 delay(sweepInterval)
                 evictIdle()
@@ -141,8 +137,7 @@ class DiscoveredDevicesStore(
     }
 
     fun stop() {
-        janitorJob?.cancel()
-        janitorJob = null
+        janitor.stop()
     }
 
     internal fun evictIdle() {
