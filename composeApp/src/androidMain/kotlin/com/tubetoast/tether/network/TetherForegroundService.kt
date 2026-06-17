@@ -79,6 +79,7 @@ class TetherForegroundService : LifecycleService() {
                 mdnsDiscovery.start(deviceName, port)
                 container.nameRepublisher.start(lifecycleScope)
                 container.rendezvousAnnouncer.start(lifecycleScope)
+                container.discoveredDevicesStore.start(lifecycleScope)
                 runningMdnsDiscovery = mdnsDiscovery
                 log.info { "mDNS started: name=$deviceName port=$port" }
             } catch (e: Exception) {
@@ -112,6 +113,7 @@ class TetherForegroundService : LifecycleService() {
         container.transferActivityTracker.releaseAll()
         container.nameRepublisher.stop()
         container.rendezvousAnnouncer.stop()
+        container.discoveredDevicesStore.stop()
         runningMdnsDiscovery?.let { mdnsDiscovery ->
             try {
                 // lifecycleScope is already cancelled by onDestroy; runBlocking for brief teardown.

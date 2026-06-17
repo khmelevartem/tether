@@ -36,7 +36,7 @@ class PeerFileSender(
                     onProgress = onProgress,
                 )
             ) {
-                is SendResult.Success -> Unit
+                is SendResult.Success -> discoveredDevicesStore.touch(device.fingerprint)
                 is SendResult.Failure -> throw PeerUnreachableException(RuntimeException(result.reason))
             }
         } finally {

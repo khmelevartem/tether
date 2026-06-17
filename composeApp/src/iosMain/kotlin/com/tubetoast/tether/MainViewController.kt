@@ -65,6 +65,7 @@ fun MainViewController() = run {
                 container.mdnsDiscovery.start(name, port = port)
                 container.nameRepublisher.start(scope)
                 container.rendezvousAnnouncer.start(scope)
+                container.discoveredDevicesStore.start(scope)
                 container.autoSendDispatcher.start()
                 drainSharedFiles()
             }
@@ -86,6 +87,7 @@ fun MainViewController() = run {
                 NSNotificationCenter.defaultCenter.removeObserver(sharedFilesObserver)
                 container.nameRepublisher.stop()
                 container.rendezvousAnnouncer.stop()
+                container.discoveredDevicesStore.stop()
                 scope.cancel()
                 // scope is cancelled above; runBlocking for brief teardown.
                 runBlocking { container.mdnsDiscovery.stop() }

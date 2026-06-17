@@ -32,7 +32,10 @@ class RendezvousAnnouncer(
                     if (key in acknowledgedKeys.value) continue
                     log.debug { "announce → ${device.id}" }
                     val ok = client.sendHello(device, info)
-                    if (ok) acknowledgedKeys.update { it + key }
+                    if (ok) {
+                        acknowledgedKeys.update { it + key }
+                        store.touch(device.fingerprint)
+                    }
                 }
             }
         }

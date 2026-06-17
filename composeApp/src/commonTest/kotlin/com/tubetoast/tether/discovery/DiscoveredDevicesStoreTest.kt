@@ -1,16 +1,24 @@
+@file:OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+
 package com.tubetoast.tether.discovery
 
 import com.tubetoast.tether.protocol.Device
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TestTimeSource
 
 class DiscoveredDevicesStoreTest {
-    private val store = DiscoveredDevicesStore()
+    // staleGrace=ZERO so removeByName always evicts in structural tests that predate idle-expiry.
+    private val store = DiscoveredDevicesStore(staleGrace = Duration.ZERO)
 
     private fun device(name: String, host: String = "1.2.3.4", port: Int = 8080, fingerprint: String = "fp-$name") =
         Device(name = name, host = host, port = port, fingerprint = fingerprint)
@@ -176,5 +184,82 @@ class DiscoveredDevicesStoreTest {
         store.upsert(device("A", fingerprint = "fp1"))
         store.removeByFingerprint("fp-unknown")
         assertEquals(1, store.devices.value.size)
+    }
+
+    // ── idle-expiry (DoD) ──────────────────────────────────────────────────────
+
+    @Test
+    fun `hello-only peer is idle-expired after idleWindow`() {
+        val clock = TestTimeSource()
+        val timedStore = DiscoveredDevicesStore(idleWindow = 5.minutes, timeSource = clock)
+        timedStore.upsert(device("Peer", fingerprint = "fp1"))
+        assertEquals(1, timedStore.devices.value.size)
+
+        clock += 5.minutes
+        timedStore.evictIdle()
+
+        assertTrue(timedStore.devices.value.isEmpty())
+    }
+
+    @Test
+    fun `touch before idleWindow keeps peer alive past what would otherwise expire it`() {
+        val clock = TestTimeSource()
+        val timedStore = DiscoveredDevicesStore(idleWindow = 5.minutes, timeSource = clock)
+        timedStore.upsert(device("Peer", fingerprint = "fp1"))
+
+        clock += 4.minutes
+        timedStore.touch("fp1")
+
+        // Without touch the peer would expire at t=5m; with touch it expires at t=4m+5m=9m.
+        clock += 4.minutes + 59.seconds
+        timedStore.evictIdle()
+        assertEquals(1, timedStore.devices.value.size, "peer should still be alive")
+
+        clock += 1.seconds
+        timedStore.evictIdle()
+        assertTrue(timedStore.devices.value.isEmpty())
+    }
+
+    @Test
+    fun `fresh hello upsert is NOT displaced by subsequent removeByName within staleGrace`() {
+        val clock = TestTimeSource()
+        val timedStore = DiscoveredDevicesStore(staleGrace = 10.seconds, timeSource = clock)
+        timedStore.upsert(device("Peer", fingerprint = "fp1"))
+
+        // serviceLost arrives almost immediately — peer was re-proven by fresh upsert above
+        clock += 5.seconds
+        timedStore.removeByName("Peer")
+
+        assertEquals(1, timedStore.devices.value.size, "fresh upsert must survive serviceLost within staleGrace")
+    }
+
+    @Test
+    fun `stale entry IS evicted by removeByName when last-seen exceeds staleGrace`() {
+        val clock = TestTimeSource()
+        val timedStore = DiscoveredDevicesStore(staleGrace = 10.seconds, timeSource = clock)
+        timedStore.upsert(device("Peer", fingerprint = "fp1"))
+
+        clock += 11.seconds
+        timedStore.removeByName("Peer")
+
+        assertTrue(timedStore.devices.value.isEmpty(), "genuinely stale entry must be evicted by removeByName")
+    }
+
+    @Test
+    fun `janitor loop driven by virtual time expires idle peers`() = runTest {
+        val clock = TestTimeSource()
+        val timedStore = DiscoveredDevicesStore(
+            idleWindow = 5.minutes,
+            sweepInterval = 30.seconds,
+            timeSource = clock,
+        )
+        timedStore.upsert(device("Peer", fingerprint = "fp1"))
+        timedStore.start(this)
+
+        clock += 5.minutes + 30.seconds
+        advanceTimeBy(5.minutes + 30.seconds)
+
+        assertTrue(timedStore.devices.value.isEmpty())
+        timedStore.stop()
     }
 }

@@ -5,6 +5,7 @@ import com.tubetoast.tether.protocol.Device
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.time.Duration
 
 class BonjourStateTest {
     private class RecordingSink : BonjourState.Sink {
@@ -27,7 +28,9 @@ class BonjourStateTest {
         }
     }
 
-    private val store = DiscoveredDevicesStore()
+    // staleGrace=ZERO so mDNS serviceLost (BrowseRemove) always evicts in unit tests,
+    // matching real-world timing where serviceLost arrives seconds after resolution.
+    private val store = DiscoveredDevicesStore(staleGrace = Duration.ZERO)
     private val sink = RecordingSink()
     private val state = BonjourState(store, sink, ownFingerprint = "") { _, _ -> false }
 
