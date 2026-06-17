@@ -1,6 +1,6 @@
 ---
 name: review-ux-brief
-description: Reviews a UX brief (`docs/product/features/<slug>/ux-brief.md`) for UX-domain quality — platform-idiom correctness, domain-state completeness, accessibility-label quality, failure-mode realism, copy voice, information-architecture cohesion, conceptual-component naming. Judgment work, not template-checking. Use in the /document, /implement, and /code-review review waves when the diff touches a `ux-brief.md`. Distinct from `review-ux-conformance` (judges UI code against the brief) and `review-guides` (judges the brief's structural conformance to the template).
+description: Reviews a UX brief (`docs/product/features/<slug>/ux-brief.md`) for UX-domain quality — platform-idiom correctness, domain-state completeness, accessibility-label quality, failure-mode realism, copy voice, information-architecture cohesion, conceptual-component naming. Judgment work, not template-checking. Use in the /implement and /code-review review waves when the diff touches a `ux-brief.md`. Distinct from `review-ux-conformance` (judges UI code against the brief) and `review-guides` (judges the brief's structural conformance to the template).
 tools: Bash, Read, Grep, Glob, WebFetch
 model: opus
 ---
