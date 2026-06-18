@@ -196,7 +196,7 @@ Docs-track ends here: producers return their artifacts; an open question a produ
 
 **Commit before reviewer wave** — see SKILL.md §The shared engine → Review-wave engine.
 
-**Fast reviewer wave — `track==code`.** Dispatch the `fast` column from [`rosters.md`](rosters.md), filtered by each reviewer's predicate against the current profile and diff. Dispatch in parallel. See SKILL.md §The shared engine → Review-wave engine for fan-out, `[REQUIRED]` aggregation, and delta re-review rules.
+**Fast reviewer wave — `track==code`.** Dispatch the `code · fast` column from [`rosters.md`](rosters.md), filtered by each reviewer's predicate against the current profile and diff. Dispatch in parallel. See SKILL.md §The shared engine → Review-wave engine for fan-out, `[REQUIRED]` aggregation, and delta re-review rules.
 
 **Iteration loop (code-track):**
 
@@ -265,11 +265,11 @@ code-track: inactive.
 
 Before Wave A — working tree must be clean (committed). If there are uncommitted edits after Step 6 or Step 7 — commit them. Reviewers read `git diff main...HEAD`.
 
-**Wave A.** Dispatch the `full-A` column from [`rosters.md`](rosters.md) in parallel, filtered by each reviewer's predicate. Each agent reviews the local working tree (`git diff main...HEAD`). Pass the issue number and the relevant brief path (for `review-ux-conformance`).
+**Wave A.** Dispatch the track's full-review column from [`rosters.md`](rosters.md) — `code · full` or `docs · full` — in parallel, filtered by each reviewer's predicate; Wave A is every reviewer in that column except `review-adversarial`. Each agent reviews the local working tree (`git diff main...HEAD`). Pass the issue number and the relevant brief path (for `review-ux-conformance`).
 
 If the PR establishes or extends canon (docs-track), tell each reviewer to apply the new rule to the diff itself.
 
-**Wave B.** Dispatch `review-adversarial` with the combined Wave A findings as input.
+**Wave B.** Dispatch `review-adversarial` (the Wave B row of that column) with the combined Wave A findings as input.
 
 **Iteration.** Aggregate `[REQUIRED]` findings. Apply via the producing agent (with the symmetry-pass instruction). Invokes the review-wave engine from SKILL.md §The shared engine — including delta re-review rules and the iteration limit from [`config.md`](config.md) §Iteration limits.
 
