@@ -1,6 +1,6 @@
 # Diagram specs — Manual DI in KMP article
 
-Five inline figures (1–5) are referenced by both `manual-di-kmp.ru.md` and `manual-di-kmp.en.md`, plus a cover/hook image (6) that the publishing platform overlays with the title (not linked inline). Filenames are language-neutral (the diagrams carry only code identifiers and arrows), so one set serves both articles. Two of the inline figures are direct descendants of the diagrams in the original `di-structure.md` (`containers.png`, `api-impl.png`, `di-structure.png`) and can be redrawn from those.
+Four inline figures (1–4) are referenced by both `manual-di-kmp.ru.md` and `manual-di-kmp.en.md`, plus a cover/hook image (5) that the publishing platform overlays with the title (not linked inline). Filenames are language-neutral (the diagrams carry only code identifiers and arrows), so one set serves both articles. Two of the inline figures are direct descendants of the diagrams in the original `di-structure.md` (`containers.png`, `api-impl.png`) and can be redrawn from those.
 
 Style guidance, consistent across all five:
 
@@ -90,34 +90,7 @@ This is essentially the original `api-impl.png` with class names stripped to rol
 
 ---
 
-## 5. `manual-di-init-order.png`
-
-**Referenced in:** "Initialization order."
-
-**Shows:** the five-step assembly sequence of a library container. Direct descendant of the original `di-structure.png`, generalised.
-
-**Layout:** four actor columns, numbered arrows between them, matching the five steps in the prose.
-
-- **Application** (yellow): box `LibConfigContainer impl` and a result slot `val container: LibInternalContainer`, exposing two faces — `lib: LibPublicContainer` (green) and `internalLib: LibInternalContainer` (purple).
-- **createLibContainer(config)** (green): the Impl-module factory function — no longer a `LibModule` interface. Shows `build` and `return container`.
-- **LibPlatformContainer** (purple): platform-specific internal entity.
-- **LibInternalContainer / LibPublicContainer** (purple outer, green inner): the assembled container with `publicDependency` (green) and `internalDependency` (purple) fields.
-
-**Numbered arrows (must match prose steps 1–5):**
-
-1. `Application` → `createLibContainer(config)` — passes the config.
-2. `createLibContainer` → builds `LibPlatformContainer`, then → assembles the container.
-3. assembled container → returned to `Application`, stored as `val container: LibInternalContainer`.
-4. `Application` exposes two faces: `lib` (public) outward via `LibProvider`, `internalLib` (internal) inward via the internal provider.
-5. consumed: an external app component reads the **public** face; a library-internal class reads the **internal** face.
-
-**Annotation:** colour legend box in the corner — yellow = application, green = public, purple = internal.
-
-This is the original `di-structure.png` with the colour semantics preserved and class names replaced by roles.
-
----
-
-## 6. `manual-di-kmp-hook.png` — cover / hook image
+## 5. `manual-di-kmp-hook.png` — cover / hook image
 
 **Referenced as:** the article's lead/cover image (Habr cover, Medium hero). Evocative, **not** a diagram — pure visual hook, no semantic load.
 
@@ -127,7 +100,7 @@ This is the original `di-structure.png` with the colour semantics preserved and 
 
 **Mood:** craftsmanship, clarity, calm focus. Not corporate, not cartoonish.
 
-**Palette:** dark background; live wires in Kotlin-ish purple/orange; warm key light on the hands. Matches the dark canvas of the five diagrams.
+**Palette:** dark background; live wires in Kotlin-ish purple/orange; warm key light on the hands. Matches the dark canvas of the four diagrams.
 
 **Format:** wide cover ratio (16:9, or Habr's cover crop). **No text in the image** — the title is overlaid by the platform.
 
@@ -137,4 +110,4 @@ This is the original `di-structure.png` with the colour semantics preserved and 
 
 ## Reuse note
 
-If redrawing from scratch is too much, figures 3, 4, and 5 can be produced by editing the originals (`api-impl.png`, `containers.png`, `di-structure.png`) — replace each real class name with its role label from the boxes above and keep the existing layout and colours. Figures 1 and 2 are new and have no original to edit from.
+If redrawing from scratch is too much, figures 3 and 4 can be produced by editing the originals (`api-impl.png`, `containers.png`) — replace each real class name with its role label from the boxes above and keep the existing layout and colours. Figures 1 and 2 are new and have no original to edit from.
