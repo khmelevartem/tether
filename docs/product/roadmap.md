@@ -29,6 +29,7 @@ Things the user will ask for soon after MVP, but that the product can survive wi
 
 Directions, not commitments. Some of these may turn out to be wrong; some are paid candidates (see [monetization.md](monetization.md)).
 
+- **Move, not just copy** — after a confirmed transfer, offer to delete the sent files from the source device, turning the operation from "copy" into "move". Hypothesis: users freeing space on one device want this; needs care around what "confirmed" means and irreversible deletion.
 - **Folder sync** — automatic mirroring of selected folders between paired devices. Pro candidate.
 - **Multi-peer / group send** — fan out to several devices in one action. Pro candidate.
 - **Linux desktop** target (JVM-based).
