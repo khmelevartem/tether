@@ -1,5 +1,5 @@
 {
-  "_doc": "Title-эвристики для категоризации PR / issue в feature vs infra / docs. Slash-command pattern (`/foo`) — сильный infra-сигнал: правка скиллов/команд почти всегда мета-работа. Полисемные существительные (`progress`, `document`) из feature_keywords исключены — слово «document» встречается в названиях PR и issue-заголовках как обычное слово, не как имя скилла, и создаёт мис-классификацию.",
+  "_doc": "Title-эвристики для категоризации PR / issue в feature vs infra / docs. Slash-command pattern (`/foo`) — сильный infra-сигнал: правка скиллов/команд почти всегда мета-работа. Полисемные существительные (`progress`, `document`) из feature_keywords исключены — слово «document» встречается в названиях PR и issue-заголовках как обычное слово и создаёт мис-классификацию.",
   "slash_command_pattern": "title contains \\B/[a-z][a-z0-9-]+ → infra",
   "infra_keywords": [
     "retro", "skill", "agent", "sprint", "ci", "gradle", "workflow",
