@@ -1,6 +1,6 @@
 # Diagram specs — Manual DI in KMP article
 
-Five figures are referenced by both `manual-di-kmp.ru.md` and `manual-di-kmp.en.md`. Filenames are language-neutral (the diagrams carry only code identifiers and arrows), so one set serves both articles. Two of them are direct descendants of the diagrams in the original `di-structure.md` (`containers.png`, `api-impl.png`, `di-structure.png`) and can be redrawn from those.
+Five inline figures (1–5) are referenced by both `manual-di-kmp.ru.md` and `manual-di-kmp.en.md`, plus a cover/hook image (6) that the publishing platform overlays with the title (not linked inline). Filenames are language-neutral (the diagrams carry only code identifiers and arrows), so one set serves both articles. Two of the inline figures are direct descendants of the diagrams in the original `di-structure.md` (`containers.png`, `api-impl.png`, `di-structure.png`) and can be redrawn from those.
 
 Style guidance, consistent across all five:
 
@@ -98,22 +98,40 @@ This is essentially the original `api-impl.png` with class names stripped to rol
 
 **Layout:** four actor columns, numbered arrows between them, matching the five steps in the prose.
 
-- **Application** (yellow): box `LibConfigContainer impl` and a result slot `val lib: LibPublicContainer`.
-- **LibModule** (green): `fun create(config)` and `return container`.
+- **Application** (yellow): box `LibConfigContainer impl` and a result slot `val container: LibInternalContainer`, exposing two faces — `lib: LibPublicContainer` (green) and `internalLib: LibInternalContainer` (purple).
+- **createLibContainer(config)** (green): the Impl-module factory function — no longer a `LibModule` interface. Shows `build` and `return container`.
 - **LibPlatformContainer** (purple): platform-specific internal entity.
 - **LibInternalContainer / LibPublicContainer** (purple outer, green inner): the assembled container with `publicDependency` (green) and `internalDependency` (purple) fields.
 
 **Numbered arrows (must match prose steps 1–5):**
 
-1. `Application` → `LibModule.create` — passes the config.
-2. `LibModule.create` → builds `LibPlatformContainer`, then → assembles the container.
-3. assembled container → exposed back (its internal field reachable from a library-internal class).
-4. `LibModule` `return container` → `Application` stores it as `val lib`.
-5. `val lib` → consumed: app component reads the **public** field; a library-internal class reads the **internal** field.
+1. `Application` → `createLibContainer(config)` — passes the config.
+2. `createLibContainer` → builds `LibPlatformContainer`, then → assembles the container.
+3. assembled container → returned to `Application`, stored as `val container: LibInternalContainer`.
+4. `Application` exposes two faces: `lib` (public) outward via `LibProvider`, `internalLib` (internal) inward via the internal provider.
+5. consumed: an external app component reads the **public** face; a library-internal class reads the **internal** face.
 
 **Annotation:** colour legend box in the corner — yellow = application, green = public, purple = internal.
 
 This is the original `di-structure.png` with the colour semantics preserved and class names replaced by roles.
+
+---
+
+## 6. `manual-di-kmp-hook.png` — cover / hook image
+
+**Referenced as:** the article's lead/cover image (Habr cover, Medium hero). Evocative, **not** a diagram — pure visual hook, no semantic load.
+
+**Concept:** "DI you can see — assembled by hand." A pair of hands wiring a **transparent / glass device** whose insides are fully visible: every cable and connector lit and traced cleanly from one block to the next, nothing hidden. The single idea to land in one glance: clarity and craftsmanship, no black box.
+
+**Contrast cue (subtle, background, optional):** a closed black box with a faint glowing "?" where a competing "magic" approach would hide the same wiring — kept dim so it doesn't compete with the lit hands.
+
+**Mood:** craftsmanship, clarity, calm focus. Not corporate, not cartoonish.
+
+**Palette:** dark background; live wires in Kotlin-ish purple/orange; warm key light on the hands. Matches the dark canvas of the five diagrams.
+
+**Format:** wide cover ratio (16:9, or Habr's cover crop). **No text in the image** — the title is overlaid by the platform.
+
+**Style:** clean semi-realistic 3D render or editorial illustration. Avoid stock-photo literalness and avoid flat clip-art.
 
 ---
 
