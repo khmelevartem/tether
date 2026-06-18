@@ -12,22 +12,27 @@ Reviewer selection — [`rosters.md`](rosters.md). Classification rules, branch/
 
 **Purpose:** determine whether this is a fresh run or a feedback iteration on an existing open PR, and bring the branch up to date before any work proceeds.
 
-**Resolve `<N>` if omitted.** When invoked without an issue number:
+**Resolve the run mode.**
+
+Invoked WITHOUT an issue number — re-entry only:
+
 ```bash
 gh pr list --head "$(git branch --show-current)" --state open --json number,body,headRefName
 ```
-- **An open PR exists for the current branch** → take its number; read the issue from the PR body's `Closes #<N>`. Set `<N>` and continue on the re-entry path.
-- **No open PR for the current branch** → stop: "No issue number given and no open PR for the current branch — cannot start fresh work without an issue number. Re-run as `/implement <N>`." Do not proceed.
 
-With `<N>` resolved (or supplied directly), look up the PR for the issue:
+- Open PR for the current branch → read `<N>` from its body's `Closes #<N>`; this PR is the feedback target → take the feedback-iteration path. Fresh work without `<N>` is impossible by construction.
+- No open PR → stop: "No issue number given and no open PR for the current branch — cannot start fresh work without an issue number. Re-run as `/implement <N>`." Do not proceed.
+
+Invoked WITH an issue number — look up its PR:
 
 ```bash
 gh pr list --search "issue:#<N>" --state open --json number,isDraft,headRefName
 ```
 
-**No PR** → proceed to Step 1 (reachable only when `<N>` was supplied).
+- No PR → fresh run, proceed to Step 1.
+- Open PR → feedback iteration.
 
-**PR exists and is open** → feedback iteration. On re-entry, the feature slug for `review-ux-conformance` is resolved from the issue number (not from the branch name). Before anything else, gate on main drift:
+**Feedback iteration.** On re-entry, the feature slug for `review-ux-conformance` is resolved from the issue number (not from the branch name). Before anything else, gate on main drift:
 
 ```bash
 git fetch origin main --quiet
@@ -202,7 +207,7 @@ Docs-track ends here: producers return their artifacts; an open question a produ
    >
    > \<list of [REQUIRED] findings with file:line\>
 
-   Apply review transmission accuracy rules from SKILL.md §The shared engine.
+   Apply review transmission accuracy and the No-deflection principle from SKILL.md §The shared engine (a user question mid-loop gets a substantive answer, not a silent action).
 
    **Red CI test = broken code, not broken test.** Fix the code. Deleting a failing test, weakening assertions/timeouts/inputs — forbidden without explicit user approval. Hypothesis "the test was checking the wrong thing" → escalate to user.
 

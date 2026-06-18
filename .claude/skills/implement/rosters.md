@@ -8,7 +8,7 @@ The orchestrator evaluates each reviewer's `When` condition against the resolved
 | `review-guides` | — | ✓ | ✓ | ✓ |
 | `review-glossary` | — | ✓ | ✓ | ✓ |
 | `review-reuse` | — | — | ✓ | ✓ |
-| `review-correctness` | type ∉ {refactor-cosmetic} | ✓ | ✓ | — |
+| `review-correctness` | type ∉ {refactor} | ✓ | ✓ | — |
 | `review-tests` | type ∉ {infra} | ✓ | ✓ | — |
 | `review-architecture` | code: not trivial-one-callsite-bugfix, not cosmetic-refactor · docs: diff touches ADR / engineering living-doc / architecture-principles | ✓ | ✓ | ✓ (docs condition) |
 | `review-platform` | diff touches a platform source set | ✓ | ✓ | — |

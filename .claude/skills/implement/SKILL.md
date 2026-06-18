@@ -34,7 +34,7 @@ Cross-cutting behaviour invoked by name from pipeline steps. The invoking step c
 
 **Parallel fan-out.** All reviewers in a wave run in parallel. Each receives: the issue number, the instruction to review the local working tree (`git diff main...HEAD`), and any wave-specific inputs (brief path, combined Wave A findings for adversarial).
 
-**`[REQUIRED]` aggregation.** Collect all `[REQUIRED]` findings across the wave. Dispatch the producing agent with the aggregated list plus the symmetry-pass instruction (see §Review transmission accuracy). An `APPROVE` from all reviewers with zero `[REQUIRED]` ends the iteration.
+**`[REQUIRED]` aggregation.** Collect all `[REQUIRED]` findings across the wave. Dispatch the producing agent with the aggregated list plus the symmetry-pass instruction (see §Review transmission accuracy). When re-dispatching, apply §No-deflection principle — a defend-via-docs response to a "remove X" finding does not address it. An `APPROVE` from all reviewers with zero `[REQUIRED]` ends the iteration.
 
 **Delta re-review (iterations 2+).** The full wave runs once to establish a baseline. On every later iteration, re-dispatch only: (a) reviewers that raised a `[REQUIRED]` finding the previous round, and (b) reviewers whose domain the new changes touch. A reviewer that returned `APPROVE` on code its domain did not change this round returns the same verdict — re-running it spends context on a known result. Track each reviewer's last verdict and whether its domain was touched.
 
