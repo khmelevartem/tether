@@ -9,21 +9,24 @@ You are the orchestrator for a single GitHub issue from intake to open PR. You d
 
 ## Input
 
-Issue number `<N>`.
+Issue number `<N>` — optional.
+
+- **`<N>` provided** — may start fresh work or re-enter an existing PR (resolved at the re-entry gate).
+- **`<N>` omitted** — only re-entry is possible. The re-entry gate resolves the issue from the current branch's open PR; with no such PR it stops, because fresh work cannot start without an issue number.
 
 ## How to run
 
-1. **Classify** — read the issue and recon results (Step 1).
+1. **Classify** — read the issue and recon results (the recon pass).
 2. **Resolve profile** — `{track, type, docLayers}` per [`config.md`](config.md) §Classification rules.
-3. **Walk [`pipeline.md`](pipeline.md) in order**, evaluating each step's `active-when` against the profile.
-4. **Select reviewers** from [`rosters.md`](rosters.md) for each review wave.
-5. **Consult [`config.md`](config.md)** for gate specifics, branch prefix, recon-brief text, smoke/probe recipe, iteration limits, and producer sets.
+3. **Walk [`pipeline.md`](pipeline.md) in order**, evaluating each step's `active-when` against the profile and dispatching the step's sub-agent.
+
+Throughout the walk, the orchestrator **MUST** read its operating values from [`config.md`](config.md) — gate specifics, branch/worktree naming, recon-brief text, smoke/probe recipe, iteration limits, producer sets — and **MUST** select each review wave's reviewers from [`rosters.md`](rosters.md) by evaluating their predicates. These are not optional consultations: improvising a value config defines, or hand-picking reviewers instead of evaluating predicates, defeats the single-source design.
 
 ---
 
 ## The shared engine
 
-Cross-cutting behaviour invoked by name from pipeline steps.
+Cross-cutting behaviour invoked by name from pipeline steps. The invoking step carries its own `active-when`; engine sections do not restate predicates.
 
 ### Review-wave engine
 
@@ -43,17 +46,13 @@ Pass findings as close to the reviewer's original wording as possible. Do not na
 
 ### No-deflection principle
 
-**active-when: `track==code`** (inner loop — preserve current firing; does not extend to docs-track).
+When a change is demanded against an artifact, the response must be substantive: either a justification for keeping the artifact as-is, or a genuine edit to the artifact itself. The two situations differ by who raised it.
 
-When someone — the user or a reviewer — asks a question about an artifact or demands a change, the answer must be substantive: either a justification for why the artifact stays as-is, or a genuine edit to the artifact itself.
+**A user question mid-loop** ("is X really needed?" / "why X?" / "wouldn't A be better?") is a request for judgement, not a directive. Answer it: justify what the artifact provides, or counter-clarify with the user. Silently performing the assumed action on a single question is forbidden.
 
-**User question mid-loop.** A message like "is X really needed?" / "why X?" / "wouldn't A be better?" — this is a request for judgement, not a directive. Default: justify what the artifact provides, or counter-clarify. Silently performing the assumed action on a single question is forbidden.
-
-**Coder's response to a finding.** If the coder addressed "remove X" by making an edit that defends X via KDoc / comment / documentation instead of actually changing X — that is deflection; reject it. Re-dispatch with the explicit wording "change X itself, without justifying it through documentation".
+**A reviewer finding is not a question.** Reviewers return `[REQUIRED]` and nice-to-have items; the orchestrator decides which to act on. When a `[REQUIRED]` finding says "remove X" and the coder responds by defending X through KDoc / comment / documentation rather than changing X, the finding has not been addressed — re-dispatch with the target made explicit: change X itself, not document why it stays.
 
 ### By-agent attribution / re-entry routing
-
-**active-when:** always.
 
 When a PR comment is scoped to work produced by a specific upstream agent, route it back to that agent first — not to the coder. The agent owns its work surface; the coder applies the resulting decision.
 
@@ -73,7 +72,7 @@ MUST-stop gates are **not overridden by session-level autonomy or "skip clarifyi
 
 ### Context / token discipline
 
-The orchestrator holds only the plan, per-iteration finding summaries, and gate decisions. Route understanding through sub-agents that return digests (see Step 1 doc discovery). Do NOT read doc or source files into the orchestrator thread to understand them — read a file verbatim only when a gate decision needs its exact text. Inline Bash is for `git` / `gh` / smoke control, not for bulk file inspection. The orchestrator's context is re-read on every turn and rebuilt from cold after any idle gap past the cache TTL — keep it lean. If context exceeds ~50% of the window — pause and summarise before continuing.
+The orchestrator holds only the plan, per-iteration finding summaries, and gate decisions. Route understanding through sub-agents that return digests (see the recon pass's doc discovery). Do NOT read doc or source files into the orchestrator thread to understand them — read a file verbatim only when a gate decision needs its exact text. Inline Bash is for `git` / `gh` / smoke control, not for bulk file inspection. The orchestrator's context is re-read on every turn and rebuilt from cold after any idle gap past the cache TTL — keep it lean. If context exceeds ~50% of the window — pause and summarise before continuing.
 
 ---
 
@@ -81,5 +80,5 @@ The orchestrator holds only the plan, per-iteration finding summaries, and gate 
 
 - Does NOT call `/close-issue` automatically. Merge is always a user decision.
 - One issue per invocation. Multiple parallel issues = multiple invocations on multiple worktrees.
-- Worktree cleanup: `.claude/scripts/cleanup-worktrees.sh` runs on the `Stop` hook and removes any worktree whose remote branch is gone and whose PR is merged — it iterates all worktrees regardless of naming, so both `feature/<N>-<slug>` and `docs/<N>-<slug>` patterns are auto-cleaned after merge.
-- If at any iteration a sub-agent reports an open question (not a fixable finding — e.g., "the issue says X but the existing pattern is Y, which to follow?") — escalate to user immediately. Agents cannot decide architectural questions.
+- Worktree cleanup: `.claude/scripts/cleanup-worktrees.sh` runs on the `Stop` hook and removes any worktree whose remote branch is gone and whose PR is merged — it iterates all worktrees regardless of name.
+- If a sub-agent reports an open question it cannot resolve (e.g. "the issue says X but the existing pattern is Y") — escalate to the user. High-level product questions are the user's to decide; sub-agents and the orchestrator do not invent them.

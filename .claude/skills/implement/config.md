@@ -18,9 +18,7 @@ Resolve `{track, type, docLayers}` from the issue.
 | `infra` AND deliverable **limited exclusively** to `.claude/` files (skill prompts, agent definitions, hooks) | docs | infra |
 | `feature` / `bugfix` / `refactor` / `infra` with deliverable in source sets or build/CI/scripts (even if an ADR is also needed) | code | as labelled |
 
-Legacy issues may carry the type in a `**Type:**` body field, or under the GitHub default labels `enhancement` (= `feature`) / `bug` (= `bugfix`) / `documentation` (= `docs`).
-
-A code-track FEATURE with an incidental ADR stays on code-track — Step 4 dispatches `architect` mid-flight and the ADR is written in the same PR.
+A code-track FEATURE with an incidental ADR stays on code-track — the plan step dispatches `architect` mid-flight when a non-trivial mechanism or structural choice needs convergence, and the ADR is written in the same PR. Applying an ADR or living-doc the canon already prescribes is the coder's work — see `architect.md §When invoked`.
 
 ### docs-track: layer classification
 
@@ -28,7 +26,7 @@ After resolving `track=docs`, resolve `docLayers` — the ordered set of artifac
 
 | Layer | Needed when | Artifact path | Writer |
 |---|---|---|---|
-| **spec** | Type FEATURE AND `docs/product/features/<slug>/spec.md` is missing, `(stub)`, or has blocking open questions | `docs/product/features/<slug>/spec.md` | `spec-writer` |
+| **spec** | Type FEATURE AND (`docs/product/features/<slug>/spec.md` is missing, `(stub)`, or has blocking open questions, OR the issue changes a previously-accepted product decision recorded in the spec) | `docs/product/features/<slug>/spec.md` | `spec-writer` |
 | **ux-brief** | FEATURE with user-facing UI (screen / component / navigation) AND `ux-brief.md` is missing or stale relative to spec changes | `docs/product/features/<slug>/ux-brief.md` | `ux-expert` |
 | **tech-doc** | Subsystem with a non-trivial mechanism not covered by `docs/engineering/<name>.md`, or existing one is outdated | `docs/engineering/<name>.md` | `architect` |
 | **ADR** | Architectural choice that clears the three-way threshold in `docs/engineering/adr/README.md` §ADR threshold (hard-to-reverse + surprising-without-context + real-trade-off) | `docs/engineering/adr/adr-<name>.md` | `architect` |
@@ -37,24 +35,13 @@ After resolving `track=docs`, resolve `docLayers` — the ordered set of artifac
 
 Multiple layers per issue are normal (e.g. FEATURE with UI and a new mechanism → spec + ux-brief + tech-doc; mechanism choice on existing FEATURE → tech-doc + ADR; new skill + its README example → .claude prompt + tech-doc; closed BUGFIX revealing a platform quirk → knowledge).
 
+`architect` writes tech-doc / ADR / knowledge layers when the layer is needed — the need often surfaces from the coder mid-implementation. `architect` is not dispatched on every code-track issue; applying an ADR or living-doc the canon already prescribes is the coder's work (see `architect.md §When invoked`).
+
 ---
 
-## Worktree / branch prefix
+## Worktree / branch naming
 
-| Track | Branch prefix | Worktree path |
-|---|---|---|
-| code | `feature/<N>-<short-slug>` | `.claude/worktrees/feature-<N>-<short-slug>` |
-| docs | `docs/<N>-<short-slug>` | `.claude/worktrees/docs-<N>-<short-slug>` |
-
-Branch from `origin/main`, never local `main`.
-
-```bash
-# code-track
-git worktree add .claude/worktrees/feature-<N>-<short-slug> -b feature/<N>-<short-slug> origin/main
-
-# docs-track
-git worktree add .claude/worktrees/docs-<N>-<short-slug> -b docs/<N>-<short-slug> origin/main
-```
+Branches and worktrees are named `<N>-<short-slug>` (no track prefix). Worktrees live under `.claude/worktrees/`. The git command sequence is in the recon pass section of `pipeline.md`.
 
 ---
 
@@ -72,7 +59,7 @@ Pass this brief to the recon agent (an `Explore` sub-agent), substituting the is
 
 `CLAUDE.md` is harness-injected — not part of the sweep.
 
-For each ADR the digest flags as trigger-tripped, the plan (code-track) or the layer plan (docs-track) must either confirm the ADR is a false trigger or include a reversal sub-plan — see `docs/engineering/adr/README.md` §Reversing an ADR.
+When the recon digest flags an ADR whose **Revisit if** trigger this issue trips, the plan must resolve it before coding: either record that the trigger is a false alarm, or add a sub-plan to reverse the ADR (see `docs/engineering/adr/README.md` §Reversing an ADR). A tripped trigger is never left unaddressed.
 
 ---
 
@@ -108,7 +95,7 @@ When a change is technically forced but falls outside the issue's literal **Out 
 
 ### G-cross-doc inconsistency (`track==docs`)
 
-When the consistency pass (Step 7) finds a contradiction between artifacts that requires a product/technical decision — route resolution to the owning sub-agent (spec issue → `spec-writer`; tech issue → `architect`; ux issue → `ux-expert`), not to the user directly. Escalate to user only if the sub-agent itself cannot converge.
+When the consistency pass finds a contradiction between artifacts that requires a product/technical decision — route resolution to the owning sub-agent (spec issue → `spec-writer`; tech issue → `architect`; ux issue → `ux-expert`), not to the user directly. Escalate to user only if the sub-agent itself cannot converge.
 
 ### G-sub-agent open question (always)
 
@@ -161,8 +148,8 @@ Write the complete body to a temp file and pass `--body-file` to `gh pr create` 
 
 | Loop | code-track | docs-track |
 |---|---|---|
-| Inner loop (Step 5) | 4 | n/a (no inner reviewer loop on docs-track) |
-| Full review (Step 8) | 2 | 2 |
+| Inner loop | 4 | n/a (no inner reviewer loop on docs-track) |
+| Full pre-PR review | 2 | 2 |
 
 ---
 

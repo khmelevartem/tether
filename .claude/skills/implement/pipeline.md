@@ -2,7 +2,7 @@
 
 Ordered step catalog. Each step: name, purpose, `active-when` predicate, what it dispatches by role.
 
-Reviewer selection — [`rosters.md`](rosters.md). Classification rules, branch prefixes, gate specifics, smoke/probe recipe, iteration limits, producer sets — [`config.md`](config.md). Cross-cutting engine — [`SKILL.md`](SKILL.md) §The shared engine.
+Reviewer selection — [`rosters.md`](rosters.md). Classification rules, branch/worktree naming, gate specifics, smoke/probe recipe, iteration limits, producer sets — [`config.md`](config.md). Cross-cutting engine — [`SKILL.md`](SKILL.md) §The shared engine.
 
 ---
 
@@ -12,15 +12,22 @@ Reviewer selection — [`rosters.md`](rosters.md). Classification rules, branch 
 
 **Purpose:** determine whether this is a fresh run or a feedback iteration on an existing open PR, and bring the branch up to date before any work proceeds.
 
-At each invocation, first run:
+**Resolve `<N>` if omitted.** When invoked without an issue number:
+```bash
+gh pr list --head "$(git branch --show-current)" --state open --json number,body,headRefName
+```
+- **An open PR exists for the current branch** → take its number; read the issue from the PR body's `Closes #<N>`. Set `<N>` and continue on the re-entry path.
+- **No open PR for the current branch** → stop: "No issue number given and no open PR for the current branch — cannot start fresh work without an issue number. Re-run as `/implement <N>`." Do not proceed.
+
+With `<N>` resolved (or supplied directly), look up the PR for the issue:
 
 ```bash
 gh pr list --search "issue:#<N>" --state open --json number,isDraft,headRefName
 ```
 
-**No PR** → proceed to Step 1.
+**No PR** → proceed to Step 1 (reachable only when `<N>` was supplied).
 
-**PR exists and is open** → feedback iteration. Before anything else, gate on main drift:
+**PR exists and is open** → feedback iteration. On re-entry, the feature slug for `review-ux-conformance` is resolved from the issue number (not from the branch name). Before anything else, gate on main drift:
 
 ```bash
 git fetch origin main --quiet
@@ -76,7 +83,11 @@ Any such gap is a reason to return to the spec/AC ambiguity gate (G-spec/AC ambi
 
 **Doc discovery.** Dispatch one read-only recon agent (`Explore`) using the brief in [`config.md`](config.md) §Doc-discovery recon brief. Do NOT read the corpus into the orchestrator thread. Hold only the compact digest; read a specific doc verbatim later only when a gate decision needs the exact text. Mention the relevant documents the recon agent surfaced in the briefing to the user.
 
-**Worktree setup — do this BEFORE dispatching any agent that edits files.** Use the branch prefix from [`config.md`](config.md) §Worktree / branch prefix. Branch from `origin/main`, never local `main`.
+**Worktree setup — do this BEFORE dispatching any agent that edits files.** Use the branch/worktree naming from [`config.md`](config.md) §Worktree / branch naming. Branch from `origin/main`, never local `main`:
+
+```bash
+git worktree add .claude/worktrees/<N>-<short-slug> -b <N>-<short-slug> origin/main
+```
 
 **Briefing back to the user.** After reading the issue and doing recon, before any question to the user — post a short 3–6 line briefing in chat: what we are doing, why (motivation / context from the issue), classification (track + affected layers/platforms). If asking questions in the same message — attach 1–2 lines of context to each. One briefing per run; do not repeat on re-entry.
 
@@ -197,7 +208,7 @@ Docs-track ends here: producers return their artifacts; an open question a produ
 
    Go back to step 1.
 
-**Iteration limit (code-track).** From [`config.md`](config.md) §Iteration limits: 4. If not converged → escalate to user with remaining findings; signals a plan/scope problem the loop cannot fix.
+**Iteration limit (code-track).** From [`config.md`](config.md) §Iteration limits. If not converged → escalate to user with remaining findings; signals a plan/scope problem the loop cannot fix.
 
 ---
 
@@ -255,7 +266,7 @@ If the PR establishes or extends canon (docs-track), tell each reviewer to apply
 
 **Wave B.** Dispatch `review-adversarial` with the combined Wave A findings as input.
 
-**Iteration.** Aggregate `[REQUIRED]` findings. Apply via the producing agent (with the symmetry-pass instruction). Invokes the review-wave engine from SKILL.md §The shared engine — including delta re-review rules and the iteration limit from [`config.md`](config.md) §Iteration limits (2 for both tracks).
+**Iteration.** Aggregate `[REQUIRED]` findings. Apply via the producing agent (with the symmetry-pass instruction). Invokes the review-wave engine from SKILL.md §The shared engine — including delta re-review rules and the iteration limit from [`config.md`](config.md) §Iteration limits.
 
 ---
 

@@ -12,8 +12,8 @@ You check whether prose under review uses Tether's load-bearing nouns the way [`
 The dispatching caller supplies one of three input modes:
 
 - **PR diff** — `gh pr view <PR> --json title,body,files` + `gh pr diff <PR>`.
-- **Working tree** — when no PR exists yet (any pre-PR dispatch, e.g. `/implement` Step 5 inner loop and Step 8 full pre-PR review): `git diff main...HEAD`.
-- **Inline prose** — when there is no diff at all (e.g. `create-issue` Step 4 reviewing a draft issue body composed in chat): the dispatcher passes the prose string in the prompt. Treat it as the only artifact under review; «file:line» citations are then «draft:line».
+- **Working tree** — when no PR exists yet (any pre-PR dispatch, e.g. `/implement` fast reviewer wave and full pre-PR review): `git diff main...HEAD`.
+- **Inline prose** — when there is no diff at all (e.g. `create-issue` when reviewing a draft issue body composed in chat): the dispatcher passes the prose string in the prompt. Treat it as the only artifact under review; «file:line» citations are then «draft:line».
 
 Always read `docs/glossary.md` in full before sampling. Definitions in the glossary win over the prose under review.
 
