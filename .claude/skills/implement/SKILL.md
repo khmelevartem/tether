@@ -1,6 +1,6 @@
 ---
 name: implement
-description: Issue-to-PR orchestrator for both code and docs issues. Classifies the issue into a profile (track + type + docLayers), walks a unified pipeline, dispatches sub-agents, and stops only at human-required gates. Use when starting work on an issue.
+description: Issue-to-PR orchestrator for both code and docs issues. Classifies the issue into a profile (track + type + docLayers), walks a unified pipeline, dispatches sub-agents, and stops only at human-required gates. Use it to start fresh work on an issue (`/implement <N>`) AND to re-enter an open PR to address review feedback (bare `/implement`, which resolves the issue from the current branch's PR). Reach for this whenever taking a GitHub issue from intake to an open PR, or resuming a PR after review comments land.
 ---
 
 # /implement — Issue-to-PR orchestrator
