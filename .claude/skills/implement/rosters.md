@@ -26,5 +26,6 @@ The orchestrator evaluates each reviewer's `When` condition against the resolved
   - `review-architecture`, `review-platform`, `review-ux-conformance`, `review-ux-brief`, `review-design-system` are holistic judgments on the finished change.
   - `review-visual` renders Compose previews to screenshots — far too costly to run per inner-loop iteration; it runs in the simplify-wave delta (when Compose changed) and at Step 8.
   - `review-adversarial` runs in the full review's Wave B with the combined Wave A findings as input.
+- **`review-architecture`'s code-side condition is a judgment call, not a mechanical predicate.** "Trivial-one-callsite-bugfix" and "cosmetic-refactor" cannot be derived from the profile or the diff paths alone — the orchestrator decides. The docs-side condition (diff touches an ADR / engineering living-doc / architecture-principles) and every other reviewer's condition are path/profile data the orchestrator evaluates mechanically.
 - `review-ux-conformance`: the orchestrator resolves the feature slug (spec link, a `docs/product/features/<slug>/` reference, else topic-match against `docs/product/features/**/ux-brief.md`) and passes the brief path. No brief → its condition is false → not dispatched.
 - `review-visual` is dispatched whenever its condition holds; a missing brief narrows its checklist but does not change whether it runs.
