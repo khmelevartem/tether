@@ -128,7 +128,7 @@ If the FEATURE scope includes user-facing UI (screen, component, navigation — 
 
 **Recovery in inner loop.** If the implementing agent halts in Step 5 reporting "UX brief missing" (skip judgement was wrong, or new UI scope emerged mid-plan) — re-dispatch `ux-expert` and resume. Machine-resolvable; do not escalate to user.
 
-Applies to a feature on either track (`track==code` and `track==docs`).
+Applies to a feature on either track (`track==code` and `track==docs`). This step **owns production of the spec and ux-brief layers** — they exist only for `type==feature` (see `config.md` §docs-track: layer classification), so producing them here covers every case. Step 5 does not re-dispatch `spec-writer` or `ux-expert` for these layers; on docs-track it produces only the remaining layers.
 
 ---
 
@@ -182,13 +182,10 @@ docs-track: layer ordering is already resolved as `docLayers` at Step 2. No sepa
 - Everything else → `coder`
 - Mixed (non-disjoint files) → `coder`, which can pull in `ui-expert` / `architect` via Agent tool
 
-**Producer dispatch — docs-track.** Follow the ordered layer sequence from `docLayers` (resolved at Step 2). Lower layers depend on upper ones for vocabulary and scope:
+**Producer dispatch — docs-track.** The **spec** and **ux-brief** layers, if needed, were already produced at Step 3a — do not re-dispatch them. Step 5 produces the remaining layers in `docLayers` (resolved at Step 2), each by its writer from `config.md` §docs-track: layer classification (Writer column). Lower layers depend on upper ones for vocabulary and scope:
 
-1. **spec** (if in docLayers) → `spec-writer`
-2. **ux-brief** and **tech-doc / ADR / knowledge** in parallel if both needed (file-disjoint by construction: ux-brief in `docs/product/features/<slug>/`, others in `docs/engineering/` or `docs/knowledge/`)
-   - **ux-brief** → `ux-expert`
-   - **tech-doc / ADR / knowledge** → `architect`
-3. **.claude prompt** → orchestrator writes inline. No sub-agent (an agent editing its own definition would race itself). Match tone and structure of siblings in `.claude/skills/*/SKILL.md`, `.claude/agents/*.md`, `.claude/commands/*.md`. Apply `CLAUDE.md §Code style` and `docs/engineering/long-lived-artifacts.md`. If the prompt change encodes a non-trivial behavioural choice — dispatch `architect` first to converge the choice and produce an ADR; only then write the prompt edit.
+1. **tech-doc / ADR / knowledge** → `architect`. These can run in parallel only when file-disjoint (`docs/engineering/` vs `docs/knowledge/`), but a single `architect` dispatch typically handles the set.
+2. **.claude prompt** → orchestrator writes inline. No sub-agent (an agent editing its own definition would race itself). Match tone and structure of siblings in `.claude/skills/*/SKILL.md`, `.claude/agents/*.md`, `.claude/commands/*.md`. Apply `CLAUDE.md §Code style` and `docs/engineering/long-lived-artifacts.md`. If the prompt change encodes a non-trivial behavioural choice — dispatch `architect` first to converge the choice and produce an ADR; only then write the prompt edit.
 
 Docs-track ends here: producers return their artifacts; an open question a producer could not converge on → G-sub-agent open question gate. No fast reviewer wave on docs-track — proceed to Step 7, then the single review wave at Step 8.
 
