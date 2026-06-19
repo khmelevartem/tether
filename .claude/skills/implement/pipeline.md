@@ -41,7 +41,7 @@ git merge-base --is-ancestor origin/main HEAD && echo up-to-date || echo behind
 
 If `behind` → run `/pull-main` and adjust to whatever it brought before classifying comments or running reviewers. Otherwise iterating on stale canon — incoming PRs may have shifted rules under your feet, and the review wave runs against a main that no longer matches the project's current canon. If `up-to-date` → skip.
 
-Then read **all** human comments on the PR (`gh api repos/<owner>/<repo>/pulls/<PR>/comments` + `gh pr view <PR> --comments`) and for each determine its status: addressed in commits after it — or not.
+Then read **all** human comments on the PR (`gh api repos/{owner}/{repo}/pulls/<PR>/comments` + `gh pr view <PR> --comments`) and for each determine its status: addressed in commits after it — or not. (`{owner}`/`{repo}` are gh placeholders it resolves from the repo; only `<PR>` is substituted by hand.)
 
 **Creation date does not determine relevance.** Filtering comments by `created_at > <date-of-previous-run>` is forbidden; an unaddressed comment remains relevant regardless of how old it is.
 
