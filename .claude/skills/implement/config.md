@@ -105,7 +105,7 @@ If a sub-agent returns an open question it could not converge on — surface it 
 
 Smoke verdict is not 🟢 after the inner loop — stop and present to user. Enforcement-probe passes green when the enforcer is not wired in despite green unit tests — same gate.
 
-### G-final summary (always)
+### G-final summary (always, non-blocking)
 
 After everything converges and (code-track) smoke is 🟢: commit, push, create the PR, then present the PR URL with a short summary. The user reviews on GitHub; do not block on explicit OK before push.
 

@@ -347,4 +347,4 @@ Each gate below has its own `active-when` and specifics in [`config.md`](config.
 | G-cross-doc inconsistency | `track==docs` | Contradiction between artifacts needing a product/technical decision |
 | G-sub-agent open question | always | Sub-agent returns a question it could not converge on |
 | G-smoke/probe red | `track==code` | Smoke verdict not 🟢, or enforcement probe passes green |
-| G-final summary | always | After loop converges — commit, push, PR, present summary |
+| G-final summary *(non-blocking)* | always | After loop converges — commit, push, PR, present summary. Not a stop: it does not wait for explicit OK before push; listed here so the landing summary is never skipped |
