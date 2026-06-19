@@ -51,9 +51,7 @@ Then read **all** human comments on the PR (`gh api repos/{owner}/{repo}/pulls/<
 
 **docs-track re-entry.** The run must include on a fresh diff: Step 7 (consistency pass) → Step 8 (full review).
 
-Step 10 (commit + push + final summary) is simplified on re-entry: the commit goes into the existing branch, force-push is not needed, do not create a new PR.
-
-**After push on re-entry — reply to every addressed inline comment** via `gh api -X POST repos/<owner>/<repo>/pulls/<PR>/comments/<comment_id>/replies -f body="<reply>"`. For each comment: what was done + the commit SHA (or explicit reasoning if the comment was deliberately declined). A reply is the "addressed" signal — without it the reviewer cannot see the loop closed and the next re-entry reads it again as unaddressed.
+Landing differs on re-entry (commit into the existing branch, no new PR, reply to every addressed comment) — see Step 10.
 
 **By-agent attribution.** When a PR comment is scoped to work produced by a specific upstream agent, route it back to that agent first — see SKILL.md §The shared engine → By-agent attribution / re-entry routing.
 
@@ -329,7 +327,7 @@ Read the PR template and follow the `--body-file` discipline from [`config.md`](
 - DoD verdict: all `[DONE]` (from `review-dod`).
 - Any `[UNVERIFIABLE]` from reviewers.
 
-**On re-entry:** commit into the existing branch, no force-push, do not create a new PR. Reply to every addressed inline comment per Step 0.
+**On re-entry:** commit into the existing branch, no force-push, do not create a new PR. After push, reply to **every** addressed inline comment via `gh api -X POST repos/{owner}/{repo}/pulls/<PR>/comments/<comment_id>/replies -f body="<reply>"`. For each: what was done + the commit SHA, or explicit reasoning if the comment was deliberately declined. The reply is the "addressed" signal — without it the reviewer cannot see the loop closed and the next re-entry reads the comment again as unaddressed.
 
 ---
 
