@@ -65,8 +65,9 @@ Landing differs on re-entry (commit into the existing branch, no new PR, reply t
 
 ```bash
 gh issue view <N> --json title,body,labels,comments
-gh pr list --search "issue:#<N>" --state open --json number,isDraft,headRefName
 ```
+
+Step 0 already resolved that no open PR exists for `#<N>` (that is why the run reached Step 1) — do not repeat the PR lookup.
 
 **Sweep the repo for prior mentions of `#<N>`** — `grep -rn "#<N>" .` over the working tree. Every hit is either resolved in this PR, or escalated to the user as "can't do here — move to #M?". Never silently leave a `TODO(#<N>)` after merge.
 
