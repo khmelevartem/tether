@@ -158,6 +158,6 @@ Write the complete body to a temp file and pass `--body-file` to `gh pr create` 
 | Track | Primary producers | On-demand producers |
 |---|---|---|
 | code | `coder`, `ui-expert` (for Compose/screens/components/theming/navigation) | `spec-writer` (feature spec slices), `architect` (non-trivial mechanism / library / structural choice) |
-| docs | `spec-writer` (spec layer), `ux-expert` (ux-brief layer), `architect` (tech-doc / ADR / knowledge layers), orchestrator inline (`.claude` prompt layer) | — |
+| docs | per-layer writers — see §docs-track: layer classification (Writer column) | — |
 
-`.claude` prompts are written inline by the orchestrator because an agent editing its own definition would race itself.
+The docs-track layer→writer mapping lives only in the layer-classification table above; this row points there rather than restating it. `.claude` prompts are written inline by the orchestrator because an agent editing its own definition would race itself.
