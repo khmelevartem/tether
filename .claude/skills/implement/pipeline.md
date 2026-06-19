@@ -158,7 +158,7 @@ Dispatch the Plan agent (or `general-purpose` if unavailable) to produce: phases
 
 **Issue scope — starting point, not a cage.** If touching adjacent classes or neighbouring platforms is needed for a quality solution — expand scope in this same PR. Whether to fold any finding or defer it — `docs/engineering/scope-discipline.md`. Exception: if forced expansion falls outside the issue's literal **Out of scope** → G-forced-cascade scope.
 
-**Track splitting.** Split into parallel tracks ONLY if the plan can enumerate file-level disjoint sets: track A's files ∩ track B's files = ∅. If any file appears in two tracks → execute sequentially.
+**Lane splitting.** Split implementation into parallel lanes ONLY if the plan can enumerate file-level disjoint sets: lane A's files ∩ lane B's files = ∅. If any file appears in two lanes → execute sequentially. ("Lane" is a unit of parallel execution within one run, distinct from `track`, the code/docs profile dimension.)
 
 **Plan conflicts with guides.** G-plan-vs-guides: present to user and stop.
 
@@ -174,7 +174,7 @@ docs-track: layer ordering is already resolved as `docLayers` at Step 2. No sepa
 
 **Purpose:** produce the artifacts. Code-track additionally fast-reviews and iterates; docs-track dispatches producers only and defers all review to Step 8 (the inner reviewer loop is code-track only).
 
-**Producer dispatch — code-track.** For each track (or sequentially if single):
+**Producer dispatch — code-track.** For each lane (or sequentially if single):
 
 - UI work (Compose, screens, components, theming, navigation) → `ui-expert`
 - Feature spec slice → `spec-writer`
