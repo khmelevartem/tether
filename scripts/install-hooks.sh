@@ -77,6 +77,18 @@ else
   echo "✅ Lychee link check done"
 fi
 
+# Run the /implement pipeline-selection test when its script or test is staged.
+if git diff --cached --name-only --diff-filter=ACM \
+   | grep -qE '\.claude/skills/implement/scripts/select-pipeline(\.test)?\.sh$'; then
+  echo "🧪 Running select-pipeline roster test..."
+  if ! TEST_OUT=$(bash .claude/skills/implement/scripts/select-pipeline.test.sh 2>&1); then
+    echo "❌ select-pipeline roster test failed — commit aborted."
+    printf '%s\n' "$TEST_OUT"
+    exit 1
+  fi
+  echo "✅ select-pipeline roster test passed"
+fi
+
 exit 0
 EOF
 

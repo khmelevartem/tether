@@ -41,3 +41,11 @@ jobs:
         with:
           args: --offline --include-fragments --no-progress 'docs/**/*.md' '*.md'
           fail: true
+
+  scripts:
+    runs-on: ubuntu-latest
+    name: Skill scripts
+    steps:
+      - uses: actions/checkout@v4
+      - name: select-pipeline roster test
+        run: bash .claude/skills/implement/scripts/select-pipeline.test.sh

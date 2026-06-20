@@ -1,6 +1,6 @@
 # Reviewer catalog
 
-`scripts/select-pipeline.sh` is the single authority for which reviewers fire per profile. `scripts/select-pipeline.test.sh` pins the expected rosters per profile — consult it for exact per-type reviewer lists.
+`scripts/select-pipeline.sh` is the single authority for which reviewers fire per profile. `scripts/select-pipeline.test.sh` pins the expected rosters per profile — consult it for exact per-type reviewer lists. The test runs at commit time (pre-commit hook, when either script is staged) and in CI, so a roster change that breaks the spec blocks the commit.
 
 `touched` values: `ui`, `code`, `platform`, `docs`, `engdoc`, `claude`, `ux-brief`. The live committed diff is bucketed into these values at each review step (Step 7, Step 10); see `steps.md` Step 0 §Step/roster split.
 
