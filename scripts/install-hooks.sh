@@ -79,7 +79,7 @@ fi
 
 # Run the /implement pipeline-selection test when its script or test is staged.
 if git diff --cached --name-only --diff-filter=ACM \
-   | grep -qE '\.claude/skills/implement/scripts/select-pipeline(\.test)?\.sh$'; then
+   | grep -qE '(\.claude/skills/implement/scripts/select-pipeline(\.test)?\.sh|\.claude/skills/implement/steps\.md)$'; then
   echo "🧪 Running select-pipeline roster test..."
   if ! TEST_OUT=$(bash .claude/skills/implement/scripts/select-pipeline.test.sh 2>&1); then
     echo "❌ select-pipeline roster test failed — commit aborted."
