@@ -390,6 +390,8 @@ Manual DI rests on a single principle: the dependency graph is assembled in one 
 
 The price is manual wiring; the gain is transparency: the graph lies in the code, without magic, and reads the same to a human, the IDE, and an AI agent. As long as the graph fits in your head, this is cheap; when it stops fitting, containers and providers are already close in shape to a framework's graph, and the move won't require a structural shakeup.
 
+## Related
+
 The idea is not new: a container-façade for KMM with a split into a public and an internal part was described back in 2023 by [Marcin Piekielny](https://medium.com/@maruchin/kmm-architecture-5-dependency-injection-79052c7ea778). What is added here is what makes it genuinely applicable: a container hierarchy by source set across all platforms, the provider pattern for Android, composition by axes, and scaling to modules: Api/Impl, public/internal.
 
 The code this article is based on is open: [github.com/khmelevartem/tether](https://github.com/khmelevartem/tether). The full breakdown of the pattern and the checklist for new code live in `docs/engineering/dependency-injection.md`.
