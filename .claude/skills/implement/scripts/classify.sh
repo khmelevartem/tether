@@ -6,16 +6,46 @@
 
 set -euo pipefail
 
-# ── Resolve issue number ────────────────────────────────────────────────────
+# ── Resolve current branch ────────────────────────────────────────────────────
+
+BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+[ -z "$BRANCH" ] && BRANCH="HEAD"
+
+# ── Resolve current worktree's issue (CURRENT_ISSUE) ─────────────────────────
+
+HEAD_PR=""
+CURRENT_ISSUE=""
+
+HEAD_PR_JSON=$(gh pr list --head "$BRANCH" --state open --json number,title 2>/dev/null || echo "[]")
+HEAD_PR=$(echo "$HEAD_PR_JSON" | python3 -c "
+import json, sys
+data = json.loads(sys.stdin.read())
+print(data[0]['number'] if data else '')
+" 2>/dev/null || echo "")
+
+if [ -n "$HEAD_PR" ]; then
+  CURRENT_ISSUE=$(echo "$HEAD_PR_JSON" | python3 -c "
+import json, sys, re
+data = json.loads(sys.stdin.read())
+title = data[0]['title'] if data else ''
+m = re.match(r'^#([0-9]+)', title)
+print(m.group(1) if m else '')
+" 2>/dev/null || echo "")
+fi
+
+if [ -z "$CURRENT_ISSUE" ]; then
+  CURRENT_ISSUE=$(printf '%s' "$BRANCH" | grep -oE '^(feature|docs)/[0-9]+' | grep -oE '[0-9]+' || true)
+fi
+if [ -z "$CURRENT_ISSUE" ]; then
+  CURRENT_ISSUE=$(printf '%s' "$BRANCH" | grep -oE '^[0-9]+' || true)
+fi
+
+# ── Resolve target issue number ───────────────────────────────────────────────
 
 if [ $# -ge 1 ] && [ -n "$1" ]; then
   ISSUE="$1"
 else
-  BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
-  ISSUE=$(printf '%s' "$BRANCH" | grep -oE '^(feature|docs)/[0-9]+' | grep -oE '[0-9]+' || echo "")
-  if [ -z "$ISSUE" ]; then
-    ISSUE=$(printf '%s' "$BRANCH" | grep -oE '^[0-9]+' || echo "")
-  fi
+  ISSUE="$CURRENT_ISSUE"
 fi
 
 if [ -z "$ISSUE" ]; then
@@ -28,16 +58,29 @@ if [ -z "$ISSUE" ]; then
   exit 0
 fi
 
+if [ $# -ge 1 ] && [ -n "$1" ] && ! echo "$1" | grep -qE '^[0-9]+$'; then
+  echo "classify.sh: issue number must be numeric, got: $1" >&2
+  exit 1
+fi
+
 echo "issue=$ISSUE"
 
-# ── Detect existing open PR ─────────────────────────────────────────────────
+# ── Detect open PR and drift for ISSUE ───────────────────────────────────────
 
-PR_JSON=$(gh pr list --search "issue:#${ISSUE}" --state open --json number,headRefName 2>/dev/null || echo "[]")
-PR_NUMBER=$(echo "$PR_JSON" | python3 -c "
-import json, sys
+if [ -n "$HEAD_PR" ] && [ -n "$CURRENT_ISSUE" ] && [ "$CURRENT_ISSUE" = "$ISSUE" ]; then
+  PR_NUMBER="$HEAD_PR"
+else
+  PR_NUMBER=$(gh pr list --state open --limit 500 --json number,title 2>/dev/null | python3 -c "
+import json, sys, re
 data = json.loads(sys.stdin.read())
-print(data[0]['number'] if data else '-')
+issue = '$ISSUE'
+for pr in data:
+  if re.match(r'^#' + re.escape(issue) + r'([: ]|\$)', pr['title']):
+    print(pr['number'])
+    sys.exit(0)
+print('-')
 " 2>/dev/null || echo "-")
+fi
 
 if [ "$PR_NUMBER" = "-" ]; then
   echo "reentry=fresh"
@@ -46,7 +89,6 @@ if [ "$PR_NUMBER" = "-" ]; then
 else
   echo "reentry=pr-feedback"
   echo "pr=$PR_NUMBER"
-  # Check drift only when a PR exists (HEAD branch is meaningful)
   if git merge-base --is-ancestor origin/main HEAD 2>/dev/null; then
     echo "drift=up-to-date"
   else
@@ -54,7 +96,7 @@ else
   fi
 fi
 
-# ── Resolve type from labels ────────────────────────────────────────────────
+# ── Resolve type from labels ──────────────────────────────────────────────────
 
 LABELS_JSON=$(gh issue view "$ISSUE" --json labels 2>/dev/null || echo '{"labels":[]}')
 TYPE=$(echo "$LABELS_JSON" | python3 -c "
@@ -79,9 +121,20 @@ print('none')
 
 echo "type=$TYPE"
 
-# ── Resolve touched set from live committed diff ─────────────────────────────
+# ── Resolve touched set ───────────────────────────────────────────────────────
+# Emit diff only when this worktree owns ISSUE (or worktree issue is unknown,
+# in which case the diff is the best available signal).
 
-DIFF_FILES=$(git diff --name-only "origin/main...HEAD" 2>/dev/null || echo "")
+MATCH=false
+if [ -z "$CURRENT_ISSUE" ] || [ "$CURRENT_ISSUE" = "$ISSUE" ]; then
+  MATCH=true
+fi
+
+if $MATCH; then
+  DIFF_FILES=$(git diff --name-only "origin/main...HEAD" 2>/dev/null || true)
+else
+  DIFF_FILES=""
+fi
 
 TOUCHED=$(echo "$DIFF_FILES" | python3 -c "
 import sys, re
@@ -114,6 +167,6 @@ for f in lines:
     result.add('claude')
 
 print(','.join(sorted(result)))
-" 2>/dev/null || echo "")
+" 2>/dev/null || true)
 
 echo "touched=$TOUCHED"
