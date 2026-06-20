@@ -57,5 +57,4 @@ Everything else — implementation details, reviewer findings, fix iterations �
 
 - This skill is for one issue at a time. Multiple parallel issues = multiple invocations on separate worktrees.
 - Worktree cleanup: `.claude/scripts/cleanup-worktrees.sh` runs on `Stop` hook and removes worktrees whose remote branch is gone and whose PR is merged — it iterates all worktrees by structure, not by naming pattern.
-- If a sub-agent reports an open question (architectural / product / UX decision it cannot own) — escalate immediately. Sub-agents cannot decide; the orchestrator does not invent.
 - Token discipline: hold only the plan, per-iteration finding summaries, and gate decisions. Do not Read doc or source files into the orchestrator thread to understand them — route through a sub-agent that returns a digest. Read a file verbatim only when a gate decision needs the exact text. If context exceeds 50% of the window, pause and summarise before continuing.

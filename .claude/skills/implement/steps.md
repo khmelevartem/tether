@@ -147,6 +147,8 @@ Mention relevant surfaced documents in the briefing to the user (see `classify` 
 
 If FEATURE and spec is missing or `(stub)` → stop and escalate to the user. Do not dispatch `spec-writer` as a mitigation; a spec may be absent only when the task itself is to write the spec.
 
+If non-FEATURE and DoD is missing or a stub → stop and escalate to the user. The deliverable is not ready to implement.
+
 If FEATURE and spec exists but has blocking open questions → dispatch `spec-writer` to resolve them. Only escalate to the user with `spec-writer`'s question list.
 
 If the FEATURE scope includes user-facing UI AND `docs/product/features/<slug>/ux-brief.md` is missing or stale relative to the spec → dispatch `ux-expert` after `spec-writer`. Open UX questions returned by `ux-expert` fold back into this gate: surface verbatim to the user, collect answers, re-dispatch. The brief is committed as part of the PR.

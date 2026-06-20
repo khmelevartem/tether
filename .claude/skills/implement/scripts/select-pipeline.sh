@@ -59,7 +59,7 @@ fi
 
 echo "steps: $STEPS"
 
-# ── Inner-loop reviewer roster (code track only, Step 7) ────────────────────
+# ── Inner-loop reviewer roster (code track only) ────────────────────────────
 
 INNER_REVIEWERS=""
 
@@ -94,7 +94,7 @@ fi
 
 echo "inner-loop-reviewers: $INNER_REVIEWERS"
 
-# ── Wave A reviewer roster (Step 10) ────────────────────────────────────────
+# ── Wave A reviewer roster (full-review) ────────────────────────────────────
 
 WAVE_A=""
 add_a() { WAVE_A="${WAVE_A:+$WAVE_A }$1"; }
