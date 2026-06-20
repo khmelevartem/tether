@@ -70,52 +70,61 @@ assert_eq "c1 steps" \
   "steps: classify recon early-gates plan inner-loop simplify full-review runtime-verify commit-pr final-summary" \
   "$(steps_line "$OUT")"
 
-assert_contains "c1 wave-a has review-architecture"  "review-architecture"    "$(wave_a_line "$OUT")"
-assert_contains "c1 wave-a has review-correctness"   "review-correctness"     "$(wave_a_line "$OUT")"
-assert_contains "c1 wave-a has review-tests"         "review-tests"           "$(wave_a_line "$OUT")"
-assert_absent   "c1 wave-a no review-design-system"  "review-design-system"   "$(wave_a_line "$OUT")"
-assert_absent   "c1 wave-a no review-visual"         "review-visual"          "$(wave_a_line "$OUT")"
-assert_absent   "c1 wave-a no review-platform"       "review-platform"        "$(wave_a_line "$OUT")"
-assert_absent   "c1 wave-a no review-ux-conformance" "review-ux-conformance"  "$(wave_a_line "$OUT")"
+assert_eq "c1 inner" \
+  "inner-loop-reviewers: review-dod review-correctness review-guides review-glossary review-architecture review-tests" \
+  "$(inner_line "$OUT")"
+
+assert_eq "c1 wave-a" \
+  "wave-a-reviewers: review-dod review-guides review-glossary review-reuse review-architecture review-correctness review-tests" \
+  "$(wave_a_line "$OUT")"
 
 # ── Case 2: code feature fresh ui+code+platform ───────────────────────────────
 
 OUT=$(run code feature fresh "ui,code,platform")
 
-assert_contains "c2 inner has review-design-system"   "review-design-system"   "$(inner_line "$OUT")"
-assert_contains "c2 inner has review-visual"          "review-visual"          "$(inner_line "$OUT")"
-assert_contains "c2 inner has review-ux-conformance"  "review-ux-conformance"  "$(inner_line "$OUT")"
-assert_contains "c2 inner has review-platform"        "review-platform"        "$(inner_line "$OUT")"
+assert_eq "c2 inner" \
+  "inner-loop-reviewers: review-dod review-correctness review-guides review-glossary review-architecture review-tests review-platform review-ux-conformance review-design-system review-visual" \
+  "$(inner_line "$OUT")"
 
-assert_contains "c2 wave-a has review-design-system"  "review-design-system"   "$(wave_a_line "$OUT")"
-assert_contains "c2 wave-a has review-visual"         "review-visual"          "$(wave_a_line "$OUT")"
-assert_contains "c2 wave-a has review-ux-conformance" "review-ux-conformance"  "$(wave_a_line "$OUT")"
-assert_contains "c2 wave-a has review-platform"       "review-platform"        "$(wave_a_line "$OUT")"
+assert_eq "c2 wave-a" \
+  "wave-a-reviewers: review-dod review-guides review-glossary review-reuse review-architecture review-correctness review-tests review-platform review-ux-conformance review-design-system review-visual" \
+  "$(wave_a_line "$OUT")"
 
 # ── Case 3: code bugfix fresh ─────────────────────────────────────────────────
 
 OUT=$(run code bugfix fresh "")
 
-assert_contains "c3 inner has review-architecture" "review-architecture" "$(inner_line "$OUT")"
-assert_contains "c3 wave-a has review-architecture" "review-architecture" "$(wave_a_line "$OUT")"
+assert_eq "c3 inner" \
+  "inner-loop-reviewers: review-dod review-correctness review-guides review-glossary review-architecture review-tests" \
+  "$(inner_line "$OUT")"
+
+assert_eq "c3 wave-a" \
+  "wave-a-reviewers: review-dod review-guides review-glossary review-reuse review-architecture review-correctness review-tests" \
+  "$(wave_a_line "$OUT")"
 
 # ── Case 4: code refactor fresh ───────────────────────────────────────────────
 
 OUT=$(run code refactor fresh "")
 
-assert_absent   "c4 inner no review-correctness"  "review-correctness"  "$(inner_line "$OUT")"
-assert_absent   "c4 wave-a no review-correctness" "review-correctness"  "$(wave_a_line "$OUT")"
-assert_contains "c4 inner has review-architecture" "review-architecture" "$(inner_line "$OUT")"
-assert_contains "c4 inner has review-tests"        "review-tests"        "$(inner_line "$OUT")"
-assert_contains "c4 wave-a has review-architecture" "review-architecture" "$(wave_a_line "$OUT")"
-assert_contains "c4 wave-a has review-tests"        "review-tests"        "$(wave_a_line "$OUT")"
+assert_eq "c4 inner" \
+  "inner-loop-reviewers: review-dod review-guides review-glossary review-architecture review-tests" \
+  "$(inner_line "$OUT")"
+
+assert_eq "c4 wave-a" \
+  "wave-a-reviewers: review-dod review-guides review-glossary review-reuse review-architecture review-tests" \
+  "$(wave_a_line "$OUT")"
 
 # ── Case 5: code infra fresh ─────────────────────────────────────────────────
 
 OUT=$(run code infra fresh "")
 
-assert_absent "c5 inner no review-tests" "review-tests" "$(inner_line "$OUT")"
-assert_absent "c5 wave-a no review-tests" "review-tests" "$(wave_a_line "$OUT")"
+assert_eq "c5 inner" \
+  "inner-loop-reviewers: review-dod review-correctness review-guides review-glossary review-architecture" \
+  "$(inner_line "$OUT")"
+
+assert_eq "c5 wave-a" \
+  "wave-a-reviewers: review-dod review-guides review-glossary review-reuse review-architecture review-correctness" \
+  "$(wave_a_line "$OUT")"
 
 # ── Case 6: code feature pr-feedback ui+code ─────────────────────────────────
 
@@ -135,23 +144,25 @@ assert_eq "c7 steps" \
 
 assert_eq "c7 inner empty" "inner-loop-reviewers: " "$(inner_line "$OUT")"
 
-assert_contains "c7 wave-a has review-dod"       "review-dod"       "$(wave_a_line "$OUT")"
-assert_contains "c7 wave-a has review-guides"    "review-guides"    "$(wave_a_line "$OUT")"
-assert_contains "c7 wave-a has review-glossary"  "review-glossary"  "$(wave_a_line "$OUT")"
-assert_contains "c7 wave-a has review-reuse"     "review-reuse"     "$(wave_a_line "$OUT")"
-assert_absent   "c7 wave-a no review-architecture" "review-architecture" "$(wave_a_line "$OUT")"
+assert_eq "c7 wave-a" \
+  "wave-a-reviewers: review-dod review-guides review-glossary review-reuse" \
+  "$(wave_a_line "$OUT")"
 
 # ── Case 8: docs docs fresh docs+engdoc ──────────────────────────────────────
 
 OUT=$(run docs docs fresh "docs,engdoc")
 
-assert_contains "c8 wave-a has review-architecture" "review-architecture" "$(wave_a_line "$OUT")"
+assert_eq "c8 wave-a" \
+  "wave-a-reviewers: review-dod review-guides review-glossary review-reuse review-architecture" \
+  "$(wave_a_line "$OUT")"
 
 # ── Case 9: docs feature fresh ux-brief ──────────────────────────────────────
 
 OUT=$(run docs feature fresh "ux-brief")
 
-assert_contains "c9 wave-a has review-ux-brief" "review-ux-brief" "$(wave_a_line "$OUT")"
+assert_eq "c9 wave-a" \
+  "wave-a-reviewers: review-dod review-guides review-glossary review-reuse review-ux-brief" \
+  "$(wave_a_line "$OUT")"
 
 # ── Case 10: docs docs pr-feedback docs+engdoc ───────────────────────────────
 
