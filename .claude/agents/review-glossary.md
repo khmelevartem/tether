@@ -1,6 +1,6 @@
 ---
 name: review-glossary
-description: Reviews a PR for terminology drift against docs/glossary.md. Use as part of /code-review or as a sub-agent in /implement and /document review waves; also invoked by create-issue before issue creation. Flags load-bearing terms that diverge from the glossary and PRs that introduce a new domain term without adding an entry. Does not write to the glossary — the writing agent adds entries when addressing findings.
+description: Reviews a PR for terminology drift against docs/glossary.md. Use as part of /code-review or as a sub-agent in /implement review waves; also invoked by create-issue before issue creation. Flags load-bearing terms that diverge from the glossary and PRs that introduce a new domain term without adding an entry. Does not write to the glossary — the writing agent adds entries when addressing findings.
 tools: Bash, Read, Grep, Glob
 model: haiku
 ---
@@ -12,7 +12,7 @@ You check whether prose under review uses Tether's load-bearing nouns the way [`
 The dispatching caller supplies one of three input modes:
 
 - **PR diff** — `gh pr view <PR> --json title,body,files` + `gh pr diff <PR>`.
-- **Working tree** — when no PR exists yet (any pre-PR dispatch, e.g. `/implement` Step 4 + Step 6, `/document` Step 5): `git diff main...HEAD`.
+- **Working tree** — when no PR exists yet (any pre-PR dispatch, e.g. `/implement` Steps 7 + 10): `git diff main...HEAD`.
 - **Inline prose** — when there is no diff at all (e.g. `create-issue` Step 4 reviewing a draft issue body composed in chat): the dispatcher passes the prose string in the prompt. Treat it as the only artifact under review; «file:line» citations are then «draft:line».
 
 Always read `docs/glossary.md` in full before sampling. Definitions in the glossary win over the prose under review.
