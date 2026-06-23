@@ -392,6 +392,8 @@ Not a trigger but an extra cost: many frameworks implement methods that simplify
 
 The move is cheap, though: containers and providers are already close in shape to a framework's graph, the container becomes the dependency graph, platform fragments and config become contributions to it, and `open val` tests become graphs with overridden bindings. Which framework exactly to pick is a separate conversation; for KMP you look at support for all targets, compile-time graph validation, and ergonomics in a multi-module project, and you might consider [Metro](https://github.com/ZacSweers/metro) or kotlin-inject.
 
+A practical walkthrough of such a migration to Metro in a KMP mobile project — [Metro DI for KMP Mobile](https://funkymuse.dev/posts/metro-di-kmp-mobile/) by FunkyMuse: the starting point there is a God-Object-style hand-rolled graph rather than a composition root, but the resulting shape (scopes, multibindings, contributes-to) is exactly what a framework unlocks once the triggers above fire.
+
 ## Conclusion
 
 Manual DI rests on a single principle: the dependency graph is assembled in one place, the composition root, and every other class receives its ready dependencies through the constructor. The Api/Impl split and composing the container from parts are the same principle, raised to the module level and spread across the axes along which the application varies.
