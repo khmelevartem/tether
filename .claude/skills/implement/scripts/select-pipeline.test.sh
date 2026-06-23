@@ -71,7 +71,7 @@ assert_eq "c1 steps" \
   "$(steps_line "$OUT")"
 
 assert_eq "c1 inner" \
-  "inner-loop-reviewers: review-dod review-correctness review-guides review-glossary review-architecture review-tests" \
+  "inner-loop-reviewers: review-correctness review-architecture review-guides" \
   "$(inner_line "$OUT")"
 
 assert_eq "c1 wave-a" \
@@ -83,7 +83,7 @@ assert_eq "c1 wave-a" \
 OUT=$(run code feature fresh "ui,code,platform")
 
 assert_eq "c2 inner" \
-  "inner-loop-reviewers: review-dod review-correctness review-guides review-glossary review-architecture review-tests review-platform review-ux-conformance review-design-system review-visual" \
+  "inner-loop-reviewers: review-correctness review-architecture review-guides review-platform review-ux-conformance" \
   "$(inner_line "$OUT")"
 
 assert_eq "c2 wave-a" \
@@ -99,7 +99,7 @@ assert_eq "c3 steps" \
   "$(steps_line "$OUT")"
 
 assert_eq "c3 inner" \
-  "inner-loop-reviewers: review-dod review-correctness review-guides review-glossary review-architecture review-tests" \
+  "inner-loop-reviewers: review-correctness review-architecture review-guides" \
   "$(inner_line "$OUT")"
 
 assert_eq "c3 wave-a" \
@@ -119,7 +119,7 @@ assert_eq "c3b steps" \
 OUT=$(run code refactor fresh "")
 
 assert_eq "c4 inner" \
-  "inner-loop-reviewers: review-dod review-guides review-glossary review-architecture review-tests" \
+  "inner-loop-reviewers: review-architecture review-guides" \
   "$(inner_line "$OUT")"
 
 assert_eq "c4 wave-a" \
@@ -131,7 +131,7 @@ assert_eq "c4 wave-a" \
 OUT=$(run code infra fresh "")
 
 assert_eq "c5 inner" \
-  "inner-loop-reviewers: review-dod review-correctness review-guides review-glossary review-architecture" \
+  "inner-loop-reviewers: review-correctness review-architecture review-guides" \
   "$(inner_line "$OUT")"
 
 assert_eq "c5 wave-a" \
@@ -196,8 +196,12 @@ assert_nonzero_exit "c12 unknown-track" banana feature fresh ""
 
 for touched in "" "ui,code,platform"; do
   OUT=$(run code feature fresh "$touched")
-  for reviewer in review-dod review-guides review-glossary; do
+  # Always in inner-loop (narrow roster — compounding-cost reviewers only).
+  for reviewer in review-guides review-architecture; do
     assert_contains "always-inner $reviewer (touched=$touched)" "$reviewer" "$(inner_line "$OUT")"
+  done
+  # Always in Wave A (broad final-gate roster).
+  for reviewer in review-dod review-guides review-glossary; do
     assert_contains "always-wave-a $reviewer (touched=$touched)" "$reviewer" "$(wave_a_line "$OUT")"
   done
   assert_eq "wave-b review-adversarial (touched=$touched)" \
