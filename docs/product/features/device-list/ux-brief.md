@@ -86,7 +86,7 @@ All rows share the same height, internal padding, and typographic hierarchy. The
 - Offline-paired row hint: "Not on this network. Make sure Wi-Fi is on and Tether is running on it."
 - Hint dismiss: no explicit button — tap/click elsewhere dismisses.
 
-**Per-platform deltas.** Visual treatment (top-bar layout, centered title, trailing gear) is identical everywhere — see Layout. Only the input affordance that opens the per-row context menu differs:
+**Per-platform deltas.**
 
 - Android: long-press on row → bottom sheet with row actions.
 - iOS: long-press on row → context menu.
