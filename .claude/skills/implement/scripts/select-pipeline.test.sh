@@ -196,8 +196,8 @@ assert_nonzero_exit "c12 unknown-track" banana feature fresh ""
 
 for touched in "" "ui,code,platform"; do
   OUT=$(run code feature fresh "$touched")
-  # Always in inner-loop (narrow roster — compounding-cost reviewers only).
-  for reviewer in review-guides review-architecture; do
+  # Always in inner-loop for non-refactor types (narrow roster — compounding-cost reviewers only).
+  for reviewer in review-correctness review-guides review-architecture; do
     assert_contains "always-inner $reviewer (touched=$touched)" "$reviewer" "$(inner_line "$OUT")"
   done
   # Always in Wave A (broad final-gate roster).
