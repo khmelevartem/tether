@@ -48,7 +48,6 @@ You MUST stop and ask the user:
 - **Forced-cascade scope expansion** — a change is technically forced but violates an explicit entry in the issue's **Out of scope** section. Ask: fold, split, or re-frame.
 - **Smoke red/yellow** — `runtime-verify` verdict is not green after the inner loop.
 - **Sub-agent open question** — a sub-agent returns a question it cannot converge on. Relay verbatim, collect answers, re-dispatch the same agent. Routing a contradiction to the owning sub-agent (`spec-writer` / `architect` / `ux-expert`) is automatic — stop at the user only when the sub-agent itself surfaces an unresolvable question.
-- **Final summary** — after all steps converge, commit + push + open PR, then present the PR URL with the summary (AC verdict, smoke verdict if applicable, any `[UNVERIFIABLE]` findings) plus manual test plan if applicable. Do not block on explicit OK before push.
 
 Everything else — implementation details, reviewer findings, fix iterations — you handle internally.
 
