@@ -1,0 +1,21 @@
+{
+	"nodes":[
+		{"id":"0a1b2c3d4e5f0001","type":"group","x":-40,"y":-40,"width":380,"height":440,"color":"3","label":"Application"},
+		{"id":"0a1b2c3d4e5f0002","type":"group","x":520,"y":-40,"width":360,"height":440,"color":"6","label":"Library"},
+		{"id":"bdd96837b977c4bd","type":"group","x":-40,"y":480,"width":920,"height":130,"label":"legend"},
+		{"id":"0a1b2c3d4e5f0022","type":"text","text":"Some Application module","x":20,"y":0,"width":240,"height":80,"color":"3"},
+		{"id":"0a1b2c3d4e5f0020","type":"text","text":"Application DI module","x":20,"y":260,"width":240,"height":80,"color":"3"},
+		{"id":"0a1b2c3d4e5f0010","type":"text","text":"Lib-Api","x":580,"y":0,"width":240,"height":80,"color":"#3c78ff"},
+		{"id":"0a1b2c3d4e5f0011","type":"text","text":"Lib-Impl","x":580,"y":260,"width":240,"height":80,"color":"6"},
+		{"id":"4f4b0238ae208cd0","type":"text","text":"application","x":664,"y":510,"width":172,"height":60,"color":"3"},
+		{"id":"14d42551bd84e3ef","type":"text","text":"library-public","x":1,"y":510,"width":172,"height":60,"color":"#427bff"},
+		{"id":"d40d0f0f6e66862c","type":"text","text":"library-internal","x":331,"y":510,"width":172,"height":60,"color":"6"},
+		{"id":"596449e289f54ee1","type":"text","text":"Some Library","x":20,"y":120,"width":240,"height":80,"color":"3"}
+	],
+	"edges":[
+		{"id":"e3000000000a0001","fromNode":"0a1b2c3d4e5f0011","fromSide":"top","toNode":"0a1b2c3d4e5f0010","toSide":"bottom","color":"6","label":"extends"},
+		{"id":"e3000000000a0002","fromNode":"0a1b2c3d4e5f0020","fromSide":"right","toNode":"0a1b2c3d4e5f0011","toSide":"left","color":"6","label":"the only dependency on Impl"},
+		{"id":"e3000000000a0004","fromNode":"0a1b2c3d4e5f0022","fromSide":"right","toNode":"0a1b2c3d4e5f0010","toSide":"left","color":"#3c78ff"},
+		{"id":"5875e28a68de250a","fromNode":"596449e289f54ee1","fromSide":"right","toNode":"0a1b2c3d4e5f0010","toSide":"left","color":"#3c78ff"}
+	]
+}

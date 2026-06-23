@@ -131,15 +131,15 @@ class AppContainer {
 
 В KMP-приложении контейнеров целое дерево. Оно повторяет дерево сорс-сетов. Каждый слой добавляет только то, что его сорс-сет способен увидеть.
 
-![Иерархия контейнеров повторяет иерархию сорс-сетов](manual-di-source-set-hierarchy.png)
-
 ```
-AppContainer            (commonMain)
-├── JvmAppContainer     (jvmMain)
-│   ├── AndroidAppContainer  (androidMain)
-│   └── DesktopAppContainer  (desktopMain)
-└── AppleAppContainer   (appleMain)
-    └── IosAppContainer      (iosMain)
+ source set            container
+  ──────────            ─────────
+  commonMain       ←→   AppContainer
+  ├ jvmMain        ←→   ├ JvmAppContainer
+  │ ├ androidMain  ←→   │ ├ AndroidAppContainer
+  │ └ desktopMain  ←→   │ └ DesktopAppContainer
+  └ appleMain      ←→   └ AppleAppContainer
+    └ iosMain      ←→     └ IosAppContainer
 ```
 
 `AppContainer` в `commonMain` собирает всё, что выражается общим кодом. `AndroidAppContainer` в `androidMain` добавляет компоненты, которым нужен `Context` или другой Android-API. `IosAppContainer` — то, что требует Apple-фреймворков. Платформенный лист (конечный узел дерева, `leaf`) наследует общий контейнер и доопределяет недостающее.
@@ -188,8 +188,6 @@ interface AndroidAppConfig : AppConfig {
 1. Подкласс `Application` реализует интерфейс-провайдер и владеет контейнером.
 2. Системные компоненты достают контейнер через приведение: `(application as AppContainerProvider).container`.
 
-![Паттерн Provider для Android-компонентов](manual-di-android-provider.png)
-
 ```kotlin
 interface AppContainerProvider {
     val container: AppContainer
@@ -234,6 +232,9 @@ class AppContainer(
     val featureGate: FeatureGate by lazy { FeatureGate(flavor.entitlements) }
 }
 ```
+
+![Композиция: AppContainer собирается из независимых фрагментов по каждой оси](manual-di-composition.png)
+> На каждой оси — несколько взаимозаменяемых вариантов. Акцентным цветом обозначен тот, что выбран для конкретной сборки (здесь — iOS, B2B, новый UI). Цветом обозначены разные смысловые оси.
 
 Также здесь проявляется главный плюс — наглядность. В случае, если нужно и можно вынести отдельную ось — скорее всего это кандидат для отдельного модуля или самостоятельной библиотеки. Ручной DI только подсвечивает возможность, но позволяет оставить ситуацию как есть.
 
@@ -287,6 +288,7 @@ class FakeContainer : AppContainer() {
 Показательный случай — опциональная или подгружаемая фича. Решение «доступна ли реализация и какую версию поднять» принимается ровно один раз, в composition root. Недоступна — корень заводит за тем же интерфейсом Api заглушку или обрабатывает случай иначе. Доступна — резолвит и подставляет настоящий Impl. А как она доставлена — Android dynamic-feature, отдельная загрузка из удалённого хранилища, выбор нужного `.so` под рантайм-условия — остальному коду неважно: потребители держат в руках только Api и вызывают функциональность напрямую, без единой проверки «загружено ли это».
 
 ![Подключение Api и Impl](manual-di-api-impl.png)
+> Только DI-модуль зависит от Impl. Всё остальное зависит от Api.
 
 ### Публичный и внутренний контейнеры
 
@@ -295,7 +297,8 @@ class FakeContainer : AppContainer() {
 - **LibPublicContainer** — публичное API (фасад) библиотеки. Объявлен в Api-модуле. В нём лежат все зависимости, которые библиотека отдаёт внешним потребителям.
 - **LibInternalContainer** — наследник публичного, объявлен в Impl-модуле. Добавляет зависимости для внутреннего использования. Внешним потребителям его тип не виден, поэтому опереться на него снаружи библиотеки физически нельзя.
 
-![Публичный и внутренний контейнеры](manual-di-public-internal.png)
+![Каскад видимости через наследование](manual-di-inheritance.png)
+> Внутренние прямоугольники — родители. AndroidContainer наследует InternalContainer, InternalContainer — PublicContainer. Конфиг приходит через конструктор. AndroidConfigContainer наследует ConfigContainer и дополняет его андроид-специфичными вводными. 
 
 ```kotlin
 // модуль Api
@@ -375,6 +378,14 @@ class LibActivity : Activity() {
 ```
 
 Отдельный внутренний провайдер избавляет от двойного каста `as? … as?`, в котором два разных промаха слились бы в одну молчаливую ветку и внутренний `start()` просто не случился бы. Здесь каст один и при неверной сборке падает с `IllegalStateException`, а не тихо отключает фичу.
+
+![Паттерн Provider: одно владение контейнером — несколько типизированных провайдеров](manual-di-provider-pattern.png)
+> Порядок взаимодействия с библиотекой:
+> 1. Приложение инициализирует библиотеку через ее фабрику
+> 2. Библиотека возвращает приложению свой контейнер на хранение
+> 3. Внутренний Android компонент библиотеки получает внутренний контейнер у приложения как LibInternalProvider
+> 4.  Android компонент приложения получает контейнер приложения у приложения как AppContainerProvider
+> 5. Android компонент приложения получает публичный контейнер библиотеки у приложения как LibPublicProvider
 
 ## Миграция на фреймворк
 

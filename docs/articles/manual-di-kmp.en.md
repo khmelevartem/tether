@@ -131,8 +131,6 @@ Plain data on the container forces it to be materialized at assembly time, hides
 
 In a KMP app there is a whole tree of containers. It mirrors the source-set tree. Each layer adds only what its source set is able to see.
 
-![Container hierarchy mirrors the source-set hierarchy](manual-di-source-set-hierarchy.png)
-
 ```
 AppContainer            (commonMain)
 ├── JvmAppContainer     (jvmMain)
@@ -188,8 +186,6 @@ The solution that fits this situation:
 1. The `Application` subclass implements a provider interface and owns the container.
 2. System components reach the container through a cast: `(application as AppContainerProvider).container`.
 
-![The Provider pattern for Android components](manual-di-android-provider.png)
-
 ```kotlin
 interface AppContainerProvider {
     val container: AppContainer
@@ -234,6 +230,9 @@ class AppContainer(
     val featureGate: FeatureGate by lazy { FeatureGate(flavor.entitlements) }
 }
 ```
+
+![Composition: AppContainer assembled from independent fragments along each axis](manual-di-composition.png)
+> Each axis has several interchangeable alternatives. An accent colour marks the one picked for this concrete build (here — iOS, B2B, new UI). Colour marks the different semantic axes.
 
 The main advantage, transparency, shows up here too. When a separate axis can and should be factored out, it is most likely a candidate for a separate module or a standalone library. Manual DI only highlights the option but lets you leave things as they are.
 
@@ -287,7 +286,7 @@ The value here is control over who is even allowed to depend on the implementati
 A telling case is an optional or loadable feature. The decision "is the implementation available and which version to bring up" is made exactly once, in the composition root. Not available: the root puts a stub behind the same Api interface or handles the case differently. Available: it resolves and substitutes the real Impl. And how it was delivered, an Android dynamic feature, a separate download from remote storage, picking the right `.so` for runtime conditions, does not matter to the rest of the code: consumers hold only Api and call the functionality directly, without a single "is this loaded" check.
 
 ![Wiring Api and Impl](manual-di-api-impl.png)
-
+> Only the DI module depends on Impl. Everything else depends on Api.
 ### Public and internal containers
 
 A library's container forks by visibility.
@@ -295,7 +294,8 @@ A library's container forks by visibility.
 - **LibPublicContainer**: the library's public API (façade). Declared in the Api module. It holds all the dependencies the library hands to external consumers.
 - **LibInternalContainer**: a descendant of the public one, declared in the Impl module. Adds dependencies for internal use. External consumers don't see its type, so it is physically impossible to rely on it from outside the library.
 
-![Public and internal containers](manual-di-public-internal.png)
+![Visibility cascade by inheritance](manual-di-inheritance.png)
+> Inner rectangles are the parents. AndroidContainer extends InternalContainer, InternalContainer extends PublicContainer. Config is fed in through the constructor. AndroidConfigContainer extends ConfigContainer and adds Android-specific inputs to it.
 
 ```kotlin
 // Api module
@@ -375,6 +375,14 @@ class LibActivity : Activity() {
 ```
 
 A separate internal provider gets rid of the double cast `as? … as?`, in which two different misses would merge into one silent branch and the internal `start()` would simply not happen. Here there is a single cast, and with a wrong build it fails with `IllegalStateException` rather than silently disabling the feature.
+
+![The Provider pattern: one container owner, multiple typed providers](manual-di-provider-pattern.png)
+> Order of interaction with the library:
+> 1. The application initializes the library via its factory.
+> 2. The library hands its container back to the application to hold.
+> 3. The library's internal Android component obtains the internal container from the application as LibInternalProvider.
+> 4.  The application's Android component obtains the app container from the application as AppContainerProvider.
+> 5. The application's Android component obtains the library's public container from the application as LibPublicProvider.
 
 ## Migrating to a framework
 

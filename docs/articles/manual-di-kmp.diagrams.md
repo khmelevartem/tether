@@ -1,54 +1,64 @@
 # Diagram specs — Manual DI in KMP article
 
-Four inline figures (1–4) are referenced by both `manual-di-kmp.ru.md` and `manual-di-kmp.en.md`, plus a cover/hook image (5) that the publishing platform overlays with the title (not linked inline). Filenames are language-neutral (the diagrams carry only code identifiers and arrows), so one set serves both articles. Two of the inline figures are direct descendants of the diagrams in the original `di-structure.md` (`containers.png`, `api-impl.png`) and can be redrawn from those.
+Four inline figures (1–4) are referenced by both `manual-di-kmp.ru.md` and `manual-di-kmp.en.md`, plus a cover/hook image (5) that the publishing platform overlays with the title (not linked inline). Filenames are language-neutral (the diagrams carry only code identifiers and arrows), so one set serves both articles. Each picture is followed inline by a short `> ...` caption in the article body.
 
-Style guidance, consistent across all five:
+Style guidance, consistent across the inheritance / api-impl / provider-pattern figures (1, 3, 4):
 
-- Dark canvas, rounded boxes, monospace labels — matches the look of the originals.
-- Colour roles, used the same way everywhere: **yellow** = the consuming application, **green** = public surface, **purple** = internal / platform-specific, **blue/teal** = neutral structural containers.
+- Dark canvas, rounded boxes, monospace labels.
+- Colour roles, used the same way everywhere: **yellow** = the consuming application, **green** = public surface, **purple** = internal (library-visible, not exposed beyond), **blue/teal** = platform-specific or structural-intermediate containers.
 - Only the identifiers that appear in the article prose. No real project class names.
-- Each box label is `code` font; group headers are plain.
+
+Figure 2 (composition) uses colour differently — see its own section.
 
 ---
 
-## 1. `manual-di-source-set-hierarchy.png`
+## 1. `manual-di-inheritance.png`
 
-**Referenced in:** "The container hierarchy mirrors the source-set hierarchy."
+**Referenced in:** "Public and internal containers."
 
-**Shows:** the container tree drawn side by side with the source-set tree, so the reader sees the one-to-one mirror. Descendant of the original `containers.png`, but generalised to the full tree rather than a single Android/iOS pair.
+**Shows:** the visibility cascade as **inheritance**, not composition. The inner rectangles are the parents; the outer rectangles are subclasses that add more fields. Same shape on both sides:
 
-**Layout:** two parallel columns, left = source sets, right = containers, with thin horizontal "mirrors" links between the matching rows.
+- The **config container** has two tiers — public-visible fields and platform-specific handles.
+- The **assembled container** has three tiers — public, internal, and platform-specific.
 
-```
-  source set            container
-  ──────────            ─────────
-  commonMain    ←→      AppContainer
-  ├ jvmMain     ←→      ├ JvmAppContainer
-  │ ├ androidMain ←→    │ ├ AndroidAppContainer
-  │ └ desktopMain ←→    │ └ DesktopAppContainer
-  └ appleMain   ←→      └ AppleAppContainer
-    └ iosMain   ←→        └ IosAppContainer
-```
+The single composition arrow ties the two together: the assembled container takes the config in its constructor.
 
-**Annotation (one caption line):** "Each layer adds only what its source set can see."
+**Layout:** two main groups + a small legend, left to right.
 
-**Colour:** structural blue/teal boxes throughout; the common row slightly highlighted to mark it as the root.
+- **Left — `AndroidConfigContainer` (teal):** subclass of `ConfigContainer`.
+  - Nested `ConfigContainer` (green): parent. Holds `val commonConfig: CommonConfig`.
+  - Outside the green region but inside the teal envelope: `val androidConfig: AndroidConfig`, `val androidApplication: Application`.
+- **Right — `AndroidContainer` (teal):** subclass of `InternalContainer`, which is itself a subclass of `PublicContainer`.
+  - Innermost `PublicContainer` (green): the topmost ancestor. Holds `val someRepository: SomeRepository`.
+  - Middle `InternalContainer` (purple): subclass of `PublicContainer`. Adds `val someInternalService: SomeInternalService`.
+  - Outermost `AndroidContainer` (teal): subclass of `InternalContainer`. Adds `val androidDependency: AndroidDependency`, `val androidNotifier: AndroidNotifier`.
+- **Arrow (red):** `AndroidConfigContainer` → `AndroidContainer`, labelled "into constructor."
+- **Legend:** colour → role mapping.
+
+**Inline caption (article body):** "Inner rectangles are the parents. AndroidContainer extends InternalContainer, InternalContainer extends PublicContainer. Config is fed in through the constructor."
 
 ---
 
-## 2. `manual-di-android-provider.png`
+## 2. `manual-di-composition.png`
 
-**Referenced in:** "The Provider pattern for Android."
+**Referenced in:** "Composing the container."
 
-**Shows:** why framework-managed components can't take the container in the constructor, and how they reach it through the `Application`.
+**Shows:** the orthogonal pattern to figure 1 — composition by axes. `AppContainer` is the assembly target; each independent axis (platform, UI, monetization, config) is factored out as its own fragment container and passed in via the constructor. Several interchangeable alternatives per axis demonstrate the "swap one fragment, get a different build" point.
 
-**Layout:** three boxes.
+**Colour convention here is local — it groups axes, not roles.** Each slot inside `AppContainer` is coloured by its axis, and the active alternative on the outside shares that colour:
 
-- Top-left (yellow): `MyApp : Application, AppContainerProvider` — note inside: "owns the container, built lazily."
-- Top-right (blue/teal): `AppContainer` — the owned instance. Solid arrow from `MyApp` → `AppContainer` labelled "constructs & owns."
-- Bottom (purple, framework-managed): `MyService : Service` with "empty constructor — required by the framework." Dashed arrow from `MyService` up to `MyApp` labelled `(application as AppContainerProvider).container`.
+- Monetization axis (purple): `B2BContainer` (active) / `B2CContainer`.
+- UI axis (cyan): `OldUiContainer` / `NewUiContainer` (active).
+- Platform axis (green): `AndroidPlatformContainer` / `IosPlatformContainer` (active) / `DesktopPlatformContainer`.
+- Config axis (yellow): `appConfigContainer` slot in the colour of the outer `AppContainer`.
 
-**Annotation:** "Only framework-managed classes reach the container this way. Plain classes get it through the constructor." Optionally draw a fourth box (green) `PlainClass(dep: SomeDep)` with a solid constructor arrow, to contrast.
+Inactive alternatives are drawn uncoloured — visually dimmed against the active one.
+
+**Layout:** `AppContainer` group (yellow) in the centre, holding four slot fields (one per axis). Each axis's fragments cluster off to one side of the group with an edge into the slot — platform on the left, UI on the right, monetization above, config slot on the bottom of the assembly with its alternatives implied.
+
+**Inline caption (article body):** "Each axis has several interchangeable alternatives; the one picked for this concrete build is shown in colour (here — iOS, B2B, new UI). A variant's colour matches its slot; colour here marks the axis, not the role."
+
+**Note:** this figure deliberately diverges from the global colour legend. Figures 1, 3, 4 use colour to mark visibility tier / role; figure 2 uses colour to mark axis. The caption flags this.
 
 ---
 
@@ -56,37 +66,40 @@ Style guidance, consistent across all five:
 
 **Referenced in:** "Splitting into Api and Impl."
 
-**Shows:** the module dependency wiring — who depends on Api, who depends on Impl. Direct descendant of the original `api-impl.png`.
+**Shows:** the module dependency wiring — who depends on Api, who depends on Impl.
 
 **Layout:** two grouped regions, **Application** (yellow) on the left, **Library** (green) on the right.
 
-- Library region contains two stacked boxes: `Lib-Api` (green, top) and `Lib-Impl` (green, bottom). Arrow `Lib-Impl` → `Lib-Api` ("depends on").
-- Application region contains: `App-DI-module` (the one module that may see Impl) and two or more `app component` boxes.
-- Arrow `App-DI-module` → `Lib-Impl` (the single allowed dependency on Impl).
-- Arrows from each `app component` → `Lib-Api` only (curved, green), showing components never touch Impl.
+- Library region contains two stacked boxes: `Lib-Api` (green, top) and `Lib-Impl` (green, bottom). Arrow `Lib-Impl` → `Lib-Api` ("extends" / "depends on").
+- Application region contains: `App DI module` (the one module that may see Impl), `app component`, and `any other library` boxes.
+- Arrow `App DI module` → `Lib-Impl` (the single allowed dependency on Impl).
+- Arrows from `app component` and `any other library` → `Lib-Api` only (green), showing they never touch Impl.
 
-**Annotation:** "Only the DI module depends on Impl. Everything else depends on Api."
-
-This is essentially the original `api-impl.png` with class names stripped to roles.
+**Inline caption (article body):** "Only the DI module depends on Impl. Everything else depends on Api."
 
 ---
 
-## 4. `manual-di-public-internal.png`
+## 4. `manual-di-provider-pattern.png`
 
-**Referenced in:** "Public and internal containers."
+**Referenced in:** end of "Static access from inside the library." Acts as a structural synthesis for the Provider pattern across both Android and library contexts.
 
-**Shows:** the container forking by visibility — public façade vs internal extension — and who reads which.
+**Shows:** one owner (the `App`) holding containers, exposing multiple typed Provider interfaces. Each consumer reaches the container through exactly the Provider whose type matches what it is allowed to see.
 
-**Layout:** one large container box with two nested regions.
+**Layout:** three columns.
 
-- Outer box: `LibInternalContainer` (purple header).
-- Nested inside: `LibPublicContainer` (green header) containing a field `val someRepository: SomeRepository` (green).
-- Outside the nested region but inside the outer box: `val someInternalService: SomeInternalService` (purple).
-- Two reader arrows on the left margin: a yellow `App` arrow pointing at the **green** region ("reads via public interface"); a purple `library-internal class` arrow pointing at the **whole outer box** ("reads via internal interface").
+- **Left column — the owner.** `App` (yellow), labelled `: AppContainerProvider, LibProvider, LibInternalProvider`.
+- **Center column — owned containers.**
+  - `AppContainer` (blue/teal) on top.
+  - `LibInternalContainer` (purple outer group) below, with a nested `LibPublicContainer` (green).
+  - `val someRepository: SomeRepository` (green) inside the public group.
+  - `val someInternalService: SomeInternalService` (purple) inside the internal group, outside the public one.
+  - Solid arrows from `App` → both containers, labelled "owns."
+- **Right column — consumers, top to bottom.**
+  1. (purple) `Android Service` — arrow to `AppContainer` labelled `as AppContainerProvider`.
+  2. (green) `External library caller` — arrow to `LibPublicContainer` labelled `as LibProvider`.
+  3. (purple) `Library-internal class` — arrow to the **whole outer** `LibInternalContainer` labelled `as LibInternalProvider`.
 
-**Annotation:** "The app sees green. The library's own classes see purple too."
-
-**Colour:** mirrors the legend used in the original `containers.png` (green = public, purple = internal).
+**Inline caption (article body):** "The app sees green. The library's own classes see purple too."
 
 ---
 
@@ -105,9 +118,3 @@ This is essentially the original `api-impl.png` with class names stripped to rol
 **Format:** wide cover ratio (16:9, or Habr's cover crop). **No text in the image** — the title is overlaid by the platform.
 
 **Style:** clean semi-realistic 3D render or editorial illustration. Avoid stock-photo literalness and avoid flat clip-art.
-
----
-
-## Reuse note
-
-If redrawing from scratch is too much, figures 3 and 4 can be produced by editing the originals (`api-impl.png`, `containers.png`) — replace each real class name with its role label from the boxes above and keep the existing layout and colours. Figures 1 and 2 are new and have no original to edit from.
