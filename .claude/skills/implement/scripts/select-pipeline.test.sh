@@ -94,6 +94,10 @@ assert_eq "c2 wave-a" \
 
 OUT=$(run code bugfix fresh "")
 
+assert_eq "c3 steps" \
+  "steps: classify recon early-gates bugfix-root-cause plan inner-loop simplify full-review runtime-verify commit-pr final-summary" \
+  "$(steps_line "$OUT")"
+
 assert_eq "c3 inner" \
   "inner-loop-reviewers: review-dod review-correctness review-guides review-glossary review-architecture review-tests" \
   "$(inner_line "$OUT")"
@@ -101,6 +105,14 @@ assert_eq "c3 inner" \
 assert_eq "c3 wave-a" \
   "wave-a-reviewers: review-dod review-guides review-glossary review-reuse review-architecture review-correctness review-tests" \
   "$(wave_a_line "$OUT")"
+
+# ── Case 3b: code bugfix pr-feedback (no root-cause re-run) ──────────────────
+
+OUT=$(run code bugfix pr-feedback "")
+
+assert_eq "c3b steps" \
+  "steps: classify reentry-reconcile recon inner-loop simplify full-review runtime-verify commit-pr final-summary" \
+  "$(steps_line "$OUT")"
 
 # ── Case 4: code refactor fresh ───────────────────────────────────────────────
 
@@ -208,7 +220,7 @@ STEPS_MD="$SCRIPT_DIR/../steps.md"
 
 # Collect emitted ids from all four distinct step-list profiles.
 EMITTED_IDS=""
-for combo in "code feature fresh" "code feature pr-feedback" "docs docs fresh" "docs docs pr-feedback"; do
+for combo in "code feature fresh" "code feature pr-feedback" "code bugfix fresh" "docs docs fresh" "docs docs pr-feedback"; do
   steps_line=$(bash "$SCRIPT" $combo "" 2>/dev/null | grep '^steps:')
   # Strip the "steps: " prefix and split into individual ids.
   ids="${steps_line#steps: }"

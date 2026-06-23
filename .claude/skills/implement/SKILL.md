@@ -11,18 +11,16 @@ You are the orchestrator for a single GitHub issue. You do NOT write code, desig
 
 ## Input
 
-Issue number `<N>`.
+Issue number `<N>` — optional.
+
+- **`<N>` provided** — may start fresh work or re-enter an existing PR.
+- **`<N>` omitted** — re-entry only; the issue is resolved from the current branch / open PR by `classify.sh`. If neither resolves an issue → STOP immediately.
 
 ## How the skill runs
 
-1. Run `classify.sh <N>` → mechanical profile facts (`issue`, `reentry`, `pr`, `drift`, `type`, `touched`).
-2. Decide `track` (docs or code) and `docLayers` using the prose tables in `classify` (steps.md).
-3. Pass the resolved profile to `select-pipeline.sh` → a manifest: ordered step IDs + reviewer rosters.
-4. Walk `steps.md` in the order the manifest names — run every listed step, skip every unlisted step.
+The pipeline is data-driven. On every invocation the orchestrator regenerates a manifest of ordered step IDs and reviewer rosters from the current profile, then walks `steps.md` in that order. Step 0 — `classify` — produces the profile; everything after follows the manifest. Fresh work and post-review re-entry produce different active-step sets because `reentry` is part of the profile.
 
 **Step/roster split.** Reviewer selection is always the script's output, never the model's. Timing and mechanics — see `steps.md` `classify` §Step/roster split.
-
-**Critical:** the manifest is regenerated on every invocation. A fresh task and a post-manual-review re-entry produce different active-step sets because `reentry` is part of the profile.
 
 ## Re-entry contract
 
@@ -41,15 +39,16 @@ These MUST-stop gates are **not overridden by session-level autonomy or "skip cl
 
 You MUST stop and ask the user:
 
-- **Spec or AC ambiguity** — for a FEATURE, a spec is mandatory; if it is missing, stop here and escalate to the user — do not dispatch `spec-writer` as a mitigation. A spec may be absent only in a task wholly dedicated to writing that spec. For non-FEATURE issues, stop if DoD is missing or stub.
-- **BUGFIX root cause** — dispatch `bug-reproducer`; stop at the user if CANNOT REPRODUCE or no hypothesis matches. The reproducer must always attempt to observe the symptom even when the cause looks structurally evident or the issue names hypotheses or reasons directly.
-- **Cause-vs-issue divergence** — confirmed cause materially diverges from issue body (different mechanism / scope / symptom / severity). Stop and ask: close #N as misdiagnosis and open a new issue, or post a clarifying comment to the issue. Do not silently edit the issue body.
-- **Plan ambiguity** — plan conflicts with loaded engineering guides and you have no clean resolution.
-- **Forced-cascade scope expansion** — a change is technically forced but falls outside the issue's literal **Out of scope**. Ask: fold, split, or re-frame. Not a heads-up.
+- **Spec / AC ambiguity** — for a FEATURE, a spec is mandatory; if it is missing or `(stub)`, stop and escalate — do not dispatch `spec-writer` as a mitigation. A spec may be absent only in a task wholly dedicated to writing it. For non-FEATURE issues, stop if DoD is missing or `(stub)`.
+- **Framing ambiguity** — the requested deliverable is unclear enough that scope / layer classification cannot proceed.
+- **Pre-implementation open questions** — questions in spec, ux-brief, issue body, or surfaced by a preparation sub-agent. Each is escalated with a recommended option and rationale before work starts; dark spots cause loop iterations later.
+- **BUGFIX root cause** — `bug-reproducer` returns CANNOT REPRODUCE or no hypothesis matches. Mechanics in `bugfix-root-cause`.
+- **Cause-vs-issue divergence** — confirmed cause materially diverges from issue body (different mechanism / scope / symptom / severity). Ask: close #N as misdiagnosis and open a new issue, or post a clarifying comment to the issue. Do not silently edit the issue body.
+- **Plan conflicts with engineering guides** — surfaced by the `Plan` agent or by recon's living-doc digest, with no clean resolution.
+- **Forced-cascade scope expansion** — a change is technically forced but violates an explicit entry in the issue's **Out of scope** section. Ask: fold, split, or re-frame.
 - **Smoke red/yellow** — `runtime-verify` verdict is not green after the inner loop.
-- **Framing ambiguity** — the requested deliverable is unclear enough that layer or scope classification cannot proceed. Stop and ask before dispatching anything.
-- **Sub-agent open question** — a sub-agent returns an open question it cannot converge on. Relay verbatim, collect answers, re-dispatch the same agent. Routing a contradiction to the owning sub-agent (`spec-writer` / `architect` / `ux-expert`) is automatic — stop at the user only when the sub-agent itself surfaces a question it cannot converge on.
-- **Final summary** — after all steps converge, commit + push + open PR, then present the PR URL with a summary (AC verdict, smoke verdict if applicable, any `[UNVERIFIABLE]` findings) plus manual test plan if applicable. Do not block on explicit OK before push.
+- **Sub-agent open question** — a sub-agent returns a question it cannot converge on. Relay verbatim, collect answers, re-dispatch the same agent. Routing a contradiction to the owning sub-agent (`spec-writer` / `architect` / `ux-expert`) is automatic — stop at the user only when the sub-agent itself surfaces an unresolvable question.
+- **Final summary** — after all steps converge, commit + push + open PR, then present the PR URL with the summary (AC verdict, smoke verdict if applicable, any `[UNVERIFIABLE]` findings) plus manual test plan if applicable. Do not block on explicit OK before push.
 
 Everything else — implementation details, reviewer findings, fix iterations — you handle internally.
 

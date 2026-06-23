@@ -43,6 +43,8 @@ is_refactor() {
 if [ "$TRACK" = "code" ]; then
   if [ "$REENTRY" = "pr-feedback" ]; then
     STEPS="classify reentry-reconcile recon inner-loop simplify full-review runtime-verify commit-pr final-summary"
+  elif [ "$TYPE" = "bugfix" ]; then
+    STEPS="classify recon early-gates bugfix-root-cause plan inner-loop simplify full-review runtime-verify commit-pr final-summary"
   else
     STEPS="classify recon early-gates plan inner-loop simplify full-review runtime-verify commit-pr final-summary"
   fi
