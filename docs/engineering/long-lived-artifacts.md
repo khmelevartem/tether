@@ -10,6 +10,12 @@ A long-lived artifact states what is / what to do / what equals — in present t
 
 If a rule is unreadable without referring to an incident, that's a weak formulation. Rewrite the rule; do not append the incident.
 
+## State the decision, not the alternatives it rejected
+
+When a rule encodes a choice, write only the choice. Do not append «А, а not Б», «not Y», «instead of Z» unless naming the rejected variant is genuinely load-bearing for understanding the choice. The next reader would not have considered the rejected option until the artifact named it — surfacing it here only widens the surface they must hold in mind.
+
+Counter-rejections age the same way as incident-rooted rationale: they freeze the writing-time context, and they make every later rewrite negotiate with a ghost variant.
+
 ## Code does not belong in long-lived artifacts
 
 A long-lived artifact describes a mechanism conceptually — what something is, why it exists, what invariants hold. It does not name the classes, methods, or library calls that implement it; those live in the code, where readers can see them in context. Class names in backticks, method signatures, and concrete API calls inside prose are signs the rule is being expressed through implementation, not as a rule.
