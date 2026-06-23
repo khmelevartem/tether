@@ -112,7 +112,7 @@ Flag and escalate before starting work if:
 
 ### Briefing to the user
 
-After recon completes, post a short 3–6 line briefing: what we are doing, why (motivation from the issue), track + affected layers/platforms, surfaced living-doc constraints. Any user-facing questions are asked next at `early-gates` (per SKILL.md §Gate semantics). One briefing per run; do not repeat on re-entry.
+After recon completes, post a short 3–6 line briefing: what we are doing, why (motivation from the issue), track + affected layers/platforms, surfaced living-doc constraints. Any user-facing questions are asked next at `early-gates` if the manifest contains it; otherwise inline, before continuing. One briefing per run; do not repeat on re-entry.
 
 ---
 
@@ -303,7 +303,8 @@ Selection from classify.sh's `touched` set:
 |---|---|
 | `code` without `platform` | All smoke blocks (Desktop, Android if device attached, iOS sim) — the change is in common sources |
 | `platform` (and possibly `code`) | Smoke block for each platform whose source set is in the diff |
-| only `docs` / `claude` / `engdoc` / `ux-brief` | Nothing |
+| `touched` is empty (build files, CI, root scripts — nothing classify.sh buckets) | All smoke blocks — a build-system change can break any target |
+| `touched` is non-empty and only `docs` / `claude` / `engdoc` / `ux-brief` | Nothing |
 
 `ui` always co-occurs with `code` — handled by the first row.
 

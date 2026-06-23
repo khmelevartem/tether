@@ -89,6 +89,7 @@ if [ "$PR_NUMBER" = "-" ]; then
 else
   echo "reentry=pr-feedback"
   echo "pr=$PR_NUMBER"
+  git fetch origin main --quiet 2>/dev/null || true
   if git merge-base --is-ancestor origin/main HEAD 2>/dev/null; then
     echo "drift=up-to-date"
   else
