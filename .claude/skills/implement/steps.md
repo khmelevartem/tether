@@ -98,6 +98,8 @@ For each prior-`#<N>` mention, resolve in this PR or escalate to the user as "ca
 
 ### Critical reading
 
+Skip on re-entry — the issue was validated on the fresh run; these triggers describe planning gaps caught before work starts.
+
 Flag and escalate before starting work if:
 
 - only one platform is mentioned, yet the task is cross-platform;
@@ -302,6 +304,8 @@ Selection from classify.sh's `touched` set:
 | `code` without `platform` | All smoke blocks (Desktop, Android if device attached, iOS sim) — the change is in common sources |
 | `platform` (and possibly `code`) | Smoke block for each platform whose source set is in the diff |
 | only `docs` / `claude` / `engdoc` / `ux-brief` | Nothing |
+
+`ui` always co-occurs with `code` — handled by the first row.
 
 If the PR introduces a new critical happy-path not covered by smoke — extend `.claude/skills/smoke-test/SKILL.md` in this same PR before running.
 
