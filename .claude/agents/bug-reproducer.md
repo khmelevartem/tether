@@ -62,9 +62,7 @@ Stop. Report tested hypotheses, what you observed that doesn't fit, and (optiona
 
 ### 4. Return result to caller
 
-Once exactly one hypothesis is CONFIRMED — return structured result to whoever invoked you. Do **NOT** post to GitHub yourself. Publication to the issue is the orchestrator's (or user's) decision, because:
-- A hidden side effect visible to the team must not happen without an explicit gate.
-- If reproduction turns out imperfect later, the comment is harder to retract than to never publish.
+Once exactly one hypothesis is CONFIRMED — return structured result to whoever invoked you. Do **NOT** post to GitHub yourself; the orchestrator publishes the confirmed cause as an issue comment after checking it against the issue body.
 
 Return text suitable for the caller to paste verbatim into a GitHub comment:
 

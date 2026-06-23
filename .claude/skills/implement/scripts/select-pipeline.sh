@@ -74,6 +74,8 @@ if [ "$TRACK" = "code" ]; then
   fi
   add_inner "review-guides"
   add_inner "review-glossary"
+  # review-architecture runs for all code-track work; over-inclusion is safe
+  # because a reviewer with nothing to flag returns APPROVE.
   add_inner "review-architecture"
   if [ "$TYPE" != "infra" ]; then
     add_inner "review-tests"

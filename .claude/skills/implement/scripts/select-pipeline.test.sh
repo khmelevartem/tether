@@ -212,32 +212,24 @@ assert_eq "docs wave-b review-adversarial" \
 
 # ── ID↔section coupling: emitted ids match steps.md catalog ─────────────────
 #
-# Emitted set: union of all step ids across the four distinct step lists.
-# Catalog set: step ids extracted from ## Step N — <id> headers in steps.md.
 # Both directions must agree — drift in either direction is a test failure.
 
 STEPS_MD="$SCRIPT_DIR/../steps.md"
 
-# Collect emitted ids from all four distinct step-list profiles.
 EMITTED_IDS=""
 for combo in "code feature fresh" "code feature pr-feedback" "code bugfix fresh" "docs docs fresh" "docs docs pr-feedback"; do
   steps_line=$(bash "$SCRIPT" $combo "" 2>/dev/null | grep '^steps:')
-  # Strip the "steps: " prefix and split into individual ids.
   ids="${steps_line#steps: }"
   for id in $ids; do
     EMITTED_IDS="$EMITTED_IDS $id"
   done
 done
 
-# Deduplicate while preserving deterministic order (sort -u).
 EMITTED_SORTED=$(echo "$EMITTED_IDS" | tr ' ' '\n' | grep -v '^$' | sort -u)
 
-# Extract catalog ids from ## Step N — <id> headers.
 CATALOG_SORTED=$(grep -E '^## Step [0-9]+ — ' "$STEPS_MD" | sed 's/^## Step [0-9]* — //' | sort -u)
 
-# IDs in emitted but not in catalog.
 EMITTED_ONLY=$(comm -23 <(echo "$EMITTED_SORTED") <(echo "$CATALOG_SORTED"))
-# IDs in catalog but not in emitted.
 CATALOG_ONLY=$(comm -13 <(echo "$EMITTED_SORTED") <(echo "$CATALOG_SORTED"))
 
 if [ -z "$EMITTED_ONLY" ]; then
