@@ -69,9 +69,7 @@ if [ "$TRACK" = "code" ]; then
   add_inner() { INNER_REVIEWERS="${INNER_REVIEWERS:+$INNER_REVIEWERS }$1"; }
 
   # Inner-loop is narrow on purpose: only reviewers whose miss cost compounds
-  # across iterations belong here. Mechanical / single-pass / expensive ones
-  # (dod, glossary, tests, design-system, visual, ux-brief, reuse) defer to
-  # Wave A, which sees the final diff once.
+  # across iterations belong here. Wave A is the broad final-gate roster.
   if ! is_refactor; then
     add_inner "review-correctness"
   fi
