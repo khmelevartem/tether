@@ -15,7 +15,7 @@
 - [ ] `data class` — что генерирует компилятор: `equals`, `hashCode`, `toString`, `copy`, `componentN`
 - [ ] `copy` — поверхностная копия, что с этим делать
 - [ ] `value class` (`@JvmInline`) — боксинг/анбоксинг, когда vs `data class`
-- [ ] `data object` (Kotlin 1.9+) — чем отличается от `object` и `data class`
+- [x] `data object` (Kotlin 1.9+) — чем отличается от `object` и `data class`
 - [x] `sealed class` vs `sealed interface` — когда что, exhaustive `when`
 - [ ] `object` — singleton, companion object, thread-safety, порядок инициализации
 - [ ] `inner class` vs вложенный класс — захват ссылки, утечки памяти
@@ -45,7 +45,7 @@
 
 ### Механика
 - [x] `suspend` под капотом — CPS, state machine, что компилятор делает с функцией
-- [ ] `Continuation<T>` — интерфейс, как реализуется возобновление
+- [x] `Continuation<T>` — интерфейс, как реализуется возобновление
 - [ ] Корутины vs потоки — почему «легковесные», как маппируются на потоки
 - [ ] `CoroutineContext` — `Job`, `Dispatcher`, `CoroutineName`, `CoroutineExceptionHandler`, наследование
 - [x] `suspend` vs `blocking` — чем `delay` отличается от `Thread.sleep`

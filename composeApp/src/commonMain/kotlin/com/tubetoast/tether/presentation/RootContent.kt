@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import com.arkivanov.decompose.extensions.compose.stack.Children
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.arkivanov.decompose.router.stack.ChildStack
+import com.tubetoast.tether.presentation.settings.SettingsScreen
 import com.tubetoast.tether.ui.theme.TetherTheme
 
 @Composable
@@ -42,6 +43,8 @@ internal fun RootContent(
                         PeerListScreen(instance.component)
                     is RootComponent.Child.TransferDetailsChild ->
                         TransferDetailsScreen(instance.component)
+                    is RootComponent.Child.SettingsChild ->
+                        SettingsScreen(instance.component)
                 }
             }
 
