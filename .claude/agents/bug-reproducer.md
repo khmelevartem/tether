@@ -1,6 +1,6 @@
 ---
 name: bug-reproducer
-description: Reproduces a reported bug and verifies its root cause before any fix is written. Use when /implement encounters a BUGFIX issue (closes gate G2). Reproduces the bug, runs minimal experiments per hypothesis, confirms which one matches reality, posts the confirmed cause as a comment on the issue.
+description: Reproduces a reported bug and verifies its root cause before any fix is written. Use when /implement encounters a BUGFIX issue (closes gate G2). Reproduces the bug, runs minimal experiments per hypothesis, confirms which one matches reality, returns the confirmed cause as paste-ready text for the orchestrator to publish.
 tools: Bash, Read, Grep, Glob
 model: sonnet
 ---
