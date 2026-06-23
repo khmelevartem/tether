@@ -8,6 +8,8 @@ import com.tubetoast.tether.preferences.FileTransferPreferences
 import com.tubetoast.tether.presentation.banners.BannersComponent
 import com.tubetoast.tether.presentation.banners.PeerConflictRelay
 import com.tubetoast.tether.presentation.devicename.DeviceNameComponent
+import com.tubetoast.tether.presentation.settings.FileTransferSettingsComponent
+import com.tubetoast.tether.presentation.settings.SettingsComponent
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.protocol.DeviceType
 import com.tubetoast.tether.transfer.FilePicker
@@ -32,7 +34,7 @@ class RootComponentFactory(
         RootComponent(
             componentContext = componentContext,
             pendingFilesRepository = pendingFilesRepository,
-            peerListFactory = { ctx, onShowDetails ->
+            peerListFactory = { ctx, onShowDetails, onOpenSettings ->
                 PeerListComponent(
                     componentContext = ctx,
                     peersRepository = peersRepository,
@@ -70,6 +72,19 @@ class RootComponentFactory(
                             nameStore = nameStore,
                         )
                     },
+                    onOpenSettings = onOpenSettings,
+                )
+            },
+            settingsFactory = { ctx, onBack ->
+                SettingsComponent(
+                    componentContext = ctx,
+                    fileTransferComponentFactory = { ftCtx ->
+                        FileTransferSettingsComponent(
+                            componentContext = ftCtx,
+                            preferences = fileTransferPreferences,
+                        )
+                    },
+                    onBack = onBack,
                 )
             },
         )

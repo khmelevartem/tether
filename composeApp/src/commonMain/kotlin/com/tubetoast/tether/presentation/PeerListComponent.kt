@@ -30,6 +30,7 @@ class PeerListComponent(
     deviceNameComponentFactory: (ComponentContext) -> DeviceNameComponent,
     private val isPickerModeChooserNeeded: Boolean = IsPickerModeChooserNeeded,
     coroutineScope: CoroutineScope = componentContext.coroutineScope(),
+    private val onOpenSettings: () -> Unit = {},
 ) : ComponentContext by componentContext {
     val bannersComponent: BannersComponent = bannersComponentFactory(childContext("banners"))
     val deviceNameComponent: DeviceNameComponent = deviceNameComponentFactory(childContext("deviceName"))
@@ -65,6 +66,8 @@ class PeerListComponent(
 
     fun peerTransferComponent(peer: PeerIdentity): PeerTransferComponent? =
         _state.value.rows.firstOrNull { it.peerId == peer }
+
+    fun openSettings() = onOpenSettings()
 
     fun onChoosePickerMode(mode: PickKind?) {
         _state.update {
