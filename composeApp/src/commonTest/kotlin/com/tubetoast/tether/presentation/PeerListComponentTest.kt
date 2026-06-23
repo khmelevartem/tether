@@ -698,6 +698,30 @@ class PeerListComponentTest {
     }
 
     @Test
+    fun `openSettings delegates to onOpenSettings callback`() = runTest {
+        var callCount = 0
+        val lifecycle = LifecycleRegistry()
+        val context = DefaultComponentContext(lifecycle)
+        lifecycle.resume()
+        val component = PeerListComponent(
+            componentContext = context,
+            peersRepository = PeersRepository(
+                discovery = FakeDeviceDiscovery(MutableStateFlow(emptyList())),
+                scope = backgroundScope,
+            ),
+            peerTransferComponentFactory = fakePeerTransferComponentFactory(coroutineScope = backgroundScope),
+            bannersComponentFactory = fakeBannersComponentFactory(backgroundScope),
+            deviceNameComponentFactory = fakeDeviceNameComponentFactory(backgroundScope),
+            coroutineScope = backgroundScope,
+            onOpenSettings = { callCount++ },
+        )
+
+        component.openSettings()
+
+        assertEquals(1, callCount)
+    }
+
+    @Test
     fun `onChoosePickerMode routes pick to tapped row only`() = runTest {
         val pickerA = FakeFilePicker(result = emptyList())
         val pickerB = FakeFilePicker(result = listOf(FakeFileSource("img.png", 50L)))

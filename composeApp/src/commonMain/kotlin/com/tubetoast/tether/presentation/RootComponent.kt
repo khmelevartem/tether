@@ -10,6 +10,7 @@ import com.arkivanov.decompose.router.stack.pushNew
 import com.arkivanov.decompose.value.MutableValue
 import com.arkivanov.decompose.value.Value
 import com.arkivanov.decompose.value.update
+import com.tubetoast.tether.presentation.settings.SettingsComponent
 import com.tubetoast.tether.presentation.transfer.TransferDetailsComponent
 import com.tubetoast.tether.transfer.FileSource
 import com.tubetoast.tether.transfer.PeerIdentity
@@ -18,7 +19,9 @@ import com.tubetoast.tether.transfer.PendingFilesRepository
 class RootComponent(
     componentContext: ComponentContext,
     private val pendingFilesRepository: PendingFilesRepository,
-    private val peerListFactory: (ComponentContext, onShowDetails: (PeerIdentity) -> Unit) -> PeerListComponent,
+    private val peerListFactory:
+        (ComponentContext, onShowDetails: (PeerIdentity) -> Unit, onOpenSettings: () -> Unit) -> PeerListComponent,
+    private val settingsFactory: (ComponentContext, onBack: () -> Unit) -> SettingsComponent,
 ) : ComponentContext by componentContext {
     private sealed interface Config {
         data object PeerList : Config
@@ -26,6 +29,8 @@ class RootComponent(
         data class TransferDetails(
             val peer: PeerIdentity,
         ) : Config
+
+        data object Settings : Config
     }
 
     private val navigation = StackNavigation<Config>()
@@ -34,7 +39,7 @@ class RootComponent(
     val dragActive: Value<Boolean> = _dragActive
 
     val peerListComponent: PeerListComponent =
-        peerListFactory(childContext("peer_list"), ::showTransferDetails)
+        peerListFactory(childContext("peer_list"), ::showTransferDetails, ::openSettings)
 
     val stack: Value<ChildStack<*, Child>> = childStack(
         source = navigation,
@@ -62,6 +67,9 @@ class RootComponent(
                     )
                 }
             }
+            Config.Settings -> Child.SettingsChild(
+                settingsFactory(context) { navigation.pop() },
+            )
         }
 
     fun onDragEntered() {
@@ -82,6 +90,10 @@ class RootComponent(
         navigation.pushNew(Config.TransferDetails(peer))
     }
 
+    fun openSettings() {
+        navigation.pushNew(Config.Settings)
+    }
+
     sealed interface Child {
         data class PeerListChild(
             val component: PeerListComponent,
@@ -89,6 +101,10 @@ class RootComponent(
 
         data class TransferDetailsChild(
             val component: TransferDetailsComponent,
+        ) : Child
+
+        data class SettingsChild(
+            val component: SettingsComponent,
         ) : Child
     }
 }
