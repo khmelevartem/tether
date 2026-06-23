@@ -2,14 +2,10 @@
 # Entries are regexes (not globs); escape dots and anchor with `$` to avoid accidental matches.
 exclude_path = ["docs/product/features/_ux-brief-template\\.md$"]
 
-# Diagram placeholders in the DI article drafts (docs/articles/manual-di-kmp.*.md).
-# The author draws and uploads these images before publishing to Habr / Medium,
-# so the relative .png links intentionally do not resolve inside the repo.
-#
 # medium.com — Medium answers automated link checkers with HTTP 403 (bot
 # protection) regardless of user agent, so its links can't be verified online.
 # habr.com — fails the TLS handshake for the link checker from CI/hook
 # environments, so its links can't be verified online either.
 # Both are cited by the DI article (prior art, the Habr/Medium publishing guide);
 # the URLs are valid, the checkers just can't reach them.
-exclude = ["manual-di-[a-z-]+\\.png$", "^https://medium\\.com/", "^https://habr\\.com/"]
+exclude = ["^https://medium\\.com/", "^https://habr\\.com/"]

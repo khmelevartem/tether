@@ -1,4 +1,6 @@
-# Manual DI in Kotlin Multiplatform: a composition root instead of a framework
+# Hand-wired DI in Kotlin Multiplatform: a composition root instead of a framework
+
+![Hand-wired-DI](hand-wired-cover.png)
 
 A Kotlin Multiplatform app can be assembled without a DI framework. No reflection, no code generation, no annotations or DSL. Dependency injection comes down to a single idea: there is one place where shared components are created, the composition root, and every other class receives its ready dependencies through its constructor.
 
@@ -231,7 +233,7 @@ class AppContainer(
 }
 ```
 
-![Composition: AppContainer assembled from independent fragments along each axis](manual-di-composition.png)
+![Composition: AppContainer assembled from independent fragments along each axis](composition.png)
 > Each axis has several interchangeable alternatives. An accent colour marks the one picked for this concrete build (here — iOS, B2B, new UI). Colour marks the different semantic axes.
 
 The main advantage, transparency, shows up here too. When a separate axis can and should be factored out, it is most likely a candidate for a separate module or a standalone library. Manual DI only highlights the option but lets you leave things as they are.
@@ -285,7 +287,7 @@ The value here is control over who is even allowed to depend on the implementati
 
 A telling case is an optional or loadable feature. The decision "is the implementation available and which version to bring up" is made exactly once, in the composition root. Not available: the root puts a stub behind the same Api interface or handles the case differently. Available: it resolves and substitutes the real Impl. And how it was delivered, an Android dynamic feature, a separate download from remote storage, picking the right `.so` for runtime conditions, does not matter to the rest of the code: consumers hold only Api and call the functionality directly, without a single "is this loaded" check.
 
-![Wiring Api and Impl](manual-di-api-impl.png)
+![Wiring Api and Impl](api-impl.png)
 > Only the DI module depends on Impl. Everything else depends on Api.
 ### Public and internal containers
 
@@ -294,7 +296,7 @@ A library's container forks by visibility.
 - **LibPublicContainer**: the library's public API (façade). Declared in the Api module. It holds all the dependencies the library hands to external consumers.
 - **LibInternalContainer**: a descendant of the public one, declared in the Impl module. Adds dependencies for internal use. External consumers don't see its type, so it is physically impossible to rely on it from outside the library.
 
-![Visibility cascade by inheritance](manual-di-inheritance.png)
+![Visibility cascade by inheritance](inheritance.png)
 > Inner rectangles are the parents. AndroidContainer extends InternalContainer, InternalContainer extends PublicContainer. Config is fed in through the constructor. AndroidConfigContainer extends ConfigContainer and adds Android-specific inputs to it.
 
 ```kotlin
@@ -376,7 +378,7 @@ class LibActivity : Activity() {
 
 A separate internal provider gets rid of the double cast `as? … as?`, in which two different misses would merge into one silent branch and the internal `start()` would simply not happen. Here there is a single cast, and with a wrong build it fails with `IllegalStateException` rather than silently disabling the feature.
 
-![The Provider pattern: one container owner, multiple typed providers](manual-di-provider-pattern.png)
+![The Provider pattern: one container owner, multiple typed providers](provider-pattern.png)
 > Order of interaction with the library:
 > 1. The application initializes the library via its factory.
 > 2. The library hands its container back to the application to hold.

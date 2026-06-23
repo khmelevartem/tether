@@ -2,7 +2,7 @@
 
 Operational steps to get the two drafts live. Platform mechanics change; each non-obvious claim links to the source it came from. Verify against the live platform before acting — these were checked in June 2026.
 
-## Habr (Russian, `manual-di-kmp.ru.md`)
+## Habr (Russian, `ru.md`)
 
 ### Account and the sandbox
 
@@ -16,7 +16,7 @@ Habr's editor supports **Habr Flavored Markdown (HFM)**. The new editor has a fu
 
 Code syntax highlighting includes `kotlin` explicitly (also `java`, `swift`, `bash`, `json`, `xml`, and ~40 more). ([syntax highlighting languages](https://habr.com/ru/docs/help/markdown/)) The fenced ```` ```kotlin ```` blocks in the draft will highlight natively — no Gist embedding needed, unlike Medium.
 
-The draft is already HFM-compatible. Before submitting: upload the five diagrams (see `manual-di-kmp.diagrams.md`) to Habr's image host and replace the relative `![...](manual-di-*.png)` links with the uploaded URLs.
+The draft is already HFM-compatible. Before submitting: upload the cover and the four inline diagrams to Habr's image host and replace the relative image links in the article with the uploaded URLs.
 
 ### Hubs and tags
 
@@ -26,7 +26,7 @@ When submitting, pick **hubs** (хабы) — the thematic feeds the article app
 
 The official "how to write your first Habr article" guide is the canonical pre-submit checklist (title, intro hook, formatting, images, hubs). ([first-article checklist](https://habr.com/ru/companies/habr/articles/736940/)) Read it once before you submit; it's the single best predictor of passing moderation.
 
-## Medium (English, `manual-di-kmp.en.md`)
+## Medium (English, `en.md`)
 
 ### Account and publishing
 
