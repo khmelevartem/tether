@@ -32,7 +32,9 @@ BASE="${GIST_URL%%\?*}"          # strip any ?query
 ID="${BASE##*/}"                 # last path segment = gist id
 
 # Ordered embed URLs, one per gist file (sorted → relies on NN- filename prefixes).
-mapfile -t NAMES < <(gh gist view "$ID" --files | sort)
+# while-read instead of mapfile: mapfile is bash 4+, and macOS ships bash 3.2.
+NAMES=()
+while IFS= read -r nm; do NAMES+=("$nm"); done < <(gh gist view "$ID" --files | sort)
 [[ ${#NAMES[@]} -gt 0 ]] || { echo "gist $ID has no files (or gh failed)" >&2; exit 1; }
 
 URLS="$(mktemp)"
@@ -49,11 +51,11 @@ awk -v urls="$URLS" -v fence="\`\`\`$LANG" '
   BEGIN { n=0; while ((getline line < urls) > 0) u[++n]=line; i=0; state="OUT" }
   state=="OUT" {
     if ($0==fence) { state="CODE"; next }
-    if ($0=="```") { state="PLAIN"; print; next }
+    if ($0 ~ /^```/) { state="PASS"; print; next }   # any other fenced block (```bash, bare ```) — pass through verbatim
     print; next
   }
-  state=="CODE"  { if ($0=="```") { print u[++i]; state="OUT" } next }
-  state=="PLAIN" { print; if ($0=="```") state="OUT"; next }
+  state=="CODE" { if ($0=="```") { print u[++i]; state="OUT" } next }
+  state=="PASS" { print; if ($0=="```") state="OUT"; next }
 ' "$MD" > "$OUT"
 
 echo "wrote $OUT — replaced ${#NAMES[@]} $LANG block(s)"
