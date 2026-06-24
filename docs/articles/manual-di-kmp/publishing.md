@@ -19,7 +19,7 @@ Code syntax highlighting includes `kotlin` explicitly (also `java`, `swift`, `ba
 The draft is already HFM-compatible. Before submitting:
 - Upload the four inline diagrams to Habr's image host and replace the relative image links with the uploaded URLs.
 - Upload `tamed-cover.jpg` into the editor's dedicated **cover image** field (separate from inline images) — this becomes the **КДПВ** (картинка для привлечения внимания), shown next to the title in the feed and previews. КДПВ is the single largest CTR lever after the title — ~28% influence on views per Habr's own surveys. Leaving the cover field empty means the publication appears in the feed without a thumbnail.
-- The same `tamed-cover.jpg` is also embedded inline inside the article (in the «Ручной DI и разработка с ИИ-агентами» section) to anchor the wordplay — keep it there; the in-body image and the cover-field image have different purposes (feed thumbnail vs. visual punchline inside the text).
+- The same `tamed-cover.jpg` is also embedded inline at the very top of the article body (right after the H1) — Habr's cover field does not render in the article body, so without the inline copy a reader who clicked through would land on a body with no hero image. The two uploads serve different surfaces (feed thumbnail + social card vs. in-body hero above the lead), so they do not visually duplicate.
 
 ### Hubs and tags
 
@@ -38,6 +38,13 @@ Anyone can create a Medium account and publish immediately — no sandbox, no ga
 For a first technical post, two viable paths:
 - **Personal profile** — fastest, full control, but reach is limited to your followers plus whatever curation/distribution picks up.
 - **A Kotlin/Android publication** (e.g. *ProAndroidDev*, *Kt. Academy*, *Better Programming*-style tech pubs) — slower (editor review) but much larger built-in audience. Submission guidelines live on each publication's page; check current requirements before submitting.
+
+### Title, subtitle, and cover image
+
+Medium expects a specific layout in the first lines of a story: line 1 is the **title**, line 2 is the **subtitle**, line 3 is the **cover image**. The source already follows that order (H1, italic subtitle line, cover image). When importing the markdown:
+- Verify the title and subtitle picked up the correct typographic styles in the Medium editor — title uses the big "T", subtitle uses the small "T". If the imported subtitle landed as a body paragraph, re-select it and apply the subtitle style; otherwise it won't appear in the feed/social-card preview.
+- Set the cover image as the **feature image** in the publish-settings panel (the same `hand-wired-cover.png`) so it's used for Medium's feed cards, the social preview, and the publication's "by this author" widgets.
+- Since `hand-wired-cover.png` is AI-generated, add a short credit caption to the image in the editor (e.g. *Cover image: AI-generated*). Medium's distribution guidelines explicitly accept AI cover art when it's credited as such; uncredited AI art is flagged as a quality issue by some curators.
 
 ### Distribution and tags
 

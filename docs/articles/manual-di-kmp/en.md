@@ -1,8 +1,10 @@
 # Hand-wired DI in Kotlin Multiplatform: a composition root instead of a framework
 
-![Hand-wired-DI](hand-wired-cover.png)
+*A composition root scaled to the KMP source-set tree, libraries, and Android — in plain Kotlin.*
 
-A Kotlin Multiplatform app can be assembled without a DI framework. No reflection, no code generation, no annotations or DSL. Dependency injection comes down to a single idea: there is one place where shared components are created, the composition root, and every other class receives its ready dependencies through its constructor.
+![Hands working on a transparent device with glowing orange and purple wires representing a dependency graph](hand-wired-cover.png)
+
+The dependency graph of a KMP app can be wired in plain Kotlin — no reflection, no code generation, no annotations, no DSL. A composition root and constructors, no magic. Sounds like a step back from mature DI frameworks — until you look at who actually benefits from this shape: you, the next person on the team, and your AI coding agent.
 
 The composition root itself is neither an invention nor anything specific to KMP. The term was popularized by Mark Seemann, author of the book "Dependency Injection," who described it as the single point where the whole object graph of an application is assembled ([ploeh.dk](https://blog.ploeh.dk/2011/07/28/CompositionRoot/)). The pattern works the same way in .NET, on the backend, in Python, in any modular application that wires its dependencies at one entry point. KMP adds one platform-specific axis to it: the source-set hierarchy. More on that below: the container hierarchy mirrors the source-set hierarchy, and each component's place is determined by which API its source set can see.
 
@@ -34,13 +36,13 @@ The main advantage shows up immediately in tests. Since `SyncEngine` takes `Mess
 
 - **Transparency.** The dependency graph is ordinary Kotlin code: you can see what is created and where, and you can follow any link in the IDE. No magic and no objects "out of thin air."
 - **Honest constructors.** A class's signature is its full list of dependencies. Nothing arrives from an invisible global.
-- **The structure hints at where to create a component.** The container tree mirrors the source-set tree, and a component's place is where the required API first becomes visible ([Container hierarchy](#the-container-hierarchy-mirrors-the-source-set-hierarchy)).
-- **A thin integration layer.** The split into Api and Impl strictly marks a module's public surface ([Splitting into Api and Impl](#splitting-into-api-and-impl)).
+- **The structure hints at where to create a component.** The container tree mirrors the source-set tree, and a component's place is where the required API first becomes visible.
+- **A thin integration layer.** The split into Api and Impl strictly marks a module's public surface.
 - **No external dependencies.** DI pulls not a single third-party library into the project: no build plugin, no runtime artifact, no versions to update and reconcile with one another.
 - **Someone else's responsibility does not leak into feature code.** Feature code stays ordinary Kotlin, without DI annotations and code generation. Wiring lives only in the composition root, not smeared across the classes it serves.
 - **The right direction of dependencies.** A component does not know where it will be used and does not reference its usage context. That keeps it reusable, while all knowledge of where it is applied stays in the root.
 - **Libraries and internal modules are handled the same way.** An internal module and a published library are assembled with one technique: Api/Impl plus a factory. So a module can be moved into a separate repository without rework when it needs to be reused.
-- **A cheap move.** Containers and providers are already close in shape to a framework's graph: you can migrate without structural changes ([Migrating to a framework](#migrating-to-a-framework)).
+- **A cheap move.** Containers and providers are already close in shape to a framework's graph: you can migrate without structural changes.
 - **Easier for AI agents.**
 
 ### Manual DI and development with AI agents
@@ -56,9 +58,10 @@ The same source gives checkability. The set of manual-DI principles ("dependenci
 
 A common objection to manual DI: in practice it degenerates into a service locator, a global registry from which classes pull dependencies themselves. For constructor injection this objection does not hold. The difference is the direction of control: with a service locator the class knows about the registry and pulls dependencies from it; with constructor injection the class knows of no container at all, and the composition root passes dependencies into it. The container here is the place of assembly, and classes do not read from it. [Martin Fowler](https://martinfowler.com/articles/injection.html) examined this boundary in detail.
 
-One exception: Android components with empty constructors are forced to reach the container themselves. This is a local service locator at the boundary with someone else's framework; details are in the section [The Provider pattern for Android](#the-provider-pattern-for-android).
+One exception: Android components with empty constructors are forced to reach the container themselves. This is a local service locator at the boundary with someone else's framework; details in the Provider pattern section below.
 
 The same place answers the frequent question "why not Koin." Koin also does without code generation and a plugin and is native to KMP, but its wiring resolves at runtime by default: a dependency is pulled from a registry on request, the graph is not visible in the code, and a forgotten registration surfaces not as a compile error but as a runtime crash. This is exactly the service locator with an invisible graph that manual DI walks away from.
+
 ## Principles of manual DI
 
 The composition root rests on a few rules.
@@ -160,7 +163,7 @@ The entry point owns the lifecycle, and so the scope of the dependency graph it 
 
 ## Configuration: the container's input
 
-The container needs values that only the entry point knows: the server port, the downloads directory, a reference to the Android `Application`. These values are gathered into a separate config object whose hierarchy mirrors the container hierarchy. Config holds not only plain values from strings, numbers, or flags. Objects with their own behavior land there too: a transport or data-source implementation, a set of UI settings for the app version, a choice of monetization model, B2B or B2C. And unlike the resulting container, here plain values are allowed (more in [Principles of manual DI](#principles-of-manual-di))
+The container needs values that only the entry point knows: the server port, the downloads directory, a reference to the Android `Application`. These values are gathered into a separate config object whose hierarchy mirrors the container hierarchy. Config holds not only plain values from strings, numbers, or flags. Objects with their own behavior land there too: a transport or data-source implementation, a set of UI settings for the app version, a choice of monetization model, B2B or B2C. And unlike the resulting container, here plain values are allowed (more in the Principles section above)
 
 ```kotlin
 // commonMain
@@ -269,7 +272,7 @@ A forgotten dependency is caught by the compiler anyway: a constructor with no a
 
 Manual DI has no built-in mechanism for scopes. All containers are singletons for the whole process: there is no child graph per screen, no dependency bound to a lifecycle, no unloading part of the graph from memory when it is no longer needed. This is exactly what mature frameworks provide.
 
-Objects that live exactly while a screen is open are owned by the navigation or screen layer, in ordinary Kotlin: they arrive in a constructor from above or are created on the spot, and are released together with their owner when it closes. This is enough as long as there are few lifecycle owners and they are expressed as explicit classes. When you need DI-managed scopes, lifecycle-bound dependencies, or unloadable features, the answer comes from a framework (see [Migrating to a framework](#migrating-to-a-framework)).
+Objects that live exactly while a screen is open are owned by the navigation or screen layer, in ordinary Kotlin: they arrive in a constructor from above or are created on the spot, and are released together with their owner when it closes. This is enough as long as there are few lifecycle owners and they are expressed as explicit classes. When you need DI-managed scopes, lifecycle-bound dependencies, or unloadable features, the answer comes from a framework (see the migration section below).
 
 The container holds process-wide singletons, and `Closeable` components like `HttpClient` are closed together with the process or the `Application`; manual DI has no separate unloading of the graph from memory. Where a component lives shorter than the process, the same ownership principle applies: `close()` is called by whoever owns its lifecycle, which is manual work; there is no automatic release here.
 
@@ -289,6 +292,7 @@ A telling case is an optional or loadable feature. The decision "is the implemen
 
 ![Wiring Api and Impl](api-impl.png)
 > Only the DI module depends on Impl. Everything else depends on Api.
+
 ### Public and internal containers
 
 A library's container forks by visibility.
