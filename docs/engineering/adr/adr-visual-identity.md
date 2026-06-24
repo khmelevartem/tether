@@ -1,9 +1,8 @@
-# Visual Identity — Palette, Typography, Iconography, Brand Mark (ADR)
+# Visual Identity — Palette, Typography, Iconography (ADR)
 
 **Status:** Accepted — 2026-05-14
 **Issue:** #145
 **Note (2026-05-25):** `macosArm64` Kotlin/Native target removed from the build — see [adr-macos-native-vs-jvm.md](adr-macos-native-vs-jvm.md) §Reversal. macOS UI now ships through the Desktop JVM tree; the rendering-layer argument below still holds.
-**Note (2026-05-27):** The **brand-mark portion** of this ADR (Interpretation I / II, the `•—•` glyph, the rationale for the line-between-two-dots primitive, the reversible-fallback section, and the `ui-brand-mark.md` spec it referenced) is **superseded by #287** — the brand-mark slot is open and being redesigned from scratch. The palette, typography, and iconography decisions in this ADR remain locked; ignore the brand-mark sections below as a current source of truth.
 
 ## Context
 
@@ -59,7 +58,7 @@ Obsidian's typographic and layout discipline (sharp corners, border lines, low m
 
 Light theme: `surface` `#FBFAF7`, `surfaceRaised` `#FFFFFF`, `border` `#E8E5DE`, `textPrimary` `#1A1A1F`, `textMuted` `#6B6B73`, `accent` `#2F7D6B`, `peerIdentity` `#C77E47`, `error` `#B4423A`. Dark theme: `surface` `#15171A`, `surfaceRaised` `#1E2125`, `border` `#2A2E33`, `textPrimary` `#ECECEE`, `textMuted` `#9A9DA3`, `accent` `#3FA08A`, `peerIdentity` `#D89968`, `error` `#E26A60`. Live token table with WCAG ratios: see [ui-style-guide.md](../ui-style-guide.md).
 
-`peerIdentity` identifies the peer device — it appears in the `•—•` mark's right dot, and in peer-identity UI contexts (peer-device rows, transfer receiver chip, pairing confirmation). It is not a UI interactive accent. Tether has exactly one interactive accent color: teal.
+`peerIdentity` identifies the peer device — it appears in peer-identity UI contexts (peer-device rows, transfer receiver chip, pairing confirmation). It is not a UI interactive accent. Tether has exactly one interactive accent color: teal.
 
 ### Typography
 
@@ -89,14 +88,6 @@ Compose stdlib only, 200–300ms ease-out, state-change confirmations only. Neve
 
 Compose Foundation + `com.composables:core` (Compose Unstyled). Custom `TetherTheme` via `CompositionLocalProvider` exposing `TetherColors`, `TetherTypography`, `TetherSpacing`, `TetherShapes`. No Material 3 dependency. Details in `docs/engineering/ui-style-guide.md`.
 
-### Brand mark — Interpretation I: "Two-Tone Tether" (chosen)
-
-Signature glyph: `•—•` — left dot teal, right dot `peerIdentity` (warm copper/amber hue), neutral `textPrimary` line. Full geometry, states, and design rationale: `ui-brand-mark.md` (file removed).
-
-The mark literalizes the word *tether* — a line between two points under tension. It occupies an empty cell in the file-transfer icon space (competitors use radar arcs, arrows, planes, clouds) and earns triple duty as app icon, in-app status indicator, and transfer progress bar — meaning `peerIdentity` stays live on-screen during use and recall remains active between launches. Full alternatives analysis: `ui-brand-mark.md § Rationale` (file removed).
-
-`peerIdentity` is never used as a UI interactive accent, hover state, focus ring, or button color. Teal is the sole interactive accent in the UI.
-
 ## Consequences
 
 **Positive:**
@@ -104,7 +95,6 @@ The mark literalizes the word *tether* — a line between two points under tensi
 - One locked system eliminates per-feature palette drift before it starts.
 - Custom theme gives complete control over cross-platform rendering; M3's tonal container proliferation does not leak into simple screens.
 - Sparse data (≤5 devices) looks intentional at `sm`/`md` density rather than embarrassingly empty.
-- `•—•` is a self-explanatory product story: it does not need a diagram in onboarding.
 - Inter + tabular figures means ETA and size numbers align in lists without custom layout workarounds.
 - No `Modifier.shadow()` dependency removes the known iOS Skia performance concern from the outset.
 
@@ -113,7 +103,6 @@ The mark literalizes the word *tether* — a line between two points under tensi
 - Owning the full theme stack requires implementing `TetherColors`, `TetherTypography`, `TetherSpacing`, `TetherShapes` — 200–300 lines of infrastructure before any feature code.
 - Bundling Inter Variable adds ~300 KB to all targets. Acceptable for a file-transfer app; revisit if app size becomes a distribution concern.
 - Tabler Icons are imported per-icon (tree-shaking via per-symbol import); contributors must remember to import from the `tabler-icons` namespace rather than drawing local SVGs.
-- The `peerIdentity` color in the mark must be reproduced faithfully in every icon format (Android adaptive, iOS, macOS, etc.). Minor asset management overhead.
 
 ## Open follow-ups
 
@@ -132,14 +121,6 @@ References include Obsidian, Things 3, Signal Desktop, Linear, Raycast, 1Passwor
 
 **Key finding:** Teal `#2F7D6B` on warm off-white `#FBFAF7` is visually distinct from every surveyed competitor. Anti-patterns confirmed: Material 3 dynamic color, paper-plane/cloud icons, sonar/radar metaphors, and multi-accent palettes.
 
-### Angle 2 — Brand recall and memorable element
-
-References include signature-color recall patterns (Slack purple, Spotify green, Linear gradient), signature symbol marks (Linear L, Telegram plane), motion signatures (Stripe rainbow, Arc space switch), and shape language (Anthropic waves, Apple corners), cross-referenced with the rarely-opened-app constraint: the mark must survive months between launches.
-
-Three concrete mark candidates evaluated: the line `•—•`, a rope-knot monogram, and a two-tone split. `•—•` is recommended as primary — it carries triple duty as app icon, in-app status indicator, and transfer progress bar. Anti-patterns confirmed: radar arcs, paper planes, gradient meshes, terminal-green/cyberpunk neon.
-
-**Key finding:** `•—•` is the strongest candidate. Its meaning (two endpoints, one connection) is self-evident and does not require onboarding. The two-tone treatment (teal + copper) gives it recall without violating the single-active-accent rule.
-
 ### Angle 3 — Compose Multiplatform feasibility
 
 Four technical constraints apply: typography (Inter Variable in `composeResources/font/` ships on all CMP targets without `expect/actual`), iconography (Tabler Icons — `br.com.devsrsouza.compose.icons:tabler-icons:1.1.1` — has a maintained Compose Multiplatform artifact; the same `br.com.devsrsouza.compose.icons` group ships several other MP icon sets: feather, simple-icons, octicons, font-awesome, eva-icons, line-awesome, linea, css-gg. Lucide and Phosphor do not currently have maintained Compose MP ports on Maven Central; a custom SVG→ImageVector port would be required for either), dark mode (`isSystemInDarkTheme()` works directly on CMP 1.5+ — the iOS bug from CMP issue #3575 is resolved), and Material 3 (its tonal container system leaks Android-ness on iOS; dropping it in favor of a custom `TetherTheme` on Compose Foundation + Compose Unstyled is feasible for this codebase size). `Modifier.shadow()` with large blur carries a known cost on the iOS Skia backend; surface hierarchy via tonal steps and 1px borders is the replacement.
@@ -148,21 +129,12 @@ Four technical constraints apply: typography (Inter Variable in `composeResource
 
 ### Convergence
 
-The chosen configuration combines: drop Material 3, Inter + Tabler Icons, teal `#2F7D6B` on warm off-white `#FBFAF7` / near-dark-earth `#15171A`, `•—•` as the memorable mark, Interpretation I (two-tone tether: teal + copper) as primary. Interpretation II (split-background icon) is preserved as a reversible fallback — see below.
-
-## Fallback — Interpretation II: "Split Background" (preserved, rejected)
-
-App icon: a squircle split diagonally — warm off-white half on one side, near-black half on the other. The `•—•` glyph crosses the seam, with the teal dot on the warm side and copper dot on the dark side.
-
-UI stays single-accent (teal only). The two-tone is icon-level only.
-
-**Why rejected:** The split is visible only in the app icon. Inside the running app, the two-tone signal disappears — only teal is active. The mark loses its recall during use, the moment it matters most (transfer in progress). Interpretation I lets the `•—•` glyph appear live on-screen with both colors semantically intact: left dot teal (you, active device), right dot `peerIdentity` (the peer), line filling with progress. That in-context meaning is the stronger choice. Interpretation II is a reversible decision: if user testing shows the two-tone icon is confusing without in-app presence, Interpretation I's in-app usage can be stripped back to single-accent while the icon retains the split.
+The chosen configuration combines: drop Material 3, Inter + Tabler Icons, teal `#2F7D6B` on warm off-white `#FBFAF7` / near-dark-earth `#15171A`.
 
 ## References
 
 - [docs/product/design.md](../../product/design.md) — visual language and locked palette
 - [docs/engineering/ui-style-guide.md](../ui-style-guide.md) — implementation reference
-- `docs/engineering/ui-brand-mark.md` — `•—•` geometry, states, and design rationale (file removed)
 - [adr-presentation-and-navigation.md](adr-presentation-and-navigation.md) — Decompose presentation layer
 - [Inter typeface](https://rsms.me/inter/) — OFL-1.1
 - [Tabler Icons](https://tabler.io/icons) — MIT license
