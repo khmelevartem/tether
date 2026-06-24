@@ -2,7 +2,7 @@
 
 *A composition root scaled to the KMP source-set tree, libraries, and Android — in plain Kotlin.*
 
-![Hands working on a transparent device with glowing orange and purple wires representing a dependency graph](hand-wired-cover.png)
+![Hands working on a transparent device with glowing orange and purple wires representing a dependency graph](hand-wired-cover.jpg)
 
 The dependency graph of a KMP app can be wired in plain Kotlin — no reflection, no code generation, no annotations, no DSL. A composition root and constructors, no magic. Sounds like a step back from mature DI frameworks — until you look at who actually benefits from this shape: you, the next person on the team, and your AI coding agent.
 
@@ -383,12 +383,14 @@ class LibActivity : Activity() {
 A separate internal provider gets rid of the double cast `as? … as?`, in which two different misses would merge into one silent branch and the internal `start()` would simply not happen. Here there is a single cast, and with a wrong build it fails with `IllegalStateException` rather than silently disabling the feature.
 
 ![The Provider pattern: one container owner, multiple typed providers](provider-pattern.png)
-> Order of interaction with the library:
-> 1. The application initializes the library via its factory.
-> 2. The library hands its container back to the application to hold.
-> 3. The library's internal Android component obtains the internal container from the application as LibInternalProvider.
-> 4.  The application's Android component obtains the app container from the application as AppContainerProvider.
-> 5. The application's Android component obtains the library's public container from the application as LibPublicProvider.
+
+Order of interaction with the library:
+
+1. The application initializes the library via its factory.
+2. The library hands its container back to the application to hold.
+3. The library's internal Android component obtains the internal container from the application as LibInternalProvider.
+4. The application's Android component obtains the app container from the application as AppContainerProvider.
+5. The application's Android component obtains the library's public container from the application as LibPublicProvider.
 
 ## Migrating to a framework
 

@@ -26,3 +26,11 @@ Shared across both platforms. Two kinds of image: the **cover** (one per article
 ## Alt-text
 
 Write descriptive alt-text, never the filename. It is read by screen readers and shown by the GitHub markdown render. `![Hands wiring a transparent device](cover.png)`, not `![cover](cover.png)`.
+
+## Captions
+
+The source markdown puts a short caption under a diagram as a `> blockquote`. That renders acceptably on GitHub, but a blockquote is semantically a quote, not a caption — handle it per platform on publish:
+
+- **Habr** — the blockquote renders as a styled quote (vertical bar). Acceptable; the editor's native image caption (подпись) is cleaner. Either works.
+- **Medium** — a blockquote renders as a **pull-quote** (large decorative quotation), wrong under an image. Move the text into Medium's **native caption** (select the image → caption field appears beneath). Markdown has no syntax for it, so this is a manual step after import.
+- **Long / structured captions** (a multi-step list, not a terse line) are explanatory body text, not a caption. Keep them as a normal numbered list under the image — never a blockquote, and not in a caption field (too long, and a list won't fit there). Short one/two-sentence captions are fine as a blockquote in source and as a native caption on Medium.

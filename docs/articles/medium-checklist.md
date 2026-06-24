@@ -38,6 +38,7 @@ Medium expects a fixed layout: **line 1 = title** (big "T"), **line 2 = subtitle
 - [ ] Short paragraphs; bold for key takeaways, italics for nuance, bullets for lists.
 - [ ] **Internal header anchors are not supported.** Flatten any `[text](#anchor)` cross-reference to plain prose ("see the X section below/above"). Anchor-form links break on import.
 - [ ] Code is **text, not images** (accessibility + copy-paste).
+- [ ] **Image captions** go in Medium's native caption field (select the image → caption beneath), not as a blockquote — a blockquote renders as a pull-quote under the image. After importing markdown, move each `> caption` into the caption field and delete the quote. A long/structured caption (e.g. a numbered list) stays normal body text under the image, not a caption. See [`image-prep.md`](image-prep.md).
 
 ## Code → gists
 

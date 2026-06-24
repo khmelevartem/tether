@@ -96,8 +96,8 @@ Send after the Medium draft exists, so a preview link can be attached. Get the l
 
 Medium expects a specific layout in the first lines of a story: line 1 is the **title**, line 2 is the **subtitle**, line 3 is the **cover image**. The source already follows that order (H1, italic subtitle line, cover image). When importing the markdown:
 - Verify the title and subtitle picked up the correct typographic styles in the Medium editor — title uses the big "T", subtitle uses the small "T". If the imported subtitle landed as a body paragraph, re-select it and apply the subtitle style; otherwise it won't appear in the feed/social-card preview.
-- Set the cover image as the **feature image** in the publish-settings panel (the same `hand-wired-cover.png`) so it's used for Medium's feed cards, the social preview, and the publication's "by this author" widgets.
-- Since `hand-wired-cover.png` is AI-generated, add a short credit caption to the image in the editor (e.g. *Cover image: AI-generated*). Medium's distribution guidelines explicitly accept AI cover art when it's credited as such; uncredited AI art is flagged as a quality issue by some curators.
+- Set the cover image as the **feature image** in the publish-settings panel (the same `hand-wired-cover.jpg`) so it's used for Medium's feed cards, the social preview, and the publication's "by this author" widgets.
+- Since `hand-wired-cover.jpg` is AI-generated, add a short credit caption to the image in the editor (e.g. *Cover image: AI-generated*). Medium's distribution guidelines explicitly accept AI cover art when it's credited as such; uncredited AI art is flagged as a quality issue by some curators.
 
 ### Distribution and tags
 

@@ -46,6 +46,7 @@ Shown in the feed before the "Читать далее" cut (~75% influence on vi
 - [ ] Blank line between paragraphs.
 - [ ] Code in fenced ```` ```kotlin ```` blocks — Habr highlights `kotlin` (and `java`, `swift`, `bash`, `json`, `xml`, ~40 more) **natively**. No gist embedding needed (unlike Medium).
 - [ ] Inline diagrams uploaded to Habr's image host; relative `*.png` links replaced with the uploaded URLs.
+- [ ] **Image captions:** a `> blockquote` renders as a quote — acceptable, but the editor's native image caption (подпись) is cleaner. A long/structured caption (e.g. a numbered list) stays a normal list under the image, not a quote. See [`image-prep.md`](image-prep.md).
 
 ## Hubs and tags
 
