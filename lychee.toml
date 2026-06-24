@@ -2,10 +2,11 @@
 # Entries are regexes (not globs); escape dots and anchor with `$` to avoid accidental matches.
 exclude_path = ["docs/product/features/_ux-brief-template\\.md$"]
 
-# medium.com — Medium answers automated link checkers with HTTP 403 (bot
-# protection) regardless of user agent, so its links can't be verified online.
+# medium.com (incl. help./blog. subdomains) — Medium answers automated link
+# checkers with HTTP 403 (bot protection) regardless of user agent, so its links
+# can't be verified online.
 # habr.com — fails the TLS handshake for the link checker from CI/hook
 # environments, so its links can't be verified online either.
-# Both are cited by the DI article (prior art, the Habr/Medium publishing guide);
+# Both are cited by the articles and the Habr/Medium publishing checklists;
 # the URLs are valid, the checkers just can't reach them.
-exclude = ["^https://medium\\.com/", "^https://habr\\.com/"]
+exclude = ["^https://([a-z0-9-]+\\.)?medium\\.com/", "^https://habr\\.com/"]
