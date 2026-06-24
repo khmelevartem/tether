@@ -331,20 +331,22 @@ Record 🟢/🟡/🔴 per branch run, plus blocks/probe path. Any 🟡/🔴 → 
 
 Only after `runtime-verify` is 🟢 (code track) or after `full-review` converges (docs track).
 
-**Fresh task (no existing PR):**
+**Fresh task (no existing PR).** Before running `gh pr create`:
+
+1. Read [`.github/pull_request_template.md`](../../../.github/pull_request_template.md) and compose the body using only the sections it defines — do not add sections of your own.
+2. Write the body to a file (e.g. `/tmp/pr-<N>-body.md`); `--body` with an in-shell heredoc silently corrupts multiline markdown and can drop `Closes #<N>`.
+3. Then run:
 
 ```bash
 git add <relevant files>
 git commit -m "#<N>: <message>"
 git push -u origin <N>-<short-slug>
-gh pr create --title "<title>" --body-file <path>
+gh pr create --title "<title>" --body-file /tmp/pr-<N>-body.md
 ```
 
 Do not block on explicit OK before push — `runtime-verify` 🟢 is the gate, not user approval.
 
 Branches and worktrees share the same shape — `<N>-<short-slug>`.
-
-Read [`.github/pull_request_template.md`](../../../.github/pull_request_template.md) before composing the body. Write the complete body to a file and pass `--body-file` — never `--body` with an in-shell-built string (silently corrupts multiline markdown; a dropped `Closes #<N>` leaves the issue open after merge). Follow the template's own field guidance; do not invent extra sections here.
 
 **Re-entry (PR already exists):** commit into the existing branch, push (no force), no new PR.
 
