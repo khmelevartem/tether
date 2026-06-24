@@ -146,7 +146,7 @@
 
 ### Архитектура
 - [x] State hoisting — паттерн, зачем
-- [ ] `CompositionLocal` — когда применять, чем опасен
+- [x] `CompositionLocal` — когда применять, чем опасен
 - [ ] Navigation в Compose — `NavController`, `NavHost`, back stack, deep links
 
 ### Performance
