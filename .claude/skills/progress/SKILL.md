@@ -92,15 +92,6 @@ Weight: `commits·2 + comments + review_threads·3 + (additions+deletions)/200`.
 
 Tables `#PR | title | value`, monospace numbers right-aligned. No RPG translation in values — pure statistics.
 
-### Current Chapter — sprint quests + side quests
-The "Текущая Глава" section lists the active sprint's `## Состав` issues (✓ closed / ◯ open). Below them, a **Сайд-квесты главы** subsection enumerates *off-plan* tasks closed in the current sprint's window — the chapter-scoped counterpart to the global Seal of Debt.
-
-- **Window** = `[git-add date of the active sprint file, --today]` (same date `compute_shares` uses for `retro_share_sprint`).
-- **Side quest** = an issue **closed** inside that window whose number is **absent** from the sprint's `## Состав`. EPIC hubs are excluded (containers, not tasks).
-- Both lists share one line renderer (`_quest_li`): every task is clickable to its issue and carries a `size:` chip. Tasks with no `size:` label show a muted dashed `?` placeholder rather than dropping the chip. Side quests rendered as a counted list; empty set → subsection omitted entirely.
-
-This answers "what did we do this chapter that wasn't on the scroll" without the user diffing the sprint plan by hand. Seal of Debt stays the all-time tally; this is just the current chapter.
-
 ### Seal of Debt — planned vs improvised
 **Planned** = issues referenced in any `## Состав` section across `docs/sprints/sprint-*.md`. **Cutoff:** count only issues created **after** the date `sprint-01.md` was filed in git. Retro-PRs are not counted.
 
