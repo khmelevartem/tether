@@ -54,9 +54,44 @@ Up to **5 tags** per article; curators distribute to the followers of those tags
 
 ### Code formatting — the one real friction point
 
-Medium's native code block has **no real syntax highlighting**. The established fix for technical articles is to embed **GitHub Gists**: create a gist with the right filename extension (`.kt` for Kotlin), paste the gist URL on its own line in the Medium editor, and it embeds with proper highlighting. ([code highlighting on Medium](https://medium.com/@vegetablecode/6-ways-to-embed-source-code-in-medium-articles-a0b2f0ce24c7))
+Medium's native code block has **no real syntax highlighting**. The established fix for technical articles is to embed **GitHub Gists**: paste a gist URL on its own line in the Medium editor and it embeds with proper Kotlin highlighting. ([code highlighting on Medium](https://medium.com/@vegetablecode/6-ways-to-embed-source-code-in-medium-articles-a0b2f0ce24c7))
 
-Practical consequence for the EN draft: each ```` ```kotlin ```` block becomes a small `.kt` gist. That's ~12 gists — tedious but one-time. Alternatively, keep short snippets in Medium's plain code block (legible, just unhighlighted) and reserve gists for the longer examples (the container, the provider, the fake container). Decide per block.
+All 15 Kotlin blocks of the EN draft already live in one public gist, one file per block: [gist/a4a4e1ac…](https://gist.github.com/khmelevartem/a4a4e1ac8ea773b90e1f089fbe0fed2f). A single gist keeps the GitHub profile to one entry; each file is embedded individually via the `?file=` query so it lands at the right spot in the article.
+
+**Substitution checklist.** Walk the EN article top to bottom; replace each ```` ```kotlin ```` block, in order, with the matching embed URL on its own line. The ASCII source-set tree (the one non-Kotlin ```` ``` ```` block) stays a plain Medium code block — no highlighting needed. After pasting, verify the first embed renders a single file, not the whole gist; if it shows all 15, the `?file=` syntax didn't take and each file needs its own gist instead.
+
+1. **The core idea — `AppContainer`**
+   <https://gist.github.com/khmelevartem/a4a4e1ac8ea773b90e1f089fbe0fed2f?file=01-AppContainer.kt>
+2. **Principles — constructor injection (bad/good)**
+   <https://gist.github.com/khmelevartem/a4a4e1ac8ea773b90e1f089fbe0fed2f?file=02-constructor-injection.kt>
+3. **Principles — platform context (bad/good)**
+   <https://gist.github.com/khmelevartem/a4a4e1ac8ea773b90e1f089fbe0fed2f?file=03-platform-context.kt>
+4. **Principles — composable anti-pattern**
+   <https://gist.github.com/khmelevartem/a4a4e1ac8ea773b90e1f089fbe0fed2f?file=04-composable-antipattern.kt>
+5. **Principles — named components, not data (bad/good)**
+   <https://gist.github.com/khmelevartem/a4a4e1ac8ea773b90e1f089fbe0fed2f?file=05-container-named-components.kt>
+6. **Configuration — `AppConfig` / `AndroidAppConfig`**
+   <https://gist.github.com/khmelevartem/a4a4e1ac8ea773b90e1f089fbe0fed2f?file=06-AppConfig.kt>
+7. **Provider pattern for Android**
+   <https://gist.github.com/khmelevartem/a4a4e1ac8ea773b90e1f089fbe0fed2f?file=07-android-provider.kt>
+8. **Composing the container — platform axis**
+   <https://gist.github.com/khmelevartem/a4a4e1ac8ea773b90e1f089fbe0fed2f?file=08-compose-platform-axis.kt>
+9. **Composing the container — flavor axis**
+   <https://gist.github.com/khmelevartem/a4a4e1ac8ea773b90e1f089fbe0fed2f?file=09-compose-flavor-axis.kt>
+10. **Testability — `FakeContainer`**
+    <https://gist.github.com/khmelevartem/a4a4e1ac8ea773b90e1f089fbe0fed2f?file=10-FakeContainer.kt>
+11. **Public and internal containers**
+    <https://gist.github.com/khmelevartem/a4a4e1ac8ea773b90e1f089fbe0fed2f?file=11-public-internal-containers.kt>
+12. **Library entry point — `createLibContainer`**
+    <https://gist.github.com/khmelevartem/a4a4e1ac8ea773b90e1f089fbe0fed2f?file=12-createLibContainer.kt>
+13. **Library entry point — app holds the container**
+    <https://gist.github.com/khmelevartem/a4a4e1ac8ea773b90e1f089fbe0fed2f?file=13-app-holds-lib-container.kt>
+14. **Library entry point — inject from the container**
+    <https://gist.github.com/khmelevartem/a4a4e1ac8ea773b90e1f089fbe0fed2f?file=14-inject-from-lib-container.kt>
+15. **Static access — typed providers**
+    <https://gist.github.com/khmelevartem/a4a4e1ac8ea773b90e1f089fbe0fed2f?file=15-typed-providers.kt>
+
+If a Kotlin block in `en.md` is later edited, sync the matching file in the gist: `gh gist edit a4a4e1ac8ea773b90e1f089fbe0fed2f`.
 
 ### Paywall and Partner Program
 
