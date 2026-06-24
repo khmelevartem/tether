@@ -16,7 +16,10 @@ Habr's editor supports **Habr Flavored Markdown (HFM)**. The new editor has a fu
 
 Code syntax highlighting includes `kotlin` explicitly (also `java`, `swift`, `bash`, `json`, `xml`, and ~40 more). ([syntax highlighting languages](https://habr.com/ru/docs/help/markdown/)) The fenced ```` ```kotlin ```` blocks in the draft will highlight natively — no Gist embedding needed, unlike Medium.
 
-The draft is already HFM-compatible. Before submitting: upload the cover and the four inline diagrams to Habr's image host and replace the relative image links in the article with the uploaded URLs.
+The draft is already HFM-compatible. Before submitting:
+- Upload the four inline diagrams to Habr's image host and replace the relative image links with the uploaded URLs.
+- Upload `tamed-cover.jpg` into the editor's dedicated **cover image** field (separate from inline images) — this becomes the **КДПВ** (картинка для привлечения внимания), shown next to the title in the feed and previews. КДПВ is the single largest CTR lever after the title — ~28% influence on views per Habr's own surveys. Leaving the cover field empty means the publication appears in the feed without a thumbnail.
+- The same `tamed-cover.jpg` is also embedded inline inside the article (in the «Ручной DI и разработка с ИИ-агентами» section) to anchor the wordplay — keep it there; the in-body image and the cover-field image have different purposes (feed thumbnail vs. visual punchline inside the text).
 
 ### Hubs and tags
 
