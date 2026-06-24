@@ -309,6 +309,31 @@ def seal_of_debt(issues: list, sprints_dir: Path, cutoff: date, keywords: dict) 
     )
 
 
+def current_chapter_side_quests(issues: list, planned: list,
+                                window_start, today: date) -> list:
+    """Off-plan tasks closed within the current sprint's window.
+
+    A side quest is an issue absent from the sprint's ## Состав yet closed
+    between the sprint file's git-add date (window_start) and today. EPIC hubs
+    are excluded — they are containers, not tasks. Sorted by close date."""
+    if window_start is None:
+        return []
+    planned_set = set(planned)
+    out = []
+    for i in issues:
+        if i.get("state") != "closed" or i["number"] in planned_set:
+            continue
+        if "epic:" in i.get("title", "").lower():
+            continue
+        closed = i.get("closed_at")
+        if not closed:
+            continue
+        if window_start <= date.fromisoformat(closed[:10]) <= today:
+            out.append(i)
+    out.sort(key=lambda i: i.get("closed_at") or "")
+    return out
+
+
 def _cycle_hours(pr: dict) -> float:
     nodes = pr.get("commits", {}).get("nodes", [])
     if not nodes:
@@ -864,23 +889,51 @@ def render_hot_heavy(prs: list) -> str:
 </div>"""
 
 
+def _size_chip(issue: dict) -> str:
+    size = _size_of(issue)
+    if size == "unlabeled":
+        return '<span class="sq-size sq-size-none mono" title="без size-метки">?</span>'
+    return f'<span class="sq-size mono">{size}</span>'
+
+
+def _quest_li(issue, num: int, mark: str, mark_cls: str = "") -> str:
+    cls = f"qmark {mark_cls}".strip()
+    if not issue:
+        return f'<li><span class="{cls}">{mark}</span> #{num}</li>'
+    url = _e(issue.get("html_url", ""))
+    return (
+        f'<li><span class="{cls}">{mark}</span> '
+        f'<a href="{url}" target="_blank" rel="noopener">#{num}</a> — '
+        f'{_e(issue["title"])}{_size_chip(issue)}</li>'
+    )
+
+
 def render_current_chapter(sprint_title: str, sprint_issues: list[int],
-                            issues_by_number: dict) -> str:
+                            issues_by_number: dict, side_quests: list) -> str:
     items = ""
     for num in sprint_issues:
         issue = issues_by_number.get(num)
-        if issue:
-            state = issue.get("state", "open")
-            mark = "✓" if state == "closed" else "◯"
-            items += f'<li><span class="qmark">{mark}</span> #{num} — {_e(issue["title"])}</li>'
-        else:
-            items += f'<li><span class="qmark">◯</span> #{num}</li>'
+        mark = "✓" if issue and issue.get("state") == "closed" else "◯"
+        items += _quest_li(issue, num, mark)
 
     quests_html = f'<ul class="quests" style="margin-top:12px;">{items}</ul>' if items else "<p>Нет задач.</p>"
+
+    side_html = ""
+    if side_quests:
+        sq_items = "".join(
+            _quest_li(issue, issue["number"], "✦", "sq-mark") for issue in side_quests
+        )
+        side_html = (
+            f'<h3 class="sq-head">Сайд-квесты главы — {len(side_quests)}</h3>'
+            f'<p class="sq-note small">Закрыто сверх ## Состав за окно текущего спринта — '
+            f'добыча, пойманная не по плану.</p>'
+            f'<ul class="quests sidequests">{sq_items}</ul>'
+        )
 
     return f"""<h2>Текущая Глава — {_e(sprint_title)}</h2>
 <div class="frame">
   {quests_html}
+  {side_html}
 </div>"""
 
 
@@ -1336,6 +1389,8 @@ def render_html(
     glory = glory_of_days(merged, issues_by_number, kw, cutoff, today)
     spread = artifact_spread(merged, issues_by_number)
     debt = seal_of_debt(issues, sprints_dir, cutoff, kw)
+    side_quests = current_chapter_side_quests(
+        issues, sprint_issues, raw.get("active_sprint_cutoff"), today)
     graph = build_graph_data(issues, blocked_by, assets["schools"]["schools"])
 
     font_h = pal("fonts.headings")
@@ -1366,7 +1421,7 @@ def render_html(
     body_sections = (
         render_header(today)
         + render_character_sheet(lx, shares, cls_name, cls_lore, balance, merged, issues, sprint_title)
-        + render_current_chapter(sprint_title, sprint_issues, issues_by_number)
+        + render_current_chapter(sprint_title, sprint_issues, issues_by_number, side_quests)
         + render_mvp(mvp_chapters, issues_by_number, size_weights)
         + render_locations(loc, assets["locations"])
         + render_quest_map(graph, assets["schools"])
@@ -1563,6 +1618,13 @@ def render_html(
   ul.quests {{ list-style:none; padding:0; margin:0; }}
   .qmark {{ display:inline-block; width:24px; color:var(--gold); font-size:18px; }}
   ul.quests li {{ padding:6px 0; }}
+  .sq-head {{ margin:22px 0 0; padding-top:16px; border-top:1px dashed var(--gold-dim); font-size:18px; }}
+  .sq-note {{ color:var(--muted); font-style:italic; margin:4px 0 8px; }}
+  .sq-mark {{ color:var(--gold-dim); }}
+  ul.quests a {{ color:var(--gold); text-decoration:none; }}
+  ul.quests a:hover {{ text-decoration:underline; }}
+  .sq-size {{ display:inline-block; margin-left:8px; font-size:11px; color:var(--muted); border:1px solid var(--gold-dim); border-radius:3px; padding:0 5px; }}
+  .sq-size-none {{ border-style:dashed; opacity:.65; }}
   .blood {{ color:var(--blood); }}
   .small {{ font-family:'{font_b}', serif; font-size:14px; font-weight:normal; }}
   table.stat-table {{ width:100%; border-collapse:collapse; font-size:16px; }}
