@@ -31,13 +31,66 @@ The official "how to write your first Habr article" guide is the canonical pre-s
 
 ## Medium (English, `en.md`)
 
-### Account and publishing
+### Where to submit — decision
 
-Anyone can create a Medium account and publish immediately — no sandbox, no gatekeeping on the first post. You can publish from your personal profile, or submit to a **publication** (a curated multi-author blog). Submitting to a publication means an editor reviews the draft first; after your first accepted piece, later submissions appear directly in the editor's publication menu. A story can be in only one publication at a time. ([Medium guide](https://nickwolny.com/writing-on-medium-guide/))
+Goal of the English version: demonstrate expertise (hiring signal), not just reach. A story lives in one publication at a time; a rejection is not public, so aim high first and fall back. Author identity is preserved either way — a publication wraps the story but it stays on the author's account, under the author's name, and shows in the author's profile.
 
-For a first technical post, two viable paths:
-- **Personal profile** — fastest, full control, but reach is limited to your followers plus whatever curation/distribution picks up.
-- **A Kotlin/Android publication** (e.g. *ProAndroidDev*, *Kt. Academy*, *Better Programming*-style tech pubs) — slower (editor review) but much larger built-in audience. Submission guidelines live on each publication's page; check current requirements before submitting.
+Chosen order:
+
+1. **Kt. Academy** (`medium.com/kotlin-academy`) — **primary.** Kotlin-first, JetBrains partner; this article is Kotlin-craft/architecture (composition root, Api/Impl, container hierarchy), not Android-framework specifics — the sharpest topical + brand match for the hiring signal. Submit by emailing a link to **contact@kt.academy** (optionally cc `marcinmoskala@gmail.com`); they review and add the story to the publication. You write on your own Medium account first. ([Write for Kt. Academy](https://blog.kotlin-academy.com/write-for-kotlin-academy-abebd70937ce))
+2. **ProAndroidDev** — **fallback.** Largest open Android/KMP publication (droidcon, 45k+), publishes heavy KMP content; easier, higher raw reach, slightly Android-framed. Email **editors@proandroiddev.com** to be added as a writer, then *Submit to publication* from the draft. Material rules (all met): code over 5 lines in GitHub gists, a featured image, **no paywall**. ([Submission Guidelines](https://proandroiddev.com/submission-guidelines-b2efa7f46272))
+3. **Personal profile** (`medium.com/@khmelyovartyom`) — last resort, only if both publications decline. Fastest but near-zero reach for a first post.
+
+Not viable: there is no large, open-submission **KMP-exclusive** publication. *Touchlab* is the KMP authority but its Medium is a closed company blog; `medium.com/tag/kotlin-multiplatform` is a tag feed, not a submission target.
+
+Mechanics: submitting to a publication means an editor reviews first; a story can be in only one publication at a time. ([Medium guide](https://nickwolny.com/writing-on-medium-guide/))
+
+### Outreach emails
+
+Send after the Medium draft exists, so a preview link can be attached. Get the link via the draft's ⋯ → **Share draft** (read-only, works before publishing). Both drafts are ready to send as-is; fill in the `<Share-draft link>` placeholder.
+
+**Primary — to `contact@kt.academy`** (cc `marcinmoskala@gmail.com`):
+
+> Subject: Submission — Hand-wired DI in Kotlin Multiplatform (composition root instead of a framework)
+>
+> Hi Kt. Academy team,
+>
+> I'd like to submit an original article to the Kt. Academy publication.
+>
+> **Title:** Hand-wired DI in Kotlin Multiplatform: a composition root instead of a framework
+> **What it covers:** a complete dependency-injection setup for a KMP app with no framework — a composition root in plain Kotlin — and exactly where the line runs past which a framework (Metro, kotlin-inject) starts to pay off. It scales the pattern across the KMP source-set hierarchy, the Api/Impl module split, the Android Provider workaround, and public/internal library containers. Every example is distilled from a production KMP app (Android / iOS / Desktop).
+> **Why Kt. Academy:** it's Kotlin-craft and architecture rather than Android-framework specifics — a language-level deep-dive for your audience.
+>
+> The piece is original to Medium and will be free (no paywall). Code is in GitHub gists; it has a featured image. A separate Russian version goes to a Russian-language audience (Habr); the English text is exclusive here.
+>
+> Draft preview: <Share-draft link>
+> Open-source code it's based on: https://github.com/khmelevartem/tether
+> My Medium account: https://medium.com/@khmelyovartyom
+>
+> Happy to adjust to your editorial guidelines. Thanks for considering it!
+>
+> Best,
+> Artem Khmelev
+
+**Fallback — to `editors@proandroiddev.com`:**
+
+> Subject: Writer request + submission — Hand-wired DI in Kotlin Multiplatform
+>
+> Hi ProAndroidDev editors,
+>
+> I'd like to contribute an article and be added as a writer so I can submit it.
+>
+> **Title:** Hand-wired DI in Kotlin Multiplatform: a composition root instead of a framework
+> **Summary:** a full DI setup for a KMP app (Android / iOS / Desktop) without a DI framework — a composition root in plain Kotlin — and where a framework starts to earn its keep. Covers the container hierarchy mirroring KMP source sets, the Api/Impl module split, the Android Provider pattern, and public/internal library containers. Examples are from a production open-source app.
+>
+> It follows your guidelines: code over 5 lines is in GitHub gists, a featured image is included, no paywall.
+>
+> Medium account to add as a writer: https://medium.com/@khmelyovartyom
+> Open-source code: https://github.com/khmelevartem/tether
+> Draft preview: <Share-draft link>
+>
+> Thanks!
+> Artem Khmelev
 
 ### Title, subtitle, and cover image
 

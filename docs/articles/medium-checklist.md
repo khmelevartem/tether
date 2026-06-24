@@ -6,8 +6,17 @@ Distilled from Medium's distribution and formatting guides (sources at the botto
 
 Anyone publishes immediately — no sandbox. Two paths:
 
-- **Personal profile** — fastest, full control, reach limited to followers plus whatever curation picks up.
-- **A publication** (e.g. *ProAndroidDev*, *Kt. Academy*) — editor review first, but a much larger built-in audience. A story can be in only one publication at a time.
+- **Personal profile** — fastest, full control, reach limited to followers plus whatever curation picks up. For a first post with no followers, reach is near-zero.
+- **A publication** — editor review first, but a much larger built-in audience and a quality signal. The story stays on the **author's** account, under the author's name, and shows in the author's profile — a publication wraps it, it doesn't take authorship. A story can be in only one publication at a time; a rejection is not public.
+
+## Choosing a publication (Kotlin / KMP)
+
+There is **no large, open-submission KMP-exclusive publication.** *Touchlab* is the KMP authority but its Medium is a closed company blog; `medium.com/tag/kotlin-multiplatform` is a tag feed, not a submission target. The two viable open publications:
+
+- **Kt. Academy** (`medium.com/kotlin-academy`) — Kotlin-first, JetBrains partner. Best fit for **language-level / architecture / Kotlin-craft** pieces and for a prestige hiring signal. Submit by emailing a link to **contact@kt.academy** (optionally cc `marcinmoskala@gmail.com`); you write on your own account, they add the story. ([Write for Kt. Academy](https://blog.kotlin-academy.com/write-for-kotlin-academy-abebd70937ce))
+- **ProAndroidDev** — largest open Android/KMP publication (droidcon, 45k+), heavy KMP content, easier entry and higher raw reach, slightly Android-framed. Email **editors@proandroiddev.com** to be added as a writer, then *Submit to publication* from the draft. Material rules: code over 5 lines in gists, a featured image, **no paywall**, no excessive GIFs, spell-check first. ([Submission Guidelines](https://proandroiddev.com/submission-guidelines-b2efa7f46272))
+
+Strategy: a rejection is invisible, so **submit to the higher-prestige / better-topic-matched publication first, fall back to the broader one, personal profile last.** Match the venue to the article — Kotlin/architecture → Kt. Academy first; Android-framework specifics → ProAndroidDev first. Record the chosen order and the outreach email(s) in the article's `publishing.md`.
 
 ## Title, subtitle, cover (first three lines)
 
