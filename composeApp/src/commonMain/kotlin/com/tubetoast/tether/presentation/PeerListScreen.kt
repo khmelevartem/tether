@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
@@ -16,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.unit.dp
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.composables.core.SheetDetent
 import com.composables.core.rememberModalBottomSheetState
@@ -33,8 +35,7 @@ import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.transfer.PendingFilesSummary
 import com.tubetoast.tether.transfer.PickKind
 import com.tubetoast.tether.ui.designsystem.BodyText
-import com.tubetoast.tether.ui.designsystem.BrandMark
-import com.tubetoast.tether.ui.designsystem.BrandMarkState
+import com.tubetoast.tether.ui.designsystem.ProgressBar
 import com.tubetoast.tether.ui.designsystem.SettingsIconButton
 import com.tubetoast.tether.ui.designsystem.TitleText
 import com.tubetoast.tether.ui.preview.PreviewFixtures
@@ -111,7 +112,11 @@ private fun PeerListContent(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                BrandMark(state = BrandMarkState.Searching)
+                ProgressBar(
+                    progress = 0f,
+                    indeterminate = true,
+                    modifier = Modifier.width(120.dp),
+                )
                 BodyText(
                     text = "Ищем устройства в сети…",
                     color = TetherTheme.colors.textMuted,
@@ -259,7 +264,11 @@ private fun PeerListContentPreview(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                BrandMark(state = BrandMarkState.Searching)
+                ProgressBar(
+                    progress = 0f,
+                    indeterminate = true,
+                    modifier = Modifier.width(120.dp),
+                )
                 BodyText(
                     text = "Ищем устройства в сети…",
                     color = TetherTheme.colors.textMuted,

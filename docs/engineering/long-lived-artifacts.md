@@ -72,8 +72,8 @@ Functional name vs proper name — examples of the wrong and the right form:
 
 | Wrong (proper name / inlined form)                                          | Right (functional name)             |
 |-----------------------------------------------------------------------------|-------------------------------------|
-| `the •—• mark in transferring state (line fills L→R)`                       | `the transfer progress bar`         |
-| `the •—• in its searching state (hollow right dot, opacity oscillation)`    | `the animated searching indicator`  |
+| `the dashed circle with clockwise sweep animation`                           | `the transfer progress bar`         |
+| `the hollow dot with pulsing opacity on the right side`                      | `the animated searching indicator`  |
 | `the Bélo logo's left lobe`                                                 | `the brand mark's identity region`  |
 
 If a proper name unavoidably must appear (the artifact is specifically *about* it), keep the mention to that one canonical document and link from elsewhere.
