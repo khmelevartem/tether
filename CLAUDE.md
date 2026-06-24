@@ -21,6 +21,7 @@ Read on demand. Match what you're touching to the corresponding canon:
 - **Feature specs / UX briefs** — `docs/product/features/<slug>/{spec,ux-brief}.md`. New / updated: copy structure from [`_template.md`](docs/product/features/_template.md) and [`_ux-brief-template.md`](docs/product/features/_ux-brief-template.md).
 - **Solved problems / platform quirks** — [`docs/knowledge/`](docs/knowledge/). Check first when something looks weird before debugging from scratch.
 - **Domain terminology** — [`docs/glossary.md`](docs/glossary.md); `review-glossary` blocks drift in PRs.
+- **Public articles / publishing** — [`docs/articles/`](docs/articles/README.md). Articles drawn from the codebase, plus the reusable Habr/Medium publishing playbook (per-platform checklists, image prep, gist scripts).
 
 ## Architecture invariants
 
