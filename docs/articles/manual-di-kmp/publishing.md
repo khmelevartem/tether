@@ -111,7 +111,9 @@ Medium's native code block has **no real syntax highlighting**. The established 
 
 All 15 Kotlin blocks of the EN draft already live in one public gist, one file per block: [gist/a4a4e1ac…](https://gist.github.com/khmelevartem/a4a4e1ac8ea773b90e1f089fbe0fed2f). A single gist keeps the GitHub profile to one entry; each file is embedded individually via the `?file=` query so it lands at the right spot in the article.
 
-**Substitution checklist.** Walk the EN article top to bottom; replace each ```` ```kotlin ```` block, in order, with the matching embed URL on its own line. The ASCII source-set tree (the one non-Kotlin ```` ``` ```` block) stays a plain Medium code block — no highlighting needed. After pasting, verify the first embed renders a single file, not the whole gist; if it shows all 15, the `?file=` syntax didn't take and each file needs its own gist instead.
+**Easiest path — paste the pre-substituted copy.** [`en.medium-ready.md`](en.medium-ready.md) is `en.md` with every Kotlin block already replaced by its gist embed URL (the ASCII tree and all prose/images left intact). Paste it whole into the Medium editor instead of swapping blocks by hand. It is a **generated snapshot** — after editing any code in `en.md`, regenerate it: `bash ../scripts/md-to-medium.sh en.md https://gist.github.com/khmelevartem/a4a4e1ac8ea773b90e1f089fbe0fed2f`. Still verify the first embed renders a single file, not the whole gist; if it shows all 15, the `?file=` syntax didn't take and each file needs its own gist instead.
+
+The manual alternative — **substitution checklist.** Walk the EN article top to bottom; replace each ```` ```kotlin ```` block, in order, with the matching embed URL on its own line. The ASCII source-set tree (the one non-Kotlin ```` ``` ```` block) stays a plain Medium code block — no highlighting needed.
 
 1. **The core idea — `AppContainer`**
    <https://gist.github.com/khmelevartem/a4a4e1ac8ea773b90e1f089fbe0fed2f?file=01-AppContainer.kt>

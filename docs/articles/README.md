@@ -25,6 +25,7 @@ Platform-agnostic prep, then the two per-platform checklists:
 Scripts:
 
 - [`scripts/md-code-to-gist.sh`](scripts/md-code-to-gist.sh) — split all fenced code blocks of one language from a markdown file into a single multi-file GitHub gist and print per-file Medium embed URLs.
+- [`scripts/md-to-medium.sh`](scripts/md-to-medium.sh) — regenerate a `*.medium-ready.md` copy: the canonical article with each fenced code block replaced by its gist embed URL, for pasting whole into the Medium editor.
 
 ## Why both platforms
 
