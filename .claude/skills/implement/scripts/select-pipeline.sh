@@ -68,18 +68,15 @@ INNER_REVIEWERS=""
 if [ "$TRACK" = "code" ]; then
   add_inner() { INNER_REVIEWERS="${INNER_REVIEWERS:+$INNER_REVIEWERS }$1"; }
 
-  add_inner "review-dod"
-  if [ "$TYPE" != "docs" ] && ! is_refactor; then
+  # Inner-loop is narrow on purpose: only reviewers whose miss cost compounds
+  # across iterations belong here. Wave A is the broad final-gate roster.
+  if ! is_refactor; then
     add_inner "review-correctness"
   fi
-  add_inner "review-guides"
-  add_inner "review-glossary"
   # review-architecture runs for all code-track work; over-inclusion is safe
   # because a reviewer with nothing to flag returns APPROVE.
   add_inner "review-architecture"
-  if [ "$TYPE" != "infra" ]; then
-    add_inner "review-tests"
-  fi
+  add_inner "review-guides"
   if has_touched "platform"; then
     add_inner "review-platform"
   fi
@@ -88,11 +85,6 @@ if [ "$TRACK" = "code" ]; then
     # orchestrator resolves this at dispatch time — we include it here when ui
     # is touched; the orchestrator suppresses dispatch when no brief exists.
     add_inner "review-ux-conformance"
-    add_inner "review-design-system"
-    add_inner "review-visual"
-  fi
-  if has_touched "ux-brief"; then
-    add_inner "review-ux-brief"
   fi
 fi
 
