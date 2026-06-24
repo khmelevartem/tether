@@ -1,0 +1,26 @@
+{
+	"nodes":[
+		{"id":"d8bb87cf5a0355d8","type":"group","x":-480,"y":-15,"width":520,"height":675,"color":"3","label":"Application"},
+		{"id":"c15f1eb3d59176bb","type":"group","x":160,"y":144,"width":436,"height":358,"color":"#3c78ff","label":"Library"},
+		{"id":"b98709d1a3d799b9","type":"group","x":-480,"y":740,"width":1076,"height":130,"label":"legend"},
+		{"id":"93013de6fa5d706d","type":"group","x":-420,"y":60,"width":380,"height":320,"color":"3","label":"Application DI module"},
+		{"id":"87eead9047211441","type":"group","x":-420,"y":480,"width":380,"height":140,"color":"3","label":"Some Application module"},
+		{"id":"5f3e9a2b7c1d0120","type":"group","x":-380,"y":220,"width":300,"height":130,"color":"6","label":"LibInternalContainer"},
+		{"id":"7f413d8377156e30","type":"text","text":"createLibraryContaier(config: LibConfig)","x":196,"y":194,"width":372,"height":60,"color":"#3c78ff"},
+		{"id":"5f3e9a2b7c1d0132","type":"text","text":"Some Android component","x":242,"y":392,"width":280,"height":60,"color":"4"},
+		{"id":"5f3e9a2b7c1d0110","type":"text","text":"AppContainer","x":-355,"y":100,"width":230,"height":60,"color":"3"},
+		{"id":"5f3e9a2b7c1d0122","type":"text","text":"LibPublicContainer","x":-355,"y":254,"width":230,"height":66,"color":"#3c78ff"},
+		{"id":"5f3e9a2b7c1d0130","type":"text","text":"Some Android component","x":-355,"y":520,"width":275,"height":60,"color":"4"},
+		{"id":"944b3529745eb52c","type":"text","text":"application","x":-420,"y":770,"width":156,"height":60,"color":"3"},
+		{"id":"f3d473886b28e5cf","type":"text","text":"library-internal","x":-162,"y":770,"width":165,"height":60,"color":"6"},
+		{"id":"8db8cc3a18dbfa7e","type":"text","text":"library-public","x":116,"y":770,"width":160,"height":60,"color":"#3c78ff"},
+		{"id":"77c85fcf27e1a314","type":"text","text":"Android-specific","x":360,"y":770,"width":176,"height":60,"color":"4"}
+	],
+	"edges":[
+		{"id":"e5f3e000000a0012","fromNode":"5f3e9a2b7c1d0132","fromSide":"left","toNode":"5f3e9a2b7c1d0120","toSide":"bottom","color":"4","label":"3"},
+		{"id":"768146256f17bbad","fromNode":"5f3e9a2b7c1d0130","fromSide":"left","toNode":"5f3e9a2b7c1d0110","toSide":"left","color":"3","label":"4"},
+		{"id":"0d02ed8f750720f3","fromNode":"93013de6fa5d706d","fromSide":"right","toNode":"7f413d8377156e30","toSide":"left","color":"#3c78ff","label":"1"},
+		{"id":"f767a747f6fe40b5","fromNode":"7f413d8377156e30","fromSide":"bottom","toNode":"5f3e9a2b7c1d0120","toSide":"right","color":"6","label":"2"},
+		{"id":"83d51a00487ff7a7","fromNode":"5f3e9a2b7c1d0130","fromSide":"left","toNode":"5f3e9a2b7c1d0122","toSide":"left","color":"4","label":"5"}
+	]
+}

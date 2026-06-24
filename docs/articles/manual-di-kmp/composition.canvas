@@ -1,0 +1,25 @@
+{
+	"nodes":[
+		{"id":"dc675f47d23b3642","type":"group","x":-220,"y":-220,"width":460,"height":380,"color":"3","label":"AppContainer"},
+		{"id":"b0569036dc9d7c00","type":"text","text":"val monetizationContainer: MonetizationContainer","x":-197,"y":-180,"width":420,"height":60,"color":"6"},
+		{"id":"b8a2014550bbb3d7","type":"text","text":"val uiContainer: UiContainer","x":-137,"y":-100,"width":294,"height":60,"color":"5"},
+		{"id":"27723cd9c0f239d6","type":"text","text":"val platformContainer: PlatformContainer","x":-180,"y":-20,"width":386,"height":60,"color":"#4d61ff"},
+		{"id":"d91d0a554cb430a7","type":"text","text":"val appConfigContainer: AppConfigContainer","x":-180,"y":60,"width":380,"height":60,"color":"3"},
+		{"id":"2897453cf19b8852","type":"text","text":"B2BContainer","x":-280,"y":-380,"width":250,"height":60,"color":"6"},
+		{"id":"5fa3df66a519248e","type":"text","text":"B2CContainer","x":32,"y":-380,"width":250,"height":60},
+		{"id":"25e502029c87a96f","type":"text","text":"AndroidPlatformContainer","x":-530,"y":-180,"width":250,"height":60},
+		{"id":"087afda86ab1e488","type":"text","text":"IosPlatformContainer","x":-530,"y":-80,"width":250,"height":60,"color":"#4d61ff"},
+		{"id":"75f817cfa60efd39","type":"text","text":"DesktopPlatformContainer","x":-530,"y":30,"width":250,"height":60},
+		{"id":"abc8a658709e7788","type":"text","text":"NewUiContainer","x":265,"y":-50,"width":250,"height":60,"color":"5"},
+		{"id":"2760d8bae1beece1","type":"text","text":"OldUiContainer","x":265,"y":-150,"width":250,"height":60}
+	],
+	"edges":[
+		{"id":"ee70740a7ea6e258","fromNode":"25e502029c87a96f","fromSide":"right","toNode":"27723cd9c0f239d6","toSide":"left"},
+		{"id":"7f1a2c2747a8bb61","fromNode":"75f817cfa60efd39","fromSide":"right","toNode":"27723cd9c0f239d6","toSide":"left"},
+		{"id":"84fde9d1cd98a502","fromNode":"087afda86ab1e488","fromSide":"right","toNode":"27723cd9c0f239d6","toSide":"left","color":"#4d61ff"},
+		{"id":"af6a50766abf6288","fromNode":"5fa3df66a519248e","fromSide":"bottom","toNode":"b0569036dc9d7c00","toSide":"top"},
+		{"id":"7b2d85ed04cd930f","fromNode":"2897453cf19b8852","fromSide":"bottom","toNode":"b0569036dc9d7c00","toSide":"top","color":"6"},
+		{"id":"f9f38580c67c56fd","fromNode":"2760d8bae1beece1","fromSide":"left","toNode":"b8a2014550bbb3d7","toSide":"right"},
+		{"id":"7c0b0602e415c722","fromNode":"abc8a658709e7788","fromSide":"left","toNode":"b8a2014550bbb3d7","toSide":"right","color":"5"}
+	]
+}

@@ -1,0 +1,23 @@
+{
+	"nodes":[
+		{"id":"7a8b1c2d3e4f0020","type":"group","x":720,"y":-40,"width":620,"height":720,"color":"4","label":"AndroidContainer"},
+		{"id":"7a8b1c2d3e4f0001","type":"group","x":0,"y":0,"width":520,"height":540,"color":"4","label":"AndroidConfigContainer"},
+		{"id":"7a8b1c2d3e4f0021","type":"group","x":760,"y":20,"width":540,"height":400,"color":"6","label":"InternalContainer"},
+		{"id":"df344a685e5066e1","type":"group","x":0,"y":750,"width":1340,"height":130,"label":"legend"},
+		{"id":"7a8b1c2d3e4f0002","type":"group","x":40,"y":60,"width":440,"height":190,"color":"#3c78ff","label":"ConfigContainer"},
+		{"id":"7a8b1c2d3e4f0022","type":"group","x":800,"y":80,"width":460,"height":170,"color":"#427bff","label":"PublicContainer"},
+		{"id":"7a8b1c2d3e4f0011","type":"text","text":"val androidConfig: AndroidConfig","x":80,"y":300,"width":360,"height":65,"color":"4"},
+		{"id":"7a8b1c2d3e4f0012","type":"text","text":"val androidApplication: Application","x":80,"y":420,"width":360,"height":60,"color":"4"},
+		{"id":"7a8b1c2d3e4f0010","type":"text","text":"val commonConfig: CommonConfig","x":80,"y":120,"width":360,"height":65,"color":"#427bff"},
+		{"id":"7a8b1c2d3e4f0031","type":"text","text":"val someInternalService: SomeInternalService","x":830,"y":298,"width":390,"height":70,"color":"6"},
+		{"id":"7a8b1c2d3e4f0030","type":"text","text":"val someRepository: SomeRepository","x":830,"y":125,"width":390,"height":60,"color":"#427bff"},
+		{"id":"05297bfacd09b381","type":"text","text":"public","x":60,"y":780,"width":250,"height":60,"color":"#427bff"},
+		{"id":"8cb5e8028f26ef77","type":"text","text":"platform-specific","x":1025,"y":780,"width":250,"height":60,"color":"4"},
+		{"id":"6893a9e35a8b47e4","type":"text","text":"internal","x":540,"y":780,"width":250,"height":60,"color":"6"},
+		{"id":"7a8b1c2d3e4f0032","type":"text","text":"val androidDependency: AndroidDependency","x":830,"y":480,"width":390,"height":60,"color":"4"},
+		{"id":"7a8b1c2d3e4f0033","type":"text","text":"val androidNotifier: AndroidNotifier","x":830,"y":580,"width":390,"height":60,"color":"4"}
+	],
+	"edges":[
+		{"id":"e7a8b000000a0001","fromNode":"7a8b1c2d3e4f0001","fromSide":"right","toNode":"7a8b1c2d3e4f0020","toSide":"left","color":"1","label":"into constructor"}
+	]
+}
