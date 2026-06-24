@@ -36,13 +36,13 @@ The main advantage shows up immediately in tests. Since `SyncEngine` takes `Mess
 
 - **Transparency.** The dependency graph is ordinary Kotlin code: you can see what is created and where, and you can follow any link in the IDE. No magic and no objects "out of thin air."
 - **Honest constructors.** A class's signature is its full list of dependencies. Nothing arrives from an invisible global.
-- **The structure hints at where to create a component.** The container tree mirrors the source-set tree, and a component's place is where the required API first becomes visible.
-- **A thin integration layer.** The split into Api and Impl strictly marks a module's public surface.
+- **The structure hints at where to create a component.** The container tree mirrors the source-set tree, and a component's place is where the required API first becomes visible (see the Container hierarchy section below).
+- **A thin integration layer.** The split into Api and Impl strictly marks a module's public surface (see the Splitting into Api and Impl section below).
 - **No external dependencies.** DI pulls not a single third-party library into the project: no build plugin, no runtime artifact, no versions to update and reconcile with one another.
 - **Someone else's responsibility does not leak into feature code.** Feature code stays ordinary Kotlin, without DI annotations and code generation. Wiring lives only in the composition root, not smeared across the classes it serves.
 - **The right direction of dependencies.** A component does not know where it will be used and does not reference its usage context. That keeps it reusable, while all knowledge of where it is applied stays in the root.
 - **Libraries and internal modules are handled the same way.** An internal module and a published library are assembled with one technique: Api/Impl plus a factory. So a module can be moved into a separate repository without rework when it needs to be reused.
-- **A cheap move.** Containers and providers are already close in shape to a framework's graph: you can migrate without structural changes.
+- **A cheap move.** Containers and providers are already close in shape to a framework's graph: you can migrate without structural changes (see the Migrating to a framework section below).
 - **Easier for AI agents.**
 
 ### Manual DI and development with AI agents
