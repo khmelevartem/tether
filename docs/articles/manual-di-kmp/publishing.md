@@ -1,191 +1,51 @@
-# Publishing guide — Habr + Medium
+# Publishing — manual-di-kmp
 
-Operational steps to get the two drafts live. Platform mechanics change; each non-obvious claim links to the source it came from. Verify against the live platform before acting — these were checked in June 2026.
+Article-specific publishing record, decisions, and remaining steps. Generic platform mechanics live in the reusable checklists: [habr-checklist.md](../habr-checklist.md), [medium-checklist.md](../medium-checklist.md), [image-prep.md](../image-prep.md).
 
-## Habr (Russian, `ru.md`)
+## Status
 
-### Account and the sandbox
+- **Habr (RU, `ru.md`)** — submitted to the Песочница (sandbox); awaiting moderation.
+- **Medium (EN, `en.md`)** — draft submitted to **Kt. Academy** (primary); fallback **ProAndroidDev**, then personal profile. Awaiting editor review.
+  Draft: <https://medium.com/@khmelyovartyom/hand-wired-di-in-kotlin-multiplatform-a-composition-root-instead-of-a-framework-ed995fb21b19>
 
-A brand-new account cannot publish to the main site directly. The first article goes through the **Песочница** (sandbox): you submit it, and moderators (or other users) review it. Roughly under half of submissions get an invite directly; the rest land in the public sandbox, need rework, or are rejected. Once a moderator approves and issues an invite, the account becomes full and the article lands on the main page immediately. Small posts are reviewed in a couple of days; long articles can take a week or more. ([Песочница / help](https://habr.com/ru/docs/help/sandbox/), [how to get an invite](https://habr.com/ru/companies/habr/articles/881676/))
+## Habr specifics
 
-What reliably fails moderation: news, announcements/press releases, advertising, vacancies, questions, requests for help solving a task. ([sandbox help](https://habr.com/ru/docs/help/sandbox/)) This article is a technical deep-dive, which is squarely the kind of content the sandbox is for — the risk is formatting/polish, not topic.
+- **Hubs:** *Kotlin*, *Программирование*, *Разработка под Android*, *Разработка мобильных приложений* (consider *Разработка под iOS*).
+- **Tags:** `Kotlin Multiplatform`, `Dependency Injection`, `KMP`, `composition root`, `Android`.
+- **Type:** Туториал. **Difficulty:** Средний.
+- **Cover:** `tamed-cover.jpg` — in both the **КДПВ/cover field** (feed thumbnail) and inline at the top of the body (the cover field does not render in-body).
 
-### Formatting
+## Medium specifics
 
-Habr's editor supports **Habr Flavored Markdown (HFM)**. The new editor has a full markdown mode — enable it in settings before you start typing, or paste markdown and let it convert. ([Habr Flavored Markdown](https://habr.com/ru/docs/help/markdown/), [markdown mode in the new editor](https://habr.com/ru/companies/habr/articles/725748/))
+- **Publication path:** Kt. Academy (`contact@kt.academy`, cc `marcinmoskala@gmail.com`) → ProAndroidDev (`editors@proandroiddev.com`) → personal profile. First submission is by emailing the draft link; the in-editor *Submit to publication* only lists publications you are already a writer of. ([Write for Kt. Academy](https://blog.kotlin-academy.com/write-for-kotlin-academy-abebd70937ce), [ProAndroidDev guidelines](https://proandroiddev.com/submission-guidelines-b2efa7f46272))
+- **Tags (5):** `Kotlin`, `Kotlin Multiplatform`, `Dependency Injection`, `Android`, `Software Architecture`.
+- **Cover:** `hand-wired-cover.jpg` — set as the **feature image**; add an *AI-generated* credit caption.
+- **Free, no paywall.**
+- **Code → gists:** all 15 Kotlin blocks live in one public gist — [a4a4e1ac…](https://gist.github.com/khmelevartem/a4a4e1ac8ea773b90e1f089fbe0fed2f). To rebuild the Medium draft, generate a paste-whole `en.medium-ready.md` (= `en.md` with each block swapped for its `?file=` embed) with `bash ../scripts/md-to-medium.sh en.md https://gist.github.com/khmelevartem/a4a4e1ac8ea773b90e1f089fbe0fed2f`. After any code edit in `en.md`, regenerate it and sync the gist (`gh gist edit a4a4e1ac8ea773b90e1f089fbe0fed2f`). Verify the first embed renders one file, not the whole gist.
+- **Captions:** move each short blockquote caption into Medium's native caption field; keep the provider-pattern list as body text ([image-prep.md](../image-prep.md)).
 
-Code syntax highlighting includes `kotlin` explicitly (also `java`, `swift`, `bash`, `json`, `xml`, and ~40 more). ([syntax highlighting languages](https://habr.com/ru/docs/help/markdown/)) The fenced ```` ```kotlin ```` blocks in the draft will highlight natively — no Gist embedding needed, unlike Medium.
+## Cross-posting and canonical
 
-The draft is already HFM-compatible. Before submitting:
-- Upload the four inline diagrams to Habr's image host and replace the relative image links with the uploaded URLs.
-- Upload `tamed-cover.jpg` into the editor's dedicated **cover image** field (separate from inline images) — this becomes the **КДПВ** (картинка для привлечения внимания), shown next to the title in the feed and previews. КДПВ is the single largest CTR lever after the title — ~28% influence on views per Habr's own surveys. Leaving the cover field empty means the publication appears in the feed without a thumbnail.
-- The same `tamed-cover.jpg` is also embedded inline at the very top of the article body (right after the H1) — Habr's cover field does not render in the article body, so without the inline copy a reader who clicked through would land on a body with no hero image. The two uploads serve different surfaces (feed thumbnail + social card vs. in-body hero above the lead), so they do not visually duplicate.
+RU (Habr) and EN (Medium) are different-language audiences — running both is fine. If the EN piece is later mirrored (personal blog, dev.to), set the **canonical URL** to the primary copy so search ranking is not split.
 
-### Hubs and tags
+## Where to promote (once live)
 
-When submitting, pick **hubs** (хабы) — the thematic feeds the article appears in. For this piece: *Kotlin*, *Программирование*, *Разработка под Android*, *Разработка мобильных приложений*; consider *Разработка под iOS* given the KMP angle. Tags are free-form keywords on top of hubs — add `Kotlin Multiplatform`, `Dependency Injection`, `KMP`, `composition root`, `Android`.
+- **Kotlin Slack** (`kotlinlang.slack.com`) — `#multiplatform`, `#dependency-injection`, `#feed`.
+- **Reddit** — r/Kotlin, r/androiddev (substantive post, not a thin promo).
+- **X / Mastodon** — tag the KMP/Android community; repo link + the source-set diagram makes a strong card.
+- **Telegram** — RU Kotlin/Android channels for the Habr piece.
+- **LinkedIn** — repost with two lines of reflection (serves the hiring-signal goal).
+- **Hacker News** — possible for the EN piece; submit, don't over-invest.
+- **The Tether repo** — link both articles from the README and `docs/engineering/dependency-injection.md` once live.
 
-### First-article checklist
+Timing: mid-week, morning in the audience timezone (Habr — MSK; Medium/HN — US business hours); seed channels within the first hours of going live.
 
-The official "how to write your first Habr article" guide is the canonical pre-submit checklist (title, intro hook, formatting, images, hubs). ([first-article checklist](https://habr.com/ru/companies/habr/articles/736940/)) Read it once before you submit; it's the single best predictor of passing moderation.
+## After publishing — close #479
 
-## Medium (English, `en.md`)
-
-### Where to submit — decision
-
-Goal of the English version: demonstrate expertise (hiring signal), not just reach. A story lives in one publication at a time; a rejection is not public, so aim high first and fall back. Author identity is preserved either way — a publication wraps the story but it stays on the author's account, under the author's name, and shows in the author's profile.
-
-Chosen order:
-
-1. **Kt. Academy** (`medium.com/kotlin-academy`) — **primary.** Kotlin-first, JetBrains partner; this article is Kotlin-craft/architecture (composition root, Api/Impl, container hierarchy), not Android-framework specifics — the sharpest topical + brand match for the hiring signal. Submit by emailing a link to **contact@kt.academy** (optionally cc `marcinmoskala@gmail.com`); they review and add the story to the publication. You write on your own Medium account first. ([Write for Kt. Academy](https://blog.kotlin-academy.com/write-for-kotlin-academy-abebd70937ce))
-2. **ProAndroidDev** — **fallback.** Largest open Android/KMP publication (droidcon, 45k+), publishes heavy KMP content; easier, higher raw reach, slightly Android-framed. Email **editors@proandroiddev.com** to be added as a writer, then *Submit to publication* from the draft. Material rules (all met): code over 5 lines in GitHub gists, a featured image, **no paywall**. ([Submission Guidelines](https://proandroiddev.com/submission-guidelines-b2efa7f46272))
-3. **Personal profile** (`medium.com/@khmelyovartyom`) — last resort, only if both publications decline. Fastest but near-zero reach for a first post.
-
-Not viable: there is no large, open-submission **KMP-exclusive** publication. *Touchlab* is the KMP authority but its Medium is a closed company blog; `medium.com/tag/kotlin-multiplatform` is a tag feed, not a submission target.
-
-Mechanics: submitting to a publication means an editor reviews first; a story can be in only one publication at a time. ([Medium guide](https://nickwolny.com/writing-on-medium-guide/))
-
-### Outreach emails
-
-Send after the Medium draft exists, so a preview link can be attached. Get the link via the draft's ⋯ → **Share draft** (read-only, works before publishing). Both drafts are ready to send as-is; fill in the `<Share-draft link>` placeholder.
-
-**Primary — to `contact@kt.academy`** (cc `marcinmoskala@gmail.com`):
-
-> Subject: Submission — Hand-wired DI in Kotlin Multiplatform (composition root instead of a framework)
->
-> Hi Kt. Academy team,
->
-> I'd like to submit an original article to the Kt. Academy publication.
->
-> **Title:** Hand-wired DI in Kotlin Multiplatform: a composition root instead of a framework
-> **What it covers:** a complete dependency-injection setup for a KMP app with no framework — a composition root in plain Kotlin — and exactly where the line runs past which a framework (Metro, kotlin-inject) starts to pay off. It scales the pattern across the KMP source-set hierarchy, the Api/Impl module split, the Android Provider workaround, and public/internal library containers. Every example is distilled from a production KMP app (Android / iOS / Desktop).
-> **Why Kt. Academy:** it's Kotlin-craft and architecture rather than Android-framework specifics — a language-level deep-dive for your audience.
->
-> The piece is original to Medium and will be free (no paywall). Code is in GitHub gists; it has a featured image. A separate Russian version goes to a Russian-language audience (Habr); the English text is exclusive here.
->
-> Draft preview: <Share-draft link>
-> Open-source code it's based on: https://github.com/khmelevartem/tether
-> My Medium account: https://medium.com/@khmelyovartyom
->
-> Happy to adjust to your editorial guidelines. Thanks for considering it!
->
-> Best,
-> Artem Khmelev
-
-**Fallback — to `editors@proandroiddev.com`:**
-
-> Subject: Writer request + submission — Hand-wired DI in Kotlin Multiplatform
->
-> Hi ProAndroidDev editors,
->
-> I'd like to contribute an article and be added as a writer so I can submit it.
->
-> **Title:** Hand-wired DI in Kotlin Multiplatform: a composition root instead of a framework
-> **Summary:** a full DI setup for a KMP app (Android / iOS / Desktop) without a DI framework — a composition root in plain Kotlin — and where a framework starts to earn its keep. Covers the container hierarchy mirroring KMP source sets, the Api/Impl module split, the Android Provider pattern, and public/internal library containers. Examples are from a production open-source app.
->
-> It follows your guidelines: code over 5 lines is in GitHub gists, a featured image is included, no paywall.
->
-> Medium account to add as a writer: https://medium.com/@khmelyovartyom
-> Open-source code: https://github.com/khmelevartem/tether
-> Draft preview: <Share-draft link>
->
-> Thanks!
-> Artem Khmelev
-
-### Title, subtitle, and cover image
-
-Medium expects a specific layout in the first lines of a story: line 1 is the **title**, line 2 is the **subtitle**, line 3 is the **cover image**. The source already follows that order (H1, italic subtitle line, cover image). When importing the markdown:
-- Verify the title and subtitle picked up the correct typographic styles in the Medium editor — title uses the big "T", subtitle uses the small "T". If the imported subtitle landed as a body paragraph, re-select it and apply the subtitle style; otherwise it won't appear in the feed/social-card preview.
-- Set the cover image as the **feature image** in the publish-settings panel (the same `hand-wired-cover.jpg`) so it's used for Medium's feed cards, the social preview, and the publication's "by this author" widgets.
-- Since `hand-wired-cover.jpg` is AI-generated, add a short credit caption to the image in the editor (e.g. *Cover image: AI-generated*). Medium's distribution guidelines explicitly accept AI cover art when it's credited as such; uncredited AI art is flagged as a quality issue by some curators.
-
-### Distribution and tags
-
-Medium uses human curation: curators read articles and mark quality content for **further distribution** — placement in reader dashboards and the daily/weekly digest emails. Distribution, not comments, is what drives reach; quality of writing is the lever. ([Medium guide](https://nickwolny.com/writing-on-medium-guide/)) Getting into a strong publication materially improves the odds, because the piece is then distributed to that publication's followers as well.
-
-Up to **5 tags** per article; curators distribute to the followers of those tags. Use `Kotlin`, `Kotlin Multiplatform`, `Dependency Injection`, `Android`, `Software Architecture`. ([Medium guide](https://nickwolny.com/writing-on-medium-guide/))
-
-### Code formatting — the one real friction point
-
-Medium's native code block has **no real syntax highlighting**. The established fix for technical articles is to embed **GitHub Gists**: paste a gist URL on its own line in the Medium editor and it embeds with proper Kotlin highlighting. ([code highlighting on Medium](https://medium.com/@vegetablecode/6-ways-to-embed-source-code-in-medium-articles-a0b2f0ce24c7))
-
-All 15 Kotlin blocks of the EN draft already live in one public gist, one file per block: [gist/a4a4e1ac…](https://gist.github.com/khmelevartem/a4a4e1ac8ea773b90e1f089fbe0fed2f). A single gist keeps the GitHub profile to one entry; each file is embedded individually via the `?file=` query so it lands at the right spot in the article.
-
-**Easiest path — paste the pre-substituted copy.** [`en.medium-ready.md`](en.medium-ready.md) is `en.md` with every Kotlin block already replaced by its gist embed URL (the ASCII tree and all prose/images left intact). Paste it whole into the Medium editor instead of swapping blocks by hand. It is a **generated snapshot** — after editing any code in `en.md`, regenerate it: `bash ../scripts/md-to-medium.sh en.md https://gist.github.com/khmelevartem/a4a4e1ac8ea773b90e1f089fbe0fed2f`. Still verify the first embed renders a single file, not the whole gist; if it shows all 15, the `?file=` syntax didn't take and each file needs its own gist instead.
-
-The manual alternative — **substitution checklist.** Walk the EN article top to bottom; replace each ```` ```kotlin ```` block, in order, with the matching embed URL on its own line. The ASCII source-set tree (the one non-Kotlin ```` ``` ```` block) stays a plain Medium code block — no highlighting needed.
-
-1. **The core idea — `AppContainer`**
-   <https://gist.github.com/khmelevartem/a4a4e1ac8ea773b90e1f089fbe0fed2f?file=01-AppContainer.kt>
-2. **Principles — constructor injection (bad/good)**
-   <https://gist.github.com/khmelevartem/a4a4e1ac8ea773b90e1f089fbe0fed2f?file=02-constructor-injection.kt>
-3. **Principles — platform context (bad/good)**
-   <https://gist.github.com/khmelevartem/a4a4e1ac8ea773b90e1f089fbe0fed2f?file=03-platform-context.kt>
-4. **Principles — composable anti-pattern**
-   <https://gist.github.com/khmelevartem/a4a4e1ac8ea773b90e1f089fbe0fed2f?file=04-composable-antipattern.kt>
-5. **Principles — named components, not data (bad/good)**
-   <https://gist.github.com/khmelevartem/a4a4e1ac8ea773b90e1f089fbe0fed2f?file=05-container-named-components.kt>
-6. **Configuration — `AppConfig` / `AndroidAppConfig`**
-   <https://gist.github.com/khmelevartem/a4a4e1ac8ea773b90e1f089fbe0fed2f?file=06-AppConfig.kt>
-7. **Provider pattern for Android**
-   <https://gist.github.com/khmelevartem/a4a4e1ac8ea773b90e1f089fbe0fed2f?file=07-android-provider.kt>
-8. **Composing the container — platform axis**
-   <https://gist.github.com/khmelevartem/a4a4e1ac8ea773b90e1f089fbe0fed2f?file=08-compose-platform-axis.kt>
-9. **Composing the container — flavor axis**
-   <https://gist.github.com/khmelevartem/a4a4e1ac8ea773b90e1f089fbe0fed2f?file=09-compose-flavor-axis.kt>
-10. **Testability — `FakeContainer`**
-    <https://gist.github.com/khmelevartem/a4a4e1ac8ea773b90e1f089fbe0fed2f?file=10-FakeContainer.kt>
-11. **Public and internal containers**
-    <https://gist.github.com/khmelevartem/a4a4e1ac8ea773b90e1f089fbe0fed2f?file=11-public-internal-containers.kt>
-12. **Library entry point — `createLibContainer`**
-    <https://gist.github.com/khmelevartem/a4a4e1ac8ea773b90e1f089fbe0fed2f?file=12-createLibContainer.kt>
-13. **Library entry point — app holds the container**
-    <https://gist.github.com/khmelevartem/a4a4e1ac8ea773b90e1f089fbe0fed2f?file=13-app-holds-lib-container.kt>
-14. **Library entry point — inject from the container**
-    <https://gist.github.com/khmelevartem/a4a4e1ac8ea773b90e1f089fbe0fed2f?file=14-inject-from-lib-container.kt>
-15. **Static access — typed providers**
-    <https://gist.github.com/khmelevartem/a4a4e1ac8ea773b90e1f089fbe0fed2f?file=15-typed-providers.kt>
-
-If a Kotlin block in `en.md` is later edited, sync the matching file in the gist: `gh gist edit a4a4e1ac8ea773b90e1f089fbe0fed2f`.
-
-### Paywall and Partner Program
-
-You choose per-article whether to put it behind Medium's paywall (meters against readers' 3-free-articles-a-month) or leave it free. **Friend links** give anyone free access to a paywalled piece and don't count against their quota — useful for sharing on social. The Partner Program (earnings from member reading time) requires a minimum of 100 followers to enroll. ([Medium guide](https://nickwolny.com/writing-on-medium-guide/)) For a showcase/attract-contributors goal, leaving it free (or free + friend links) maximizes reach over revenue.
-
-## Cross-posting and canonical URL
-
-Publishing the same substance on both Habr and Medium is fine — they're different language audiences. If you later mirror the English version on a personal blog or dev.to, set the **canonical URL** to whichever you consider primary so search engines don't split ranking. (Habr and Medium each treat their copy as canonical by default.)
-
-## Where to promote
-
-Match each channel to where KMP/Android developers actually congregate:
-
-- **Kotlin Slack** (`kotlinlang.slack.com`) — `#multiplatform`, `#dependency-injection`, `#feed` channels. The highest-signal audience for this exact topic.
-- **Reddit** — r/Kotlin, r/androiddev. Both accept "I wrote about X" posts if the content is substantive, not a thin promo.
-- **X/Twitter and Mastodon** — tag the KMP/Android community; the Tether repo link plus the diagram-1 image (the source-set mirror) makes a strong card.
-- **Telegram** — Russian-language Kotlin/Android channels for the Habr piece; post the Habr link with a two-line hook.
-- **Hacker News** — possible for the English piece, but only the strongest technical writing survives there; submit, don't over-invest.
-- **The Tether repo itself** — link both articles from the README and from `docs/engineering/dependency-injection.md` once live, closing the loop between the showcase and the code.
-
-Timing: post mid-week, morning in the target audience's timezone (Habr — MSK; Medium/HN — US business hours). Publish, then seed the promotion channels within the first couple of hours while the article is fresh in each platform's ranking window.
-
-## After publishing — close the issue
-
-Issue #479's DoD requires both published URLs recorded in the issue. Once live:
+The DoD requires both published URLs recorded in the issue:
 
 ```bash
 gh issue comment 479 --body "Published:
 - Habr (RU): <url>
 - Medium (EN): <url>"
 ```
-
----
-
-Sources:
-- [Песочница / Устройство сайта / Хабр](https://habr.com/ru/docs/help/sandbox/)
-- [Песочница Хабра: как получить инвайт / Хабр](https://habr.com/ru/companies/habr/articles/881676/)
-- [Как написать первую статью на Хабр: чек-лист / Хабр](https://habr.com/ru/companies/habr/articles/736940/)
-- [Habr Flavored Markdown / Хабр](https://habr.com/ru/docs/help/markdown/)
-- [Мы добавили markdown-режим в новый редактор / Хабр](https://habr.com/ru/companies/habr/articles/725748/)
-- [Writing on Medium: the ultimate guide / nickwolny.com](https://nickwolny.com/writing-on-medium-guide/)
-- [6 Ways to Embed Source Code in Medium Articles / Medium](https://medium.com/@vegetablecode/6-ways-to-embed-source-code-in-medium-articles-a0b2f0ce24c7)
