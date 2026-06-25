@@ -6,7 +6,9 @@ Each `##` section is one step. **Walk this file top to bottom — file order is 
 
 **Announce each step on entry.** Before executing a section, post a one-line user-visible marker naming the step you are entering (e.g. `→ inner-loop`). Announce a skipped step too, with the reason (`skip recon — docs re-entry`). The announcement makes the walk auditable: the user sees the real sequence, and drift into a remembered shape shows the moment a step is announced out of order or an expected step is never announced.
 
-**A step's name is a label, not its specification.** Run each step from its section body, not from what its name suggests. A step is done only when the concrete obligation its section names is satisfied.
+**A step's name is a label, not its specification.** Run each step from its section body, not from what its name suggests.
+
+**One step carries one independent obligation.** If a section would bundle two must-dos that can each be satisfied separately, they are separate steps — never a step plus a buried secondary duty. A step is done only when its single obligation is met; because every obligation is its own announced step, none can be silently dropped behind a more salient sibling. (Sequenced sub-parts of a single procedure — e.g. compose-then-write-then-push — are one obligation, not several.)
 
 **Worktree precondition.** Before dispatching any agent that writes files, ensure the working directory is `.claude/worktrees/<N>-<short-slug>/`. If missing, create from `origin/main`:
 
@@ -27,7 +29,7 @@ Run `classify.sh <N>` (or `classify.sh` — it parses the current branch / open 
 
 **Drift gate.** On a re-entry that is behind `origin/main`, `classify.sh` emits only `drift=behind` + `status=blocked` and exits non-zero — `reentry` / `pr` / `type` / `touched` are all withheld. No step whose predicate names `reentry` / `type` / `track` can match, and the preamble's blocked-profile rule suspends the unconditional steps too, so the one legal step is `sync-main` (Step 1). Do not improvise the withheld fields: run `sync-main`, then re-run `classify.sh` for the clean profile.
 
-Read the issue itself: title, body, label-derived `type`, and **every comment** via `gh issue view <N> --comments`. **Comments are not a discussion — they are potentially a canon-update on the body.** When a comment conflicts with the body, the comment takes priority; surface the divergence to the user in one line.
+Read the issue's title, body, and label-derived `type` — enough to resolve `track` below. Its comments are read in `issue-canon`.
 
 Decide the one judgment field `classify.sh` cannot resolve mechanically:
 
@@ -59,7 +61,15 @@ The branch is behind `origin/main`. Run `/pull-main` to merge fresh main, then r
 
 ---
 
-## Step 2 — reentry-reconcile
+## Step 2 — issue-canon
+
+**Applies to:** every run.
+
+Read **every** comment on the issue via `gh issue view <N> --comments`. Comments are not a discussion — they are potentially a canon-update on the body. When a comment conflicts with the body, the comment takes priority: surface the divergence to the user in one line. If it changes `type` or scope, return to `classify` and re-resolve `track`.
+
+---
+
+## Step 3 — reentry-reconcile
 
 **Applies to:** `reentry=pr-feedback`.
 
@@ -80,11 +90,11 @@ The originating agent returns its revised work to the orchestrator. The orchestr
 
 Before re-dispatching reviewers, refresh the roster: run `classify.sh` + `select-reviewers.sh` against the current committed `touched` set. Use the returned `inner-loop-reviewers` for this pass — do not eyeball the domain.
 
-After push — reply to every addressed inline comment via `gh api -X POST repos/<owner>/<repo>/pulls/<PR>/comments/<comment_id>/replies -f body="<reply>"`: what was done + the commit SHA, or explicit reasoning if deliberately declined. A reply is the "addressed" signal; without it the next re-entry re-reads the comment as unaddressed.
+The reply-to-every-comment obligation is its own step (`reply-threads`), after the push.
 
 ---
 
-## Step 3 — recon
+## Step 4 — recon
 
 **Applies to:** `reentry=fresh`.
 
@@ -106,13 +116,33 @@ Brief for the recon agent (pass the issue title + body):
 
 `CLAUDE.md` is harness-injected — not part of the sweep.
 
-For each ADR the digest flags as trigger-tripped, the plan (code track) or layer list (docs track) must confirm the ADR (false trigger) or include a reversal sub-plan (see `docs/engineering/adr/README.md` §Reversing an ADR).
+### Briefing to the user
 
-For each prior-`#<N>` mention, resolve in this PR or escalate to the user as "can't do here — move to #M?". Never silently leave a `TODO(#<N>)` after merge.
+After recon completes, post a short 3–6 line briefing: what we are doing, why (motivation from the issue), track + affected layers/platforms, surfaced living-doc constraints. Any user-facing questions are asked next at `early-gates` if the profile includes it (code, fresh); otherwise inline, before continuing. One briefing per run; do not repeat on re-entry.
 
-### Critical reading
+---
 
-Flag and escalate before starting work if:
+## Step 5 — adr-triggers
+
+**Applies to:** `reentry=fresh`.
+
+For each ADR the recon digest flagged as trigger-tripped, the plan (code track) or layer list (docs track) must confirm the ADR (false trigger) or include a reversal sub-plan (see [`docs/engineering/adr/README.md`](../../../docs/engineering/adr/README.md) §Reversing an ADR). Announce the verdict per flagged ADR; "none" when the digest flagged none.
+
+---
+
+## Step 6 — prior-mentions
+
+**Applies to:** `reentry=fresh`.
+
+For each prior-`#<N>` mention the digest ranked, resolve it in this PR or escalate to the user as "can't do here — move to #M?". Never silently leave a `TODO(#<N>)` after merge. Announce the disposition per mention; "none" when the digest found none.
+
+---
+
+## Step 7 — critical-reading
+
+**Applies to:** `reentry=fresh`.
+
+Flag and escalate to the user before starting work if any holds:
 
 - only one platform is mentioned, yet the task is cross-platform;
 - errors and fail-paths are not described;
@@ -122,13 +152,11 @@ Flag and escalate before starting work if:
 - *(docs track)* unclear which specific artifacts are expected as output;
 - filler phrases: "fill in if you have something", "describe as you see fit", "and so on".
 
-### Briefing to the user
-
-After recon completes, post a short 3–6 line briefing: what we are doing, why (motivation from the issue), track + affected layers/platforms, surfaced living-doc constraints. Any user-facing questions are asked next at `early-gates` if the profile includes it (code, fresh); otherwise inline, before continuing. One briefing per run; do not repeat on re-entry.
+Announce the flags raised, or "none".
 
 ---
 
-## Step 4 — early-gates
+## Step 8 — early-gates
 
 **Applies to:** `track=code AND reentry=fresh`.
 
@@ -143,7 +171,7 @@ A missing or stub spec / DoD is a SKILL.md gate (no sub-agent mitigation) — do
 
 ---
 
-## Step 5 — bugfix-root-cause
+## Step 9 — bugfix-root-cause
 
 **Applies to:** `track=code AND type=bugfix AND reentry=fresh`.
 
@@ -157,7 +185,7 @@ Otherwise post the confirmed cause as a comment on issue #\<N\> via `gh issue co
 
 ---
 
-## Step 6 — layer-classify
+## Step 10 — layer-classify
 
 **Applies to:** `track=docs AND reentry=fresh`.
 
@@ -180,7 +208,7 @@ Result of this step: an ordered list of layers to produce, with target path and 
 
 ---
 
-## Step 7 — plan
+## Step 11 — plan
 
 **Applies to:** `reentry=fresh`.
 
@@ -188,17 +216,17 @@ Use the built-in `Plan` agent (or `general-purpose` if unavailable) to produce a
 
 *(docs track)* The plan is the solution's architecture — the canon changes and how the pieces fit together — not the layer list, which `layer-classify` already produced. The fix-level, lane-splitting, and approach-fork guidance below is code-track.
 
-**Choosing the fix level.** When the root cause describes a class of bugs, or parallel implementations contain the same defect — consider fixing one level up: a type / container / contract change that makes the class impossible. Compare costs: N point-fixes vs 1 structural fix. If you choose point-fix — list parallel defective locations explicitly and file a follow-up issue before coding.
+**Choosing the fix level.** When the root cause describes a class of bugs, or parallel implementations contain the same defect — consider fixing one level up: a type / container / contract change that makes the class impossible. Compare costs: N point-fixes vs 1 structural fix. If you choose point-fix — list parallel defective locations explicitly and file a follow-up issue before coding. Announce the decision: `fix-level: structural`, or `fix-level: point-fix → siblings <list>, follow-up #<M> filed` — so the follow-up obligation is on-screen, not assumed.
 
 **Issue scope is a starting point, not a cage.** If touching adjacent classes or neighbouring platforms is needed for a quality solution — expand scope in this PR. Whether to fold a finding or defer it → [`docs/engineering/scope-discipline.md`](../../../docs/engineering/scope-discipline.md). Forced cascade outside the literal **Out of scope** list → SKILL.md gate; do not silently fold.
 
 **Lane splitting.** Default is a single sequential lane. Split into parallel lanes ONLY if the plan enumerates file-level disjoint sets: lane A files ∩ lane B files = ∅. List explicit file paths per lane. Any overlap → execute sequentially. (Use "lane" here — "track" is reserved for docs vs code.)
 
-**Approach-fork empirical gate.** When the task forks into more than one viable implementation, converge on the most suitable one (via `architect` when the choice is non-trivial), implement that candidate, and verify it at runtime under the conditions that distinguish the candidates before investing the full review pipeline. Only an empirically-confirmed approach earns that investment. This pulls `runtime-verify` forward for fork tasks; single-implementation tasks keep the default order.
+**Approach-fork empirical gate.** When the task forks into more than one viable implementation, converge on the most suitable one (via `architect` when the choice is non-trivial), implement that candidate, and verify it at runtime under the conditions that distinguish the candidates before investing the full review pipeline. Only an empirically-confirmed approach earns that investment. This pulls `smoke` forward for fork tasks; single-implementation tasks keep the default order.
 
 ---
 
-## Step 8 — docs-dispatch
+## Step 12 — docs-dispatch
 
 **Applies to:** `track=docs AND reentry=fresh`.
 
@@ -222,7 +250,7 @@ Each sub-agent / direct write returns: paths produced, index updates, converged-
 
 ---
 
-## Step 9 — inner-loop
+## Step 13 — inner-loop
 
 **Applies to:** `track=code`.
 
@@ -239,7 +267,7 @@ Per lane (or sequentially if single lane):
 
 2. **Commit before dispatching the reviewer wave.** Reviewers read `git diff main...HEAD` — the working tree must have no uncommitted changes when they run. Otherwise some agents read a stale state and send phantom `[REQUIRED]` flags. One source of truth = one commit per iteration.
 
-3. **Refresh roster, then dispatch.** Run `classify.sh` to recompute `touched` from the live committed diff, then `select-reviewers.sh` to get the current `inner-loop-reviewers` roster. Dispatch exactly those reviewers. When dispatching `review-ux-conformance`: resolve the feature slug from the issue number (spec link or `docs/product/features/<slug>/` reference in the body, else glob `docs/product/features/**/ux-brief.md` and topic-match the changed paths); pass the resolved brief path in the prompt. Suppress the dispatch entirely when no brief exists — brief-existence is not scriptable; the orchestrator owns this gate.
+3. **Refresh roster, then dispatch.** Run `classify.sh` to recompute `touched` from the live committed diff, then `select-reviewers.sh` to get the current `inner-loop-reviewers` roster. Dispatch exactly those reviewers. When dispatching `review-ux-conformance`: resolve the feature slug from the issue number (spec link or `docs/product/features/<slug>/` reference in the body, else glob `docs/product/features/**/ux-brief.md` and topic-match the changed paths); pass the resolved brief path in the prompt. Suppress the dispatch entirely when no brief exists — brief-existence is not scriptable; the orchestrator owns this gate. Announce the outcome (`ux-conformance: brief <path> → dispatched` / `ux-conformance: no brief → suppressed`) so this orchestrator-owned judgment is not silently skipped behind the scripted roster.
 
    On iterations 2+: re-dispatch only reviewers that raised `[REQUIRED]` the previous round, plus any added by the refreshed roster when the new changes pulled in a new domain. Full-roster coverage is restored at `full-review`.
 
@@ -263,7 +291,7 @@ Per lane (or sequentially if single lane):
 
 ---
 
-## Step 10 — simplify
+## Step 14 — simplify
 
 **Applies to:** `track=code`.
 
@@ -283,7 +311,7 @@ If anything was simplified — commit. `full-review` runs immediately after and 
 
 ---
 
-## Step 11 — full-review
+## Step 15 — full-review
 
 **Applies to:** every run.
 
@@ -300,15 +328,11 @@ No `gh pr review` here — findings are consumed locally only.
 
 ---
 
-## Step 12 — runtime-verify
+## Step 16 — smoke
 
 **Applies to:** `track=code`.
 
-Two branches, not mutually exclusive — for a PR that changes both a feature and an enforcer, run both.
-
-### 12a — Smoke (feature behaviour)
-
-When the PR deliverable is runtime feature behaviour (user path, network exchange, lifecycle).
+Runtime feature behaviour (user path, network exchange, lifecycle). If the deliverable carries none — announce `skip smoke — no runtime feature behaviour` and move on.
 
 Selection from classify.sh's `touched` set:
 
@@ -323,9 +347,15 @@ Selection from classify.sh's `touched` set:
 
 If the PR introduces a new critical happy-path not covered by smoke — extend `.claude/skills/smoke-test/SKILL.md` in this same PR before running.
 
-### 12b — Enforcement probe (static check is wired in)
+Record a 🟢/🟡/🔴 verdict naming the smoke blocks executed. A bare pass/fail that names no block is not a smoke result — it signals a compile check stood in for the run; redo. Any 🟡/🔴 → present to the user, stop.
 
-When the PR deliverable is the enforcement mechanism itself (custom lint rule, CI guard, git hook, custom Gradle check).
+---
+
+## Step 17 — enforcement-probe
+
+**Applies to:** `track=code`.
+
+The deliverable is an enforcement mechanism (custom lint rule, CI guard, git hook, custom Gradle check). If the deliverable is not an enforcer — announce `skip enforcement-probe — no enforcer in deliverable` and move on.
 
 1. Create a minimal artifact violating the check in a real location (where the enforcer should fire).
 2. Run the corresponding Gradle/CI task.
@@ -334,17 +364,15 @@ When the PR deliverable is the enforcement mechanism itself (custom lint rule, C
 
 If step 3 passes green — the enforcer is not wired in despite green unit tests. Red gate; escalate to the user.
 
-### Verdict
-
-Record 🟢/🟡/🔴 per branch run, naming the smoke blocks executed or the enforcement-probe path. A bare pass/fail that names no block or probe is not a runtime-verify result — it signals a compile check stood in for the smoke run; redo from §12a/§12b. Any 🟡/🔴 → present to the user, stop.
+Record a 🟢/🟡/🔴 verdict naming the enforcement-probe path. Any 🟡/🔴 → present to the user, stop.
 
 ---
 
-## Step 13 — commit-pr
+## Step 18 — commit-pr
 
 **Applies to:** every run.
 
-Only after `runtime-verify` is 🟢 (code track) or after `full-review` converges (docs track).
+Only after the runtime checks (`smoke` / `enforcement-probe`) are 🟢 (code track) or after `full-review` converges (docs track).
 
 **Fresh task (no existing PR).** Before running `gh pr create`:
 
@@ -359,7 +387,7 @@ git push -u origin <N>-<short-slug>
 gh pr create --title "<title>" --body-file /tmp/pr-<N>-body.md
 ```
 
-Do not block on explicit OK before push — `runtime-verify` 🟢 is the gate, not user approval.
+Do not block on explicit OK before push — green runtime checks (`smoke` / `enforcement-probe`) are the gate, not user approval.
 
 Branches and worktrees share the same shape — `<N>-<short-slug>`.
 
@@ -367,7 +395,15 @@ Branches and worktrees share the same shape — `<N>-<short-slug>`.
 
 ---
 
-## Step 14 — final-summary
+## Step 19 — reply-threads
+
+**Applies to:** `reentry=pr-feedback`.
+
+After the push, reply to **every** addressed inline comment via `gh api -X POST repos/<owner>/<repo>/pulls/<PR>/comments/<comment_id>/replies -f body="<reply>"`: what was done + the commit SHA, or explicit reasoning if deliberately declined. A reply is the "addressed" signal; without it the next re-entry re-reads the comment as unaddressed.
+
+---
+
+## Step 20 — final-summary
 
 **Applies to:** every run.
 
@@ -386,6 +422,6 @@ Report to the user:
 - **Edge cases** — every AC that is not the golden path, plus failure modes the diff plausibly introduced (cancellation, empty input, offline, permission denied, simultaneous peers, etc.). One bullet per case.
 - **Cross-platform parity** — if `touched` includes `code` (common) or multiple `platform` source sets, list one check per affected platform.
 - **Regression sweep** — adjacent features the diff could have broken. Name them; do not say "smoke them".
-- **What is NOT testable manually** — backend-only changes, internal refactors with no visible diff. Say so explicitly and name what was already covered by `runtime-verify` 🟢 instead.
+- **What is NOT testable manually** — backend-only changes, internal refactors with no visible diff. Say so explicitly and name what was already covered by `smoke` 🟢 instead.
 
 If the entire diff is backend-only or has no visible behaviour change: state "backend-only, nothing to test manually" and stop.

@@ -28,7 +28,7 @@ Every actionable value `classify.sh` emits is consumed mechanically, never by yo
 
 ## Re-entry contract
 
-The skill is idempotent per issue. `classify.sh` detects PR state and emits `reentry=fresh` or `reentry=pr-feedback`; the `**Applies to:**` tags then gate which steps a re-entry run executes. A re-entry behind `origin/main` is forced through `sync-main` first — `classify.sh` withholds the profile until the branch is synced. Reconciliation mechanics — reading every PR comment, "counted is not read", by-agent attribution routing, and the reply-after-push rule — live in `reentry-reconcile`. The re-entry commit rule (commit into existing branch, no force-push, no new PR) lives in `commit-pr`.
+The skill is idempotent per issue. `classify.sh` detects PR state and emits `reentry=fresh` or `reentry=pr-feedback`; the `**Applies to:**` tags then gate which steps a re-entry run executes. A re-entry behind `origin/main` is forced through `sync-main` first — `classify.sh` withholds the profile until the branch is synced. Reconciliation mechanics — reading every PR comment, "counted is not read", and by-agent attribution routing — live in `reentry-reconcile`; the reply-to-every-comment-after-push rule is its own step, `reply-threads`. The re-entry commit rule (commit into existing branch, no force-push, no new PR) lives in `commit-pr`.
 
 ## No-deflection principle
 
@@ -50,7 +50,7 @@ You MUST stop and ask the user:
 - **Cause-vs-issue divergence** — confirmed cause materially diverges from issue body (different mechanism / scope / symptom / severity). Ask: close #N as misdiagnosis and open a new issue, or post a clarifying comment to the issue. Do not silently edit the issue body.
 - **Plan conflicts with engineering guides** — surfaced by the `Plan` agent or by recon's living-doc digest, with no clean resolution.
 - **Forced-cascade scope expansion** — a change is technically forced but violates an explicit entry in the issue's **Out of scope** section. Ask: fold, split, or re-frame.
-- **Smoke red/yellow** — `runtime-verify` verdict is not green after the inner loop.
+- **Smoke red/yellow** — the `smoke` or `enforcement-probe` verdict is not green after the inner loop.
 - **Sub-agent open question** — a sub-agent returns a question it cannot converge on. Relay verbatim, collect answers, re-dispatch the same agent. Routing a contradiction to the owning sub-agent (`spec-writer` / `architect` / `ux-expert`) is automatic — stop at the user only when the sub-agent itself surfaces an unresolvable question.
 
 Everything else — implementation details, reviewer findings, fix iterations — you handle internally.

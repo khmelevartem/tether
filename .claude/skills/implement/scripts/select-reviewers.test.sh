@@ -210,7 +210,7 @@ EVERY_RUN=$(awk '
 ' "$STEPS_MD" | sort | tr '\n' ' ' | sed 's/ $//')
 
 assert_eq "unconditional steps are exactly the always-run set" \
-  "classify commit-pr final-summary full-review" "$EVERY_RUN"
+  "classify commit-pr final-summary full-review issue-canon" "$EVERY_RUN"
 
 # The drift gate: classify.sh withholds the profile when behind main, and the
 # only step able to match that partial profile is sync-main. Pin it by name so
