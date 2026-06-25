@@ -20,7 +20,7 @@ Issue number `<N>` — optional.
 
 The **algorithm** — the ordered steps and how to walk them — lives in `steps.md`; this file holds the **run principles**. Run it like this:
 
-1. Start by reading the issue in full (`read-all`, Step 0), then `classify` (Step 1): make the one judgment `classify.sh` cannot — the track (docs vs code).
+1. On a fresh run, start by reading the issue in full (`read-all`, Step 0); then `classify` (Step 1) makes the one judgment `classify.sh` cannot — the track (docs vs code).
 2. Walk `steps.md` top to bottom — never assemble the step list from your own model. Its preamble governs how each step is gated, run, and announced; follow it.
 3. At every review step, take the reviewer roster from `select-reviewers.sh`, never your own pick — it is computed from the live committed diff.
 

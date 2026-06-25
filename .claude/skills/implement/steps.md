@@ -7,6 +7,7 @@ Each `##` section is one step. **Walk this file top to bottom — file order is 
 **Announce each step on entry.** Before executing a section, post a one-line user-visible marker naming the step you are entering (e.g. `→ inner-loop`). Announce a skipped step too, with the reason (`skip recon — re-entry`). The announcement makes the walk auditable: the user sees the real sequence, and drift into a remembered shape shows the moment a step is announced out of order or an expected step is never announced.
 
 **A step's name is a label, not its specification.** Run each step from its section body, not from what its name suggests.
+
 **Worktree precondition.** Before dispatching any agent that writes files, ensure the working directory is `.claude/worktrees/<N>-<short-slug>/`. If missing, create from `origin/main`:
 
 ```bash
@@ -20,9 +21,9 @@ This is a one-shot setup, not part of the walk.
 
 ## Step 0 — read-all
 
-**Applies to:** every run.
+**Applies to:** `reentry=fresh`.
 
-Read the issue in full — title, body, and **every** comment via `gh issue view <N> --comments`. Comments are potentially a canon-update on the body, not a discussion: when a comment conflicts with the body, the comment takes priority — surface the divergence to the user in one line. This is the complete picture `classify` resolves `track` from.
+Read the issue in full — title, body, and **every** comment via `gh issue view <N> --comments`. Comments are potentially a canon-update on the body, not a discussion: when a comment conflicts with the body, the comment takes priority — surface the divergence to the user in one line. This is the complete picture `classify` resolves `track` from at the start; on re-entry `classify` reads `track` from the committed `touched` set instead.
 
 ---
 
@@ -209,6 +210,7 @@ Result of this step: an ordered list of layers to produce, with target path and 
 
 Use the built-in `Plan` agent (or `general-purpose` if unavailable) to produce a short implementation plan: phases, artifacts to touch, validation strategy. The agent reads the recon digest's flagged engineering rules and surfaces any plan↔guide conflict explicitly.
 
+**Skip when the scope is already clear.** A `size:S` task whose work is unambiguous needs no plan — announce `skip plan — size:S, scope clear` and go straight to the build (`inner-loop` / `docs-dispatch`).
 
 **Choosing the fix level.** When the root cause describes a class of bugs, or parallel implementations contain the same defect — consider fixing one level up: a type / container / contract change that makes the class impossible. Compare costs: N point-fixes vs 1 structural fix. If you choose point-fix — list parallel defective locations explicitly and file a follow-up issue before coding. Announce the decision: `fix-level: structural`, or `fix-level: point-fix → siblings <list>, follow-up #<M> filed` — so the follow-up obligation is on-screen, not assumed.
 
