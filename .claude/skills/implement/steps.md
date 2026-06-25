@@ -355,7 +355,7 @@ gh pr create --title "<title>" --body-file /tmp/pr-<N>-body.md
 
 Do not block on explicit OK before push — `runtime-verify` 🟢 is the gate, not user approval.
 
-Branches and worktrees share the same shape — `<N>-<short-slug>`.
+The branch carries the issue number — `<N>-<slug>`; the worktree directory keeps its harness slug (see **Worktree precondition**), so the two names differ.
 
 **Re-entry (PR already exists):** commit into the existing branch, push (no force), no new PR.
 
