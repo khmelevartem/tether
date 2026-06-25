@@ -47,6 +47,8 @@ Decide the one judgment field `classify.sh` cannot resolve mechanically:
 | `type=infra` AND deliverable limited exclusively to editing `.claude/` files | docs |
 | `type=feature` / `bugfix` / `refactor` / `infra` with deliverable in source sets or build/CI/scripts (even if an ADR is also needed) | code |
 
+On re-entry the body is not re-read (`read-all` is fresh-only) — resolve `track` from the committed `touched` set against the rows above. Empty `touched` (build files, CI, root scripts — `classify.sh` buckets none of them) is the **code** track, per the last row, not docs.
+
 ### Profile
 
 `track` is the one judgment `classify.sh` cannot resolve. After deciding it, announce the resolved profile — `track=<…> type=<…> reentry=<…>` — so every later `**Applies to:**` match reads against an on-screen value, not a re-derived one. Treat `reentry=unknown` as `fresh` for matching. From here, walk the steps per the preamble — each `**Applies to:**` now matches against this on-screen profile.
@@ -368,7 +370,7 @@ Record a 🟢/🟡/🔴 verdict naming the enforcement-probe path. Any 🟡/🔴
 
 **Applies to:** every run.
 
-Only after the runtime checks that applied (`smoke` and/or `enforcement-probe`) are 🟢 (code track) — an announced skip counts as satisfied — or after `full-review` converges (docs track).
+Only after `full-review` has converged and every runtime check that applied is 🟢 — `smoke` (code-track behaviour) and `enforcement-probe` (any track, since enforcers can live in `.claude/`), an announced skip counting as satisfied.
 
 **Fresh task (no existing PR).** Before running `gh pr create`:
 
