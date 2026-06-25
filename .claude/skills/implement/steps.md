@@ -37,7 +37,7 @@ Decide the one judgment field `classify.sh` cannot resolve mechanically:
 
 ### Profile
 
-`track` is the one judgment `classify.sh` cannot resolve. After deciding it, announce the resolved profile — `track=<…> type=<…> reentry=<…>` — so every later `**Applies to:**` match reads against an on-screen value, not a re-derived one. The walk from here is: read each `## Step` top to bottom, run it iff its `**Applies to:**` predicate holds for this profile (a step with no such line always runs), announce each step on entry.
+`track` is the one judgment `classify.sh` cannot resolve. After deciding it, announce the resolved profile — `track=<…> type=<…> reentry=<…>` — so every later `**Applies to:**` match reads against an on-screen value, not a re-derived one. Treat `reentry=unknown` as `fresh` for matching. The walk from here is: read each `## Step` top to bottom, run it iff its `**Applies to:**` predicate holds for this profile (a step with no such line always runs), announce each step on entry.
 
 ### Reviewer roster
 

@@ -170,16 +170,18 @@ assert_eq "docs wave-b review-adversarial" \
 
 # ── steps.md tag presence ────────────────────────────────────────────────────
 #
-# Every `## Step` section is gated by an `**Applies to:**` line, except the
-# always-run steps. A new step added without a tag — or a tag dropped — breaks
-# the count.
+# Every `## Step` is gated by an `**Applies to:**` line except the always-run
+# steps. Pin the untagged set by name, not by count — a count-only check passes
+# if a future edit tags an always-run step while untagging a gated one.
 
-ALWAYS_RUN_COUNT=4   # classify, full-review, commit-pr, final-summary
-N_STEPS=$(grep -cE '^## Step [0-9]+ — ' "$STEPS_MD")
-N_TAGS=$(grep -cE '^\*\*Applies to:\*\*' "$STEPS_MD")
+UNTAGGED=$(awk '
+  /^## Step [0-9]+ — /{ if(id!="" && !tagged) print id; id=$0; sub(/^## Step [0-9]+ — /,"",id); tagged=0 }
+  /^\*\*Applies to:\*\*/{ tagged=1 }
+  END{ if(id!="" && !tagged) print id }
+' "$STEPS_MD" | sort | tr '\n' ' ' | sed 's/ $//')
 
-assert_eq "applies-to tag count = steps - always-run" \
-  "$((N_STEPS - ALWAYS_RUN_COUNT))" "$N_TAGS"
+assert_eq "untagged steps are exactly the always-run set" \
+  "classify commit-pr final-summary full-review" "$UNTAGGED"
 
 # ── Summary ───────────────────────────────────────────────────────────────────
 
