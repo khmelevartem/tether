@@ -141,9 +141,8 @@ echo "wave-a-reviewers: $WAVE_A"
 echo "wave-b-reviewers: review-adversarial"
 
 # ── Run-marker ───────────────────────────────────────────────────────────────
-# When a run-dir is given, persist the active-step set on disk. Its existence is
-# the bash-checkable proof that membership was generated this run; the walk
-# refuses to proceed past classify without it.
+# Its existence is the bash-checkable proof that membership was generated this
+# run; the walk refuses to proceed past classify without it.
 
 if [ -n "$RUN_DIR" ]; then
   mkdir -p "$RUN_DIR"

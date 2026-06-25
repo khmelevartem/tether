@@ -1,8 +1,8 @@
 # Step catalog
 
-Each `##` section is one step. **Walk this file top to bottom — file order is the sequencing authority and is never overridden.** A step runs only when `select-pipeline.sh` lists it in the run's `active-steps` set; a section not in the set is skipped in place, never reordered. The one sanctioned deviation from file order is the approach-fork empirical gate (§plan), which is conditional and announces itself.
+Each `##` section is one step. **Walk this file top to bottom — file order is the sequencing authority and is never overridden.** A step runs only when `select-pipeline.sh` lists it in the run's `active-steps` set; a section not in the set is skipped in place, never reordered. The sole exception is the approach-fork gate (§plan).
 
-**The active-step set is read from the run-marker, not remembered.** `classify` runs `select-pipeline.sh` with a run-dir, which writes the set to `<worktree>/.implement-run/manifest.txt`. That file's existence is the proof that membership was generated this run. **Before executing any step after `classify`, confirm the run-marker exists; if it does not, STOP and flag it — do not proceed on a remembered pipeline shape.**
+**The active-step set is read from the run-marker, not remembered.** `classify` clears the run-marker at the start of every run, then writes the current profile's set to it — so a marker present at any later step was written by this run. **Before executing any step after `classify`, confirm the run-marker exists; if it does not, STOP and flag it — do not proceed on a remembered pipeline shape.**
 
 **A step's name is a label, not its specification.** Run each step from its section body, not from what its name suggests. A step is done only when the concrete obligation its section names is satisfied. If a step in `active-steps` is not run, post a one-line user-visible note naming the step and the reason — never drop it silently.
 
@@ -37,13 +37,14 @@ Decide the one judgment field `classify.sh` cannot resolve mechanically:
 
 ### Active-step set
 
-After deciding `track`, run `select-pipeline.sh` with the run-dir so the active-step set is persisted to the run-marker:
+As the first action of the run, clear any prior run-marker; then, after deciding `track`, run `select-pipeline.sh` with the run-dir so the current profile's set is written fresh:
 
 ```bash
+rm -rf <worktree>/.implement-run
 select-pipeline.sh <track> <type> <reentry> <touched> <worktree>/.implement-run
 ```
 
-The script emits the **active-step set** (which sections are on for this profile) and the reviewer rosters, and writes them to `<worktree>/.implement-run/manifest.txt`. The orchestrator walks `steps.md` in **file order**, running each section iff it appears in `active-steps` — the set decides membership, never sequence. The marker's existence is what later steps check before proceeding.
+The script emits the **active-step set** (which sections are on for this profile) and the reviewer rosters, and writes them to `<worktree>/.implement-run/manifest.txt`. Clearing before the write is what makes a marker found at a later step mean *this* run generated it, not a leftover from a prior invocation in the same worktree.
 
 ### Step/roster split
 

@@ -297,12 +297,13 @@ assert_eq "marker active-steps matches stdout" \
   "$(steps_line "$OUT")" \
   "$(grep '^active-steps:' "$MARKER_DIR/manifest.txt" 2>/dev/null)"
 
-# No marker when run-dir omitted.
-MARKER_DIR2=$(mktemp -d)
-run code feature fresh "" >/dev/null 2>&1
-assert_eq "no marker without run-dir" "" "$(ls "$MARKER_DIR2")"
+# No marker is written when the run-dir is omitted: run with cwd inside an empty
+# dir and confirm nothing lands there (guards against a hardcoded/relative path).
+NEG_DIR=$(mktemp -d)
+( cd "$NEG_DIR" && bash "$SCRIPT" code feature fresh "" >/dev/null 2>&1 )
+assert_eq "no marker without run-dir" "" "$(ls -A "$NEG_DIR")"
 
-rm -rf "$MARKER_DIR" "$MARKER_DIR2"
+rm -rf "$MARKER_DIR" "$NEG_DIR"
 
 # ── Summary ───────────────────────────────────────────────────────────────────
 
