@@ -87,19 +87,20 @@ if [ "$PR_NUMBER" = "-" ]; then
   echo "pr=-"
   echo "drift=na"
 else
-  echo "reentry=pr-feedback"
-  echo "pr=$PR_NUMBER"
   git fetch origin main --quiet 2>/dev/null || true
-  if git merge-base --is-ancestor origin/main HEAD 2>/dev/null; then
-    echo "drift=up-to-date"
-  else
-    # Behind main: withhold the rest of the profile (type/touched) so no work
-    # step can match — the only thing the orchestrator can do is sync-main.
+  if ! git merge-base --is-ancestor origin/main HEAD 2>/dev/null; then
+    # Behind main: withhold the ENTIRE profile (reentry/pr/type/touched) and exit
+    # non-zero. Only drift=behind + status=blocked are emitted, so no step whose
+    # predicate names reentry/type/track can match; the preamble's blocked-profile
+    # rule covers the unconditional steps. sync-main is the one legal next step.
     echo "drift=behind"
     echo "status=blocked"
     echo "classify.sh: branch is behind origin/main — run /pull-main, then re-run classify.sh before proceeding." >&2
     exit 3
   fi
+  echo "reentry=pr-feedback"
+  echo "pr=$PR_NUMBER"
+  echo "drift=up-to-date"
 fi
 
 # ── Resolve type from labels ──────────────────────────────────────────────────

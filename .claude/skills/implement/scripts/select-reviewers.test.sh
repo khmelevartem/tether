@@ -223,6 +223,22 @@ DRIFT_STEP=$(awk '
 
 assert_eq "sync-main is the sole drift=behind gate" "sync-main" "$DRIFT_STEP"
 
+# Order is load-bearing: a behind re-entry must hit sync-main before any other
+# step. A name-only check passes a regression that reorders them, so pin
+# position — sync-main is Step 1, ahead of reentry-reconcile and every work step.
+
+SYNC_N=$(awk '/^## Step [0-9]+ — sync-main$/{print $3}' "$STEPS_MD")
+RECONCILE_N=$(awk '/^## Step [0-9]+ — reentry-reconcile$/{print $3}' "$STEPS_MD")
+
+assert_eq "sync-main is Step 1 (first after classify)" "1" "$SYNC_N"
+
+if [ -n "$SYNC_N" ] && [ -n "$RECONCILE_N" ] && [ "$SYNC_N" -lt "$RECONCILE_N" ]; then
+  PASS=$((PASS + 1))
+else
+  FAIL=$((FAIL + 1))
+  echo "FAIL [sync-main precedes reentry-reconcile] — sync=$SYNC_N reconcile=$RECONCILE_N"
+fi
+
 # ── Summary ───────────────────────────────────────────────────────────────────
 
 TOTAL=$((PASS + FAIL))

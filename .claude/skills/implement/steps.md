@@ -2,6 +2,8 @@
 
 Each `##` section is one step. **Walk this file top to bottom — file order is the sequencing authority and is never overridden.** Every step carries an `**Applies to:**` line: run the section if its predicate matches this run's `(track, type, reentry)` profile, otherwise skip in place — never reorder. A step that runs unconditionally says `**Applies to:** every run`. The one ordering exception is the approach-fork gate (§plan), which is conditional and announces itself.
 
+**A blocked profile permits one step.** If `classify` emitted `status=blocked` (the branch is behind `origin/main`), exactly one step is legal — `sync-main` — regardless of any other step's `**Applies to:**`, including `every run`. No other step runs until a re-run of `classify` clears the block.
+
 **Announce each step on entry.** Before executing a section, post a one-line user-visible marker naming the step you are entering (e.g. `→ inner-loop`). Announce a skipped step too, with the reason (`skip recon — docs re-entry`). The announcement makes the walk auditable: the user sees the real sequence, and drift into a remembered shape shows the moment a step is announced out of order or an expected step is never announced.
 
 **A step's name is a label, not its specification.** Run each step from its section body, not from what its name suggests. A step is done only when the concrete obligation its section names is satisfied.
@@ -23,7 +25,7 @@ This is a one-shot setup, not part of the walk.
 
 Run `classify.sh <N>` (or `classify.sh` — it parses the current branch / open PR when no arg is given). Read the emitted key=value lines.
 
-**Drift gate.** On a re-entry that is behind `origin/main`, `classify.sh` emits `drift=behind` + `status=blocked`, withholds `type` / `touched`, and exits non-zero. That partial profile matches only `sync-main` (Step 1) — every work step needs `type` / `track`, which are absent. Do not improvise the missing fields: go to `sync-main`, then re-run `classify.sh` for the clean profile.
+**Drift gate.** On a re-entry that is behind `origin/main`, `classify.sh` emits only `drift=behind` + `status=blocked` and exits non-zero — `reentry` / `pr` / `type` / `touched` are all withheld. No step whose predicate names `reentry` / `type` / `track` can match, and the preamble's blocked-profile rule suspends the unconditional steps too, so the one legal step is `sync-main` (Step 1). Do not improvise the withheld fields: run `sync-main`, then re-run `classify.sh` for the clean profile.
 
 Read the issue itself: title, body, label-derived `type`, and **every comment** via `gh issue view <N> --comments`. **Comments are not a discussion — they are potentially a canon-update on the body.** When a comment conflicts with the body, the comment takes priority; surface the divergence to the user in one line.
 
