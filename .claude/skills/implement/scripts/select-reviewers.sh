@@ -59,8 +59,8 @@ if [ "$TRACK" = "code" ]; then
   if ! is_refactor; then
     add_inner "review-correctness"
   fi
-  # review-architecture runs for all code-track work; over-inclusion is safe
-  # because a reviewer with nothing to flag returns APPROVE.
+  # review-architecture runs unconditionally for code-track work; over-inclusion
+  # is harmless, so no per-change threshold is applied.
   add_inner "review-architecture"
   add_inner "review-guides"
   if has_touched "platform"; then

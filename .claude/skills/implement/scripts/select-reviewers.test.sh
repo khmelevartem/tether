@@ -138,7 +138,7 @@ assert_eq "c9 wave-a" \
   "wave-a-reviewers: review-dod review-guides review-glossary review-reuse review-consistency review-ux-brief" \
   "$(wave_a_line "$OUT")"
 
-# ── Case 9b: code feature touching docs gets review-consistency (Thread I) ───
+# ── Case 9b: code feature touching docs gets review-consistency ──────────────
 #
 # A code task that also edits docs still earns the cross-cutting consistency
 # pass; a code task that touches no docs does not.

@@ -39,7 +39,7 @@ Decide the one judgment field `classify.sh` cannot resolve mechanically:
 
 ### Profile
 
-`track` is the one judgment `classify.sh` cannot resolve. After deciding it, announce the resolved profile — `track=<…> type=<…> reentry=<…>` — so every later `**Applies to:**` match reads against an on-screen value, not a re-derived one. Treat `reentry=unknown` as `fresh` for matching. The walk from here is: read each `## Step` top to bottom, run it if its `**Applies to:**` predicate holds for this profile (`**Applies to:** every run` runs unconditionally), announce each step on entry.
+`track` is the one judgment `classify.sh` cannot resolve. After deciding it, announce the resolved profile — `track=<…> type=<…> reentry=<…>` — so every later `**Applies to:**` match reads against an on-screen value, not a re-derived one. Treat `reentry=unknown` as `fresh` for matching. From here, walk the steps per the preamble — each `**Applies to:**` now matches against this on-screen profile.
 
 ### Reviewer roster
 
@@ -296,7 +296,7 @@ No `gh pr review` here — findings are consumed locally only.
 
 Two branches, not mutually exclusive — for a PR that changes both a feature and an enforcer, run both.
 
-### 12a — Smoke (feature behaviour)
+### 11a — Smoke (feature behaviour)
 
 When the PR deliverable is runtime feature behaviour (user path, network exchange, lifecycle).
 
@@ -313,7 +313,7 @@ Selection from classify.sh's `touched` set:
 
 If the PR introduces a new critical happy-path not covered by smoke — extend `.claude/skills/smoke-test/SKILL.md` in this same PR before running.
 
-### 12b — Enforcement probe (static check is wired in)
+### 11b — Enforcement probe (static check is wired in)
 
 When the PR deliverable is the enforcement mechanism itself (custom lint rule, CI guard, git hook, custom Gradle check).
 
@@ -326,7 +326,7 @@ If step 3 passes green — the enforcer is not wired in despite green unit tests
 
 ### Verdict
 
-Record 🟢/🟡/🔴 per branch run, naming the smoke blocks executed or the enforcement-probe path. A bare pass/fail that names no block or probe is not a runtime-verify result — it signals a compile check stood in for the smoke run; redo from §12a/§12b. Any 🟡/🔴 → present to the user, stop.
+Record 🟢/🟡/🔴 per branch run, naming the smoke blocks executed or the enforcement-probe path. A bare pass/fail that names no block or probe is not a runtime-verify result — it signals a compile check stood in for the smoke run; redo from §11a/§11b. Any 🟡/🔴 → present to the user, stop.
 
 ---
 
