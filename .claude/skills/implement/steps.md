@@ -2,28 +2,7 @@
 
 Each `##` section is one step. Whether a step runs is determined solely by the manifest produced by `select-pipeline.sh` — the model does not re-evaluate it. Steps are walked in the order the manifest names them; skipped steps are not walked.
 
-**Worktree precondition.** Work for an issue happens inside a dedicated worktree whose **branch** carries the issue number, so `git worktree list` and `classify.sh` map any checkout back to its issue.
-
-The harness has normally already created the worktree and started this session inside it, but named the branch with a random slug (e.g. `<random-slug>`) that omits the issue number. So the precondition is a **branch rename** — run once, right after `classify` resolves `<N>`; re-running is a no-op:
-
-```bash
-branch=$(git rev-parse --abbrev-ref HEAD)
-case "$branch" in
-  [0-9]*) ;;                                            # already carries the issue number — skip
-  *)      git branch -m "$branch" "<N>-${branch##*/}" ;;  # prefix <N>, dropping any owner/ prefix
-esac
-```
-
-Only the **branch** is renamed; the worktree **directory** keeps its harness slug. Moving the directory of the live session is unsafe — the session's working directory would vanish mid-run, and the transcript directory is derived from the worktree path. `git worktree list` already shows the renamed branch, which is what maps a checkout to its issue.
-
-If no worktree exists yet (the session is on `main`, e.g. a CLI run), create one named for the issue instead — directory and branch share the `<N>-<slug>` shape here because there is no harness slug to preserve:
-
-```bash
-git fetch origin main --quiet
-git worktree add .claude/worktrees/<N>-<slug> -b <N>-<slug> origin/main
-```
-
-This is a one-shot setup, not part of the manifest.
+**Worktree precondition (mandatory).** Immediately after `classify` resolves `<N>`, run `.claude/skills/implement/scripts/ensure-branch.sh <N>` as the first step. One-shot, not part of the manifest.
 
 ---
 
@@ -354,13 +333,11 @@ Only after `runtime-verify` is 🟢 (code track) or after `full-review` converge
 ```bash
 git add <relevant files>
 git commit -m "#<N>: <message>"
-git push -u origin <N>-<slug>
+git push -u origin HEAD
 gh pr create --title "<title>" --body-file /tmp/pr-<N>-body.md
 ```
 
 Do not block on explicit OK before push — `runtime-verify` 🟢 is the gate, not user approval.
-
-The branch carries the issue number — `<N>-<slug>`; the worktree directory keeps its harness slug (see **Worktree precondition**), so the two names differ.
 
 **Re-entry (PR already exists):** commit into the existing branch, push (no force), no new PR.
 
