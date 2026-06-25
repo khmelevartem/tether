@@ -15,7 +15,7 @@ esac
 read -r -d '' CHECKLIST <<'EOF' || true
 Pre-commit checklist (быстрая проверка перед `git commit`):
 
-- [ ] правки внутри worktree (`.claude/worktrees/<branch>/`), не в корне
+- [ ] правки внутри worktree (`.claude/worktrees/<name>/`), не в корне
 - [ ] новый код в `commonMain`, если не нужен platform API → docs/engineering/architecture-principles.md
 - [ ] правильный source set / hierarchy (`jvmMain` > android+desktop, `appleMain` > ios) → docs/engineering/modules.md
 - [ ] DI: компонент зарегистрирован и резолвится через граф, без ручных `new`/`object` → docs/engineering/dependency-injection.md
