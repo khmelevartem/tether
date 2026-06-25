@@ -41,7 +41,7 @@ Decide the one judgment field `classify.sh` cannot resolve mechanically:
 
 ### Reviewer roster
 
-Rosters are not part of the walk. They are computed by `select-reviewers.sh <track> <type> <touched>` at each review step (`inner-loop`, `full-review`) from the live committed diff, because `touched` is only real once code is committed. The model never self-selects reviewers.
+Rosters are not part of the walk. They are computed by `select-reviewers.sh` from `track`, `type`, and the live committed `touched` set, at each review step (`inner-loop`, `full-review`) — `touched` is only real once code is committed. The model never self-selects reviewers.
 
 ---
 
@@ -74,7 +74,7 @@ After push — reply to every addressed inline comment via `gh api -X POST repos
 
 ## Step 2 — recon
 
-**Applies to:** all runs except docs re-entry (i.e. skip only when `track=docs AND reentry=pr-feedback`).
+**Applies to:** all runs except docs re-entry (`track=docs AND reentry=pr-feedback`).
 
 Dispatch ONE read-only recon agent (`Explore`) to sweep the doc corpus and return a compact digest — do NOT read the corpus into the orchestrator thread.
 
@@ -228,7 +228,7 @@ Per lane (or sequentially if single lane):
 
 2. **Commit before dispatching the reviewer wave.** Reviewers read `git diff main...HEAD` — the working tree must have no uncommitted changes when they run. Otherwise some agents read a stale state and send phantom `[REQUIRED]` flags. One source of truth = one commit per iteration.
 
-3. **Refresh roster, then dispatch.** Run `classify.sh` to recompute `touched` from the live committed diff, then `select-reviewers.sh <track> <type> <touched>` to get the current `inner-loop-reviewers` roster. Dispatch exactly those reviewers. When dispatching `review-ux-conformance`: resolve the feature slug from the issue number (spec link or `docs/product/features/<slug>/` reference in the body, else glob `docs/product/features/**/ux-brief.md` and topic-match the changed paths); pass the resolved brief path in the prompt. Suppress the dispatch entirely when no brief exists — brief-existence is not scriptable; the orchestrator owns this gate.
+3. **Refresh roster, then dispatch.** Run `classify.sh` to recompute `touched` from the live committed diff, then `select-reviewers.sh` to get the current `inner-loop-reviewers` roster. Dispatch exactly those reviewers. When dispatching `review-ux-conformance`: resolve the feature slug from the issue number (spec link or `docs/product/features/<slug>/` reference in the body, else glob `docs/product/features/**/ux-brief.md` and topic-match the changed paths); pass the resolved brief path in the prompt. Suppress the dispatch entirely when no brief exists — brief-existence is not scriptable; the orchestrator owns this gate.
 
    On iterations 2+: re-dispatch only reviewers that raised `[REQUIRED]` the previous round, plus any added by the refreshed roster when the new changes pulled in a new domain. Full-roster coverage is restored at `full-review`.
 
@@ -297,7 +297,7 @@ If anything was simplified — commit. `full-review` runs immediately after and 
 Pre-PR review wave, inline — no GitHub publication.
 
 1. **Working tree must be clean** (committed). Reviewers read `git diff main...HEAD`.
-2. **Wave A** in parallel: run `classify.sh` + `select-reviewers.sh <track> <type> <touched>` to get the `wave-a-reviewers` roster. Dispatch exactly those reviewers. Suppress `review-ux-conformance` dispatch when the touched feature has no `ux-brief.md` (brief-existence is not scriptable). Each agent receives the issue number and reviews the working tree.
+2. **Wave A** in parallel: run `classify.sh` + `select-reviewers.sh` to get the `wave-a-reviewers` roster. Dispatch exactly those reviewers. Suppress `review-ux-conformance` dispatch when the touched feature has no `ux-brief.md` (brief-existence is not scriptable). Each agent receives the issue number and reviews the working tree.
 3. **Wave B**: dispatch exactly the reviewer(s) named in `select-reviewers.sh`'s `wave-b-reviewers` output with the combined Wave A findings as input. (Roster authority is the script — the steps don't name specific reviewers.)
 4. Aggregate. Apply any `[REQUIRED]` via the implementing/writing agent (with the symmetry-pass instruction for code, or via the responsible sub-agent for docs). Re-run until approved or 2 iterations.
 

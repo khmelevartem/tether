@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # Emits the reviewer rosters for a run, computed from the live committed diff.
 # Called at each review step (inner-loop, full-review); the model never
-# self-selects reviewers. Step selection is NOT this script's job — the walk
-# runs steps.md in file order, each section gated by its own `Applies to:` tag.
+# self-selects reviewers.
 #
 # Usage: select-reviewers.sh <track> <type> <touched>
 #   track:   docs | code
