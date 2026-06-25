@@ -22,7 +22,7 @@ Pre-commit checklist (быстрая проверка перед `git commit`):
 - [ ] UI/state — по слоям presentation, без бизнес-логики во вьюхах → docs/engineering/presentation-layer.md
 - [ ] покрытие тестами: ≥70% для общей логики, ≥90% для алгоритмов → docs/engineering/testing.md
 - [ ] комментарии минимальны (приватные методы вместо пояснений)
-- [ ] долгоживущие артефакты (docs, `.claude/**`, KDoc, комментарии) следуют правилам письма — без истории/кода-в-прозе/inline-копий → docs/engineering/long-lived-artifacts.md
+- [ ] долгоживущие артефакты (docs, `.claude/**`, KDoc, комментарии) следуют правилам письма → docs/engineering/long-lived-artifacts.md
 - [ ] странное поведение платформы? — сначала загляни в `docs/knowledge/`
 
 Сомневаешься в архитектурном решении — открой соответствующий файл из `docs/engineering/` прежде чем коммитить.

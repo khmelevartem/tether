@@ -1,6 +1,6 @@
 # Step catalog
 
-Each `##` section is one step. **Walk this file top to bottom — file order is the sequencing authority and is never overridden.** Each step carries an `**Applies to:**` line: run the section iff its predicate matches this run's `(track, type, reentry)` profile, otherwise skip in place — never reorder. A step with no `**Applies to:**` line always runs. The one ordering exception is the approach-fork gate (§plan), which is conditional and announces itself.
+Each `##` section is one step. **Walk this file top to bottom — file order is the sequencing authority and is never overridden.** Every step carries an `**Applies to:**` line: run the section if its predicate matches this run's `(track, type, reentry)` profile, otherwise skip in place — never reorder. A step that runs unconditionally says `**Applies to:** every run`. The one ordering exception is the approach-fork gate (§plan), which is conditional and announces itself.
 
 **Announce each step on entry.** Before executing a section, post a one-line user-visible marker naming the step you are entering (e.g. `→ inner-loop`). Announce a skipped step too, with the reason (`skip recon — docs re-entry`). The announcement makes the walk auditable: the user sees the real sequence, and drift into a remembered shape shows the moment a step is announced out of order or an expected step is never announced.
 
@@ -18,6 +18,8 @@ This is a one-shot setup, not part of the walk.
 ---
 
 ## Step 0 — classify
+
+**Applies to:** every run.
 
 Run `classify.sh <N>` (or `classify.sh` — it parses the current branch / open PR when no arg is given). Read the emitted key=value lines.
 
@@ -37,11 +39,11 @@ Decide the one judgment field `classify.sh` cannot resolve mechanically:
 
 ### Profile
 
-`track` is the one judgment `classify.sh` cannot resolve. After deciding it, announce the resolved profile — `track=<…> type=<…> reentry=<…>` — so every later `**Applies to:**` match reads against an on-screen value, not a re-derived one. Treat `reentry=unknown` as `fresh` for matching. The walk from here is: read each `## Step` top to bottom, run it iff its `**Applies to:**` predicate holds for this profile (a step with no such line always runs), announce each step on entry.
+`track` is the one judgment `classify.sh` cannot resolve. After deciding it, announce the resolved profile — `track=<…> type=<…> reentry=<…>` — so every later `**Applies to:**` match reads against an on-screen value, not a re-derived one. Treat `reentry=unknown` as `fresh` for matching. The walk from here is: read each `## Step` top to bottom, run it if its `**Applies to:**` predicate holds for this profile (`**Applies to:** every run` runs unconditionally), announce each step on entry.
 
 ### Reviewer roster
 
-Rosters are not part of the walk. They are computed by `select-reviewers.sh` from `track`, `type`, and the live committed `touched` set, at each review step (`inner-loop`, `full-review`) — `touched` is only real once code is committed. The model never self-selects reviewers.
+Rosters are computed by `select-reviewers.sh` from `track`, `type`, and the live committed `touched` set, at each review step (`inner-loop`, `full-review`) — `touched` is only real once code is committed. The model never self-selects reviewers.
 
 ---
 
@@ -62,7 +64,7 @@ Route each comment to the agent that owns the work surface it objects to, not to
 - Screen / interaction / state-flow decision → `ux-expert`.
 - UI rendering, theme, accessibility specifics → `ui-expert`.
 - Glossary / docs entry the architect wrote → `architect`.
-- Pointwise correctness or style with no architectural element → code track: `coder` via the inner-loop path; docs track: re-dispatch the sub-agent that owns the artifact, or apply the fix inline in the consistency step.
+- Pointwise correctness or style with no architectural element → code track: `coder` via the inner-loop path; docs track: re-dispatch the sub-agent that owns the artifact, or apply a mechanical fix inline.
 
 The originating agent returns its revised work to the orchestrator. The orchestrator decides next steps: dispatch `coder` to apply, re-run reviewers, or escalate when the revision changes scope (new top-level types, layer crossings, deleted contracts).
 
@@ -126,7 +128,6 @@ Operational mechanics for closing pre-implementation gaps. The user-stop conditi
 
 - **FEATURE, spec exists but has blocking open questions** → dispatch `spec-writer` to resolve them. Forward `spec-writer`'s residual unresolvable questions to the user verbatim, with the recommended-option annotation above.
 - **FEATURE with user-facing UI AND `ux-brief.md` missing or stale** → dispatch `ux-expert` after `spec-writer`. Open UX questions fold back here: surface verbatim to the user, collect answers, re-dispatch. The brief is committed as part of the PR.
-- **`ui-expert` halts mid-`inner-loop` reporting "UX brief missing"** → STOP and escalate to the user. Either recon missed the UI scope, or the loop has expanded into UI work outside the original plan; the orchestrator does not silently dispatch `ux-expert` to backfill.
 
 A missing or stub spec / DoD is a SKILL.md gate (no sub-agent mitigation) — do not bypass it here.
 
@@ -171,9 +172,11 @@ Result of this step: an ordered list of layers to produce, with target path and 
 
 ## Step 6 — plan
 
-**Applies to:** `track=code AND reentry=fresh`.
+**Applies to:** `reentry=fresh`.
 
-Use the built-in `Plan` agent (or `general-purpose` if unavailable) to produce a short implementation plan: phases, files to touch, validation strategy. The agent reads the recon digest's flagged engineering rules and surfaces any plan↔guide conflict explicitly.
+Use the built-in `Plan` agent (or `general-purpose` if unavailable) to produce a short implementation plan: phases, artifacts to touch, validation strategy. The agent reads the recon digest's flagged engineering rules and surfaces any plan↔guide conflict explicitly.
+
+*(docs track)* The plan is the solution's architecture — the canon changes and how the pieces fit together — not the layer list, which `layer-classify` already produced. The fix-level, lane-splitting, and approach-fork guidance below is code-track.
 
 **Choosing the fix level.** When the root cause describes a class of bugs, or parallel implementations contain the same defect — consider fixing one level up: a type / container / contract change that makes the class impossible. Compare costs: N point-fixes vs 1 structural fix. If you choose point-fix — list parallel defective locations explicitly and file a follow-up issue before coding.
 
@@ -230,6 +233,8 @@ Per lane (or sequentially if single lane):
 
    On iterations 2+: re-dispatch only reviewers that raised `[REQUIRED]` the previous round, plus any added by the refreshed roster when the new changes pulled in a new domain. Full-roster coverage is restored at `full-review`.
 
+   **Missing UX brief mid-loop.** If `ui-expert` halts reporting "UX brief missing" → STOP and escalate to the user. Either recon missed the UI scope, or the loop expanded into UI work outside the original plan; do not silently dispatch `ux-expert` to backfill.
+
 4. If every reviewer says `APPROVE` and zero `[REQUIRED]` → lane done.
 
 5. Else → aggregate `[REQUIRED]` findings, dispatch the implementing agent again:
@@ -248,29 +253,7 @@ Per lane (or sequentially if single lane):
 
 ---
 
-## Step 9 — consistency
-
-**Applies to:** `track=docs`.
-
-Dispatch ONE `Explore` agent to verify cross-cutting properties of the produced artifacts and return a structured findings list. The orchestrator then applies mechanical fixes inline and routes conceptual ones to the owning sub-agent (`spec-writer` / `architect` / `ux-expert`).
-
-Brief for the agent:
-
-> Read-only check over `git diff main...HEAD`. For each item, return: status (OK / mechanical-fix / conceptual-fix), file:line, one-line recommendation.
->
-> 1. **Cross-references resolve at the semantic level.** Every link between artifacts (spec → ux-brief, spec → tech-doc, tech-doc → ADR, ADR → parent living doc) points to a section whose meaning still matches the linking context. (`lychee` already verifies the link resolves at file level; this check catches a renamed anchor that now points at a different concept.)
-> 2. **Scope cohesion.** For each artifact, does every section depend on the central invariant of this artifact's feature/subsystem? Sections describing concepts that survive without that invariant belong elsewhere. Mechanical move vs concept-level dispute — flag the distinction.
-> 3. **ADR parent-living-doc invariant.** If an ADR was created, the parent living doc exists and is referenced from the ADR Context section. Per [`docs/engineering/adr/README.md`](../../../docs/engineering/adr/README.md).
-> 4. **Indexes updated.** `docs/product/features/README.md` row added/updated if a spec was touched; `docs/engineering/README.md` entry added if a living doc or ADR was created.
-> 5. **Relocation completeness.** When the diff removes or moves a decision / section, verify (a) it is homed somewhere in canon, not simply deleted; (b) every inbound link to the removed anchor is repointed (`grep -rn '<old-file>.md#<anchor>' docs/ *.md`).
-
-Terminology consistency is `review-glossary`'s job in the next step — not duplicated here.
-
-Mechanical fixes (rename, add missing link, missing index row, repoint dangling reference) — orchestrator applies directly. Conceptual fixes → route to the owning sub-agent; stop at the user only if that sub-agent surfaces an unresolvable question.
-
----
-
-## Step 10 — simplify
+## Step 9 — simplify
 
 **Applies to:** `track=code`.
 
@@ -290,7 +273,9 @@ If anything was simplified — commit. `full-review` runs immediately after and 
 
 ---
 
-## Step 11 — full-review
+## Step 10 — full-review
+
+**Applies to:** every run.
 
 Pre-PR review wave, inline — no GitHub publication.
 
@@ -305,7 +290,7 @@ No `gh pr review` here — findings are consumed locally only.
 
 ---
 
-## Step 12 — runtime-verify
+## Step 11 — runtime-verify
 
 **Applies to:** `track=code`.
 
@@ -345,7 +330,9 @@ Record 🟢/🟡/🔴 per branch run, naming the smoke blocks executed or the en
 
 ---
 
-## Step 13 — commit-pr
+## Step 12 — commit-pr
+
+**Applies to:** every run.
 
 Only after `runtime-verify` is 🟢 (code track) or after `full-review` converges (docs track).
 
@@ -370,7 +357,9 @@ Branches and worktrees share the same shape — `<N>-<short-slug>`.
 
 ---
 
-## Step 14 — final-summary
+## Step 13 — final-summary
+
+**Applies to:** every run.
 
 Report to the user:
 

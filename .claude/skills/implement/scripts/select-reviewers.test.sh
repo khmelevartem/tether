@@ -119,7 +119,7 @@ OUT=$(run docs docs "docs")
 assert_eq "c7 inner empty" "inner-loop-reviewers: " "$(inner_line "$OUT")"
 
 assert_eq "c7 wave-a" \
-  "wave-a-reviewers: review-dod review-guides review-glossary review-reuse" \
+  "wave-a-reviewers: review-dod review-guides review-glossary review-reuse review-consistency" \
   "$(wave_a_line "$OUT")"
 
 # ── Case 8: docs docs docs+engdoc ────────────────────────────────────────────
@@ -127,7 +127,7 @@ assert_eq "c7 wave-a" \
 OUT=$(run docs docs "docs,engdoc")
 
 assert_eq "c8 wave-a" \
-  "wave-a-reviewers: review-dod review-guides review-glossary review-reuse review-architecture" \
+  "wave-a-reviewers: review-dod review-guides review-glossary review-reuse review-consistency review-architecture" \
   "$(wave_a_line "$OUT")"
 
 # ── Case 9: docs feature ux-brief ────────────────────────────────────────────
@@ -135,8 +135,28 @@ assert_eq "c8 wave-a" \
 OUT=$(run docs feature "ux-brief")
 
 assert_eq "c9 wave-a" \
-  "wave-a-reviewers: review-dod review-guides review-glossary review-reuse review-ux-brief" \
+  "wave-a-reviewers: review-dod review-guides review-glossary review-reuse review-consistency review-ux-brief" \
   "$(wave_a_line "$OUT")"
+
+# ── Case 9b: code feature touching docs gets review-consistency (Thread I) ───
+#
+# A code task that also edits docs still earns the cross-cutting consistency
+# pass; a code task that touches no docs does not.
+
+OUT=$(run code feature "code,docs")
+assert_contains "c9b code+docs has review-consistency" \
+  "review-consistency" "$(wave_a_line "$OUT")"
+assert_eq "c9b code+docs inner unaffected" \
+  "inner-loop-reviewers: review-correctness review-architecture review-guides" \
+  "$(inner_line "$OUT")"
+
+OUT=$(run code feature "code")
+if echo "$(wave_a_line "$OUT")" | grep -qF "review-consistency"; then
+  FAIL=$((FAIL + 1))
+  echo "FAIL [c9b code-no-docs omits review-consistency] — unexpectedly present"
+else
+  PASS=$((PASS + 1))
+fi
 
 # ── Case 10: error — no args ──────────────────────────────────────────────────
 
@@ -170,9 +190,11 @@ assert_eq "docs wave-b review-adversarial" \
 
 # ── steps.md tag presence ────────────────────────────────────────────────────
 #
-# Every `## Step` is gated by an `**Applies to:**` line except the always-run
-# steps. Pin the untagged set by name, not by count — a count-only check passes
-# if a future edit tags an always-run step while untagging a gated one.
+# Every `## Step` carries an `**Applies to:**` line — no step relies on the
+# absence of a tag to mean "always run". Assert the untagged set is empty, and
+# pin the unconditional steps (`**Applies to:** every run`) by name, not count —
+# a count-only check passes if a future edit tags an always-run step while
+# untagging a gated one.
 
 UNTAGGED=$(awk '
   /^## Step [0-9]+ — /{ if(id!="" && !tagged) print id; id=$0; sub(/^## Step [0-9]+ — /,"",id); tagged=0 }
@@ -180,8 +202,15 @@ UNTAGGED=$(awk '
   END{ if(id!="" && !tagged) print id }
 ' "$STEPS_MD" | sort | tr '\n' ' ' | sed 's/ $//')
 
-assert_eq "untagged steps are exactly the always-run set" \
-  "classify commit-pr final-summary full-review" "$UNTAGGED"
+assert_eq "every step carries an Applies-to line" "" "$UNTAGGED"
+
+EVERY_RUN=$(awk '
+  /^## Step [0-9]+ — /{ id=$0; sub(/^## Step [0-9]+ — /,"",id) }
+  /^\*\*Applies to:\*\* every run/{ print id }
+' "$STEPS_MD" | sort | tr '\n' ' ' | sed 's/ $//')
+
+assert_eq "unconditional steps are exactly the always-run set" \
+  "classify commit-pr final-summary full-review" "$EVERY_RUN"
 
 # ── Summary ───────────────────────────────────────────────────────────────────
 

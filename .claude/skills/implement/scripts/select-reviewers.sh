@@ -40,6 +40,13 @@ is_refactor() {
   return 1
 }
 
+# Documentation artifacts under review — `review-consistency` covers these
+# whatever the track, so a code change that also edits docs still gets the
+# cross-cutting consistency pass.
+has_doc_artifact() {
+  has_touched "docs" || has_touched "engdoc" || has_touched "ux-brief" || has_touched "claude"
+}
+
 # ── Inner-loop reviewer roster (code track only) ────────────────────────────
 
 INNER_REVIEWERS=""
@@ -79,6 +86,9 @@ if [ "$TRACK" = "code" ]; then
   add_a "review-guides"
   add_a "review-glossary"
   add_a "review-reuse"
+  if has_doc_artifact; then
+    add_a "review-consistency"
+  fi
   add_a "review-architecture"
   if [ "$TYPE" != "docs" ] && ! is_refactor; then
     add_a "review-correctness"
@@ -102,6 +112,9 @@ else
   add_a "review-guides"
   add_a "review-glossary"
   add_a "review-reuse"
+  if has_doc_artifact; then
+    add_a "review-consistency"
+  fi
   # review-architecture only when docs/engineering/** touched (ADR, living-doc, architecture-principles.md)
   if has_touched "engdoc"; then
     add_a "review-architecture"
