@@ -7,9 +7,6 @@ Each `##` section is one step. **Walk this file top to bottom — file order is 
 **Announce each step on entry.** Before executing a section, post a one-line user-visible marker naming the step you are entering (e.g. `→ inner-loop`). Announce a skipped step too, with the reason (`skip recon — re-entry`). The announcement makes the walk auditable: the user sees the real sequence, and drift into a remembered shape shows the moment a step is announced out of order or an expected step is never announced.
 
 **A step's name is a label, not its specification.** Run each step from its section body, not from what its name suggests.
-
-**One step carries one independent obligation.** If a section would bundle two must-dos that can each be satisfied separately, they are separate steps — never a step plus a buried secondary duty. A step is done only when its single obligation is met; because every obligation is its own announced step, none can be silently dropped behind a more salient sibling. (Sequenced sub-parts of a single procedure — e.g. compose-then-write-then-push — are one obligation, not several.)
-
 **Worktree precondition.** Before dispatching any agent that writes files, ensure the working directory is `.claude/worktrees/<N>-<short-slug>/`. If missing, create from `origin/main`:
 
 ```bash
@@ -212,7 +209,6 @@ Result of this step: an ordered list of layers to produce, with target path and 
 
 Use the built-in `Plan` agent (or `general-purpose` if unavailable) to produce a short implementation plan: phases, artifacts to touch, validation strategy. The agent reads the recon digest's flagged engineering rules and surfaces any plan↔guide conflict explicitly.
 
-*(docs track)* The plan is the solution's architecture — the canon changes and how the pieces fit together — not the layer list, which `layer-classify` already produced. The fix-level, lane-splitting, and approach-fork guidance below is code-track.
 
 **Choosing the fix level.** When the root cause describes a class of bugs, or parallel implementations contain the same defect — consider fixing one level up: a type / container / contract change that makes the class impossible. Compare costs: N point-fixes vs 1 structural fix. If you choose point-fix — list parallel defective locations explicitly and file a follow-up issue before coding. Announce the decision: `fix-level: structural`, or `fix-level: point-fix → siblings <list>, follow-up #<M> filed` — so the follow-up obligation is on-screen, not assumed.
 
