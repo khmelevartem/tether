@@ -74,7 +74,7 @@ After push — reply to every addressed inline comment via `gh api -X POST repos
 
 ## Step 2 — recon
 
-**Applies to:** all runs except docs re-entry (`track=docs AND reentry=pr-feedback`).
+**Applies to:** `reentry=fresh`.
 
 Dispatch ONE read-only recon agent (`Explore`) to sweep the doc corpus and return a compact digest — do NOT read the corpus into the orchestrator thread.
 
@@ -99,8 +99,6 @@ For each ADR the digest flags as trigger-tripped, the plan (code track) or layer
 For each prior-`#<N>` mention, resolve in this PR or escalate to the user as "can't do here — move to #M?". Never silently leave a `TODO(#<N>)` after merge.
 
 ### Critical reading
-
-Skip on re-entry — the issue was validated on the fresh run; these triggers describe planning gaps caught before work starts.
 
 Flag and escalate before starting work if:
 
