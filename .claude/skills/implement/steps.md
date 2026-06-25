@@ -23,6 +23,8 @@ This is a one-shot setup, not part of the walk.
 
 Run `classify.sh <N>` (or `classify.sh` — it parses the current branch / open PR when no arg is given). Read the emitted key=value lines.
 
+**Drift gate.** On a re-entry that is behind `origin/main`, `classify.sh` emits `drift=behind` + `status=blocked`, withholds `type` / `touched`, and exits non-zero. That partial profile matches only `sync-main` (Step 1) — every work step needs `type` / `track`, which are absent. Do not improvise the missing fields: go to `sync-main`, then re-run `classify.sh` for the clean profile.
+
 Read the issue itself: title, body, label-derived `type`, and **every comment** via `gh issue view <N> --comments`. **Comments are not a discussion — they are potentially a canon-update on the body.** When a comment conflicts with the body, the comment takes priority; surface the divergence to the user in one line.
 
 Decide the one judgment field `classify.sh` cannot resolve mechanically:
@@ -47,11 +49,17 @@ Rosters are computed by `select-reviewers.sh` from `track`, `type`, and the live
 
 ---
 
-## Step 1 — reentry-reconcile
+## Step 1 — sync-main
+
+**Applies to:** `drift=behind`.
+
+The branch is behind `origin/main`. Run `/pull-main` to merge fresh main, then re-run `classify.sh <N>` and continue the walk on the now-clean profile (`drift=up-to-date`, with `type` / `touched` present). Reviewing or building before this would diff against a stale `main` and risk a conflicting merge. `classify.sh` withholds the profile until this is done, so no later step can match in the meantime.
+
+---
+
+## Step 2 — reentry-reconcile
 
 **Applies to:** `reentry=pr-feedback`.
-
-If `classify` emitted `drift=behind` → run `/pull-main` before doing anything else.
 
 Read **every** human inline comment on the PR via `gh api repos/<owner>/<repo>/pulls/<PR>/comments` (paginate). For each, determine: addressed in commits after it, or not. **Creation date does not determine relevance** — filtering by `created_at > <date>` is forbidden; an unaddressed comment remains relevant regardless of age. **Counted is not read** — fetching `length` without `body` does not satisfy this. While unaddressed comments remain, no reviewer step runs.
 
@@ -74,7 +82,7 @@ After push — reply to every addressed inline comment via `gh api -X POST repos
 
 ---
 
-## Step 2 — recon
+## Step 3 — recon
 
 **Applies to:** `reentry=fresh`.
 
@@ -118,7 +126,7 @@ After recon completes, post a short 3–6 line briefing: what we are doing, why 
 
 ---
 
-## Step 3 — early-gates
+## Step 4 — early-gates
 
 **Applies to:** `track=code AND reentry=fresh`.
 
@@ -133,7 +141,7 @@ A missing or stub spec / DoD is a SKILL.md gate (no sub-agent mitigation) — do
 
 ---
 
-## Step 4 — bugfix-root-cause
+## Step 5 — bugfix-root-cause
 
 **Applies to:** `track=code AND type=bugfix AND reentry=fresh`.
 
@@ -147,7 +155,7 @@ Otherwise post the confirmed cause as a comment on issue #\<N\> via `gh issue co
 
 ---
 
-## Step 5 — layer-classify
+## Step 6 — layer-classify
 
 **Applies to:** `track=docs AND reentry=fresh`.
 
@@ -170,7 +178,7 @@ Result of this step: an ordered list of layers to produce, with target path and 
 
 ---
 
-## Step 6 — plan
+## Step 7 — plan
 
 **Applies to:** `reentry=fresh`.
 
@@ -188,7 +196,7 @@ Use the built-in `Plan` agent (or `general-purpose` if unavailable) to produce a
 
 ---
 
-## Step 7 — docs-dispatch
+## Step 8 — docs-dispatch
 
 **Applies to:** `track=docs AND reentry=fresh`.
 
@@ -212,7 +220,7 @@ Each sub-agent / direct write returns: paths produced, index updates, converged-
 
 ---
 
-## Step 8 — inner-loop
+## Step 9 — inner-loop
 
 **Applies to:** `track=code`.
 
@@ -253,7 +261,7 @@ Per lane (or sequentially if single lane):
 
 ---
 
-## Step 9 — simplify
+## Step 10 — simplify
 
 **Applies to:** `track=code`.
 
@@ -273,7 +281,7 @@ If anything was simplified — commit. `full-review` runs immediately after and 
 
 ---
 
-## Step 10 — full-review
+## Step 11 — full-review
 
 **Applies to:** every run.
 
@@ -290,13 +298,13 @@ No `gh pr review` here — findings are consumed locally only.
 
 ---
 
-## Step 11 — runtime-verify
+## Step 12 — runtime-verify
 
 **Applies to:** `track=code`.
 
 Two branches, not mutually exclusive — for a PR that changes both a feature and an enforcer, run both.
 
-### 11a — Smoke (feature behaviour)
+### 12a — Smoke (feature behaviour)
 
 When the PR deliverable is runtime feature behaviour (user path, network exchange, lifecycle).
 
@@ -313,7 +321,7 @@ Selection from classify.sh's `touched` set:
 
 If the PR introduces a new critical happy-path not covered by smoke — extend `.claude/skills/smoke-test/SKILL.md` in this same PR before running.
 
-### 11b — Enforcement probe (static check is wired in)
+### 12b — Enforcement probe (static check is wired in)
 
 When the PR deliverable is the enforcement mechanism itself (custom lint rule, CI guard, git hook, custom Gradle check).
 
@@ -326,11 +334,11 @@ If step 3 passes green — the enforcer is not wired in despite green unit tests
 
 ### Verdict
 
-Record 🟢/🟡/🔴 per branch run, naming the smoke blocks executed or the enforcement-probe path. A bare pass/fail that names no block or probe is not a runtime-verify result — it signals a compile check stood in for the smoke run; redo from §11a/§11b. Any 🟡/🔴 → present to the user, stop.
+Record 🟢/🟡/🔴 per branch run, naming the smoke blocks executed or the enforcement-probe path. A bare pass/fail that names no block or probe is not a runtime-verify result — it signals a compile check stood in for the smoke run; redo from §12a/§12b. Any 🟡/🔴 → present to the user, stop.
 
 ---
 
-## Step 12 — commit-pr
+## Step 13 — commit-pr
 
 **Applies to:** every run.
 
@@ -357,7 +365,7 @@ Branches and worktrees share the same shape — `<N>-<short-slug>`.
 
 ---
 
-## Step 13 — final-summary
+## Step 14 — final-summary
 
 **Applies to:** every run.
 

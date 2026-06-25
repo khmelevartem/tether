@@ -212,6 +212,17 @@ EVERY_RUN=$(awk '
 assert_eq "unconditional steps are exactly the always-run set" \
   "classify commit-pr final-summary full-review" "$EVERY_RUN"
 
+# The drift gate: classify.sh withholds the profile when behind main, and the
+# only step able to match that partial profile is sync-main. Pin it by name so
+# a future edit cannot drop the step or its gate and leave drift prose-handled.
+
+DRIFT_STEP=$(awk '
+  /^## Step [0-9]+ — /{ id=$0; sub(/^## Step [0-9]+ — /,"",id) }
+  /^\*\*Applies to:\*\*.*drift=behind/{ print id }
+' "$STEPS_MD" | sort | tr '\n' ' ' | sed 's/ $//')
+
+assert_eq "sync-main is the sole drift=behind gate" "sync-main" "$DRIFT_STEP"
+
 # ── Summary ───────────────────────────────────────────────────────────────────
 
 TOTAL=$((PASS + FAIL))

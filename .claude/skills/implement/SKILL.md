@@ -24,9 +24,11 @@ The **algorithm** — the ordered steps and how to walk them — lives in `steps
 2. Walk `steps.md` top to bottom — never assemble the step list from your own model. Its preamble governs how each step is gated, run, and announced; follow it.
 3. At every review step, take the reviewer roster from `select-reviewers.sh`, never your own pick — it is computed from the live committed diff (mechanics in `steps.md` `classify` §Reviewer roster).
 
+Every actionable value `classify.sh` emits is consumed mechanically, never by your reading discipline: `reentry` / `type` / `touched` by `**Applies to:**` tags and `select-reviewers.sh`; `drift` by the `sync-main` gate — a branch behind `origin/main` makes `classify.sh` withhold `type` / `touched`, so no work step can match until you sync.
+
 ## Re-entry contract
 
-The skill is idempotent per issue. `classify.sh` detects PR state and emits `reentry=fresh` or `reentry=pr-feedback`; the `**Applies to:**` tags then gate which steps a re-entry run executes. Full reconciliation mechanics — drift gate, reading every PR comment, "counted is not read", by-agent attribution routing, and the reply-after-push rule — live in `reentry-reconcile`. The re-entry commit rule (commit into existing branch, no force-push, no new PR) lives in `commit-pr`.
+The skill is idempotent per issue. `classify.sh` detects PR state and emits `reentry=fresh` or `reentry=pr-feedback`; the `**Applies to:**` tags then gate which steps a re-entry run executes. A re-entry behind `origin/main` is forced through `sync-main` first — `classify.sh` withholds the profile until the branch is synced. Reconciliation mechanics — reading every PR comment, "counted is not read", by-agent attribution routing, and the reply-after-push rule — live in `reentry-reconcile`. The re-entry commit rule (commit into existing branch, no force-push, no new PR) lives in `commit-pr`.
 
 ## No-deflection principle
 

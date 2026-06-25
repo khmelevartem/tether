@@ -93,7 +93,12 @@ else
   if git merge-base --is-ancestor origin/main HEAD 2>/dev/null; then
     echo "drift=up-to-date"
   else
+    # Behind main: withhold the rest of the profile (type/touched) so no work
+    # step can match — the only thing the orchestrator can do is sync-main.
     echo "drift=behind"
+    echo "status=blocked"
+    echo "classify.sh: branch is behind origin/main — run /pull-main, then re-run classify.sh before proceeding." >&2
+    exit 3
   fi
 fi
 
