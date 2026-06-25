@@ -18,7 +18,7 @@ Issue number `<N>` — optional.
 
 ## How the skill runs
 
-The pipeline is data-driven. On every invocation the orchestrator regenerates a manifest of ordered step IDs and reviewer rosters from the current profile, then walks `steps.md` in that order. Step 0 — `classify` — produces the profile; everything after follows the manifest. Fresh work and post-review re-entry produce different active-step sets because `reentry` is part of the profile.
+The pipeline is data-driven. Step 0 — `classify` — emits the run's **active-step set** (which steps are on for this profile) and reviewer rosters, and writes them to an on-disk run-marker. The orchestrator then walks `steps.md` in **file order**, running each section iff it is in the active-step set. File order is fixed; the profile decides only membership. The orchestrator never assembles the step list from its own model, and never runs a step from its name — each step is carried out per its section body. If the run-marker was not written this run, the walk stops rather than proceeding on a remembered shape. Fresh work and post-review re-entry produce different active-step sets because `reentry` is part of the profile.
 
 **Step/roster split.** Reviewer selection is always the script's output, never the model's. Timing and mechanics — see `steps.md` `classify` §Step/roster split.
 

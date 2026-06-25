@@ -18,5 +18,6 @@ captures
 **/xcshareddata/WorkspaceSettings.xcsettings
 node_modules/
 .claude/scheduled_tasks.lock
+.implement-run/
 scripts/.run-all/
 .obsidian

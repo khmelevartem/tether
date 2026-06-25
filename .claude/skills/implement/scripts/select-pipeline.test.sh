@@ -57,7 +57,7 @@ assert_nonzero_exit() {
   fi
 }
 
-steps_line() { echo "$1" | grep '^steps:'; }
+steps_line() { echo "$1" | grep '^active-steps:'; }
 inner_line()  { echo "$1" | grep '^inner-loop-reviewers:'; }
 wave_a_line() { echo "$1" | grep '^wave-a-reviewers:'; }
 wave_b_line() { echo "$1" | grep '^wave-b-reviewers:'; }
@@ -67,7 +67,7 @@ wave_b_line() { echo "$1" | grep '^wave-b-reviewers:'; }
 OUT=$(run code feature fresh "")
 
 assert_eq "c1 steps" \
-  "steps: classify recon early-gates plan inner-loop simplify full-review runtime-verify commit-pr final-summary" \
+  "active-steps: classify recon early-gates plan inner-loop simplify full-review runtime-verify commit-pr final-summary" \
   "$(steps_line "$OUT")"
 
 assert_eq "c1 inner" \
@@ -95,7 +95,7 @@ assert_eq "c2 wave-a" \
 OUT=$(run code bugfix fresh "")
 
 assert_eq "c3 steps" \
-  "steps: classify recon early-gates bugfix-root-cause plan inner-loop simplify full-review runtime-verify commit-pr final-summary" \
+  "active-steps: classify recon early-gates bugfix-root-cause plan inner-loop simplify full-review runtime-verify commit-pr final-summary" \
   "$(steps_line "$OUT")"
 
 assert_eq "c3 inner" \
@@ -111,7 +111,7 @@ assert_eq "c3 wave-a" \
 OUT=$(run code bugfix pr-feedback "")
 
 assert_eq "c3b steps" \
-  "steps: classify reentry-reconcile recon inner-loop simplify full-review runtime-verify commit-pr final-summary" \
+  "active-steps: classify reentry-reconcile recon inner-loop simplify full-review runtime-verify commit-pr final-summary" \
   "$(steps_line "$OUT")"
 
 # ── Case 4: code refactor fresh ───────────────────────────────────────────────
@@ -143,7 +143,7 @@ assert_eq "c5 wave-a" \
 OUT=$(run code feature pr-feedback "ui,code")
 
 assert_eq "c6 steps" \
-  "steps: classify reentry-reconcile recon inner-loop simplify full-review runtime-verify commit-pr final-summary" \
+  "active-steps: classify reentry-reconcile recon inner-loop simplify full-review runtime-verify commit-pr final-summary" \
   "$(steps_line "$OUT")"
 
 # ── Case 7: docs docs fresh docs ─────────────────────────────────────────────
@@ -151,7 +151,7 @@ assert_eq "c6 steps" \
 OUT=$(run docs docs fresh "docs")
 
 assert_eq "c7 steps" \
-  "steps: classify recon layer-classify docs-dispatch consistency full-review commit-pr final-summary" \
+  "active-steps: classify recon layer-classify docs-dispatch consistency full-review commit-pr final-summary" \
   "$(steps_line "$OUT")"
 
 assert_eq "c7 inner empty" "inner-loop-reviewers: " "$(inner_line "$OUT")"
@@ -181,7 +181,7 @@ assert_eq "c9 wave-a" \
 OUT=$(run docs docs pr-feedback "docs,engdoc")
 
 assert_eq "c10 steps" \
-  "steps: classify reentry-reconcile consistency full-review commit-pr final-summary" \
+  "active-steps: classify reentry-reconcile consistency full-review commit-pr final-summary" \
   "$(steps_line "$OUT")"
 
 # ── Case 11: error — no args ──────────────────────────────────────────────────
@@ -222,8 +222,8 @@ STEPS_MD="$SCRIPT_DIR/../steps.md"
 
 EMITTED_IDS=""
 for combo in "code feature fresh" "code feature pr-feedback" "code bugfix fresh" "docs docs fresh" "docs docs pr-feedback"; do
-  steps_line=$(bash "$SCRIPT" $combo "" 2>/dev/null | grep '^steps:')
-  ids="${steps_line#steps: }"
+  steps_line=$(bash "$SCRIPT" $combo "" 2>/dev/null | grep '^active-steps:')
+  ids="${steps_line#active-steps: }"
   for id in $ids; do
     EMITTED_IDS="$EMITTED_IDS $id"
   done
@@ -253,6 +253,56 @@ else
   echo "  ids in steps.md ## Step headers never emitted by any profile:"
   echo "$CATALOG_ONLY" | sed 's/^/    /'
 fi
+
+# ── Order invariant: every emitted set is a subsequence of catalog file order ─
+#
+# steps.md file order is the sole sequencing authority. A profile that reordered
+# relative to the catalog would silently break the walk; assert it cannot.
+
+CATALOG_ORDER=$(grep -E '^## Step [0-9]+ — ' "$STEPS_MD" | sed 's/^## Step [0-9]* — //')
+
+catalog_index() { echo "$CATALOG_ORDER" | grep -nxF "$1" | head -1 | cut -d: -f1; }
+
+for combo in "code feature fresh" "code feature pr-feedback" "code bugfix fresh" "docs docs fresh" "docs docs pr-feedback"; do
+  line=$(bash "$SCRIPT" $combo "" 2>/dev/null | grep '^active-steps:')
+  ids="${line#active-steps: }"
+  prev=0
+  ok=1
+  for id in $ids; do
+    idx=$(catalog_index "$id")
+    if [ -z "$idx" ] || [ "$idx" -le "$prev" ]; then ok=0; break; fi
+    prev="$idx"
+  done
+  if [ "$ok" -eq 1 ]; then
+    PASS=$((PASS + 1))
+  else
+    FAIL=$((FAIL + 1))
+    echo "FAIL [order-subsequence: $combo] — emitted set is not in catalog file order: $ids"
+  fi
+done
+
+# ── Run-marker: written when a run-dir is given, matching stdout ─────────────
+
+MARKER_DIR=$(mktemp -d)
+OUT=$(run code feature fresh "" "$MARKER_DIR")
+
+if [ -f "$MARKER_DIR/manifest.txt" ]; then
+  PASS=$((PASS + 1))
+else
+  FAIL=$((FAIL + 1))
+  echo "FAIL [marker-written] — manifest.txt not created when run-dir given"
+fi
+
+assert_eq "marker active-steps matches stdout" \
+  "$(steps_line "$OUT")" \
+  "$(grep '^active-steps:' "$MARKER_DIR/manifest.txt" 2>/dev/null)"
+
+# No marker when run-dir omitted.
+MARKER_DIR2=$(mktemp -d)
+run code feature fresh "" >/dev/null 2>&1
+assert_eq "no marker without run-dir" "" "$(ls "$MARKER_DIR2")"
+
+rm -rf "$MARKER_DIR" "$MARKER_DIR2"
 
 # ── Summary ───────────────────────────────────────────────────────────────────
 

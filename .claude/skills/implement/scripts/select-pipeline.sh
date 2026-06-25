@@ -1,15 +1,19 @@
 #!/usr/bin/env bash
-# Emits the manifest: ordered active step IDs + reviewer rosters.
+# Emits the active-step SET (which steps are on for this profile) + reviewer
+# rosters. The set decides membership only — steps.md file order is the
+# sequencing authority and the set never reorders it.
 # The model passes the two judgment fields classify.sh cannot resolve.
 #
-# Usage: select-pipeline.sh <track> <type> <reentry> <touched>
+# Usage: select-pipeline.sh <track> <type> <reentry> <touched> [run-dir]
 #   track:   docs | code
 #   type:    feature | bugfix | refactor | infra | docs | dependency | none | unknown
 #   reentry: fresh | pr-feedback | unknown
 #   touched: comma-separated subset of {ui,code,platform,docs,engdoc,claude,ux-brief} (empty ok)
+#   run-dir: optional; when given, the manifest is also written to <run-dir>/manifest.txt
+#            so the active-step set persists on disk as the run-marker.
 #
 # Output (stdout):
-#   steps: <space-separated ordered step ids>
+#   active-steps: <space-separated step ids, in catalog order>
 #   inner-loop-reviewers: <space-separated> (empty when track=docs)
 #   wave-a-reviewers: <space-separated>
 #   wave-b-reviewers: review-adversarial
@@ -20,6 +24,7 @@ TRACK="${1:-}"
 TYPE="${2:-unknown}"
 REENTRY="${3:-fresh}"
 TOUCHED="${4:-}"
+RUN_DIR="${5:-}"
 
 if [ -z "$TRACK" ]; then
   echo "error: track argument required (docs|code)" >&2
@@ -59,7 +64,7 @@ else
   exit 1
 fi
 
-echo "steps: $STEPS"
+echo "active-steps: $STEPS"
 
 # ── Inner-loop reviewer roster (code track only) ────────────────────────────
 
@@ -134,3 +139,19 @@ fi
 
 echo "wave-a-reviewers: $WAVE_A"
 echo "wave-b-reviewers: review-adversarial"
+
+# ── Run-marker ───────────────────────────────────────────────────────────────
+# When a run-dir is given, persist the active-step set on disk. Its existence is
+# the bash-checkable proof that membership was generated this run; the walk
+# refuses to proceed past classify without it.
+
+if [ -n "$RUN_DIR" ]; then
+  mkdir -p "$RUN_DIR"
+  {
+    echo "run-generated-utc: $(date -u +%FT%TZ)"
+    echo "active-steps: $STEPS"
+    echo "inner-loop-reviewers: $INNER_REVIEWERS"
+    echo "wave-a-reviewers: $WAVE_A"
+    echo "wave-b-reviewers: review-adversarial"
+  } > "$RUN_DIR/manifest.txt"
+fi
