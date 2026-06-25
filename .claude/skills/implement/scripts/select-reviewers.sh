@@ -1,19 +1,16 @@
 #!/usr/bin/env bash
-# Emits the active-step SET (which steps are on for this profile) + reviewer
-# rosters. The set decides membership only — steps.md file order is the
-# sequencing authority and the set never reorders it.
-# The model passes the two judgment fields classify.sh cannot resolve.
+# Emits the reviewer rosters for a run, computed from the live committed diff.
+# Called at each review step (inner-loop, full-review); the model never
+# self-selects reviewers. Step selection is NOT this script's job — the walk
+# runs steps.md in file order, each section gated by its own `Applies to:` tag.
 #
-# Usage: select-pipeline.sh <track> <type> <reentry> <touched> [run-dir]
+# Usage: select-reviewers.sh <track> <type> <reentry> <touched>
 #   track:   docs | code
 #   type:    feature | bugfix | refactor | infra | docs | dependency | none | unknown
-#   reentry: fresh | pr-feedback | unknown
+#   reentry: fresh | pr-feedback | unknown  (accepted for profile symmetry; rosters key on track/type/touched)
 #   touched: comma-separated subset of {ui,code,platform,docs,engdoc,claude,ux-brief} (empty ok)
-#   run-dir: optional; when given, the manifest is also written to <run-dir>/manifest.txt
-#            so the active-step set persists on disk as the run-marker.
 #
 # Output (stdout):
-#   active-steps: <space-separated step ids, in catalog order>
 #   inner-loop-reviewers: <space-separated> (empty when track=docs)
 #   wave-a-reviewers: <space-separated>
 #   wave-b-reviewers: review-adversarial
@@ -24,10 +21,13 @@ TRACK="${1:-}"
 TYPE="${2:-unknown}"
 REENTRY="${3:-fresh}"
 TOUCHED="${4:-}"
-RUN_DIR="${5:-}"
 
 if [ -z "$TRACK" ]; then
   echo "error: track argument required (docs|code)" >&2
+  exit 1
+fi
+if [ "$TRACK" != "code" ] && [ "$TRACK" != "docs" ]; then
+  echo "error: unknown track '$TRACK'; expected docs or code" >&2
   exit 1
 fi
 
@@ -42,29 +42,6 @@ is_refactor() {
   [ "$TYPE" = "refactor" ] && return 0
   return 1
 }
-
-# ── Step selection ───────────────────────────────────────────────────────────
-
-if [ "$TRACK" = "code" ]; then
-  if [ "$REENTRY" = "pr-feedback" ]; then
-    STEPS="classify reentry-reconcile recon inner-loop simplify full-review runtime-verify commit-pr final-summary"
-  elif [ "$TYPE" = "bugfix" ]; then
-    STEPS="classify recon early-gates bugfix-root-cause plan inner-loop simplify full-review runtime-verify commit-pr final-summary"
-  else
-    STEPS="classify recon early-gates plan inner-loop simplify full-review runtime-verify commit-pr final-summary"
-  fi
-elif [ "$TRACK" = "docs" ]; then
-  if [ "$REENTRY" = "pr-feedback" ]; then
-    STEPS="classify reentry-reconcile consistency full-review commit-pr final-summary"
-  else
-    STEPS="classify recon layer-classify docs-dispatch consistency full-review commit-pr final-summary"
-  fi
-else
-  echo "error: unknown track '$TRACK'; expected docs or code" >&2
-  exit 1
-fi
-
-echo "active-steps: $STEPS"
 
 # ── Inner-loop reviewer roster (code track only) ────────────────────────────
 
@@ -139,18 +116,3 @@ fi
 
 echo "wave-a-reviewers: $WAVE_A"
 echo "wave-b-reviewers: review-adversarial"
-
-# ── Run-marker ───────────────────────────────────────────────────────────────
-# Its existence is the bash-checkable proof that membership was generated this
-# run; the walk refuses to proceed past classify without it.
-
-if [ -n "$RUN_DIR" ]; then
-  mkdir -p "$RUN_DIR"
-  {
-    echo "run-generated-utc: $(date -u +%FT%TZ)"
-    echo "active-steps: $STEPS"
-    echo "inner-loop-reviewers: $INNER_REVIEWERS"
-    echo "wave-a-reviewers: $WAVE_A"
-    echo "wave-b-reviewers: review-adversarial"
-  } > "$RUN_DIR/manifest.txt"
-fi

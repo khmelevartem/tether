@@ -18,13 +18,15 @@ Issue number `<N>` — optional.
 
 ## How the skill runs
 
-The pipeline is data-driven. Step 0 — `classify` — emits the run's **active-step set** (which steps are on for this profile) and reviewer rosters, and writes them to an on-disk run-marker that it clears and regenerates each run. The orchestrator then walks `steps.md` in **file order** — fixed, never model-chosen — running each section iff it is in the active-step set. It never assembles the step list from its own model, and never runs a step from its name: each step is carried out per its section body. If the run-marker is absent, the walk stops rather than proceeding on a remembered shape. Fresh work and post-review re-entry produce different active-step sets because `reentry` is part of the profile.
+This file holds the **run principles**; the **algorithm** — the ordered steps — lives in `steps.md`.
 
-**Step/roster split.** Reviewer selection is always the script's output, never the model's. Timing and mechanics — see `steps.md` `classify` §Step/roster split.
+`classify` (Step 0) profiles the issue and makes the one judgment `classify.sh` cannot: the track (docs vs code). Everything after is the walk of `steps.md`: read it **top to bottom** and run each `## Step` iff its `**Applies to:**` predicate matches the run's `(track, type, reentry)` profile — a step with no such line always runs; skip a non-matching step in place, never reorder. **Announce each step on entry**, so the walk is auditable. The orchestrator never assembles the step list from its own model, and never runs a step from its name — each step is carried out per its section body. Fresh work and post-review re-entry walk different steps because `reentry` is part of the profile.
+
+**Step/roster split.** Reviewer selection is always `select-reviewers.sh`'s output, never the model's — computed at the review steps from the live committed diff. Timing and mechanics — see `steps.md` `classify` §Reviewer roster.
 
 ## Re-entry contract
 
-The skill is idempotent per issue. `classify.sh` detects PR state and emits `reentry=fresh` or `reentry=pr-feedback`; `select-pipeline.sh` selects the re-entry step set accordingly. Full reconciliation mechanics — drift gate, reading every PR comment, "counted is not read", by-agent attribution routing, and the reply-after-push rule — live in `reentry-reconcile`. The re-entry commit rule (commit into existing branch, no force-push, no new PR) lives in `commit-pr`.
+The skill is idempotent per issue. `classify.sh` detects PR state and emits `reentry=fresh` or `reentry=pr-feedback`; the `**Applies to:**` tags then gate which steps a re-entry run executes. Full reconciliation mechanics — drift gate, reading every PR comment, "counted is not read", by-agent attribution routing, and the reply-after-push rule — live in `reentry-reconcile`. The re-entry commit rule (commit into existing branch, no force-push, no new PR) lives in `commit-pr`.
 
 ## No-deflection principle
 

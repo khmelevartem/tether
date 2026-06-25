@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# Standalone tests for select-pipeline.sh.
+# Standalone tests for select-reviewers.sh + the steps.md `Applies to:` tags.
 
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SCRIPT="$SCRIPT_DIR/select-pipeline.sh"
+SCRIPT="$SCRIPT_DIR/select-reviewers.sh"
+STEPS_MD="$SCRIPT_DIR/../steps.md"
 
 PASS=0
 FAIL=0
@@ -35,16 +36,6 @@ assert_contains() {
   fi
 }
 
-assert_absent() {
-  local label="$1" needle="$2" haystack="$3"
-  if echo "$haystack" | grep -qF "$needle"; then
-    FAIL=$((FAIL + 1))
-    echo "FAIL [$label] — expected '$needle' absent from: $haystack"
-  else
-    PASS=$((PASS + 1))
-  fi
-}
-
 assert_nonzero_exit() {
   local label="$1"; shift
   local code=0
@@ -57,7 +48,6 @@ assert_nonzero_exit() {
   fi
 }
 
-steps_line() { echo "$1" | grep '^active-steps:'; }
 inner_line()  { echo "$1" | grep '^inner-loop-reviewers:'; }
 wave_a_line() { echo "$1" | grep '^wave-a-reviewers:'; }
 wave_b_line() { echo "$1" | grep '^wave-b-reviewers:'; }
@@ -65,10 +55,6 @@ wave_b_line() { echo "$1" | grep '^wave-b-reviewers:'; }
 # ── Case 1: code feature fresh (no touched) ───────────────────────────────────
 
 OUT=$(run code feature fresh "")
-
-assert_eq "c1 steps" \
-  "active-steps: classify recon early-gates plan inner-loop simplify full-review runtime-verify commit-pr final-summary" \
-  "$(steps_line "$OUT")"
 
 assert_eq "c1 inner" \
   "inner-loop-reviewers: review-correctness review-architecture review-guides" \
@@ -94,10 +80,6 @@ assert_eq "c2 wave-a" \
 
 OUT=$(run code bugfix fresh "")
 
-assert_eq "c3 steps" \
-  "active-steps: classify recon early-gates bugfix-root-cause plan inner-loop simplify full-review runtime-verify commit-pr final-summary" \
-  "$(steps_line "$OUT")"
-
 assert_eq "c3 inner" \
   "inner-loop-reviewers: review-correctness review-architecture review-guides" \
   "$(inner_line "$OUT")"
@@ -105,14 +87,6 @@ assert_eq "c3 inner" \
 assert_eq "c3 wave-a" \
   "wave-a-reviewers: review-dod review-guides review-glossary review-reuse review-architecture review-correctness review-tests" \
   "$(wave_a_line "$OUT")"
-
-# ── Case 3b: code bugfix pr-feedback (no root-cause re-run) ──────────────────
-
-OUT=$(run code bugfix pr-feedback "")
-
-assert_eq "c3b steps" \
-  "active-steps: classify reentry-reconcile recon inner-loop simplify full-review runtime-verify commit-pr final-summary" \
-  "$(steps_line "$OUT")"
 
 # ── Case 4: code refactor fresh ───────────────────────────────────────────────
 
@@ -138,21 +112,9 @@ assert_eq "c5 wave-a" \
   "wave-a-reviewers: review-dod review-guides review-glossary review-reuse review-architecture review-correctness" \
   "$(wave_a_line "$OUT")"
 
-# ── Case 6: code feature pr-feedback ui+code ─────────────────────────────────
-
-OUT=$(run code feature pr-feedback "ui,code")
-
-assert_eq "c6 steps" \
-  "active-steps: classify reentry-reconcile recon inner-loop simplify full-review runtime-verify commit-pr final-summary" \
-  "$(steps_line "$OUT")"
-
 # ── Case 7: docs docs fresh docs ─────────────────────────────────────────────
 
 OUT=$(run docs docs fresh "docs")
-
-assert_eq "c7 steps" \
-  "active-steps: classify recon layer-classify docs-dispatch consistency full-review commit-pr final-summary" \
-  "$(steps_line "$OUT")"
 
 assert_eq "c7 inner empty" "inner-loop-reviewers: " "$(inner_line "$OUT")"
 
@@ -176,21 +138,13 @@ assert_eq "c9 wave-a" \
   "wave-a-reviewers: review-dod review-guides review-glossary review-reuse review-ux-brief" \
   "$(wave_a_line "$OUT")"
 
-# ── Case 10: docs docs pr-feedback docs+engdoc ───────────────────────────────
+# ── Case 10: error — no args ──────────────────────────────────────────────────
 
-OUT=$(run docs docs pr-feedback "docs,engdoc")
+assert_nonzero_exit "c10 no-args"
 
-assert_eq "c10 steps" \
-  "active-steps: classify reentry-reconcile consistency full-review commit-pr final-summary" \
-  "$(steps_line "$OUT")"
+# ── Case 11: error — unknown track ───────────────────────────────────────────
 
-# ── Case 11: error — no args ──────────────────────────────────────────────────
-
-assert_nonzero_exit "c11 no-args"
-
-# ── Case 12: error — unknown track ───────────────────────────────────────────
-
-assert_nonzero_exit "c12 unknown-track" banana feature fresh ""
+assert_nonzero_exit "c11 unknown-track" banana feature fresh ""
 
 # ── Always-present: code track rosters ───────────────────────────────────────
 
@@ -214,96 +168,18 @@ OUT=$(run docs docs fresh "docs")
 assert_eq "docs wave-b review-adversarial" \
   "wave-b-reviewers: review-adversarial" "$(wave_b_line "$OUT")"
 
-# ── ID↔section coupling: emitted ids match steps.md catalog ─────────────────
+# ── steps.md tag presence ────────────────────────────────────────────────────
 #
-# Both directions must agree — drift in either direction is a test failure.
+# Every `## Step` section is gated by an `**Applies to:**` line, except the
+# always-run steps. A new step added without a tag — or a tag dropped — breaks
+# the count and is the closest analogue to the old id↔section coupling check.
 
-STEPS_MD="$SCRIPT_DIR/../steps.md"
+ALWAYS_RUN_COUNT=4   # classify, full-review, commit-pr, final-summary
+N_STEPS=$(grep -cE '^## Step [0-9]+ — ' "$STEPS_MD")
+N_TAGS=$(grep -cE '^\*\*Applies to:\*\*' "$STEPS_MD")
 
-EMITTED_IDS=""
-for combo in "code feature fresh" "code feature pr-feedback" "code bugfix fresh" "docs docs fresh" "docs docs pr-feedback"; do
-  steps_line=$(bash "$SCRIPT" $combo "" 2>/dev/null | grep '^active-steps:')
-  ids="${steps_line#active-steps: }"
-  for id in $ids; do
-    EMITTED_IDS="$EMITTED_IDS $id"
-  done
-done
-
-EMITTED_SORTED=$(echo "$EMITTED_IDS" | tr ' ' '\n' | grep -v '^$' | sort -u)
-
-CATALOG_SORTED=$(grep -E '^## Step [0-9]+ — ' "$STEPS_MD" | sed 's/^## Step [0-9]* — //' | sort -u)
-
-EMITTED_ONLY=$(comm -23 <(echo "$EMITTED_SORTED") <(echo "$CATALOG_SORTED"))
-CATALOG_ONLY=$(comm -13 <(echo "$EMITTED_SORTED") <(echo "$CATALOG_SORTED"))
-
-if [ -z "$EMITTED_ONLY" ]; then
-  PASS=$((PASS + 1))
-else
-  FAIL=$((FAIL + 1))
-  echo "FAIL [id-coupling: emitted-but-undocumented]"
-  echo "  ids emitted by select-pipeline.sh with no matching ## Step section in steps.md:"
-  echo "$EMITTED_ONLY" | sed 's/^/    /'
-fi
-
-if [ -z "$CATALOG_ONLY" ]; then
-  PASS=$((PASS + 1))
-else
-  FAIL=$((FAIL + 1))
-  echo "FAIL [id-coupling: documented-but-unreachable]"
-  echo "  ids in steps.md ## Step headers never emitted by any profile:"
-  echo "$CATALOG_ONLY" | sed 's/^/    /'
-fi
-
-# ── Order invariant: every emitted set is a subsequence of catalog file order ─
-#
-# steps.md file order is the sole sequencing authority. A profile that reordered
-# relative to the catalog would silently break the walk; assert it cannot.
-
-CATALOG_ORDER=$(grep -E '^## Step [0-9]+ — ' "$STEPS_MD" | sed 's/^## Step [0-9]* — //')
-
-catalog_index() { echo "$CATALOG_ORDER" | grep -nxF "$1" | head -1 | cut -d: -f1; }
-
-for combo in "code feature fresh" "code feature pr-feedback" "code bugfix fresh" "docs docs fresh" "docs docs pr-feedback"; do
-  line=$(bash "$SCRIPT" $combo "" 2>/dev/null | grep '^active-steps:')
-  ids="${line#active-steps: }"
-  prev=0
-  ok=1
-  for id in $ids; do
-    idx=$(catalog_index "$id")
-    if [ -z "$idx" ] || [ "$idx" -le "$prev" ]; then ok=0; break; fi
-    prev="$idx"
-  done
-  if [ "$ok" -eq 1 ]; then
-    PASS=$((PASS + 1))
-  else
-    FAIL=$((FAIL + 1))
-    echo "FAIL [order-subsequence: $combo] — emitted set is not in catalog file order: $ids"
-  fi
-done
-
-# ── Run-marker: written when a run-dir is given, matching stdout ─────────────
-
-MARKER_DIR=$(mktemp -d)
-OUT=$(run code feature fresh "" "$MARKER_DIR")
-
-if [ -f "$MARKER_DIR/manifest.txt" ]; then
-  PASS=$((PASS + 1))
-else
-  FAIL=$((FAIL + 1))
-  echo "FAIL [marker-written] — manifest.txt not created when run-dir given"
-fi
-
-assert_eq "marker active-steps matches stdout" \
-  "$(steps_line "$OUT")" \
-  "$(grep '^active-steps:' "$MARKER_DIR/manifest.txt" 2>/dev/null)"
-
-# No marker is written when the run-dir is omitted: run with cwd inside an empty
-# dir and confirm nothing lands there (guards against a hardcoded/relative path).
-NEG_DIR=$(mktemp -d)
-( cd "$NEG_DIR" && bash "$SCRIPT" code feature fresh "" >/dev/null 2>&1 )
-assert_eq "no marker without run-dir" "" "$(ls -A "$NEG_DIR")"
-
-rm -rf "$MARKER_DIR" "$NEG_DIR"
+assert_eq "applies-to tag count = steps - always-run" \
+  "$((N_STEPS - ALWAYS_RUN_COUNT))" "$N_TAGS"
 
 # ── Summary ───────────────────────────────────────────────────────────────────
 
