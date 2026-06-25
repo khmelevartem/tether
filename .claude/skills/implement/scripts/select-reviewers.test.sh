@@ -239,6 +239,16 @@ else
   echo "FAIL [sync-main precedes reentry-reconcile] — sync=$SYNC_N reconcile=$RECONCILE_N"
 fi
 
+# File order IS the sequencing authority, so the `## Step N` numbers must strictly
+# increase down the file. Without this, a block moved physically while keeping a
+# stale number would desync the walk from the headings and pass every name check.
+MONO=$(awk '
+  /^## Step [0-9]+ — /{ if(prev!="" && $3<=prev){bad=1} prev=$3 }
+  END{ print (bad?"no":"yes") }
+' "$STEPS_MD")
+
+assert_eq "step numbers strictly increase in file order" "yes" "$MONO"
+
 # ── Summary ───────────────────────────────────────────────────────────────────
 
 TOTAL=$((PASS + FAIL))
