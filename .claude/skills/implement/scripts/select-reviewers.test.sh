@@ -52,9 +52,9 @@ inner_line()  { echo "$1" | grep '^inner-loop-reviewers:'; }
 wave_a_line() { echo "$1" | grep '^wave-a-reviewers:'; }
 wave_b_line() { echo "$1" | grep '^wave-b-reviewers:'; }
 
-# ── Case 1: code feature fresh (no touched) ───────────────────────────────────
+# ── Case 1: code feature (no touched) ─────────────────────────────────────────
 
-OUT=$(run code feature fresh "")
+OUT=$(run code feature "")
 
 assert_eq "c1 inner" \
   "inner-loop-reviewers: review-correctness review-architecture review-guides" \
@@ -64,9 +64,9 @@ assert_eq "c1 wave-a" \
   "wave-a-reviewers: review-dod review-guides review-glossary review-reuse review-architecture review-correctness review-tests" \
   "$(wave_a_line "$OUT")"
 
-# ── Case 2: code feature fresh ui+code+platform ───────────────────────────────
+# ── Case 2: code feature ui+code+platform ─────────────────────────────────────
 
-OUT=$(run code feature fresh "ui,code,platform")
+OUT=$(run code feature "ui,code,platform")
 
 assert_eq "c2 inner" \
   "inner-loop-reviewers: review-correctness review-architecture review-guides review-platform review-ux-conformance" \
@@ -76,9 +76,9 @@ assert_eq "c2 wave-a" \
   "wave-a-reviewers: review-dod review-guides review-glossary review-reuse review-architecture review-correctness review-tests review-platform review-ux-conformance review-design-system review-visual" \
   "$(wave_a_line "$OUT")"
 
-# ── Case 3: code bugfix fresh ─────────────────────────────────────────────────
+# ── Case 3: code bugfix ───────────────────────────────────────────────────────
 
-OUT=$(run code bugfix fresh "")
+OUT=$(run code bugfix "")
 
 assert_eq "c3 inner" \
   "inner-loop-reviewers: review-correctness review-architecture review-guides" \
@@ -88,9 +88,9 @@ assert_eq "c3 wave-a" \
   "wave-a-reviewers: review-dod review-guides review-glossary review-reuse review-architecture review-correctness review-tests" \
   "$(wave_a_line "$OUT")"
 
-# ── Case 4: code refactor fresh ───────────────────────────────────────────────
+# ── Case 4: code refactor ─────────────────────────────────────────────────────
 
-OUT=$(run code refactor fresh "")
+OUT=$(run code refactor "")
 
 assert_eq "c4 inner" \
   "inner-loop-reviewers: review-architecture review-guides" \
@@ -100,9 +100,9 @@ assert_eq "c4 wave-a" \
   "wave-a-reviewers: review-dod review-guides review-glossary review-reuse review-architecture review-tests" \
   "$(wave_a_line "$OUT")"
 
-# ── Case 5: code infra fresh ─────────────────────────────────────────────────
+# ── Case 5: code infra ───────────────────────────────────────────────────────
 
-OUT=$(run code infra fresh "")
+OUT=$(run code infra "")
 
 assert_eq "c5 inner" \
   "inner-loop-reviewers: review-correctness review-architecture review-guides" \
@@ -112,9 +112,9 @@ assert_eq "c5 wave-a" \
   "wave-a-reviewers: review-dod review-guides review-glossary review-reuse review-architecture review-correctness" \
   "$(wave_a_line "$OUT")"
 
-# ── Case 7: docs docs fresh docs ─────────────────────────────────────────────
+# ── Case 7: docs docs docs ───────────────────────────────────────────────────
 
-OUT=$(run docs docs fresh "docs")
+OUT=$(run docs docs "docs")
 
 assert_eq "c7 inner empty" "inner-loop-reviewers: " "$(inner_line "$OUT")"
 
@@ -122,17 +122,17 @@ assert_eq "c7 wave-a" \
   "wave-a-reviewers: review-dod review-guides review-glossary review-reuse" \
   "$(wave_a_line "$OUT")"
 
-# ── Case 8: docs docs fresh docs+engdoc ──────────────────────────────────────
+# ── Case 8: docs docs docs+engdoc ────────────────────────────────────────────
 
-OUT=$(run docs docs fresh "docs,engdoc")
+OUT=$(run docs docs "docs,engdoc")
 
 assert_eq "c8 wave-a" \
   "wave-a-reviewers: review-dod review-guides review-glossary review-reuse review-architecture" \
   "$(wave_a_line "$OUT")"
 
-# ── Case 9: docs feature fresh ux-brief ──────────────────────────────────────
+# ── Case 9: docs feature ux-brief ────────────────────────────────────────────
 
-OUT=$(run docs feature fresh "ux-brief")
+OUT=$(run docs feature "ux-brief")
 
 assert_eq "c9 wave-a" \
   "wave-a-reviewers: review-dod review-guides review-glossary review-reuse review-ux-brief" \
@@ -144,12 +144,12 @@ assert_nonzero_exit "c10 no-args"
 
 # ── Case 11: error — unknown track ───────────────────────────────────────────
 
-assert_nonzero_exit "c11 unknown-track" banana feature fresh ""
+assert_nonzero_exit "c11 unknown-track" banana feature ""
 
 # ── Always-present: code track rosters ───────────────────────────────────────
 
 for touched in "" "ui,code,platform"; do
-  OUT=$(run code feature fresh "$touched")
+  OUT=$(run code feature "$touched")
   # Always in inner-loop for non-refactor types (narrow roster — compounding-cost reviewers only).
   for reviewer in review-correctness review-guides review-architecture; do
     assert_contains "always-inner $reviewer (touched=$touched)" "$reviewer" "$(inner_line "$OUT")"
@@ -164,7 +164,7 @@ done
 
 # ── Wave B present on docs track ─────────────────────────────────────────────
 
-OUT=$(run docs docs fresh "docs")
+OUT=$(run docs docs "docs")
 assert_eq "docs wave-b review-adversarial" \
   "wave-b-reviewers: review-adversarial" "$(wave_b_line "$OUT")"
 

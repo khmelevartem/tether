@@ -4,10 +4,9 @@
 # self-selects reviewers. Step selection is NOT this script's job — the walk
 # runs steps.md in file order, each section gated by its own `Applies to:` tag.
 #
-# Usage: select-reviewers.sh <track> <type> <reentry> <touched>
+# Usage: select-reviewers.sh <track> <type> <touched>
 #   track:   docs | code
 #   type:    feature | bugfix | refactor | infra | docs | dependency | none | unknown
-#   reentry: fresh | pr-feedback | unknown  (accepted for profile symmetry; rosters key on track/type/touched)
 #   touched: comma-separated subset of {ui,code,platform,docs,engdoc,claude,ux-brief} (empty ok)
 #
 # Output (stdout):
@@ -19,8 +18,7 @@ set -euo pipefail
 
 TRACK="${1:-}"
 TYPE="${2:-unknown}"
-REENTRY="${3:-fresh}"
-TOUCHED="${4:-}"
+TOUCHED="${3:-}"
 
 if [ -z "$TRACK" ]; then
   echo "error: track argument required (docs|code)" >&2
