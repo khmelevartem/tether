@@ -2,12 +2,21 @@
 
 Each `##` section is one step. Whether a step runs is determined solely by the manifest produced by `select-pipeline.sh` — the model does not re-evaluate it. Steps are walked in the order the manifest names them; skipped steps are not walked.
 
-**Worktree precondition.** Before dispatching any agent that writes files, ensure the working directory is `.claude/worktrees/<N>-<short-slug>/`. If missing, create from `origin/main`:
+**Worktree precondition.** Work for an issue happens inside a dedicated worktree whose **branch** carries the issue number, so `git worktree list` and `classify.sh` map any checkout back to its issue.
+
+Normally the harness has already created the worktree and started this session inside it, but named the branch with a random slug (e.g. `nice-borg-18fba9`) that omits the issue number. So the precondition is usually a **branch rename**, not a creation — run once, right after `classify` resolves `<N>`. Idempotent:
 
 ```bash
-git fetch origin main --quiet
-git worktree add .claude/worktrees/<N>-<short-slug> -b <N>-<short-slug> origin/main
+branch=$(git rev-parse --abbrev-ref HEAD)
+case "$branch" in
+  [0-9]*)      ;;                                     # already carries the issue number — skip
+  main|master) git fetch origin main --quiet          # not in a worktree yet — create one
+               git worktree add .claude/worktrees/<N>-<short-slug> -b <N>-<short-slug> origin/main ;;
+  *)           git branch -m "$branch" "<N>-${branch##*/}" ;;  # prefix <N>, dropping any owner/ prefix
+esac
 ```
+
+Only the **branch** is renamed; the worktree **directory** keeps its harness slug. Moving the directory of the live session is unsafe — the session's working directory would vanish mid-run, and the transcript directory is derived from the worktree path. `git worktree list` already shows the renamed branch, which is what maps a checkout to its issue. (Empirical rationale recorded on #482.)
 
 This is a one-shot setup, not part of the manifest.
 
