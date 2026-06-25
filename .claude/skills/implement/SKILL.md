@@ -20,15 +20,15 @@ Issue number `<N>` — optional.
 
 The **algorithm** — the ordered steps and how to walk them — lives in `steps.md`; this file holds the **run principles**. Run it like this:
 
-1. Start at `classify` (Step 0): profile the issue and make the one judgment `classify.sh` cannot — the track (docs vs code).
+1. Start by reading the issue in full (`read-all`, Step 0), then `classify` (Step 1): make the one judgment `classify.sh` cannot — the track (docs vs code).
 2. Walk `steps.md` top to bottom — never assemble the step list from your own model. Its preamble governs how each step is gated, run, and announced; follow it.
-3. At every review step, take the reviewer roster from `select-reviewers.sh`, never your own pick — it is computed from the live committed diff (mechanics in `steps.md` `classify` §Reviewer roster).
+3. At every review step, take the reviewer roster from `select-reviewers.sh`, never your own pick — it is computed from the live committed diff.
 
-Every actionable value `classify.sh` emits is consumed mechanically, never by your reading discipline: `reentry` / `type` / `touched` by `**Applies to:**` tags and `select-reviewers.sh`; `drift` by the `sync-main` gate (mechanics in `steps.md` preamble + Step 0 §Drift gate).
+Every actionable value `classify.sh` emits is consumed mechanically, never by your reading discipline.
 
 ## Re-entry contract
 
-The skill is idempotent per issue. `classify.sh` detects PR state and emits `reentry=fresh` or `reentry=pr-feedback`; the `**Applies to:**` tags then gate which steps a re-entry run executes. A re-entry behind `origin/main` is forced through `sync-main` first. Reconciliation mechanics — reading every PR comment, "counted is not read", and by-agent attribution routing — live in `reentry-reconcile`; the reply-to-every-comment-after-push rule is its own step, `reply-threads`. The re-entry commit rule (commit into existing branch, no force-push, no new PR) lives in `commit-pr`.
+The skill is idempotent per issue: `classify.sh` detects PR state (`reentry=fresh` / `pr-feedback`) and the `**Applies to:**` tags gate the rest. The re-entry mechanics live in their own steps — `reentry-reconcile`, `reply-threads`, `commit-pr`.
 
 ## No-deflection principle
 

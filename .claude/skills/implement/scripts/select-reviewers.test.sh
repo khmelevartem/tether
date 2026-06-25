@@ -210,7 +210,7 @@ EVERY_RUN=$(awk '
 ' "$STEPS_MD" | sort | tr '\n' ' ' | sed 's/ $//')
 
 assert_eq "unconditional steps are exactly the always-run set" \
-  "classify commit-pr final-summary full-review issue-canon" "$EVERY_RUN"
+  "classify commit-pr enforcement-probe final-summary full-review read-all" "$EVERY_RUN"
 
 # The drift gate: classify.sh withholds the profile when behind main, and the
 # only step able to match that partial profile is sync-main. Pin it by name so
@@ -230,7 +230,7 @@ assert_eq "sync-main is the sole drift=behind gate" "sync-main" "$DRIFT_STEP"
 SYNC_N=$(awk '/^## Step [0-9]+ — sync-main$/{print $3}' "$STEPS_MD")
 RECONCILE_N=$(awk '/^## Step [0-9]+ — reentry-reconcile$/{print $3}' "$STEPS_MD")
 
-assert_eq "sync-main is Step 1 (first after classify)" "1" "$SYNC_N"
+assert_eq "sync-main is Step 2 (after read-all + classify)" "2" "$SYNC_N"
 
 if [ -n "$SYNC_N" ] && [ -n "$RECONCILE_N" ] && [ "$SYNC_N" -lt "$RECONCILE_N" ]; then
   PASS=$((PASS + 1))

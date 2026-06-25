@@ -21,15 +21,21 @@ This is a one-shot setup, not part of the walk.
 
 ---
 
-## Step 0 — classify
+## Step 0 — read-all
+
+**Applies to:** every run.
+
+Read the issue in full — title, body, and **every** comment via `gh issue view <N> --comments`. Comments are potentially a canon-update on the body, not a discussion: when a comment conflicts with the body, the comment takes priority — surface the divergence to the user in one line. This is the complete picture `classify` resolves `track` from.
+
+---
+
+## Step 1 — classify
 
 **Applies to:** every run.
 
 Run `classify.sh <N>` (or `classify.sh` — it parses the current branch / open PR when no arg is given). Read the emitted key=value lines.
 
-**Drift gate.** On a re-entry that is behind `origin/main`, `classify.sh` emits only `drift=behind` + `status=blocked` and exits non-zero — `reentry` / `pr` / `type` / `touched` are all withheld. No step whose predicate names `reentry` / `type` / `track` can match, and the preamble's blocked-profile rule suspends the unconditional steps too, so the one legal step is `sync-main` (Step 1). Do not improvise the withheld fields: run `sync-main`, then re-run `classify.sh` for the clean profile.
-
-Read the issue's title, body, and label-derived `type` — enough to resolve `track` below. Its comments are read in `issue-canon`.
+**Drift gate.** On a re-entry that is behind `origin/main`, `classify.sh` emits only `drift=behind` + `status=blocked` and exits non-zero — `reentry` / `pr` / `type` / `touched` are all withheld. No step whose predicate names `reentry` / `type` / `track` can match, and the preamble's blocked-profile rule suspends the unconditional steps too, so the one legal step is `sync-main` (Step 2). Do not improvise the withheld fields: run `sync-main`, then re-run `classify.sh` for the clean profile.
 
 Decide the one judgment field `classify.sh` cannot resolve mechanically:
 
@@ -47,25 +53,13 @@ Decide the one judgment field `classify.sh` cannot resolve mechanically:
 
 `track` is the one judgment `classify.sh` cannot resolve. After deciding it, announce the resolved profile — `track=<…> type=<…> reentry=<…>` — so every later `**Applies to:**` match reads against an on-screen value, not a re-derived one. Treat `reentry=unknown` as `fresh` for matching. From here, walk the steps per the preamble — each `**Applies to:**` now matches against this on-screen profile.
 
-### Reviewer roster
-
-Rosters are computed by `select-reviewers.sh` from `track`, `type`, and the live committed `touched` set, at each review step (`inner-loop`, `full-review`) — `touched` is only real once code is committed. The model never self-selects reviewers.
-
 ---
 
-## Step 1 — sync-main
+## Step 2 — sync-main
 
 **Applies to:** `drift=behind`.
 
 The branch is behind `origin/main`. Run `/pull-main` to merge fresh main, then re-run `classify.sh <N>` and continue the walk on the now-clean profile (`drift=up-to-date`, with `type` / `touched` present). Reviewing or building before this would diff against a stale `main` and risk a conflicting merge.
-
----
-
-## Step 2 — issue-canon
-
-**Applies to:** every run.
-
-Read **every** comment on the issue via `gh issue view <N> --comments`. Comments are not a discussion — they are potentially a canon-update on the body. When a comment conflicts with the body, the comment takes priority: surface the divergence to the user in one line. If it changes `type` or scope, return to `classify` and re-resolve `track`.
 
 ---
 
@@ -116,13 +110,17 @@ Brief for the recon agent (pass the issue title + body):
 
 `CLAUDE.md` is harness-injected — not part of the sweep.
 
-### Briefing to the user
+---
 
-After recon completes, post a short 3–6 line briefing: what we are doing, why (motivation from the issue), track + affected layers/platforms, surfaced living-doc constraints. Any user-facing questions are asked next at `early-gates` if the profile includes it (code, fresh); otherwise inline, before continuing. One briefing per run; do not repeat on re-entry.
+## Step 5 — briefing
+
+**Applies to:** `reentry=fresh`.
+
+Post a short 3–6 line briefing to the user: what we are doing, why (motivation from the issue), track + affected layers/platforms, surfaced living-doc constraints. Any user-facing questions are asked next at `early-gates` if the profile includes it (code, fresh); otherwise inline, before continuing. One briefing per run; do not repeat on re-entry.
 
 ---
 
-## Step 5 — adr-triggers
+## Step 6 — adr-triggers
 
 **Applies to:** `reentry=fresh`.
 
@@ -130,7 +128,7 @@ For each ADR the recon digest flagged as trigger-tripped, the plan (code track) 
 
 ---
 
-## Step 6 — prior-mentions
+## Step 7 — prior-mentions
 
 **Applies to:** `reentry=fresh`.
 
@@ -138,7 +136,7 @@ For each prior-`#<N>` mention the digest ranked, resolve it in this PR or escala
 
 ---
 
-## Step 7 — critical-reading
+## Step 8 — critical-reading
 
 **Applies to:** `reentry=fresh`.
 
@@ -156,7 +154,7 @@ Announce the flags raised, or "none".
 
 ---
 
-## Step 8 — early-gates
+## Step 9 — early-gates
 
 **Applies to:** `track=code AND reentry=fresh`.
 
@@ -171,7 +169,7 @@ A missing or stub spec / DoD is a SKILL.md gate (no sub-agent mitigation) — do
 
 ---
 
-## Step 9 — bugfix-root-cause
+## Step 10 — bugfix-root-cause
 
 **Applies to:** `track=code AND type=bugfix AND reentry=fresh`.
 
@@ -185,7 +183,7 @@ Otherwise post the confirmed cause as a comment on issue #\<N\> via `gh issue co
 
 ---
 
-## Step 10 — layer-classify
+## Step 11 — layer-classify
 
 **Applies to:** `track=docs AND reentry=fresh`.
 
@@ -208,7 +206,7 @@ Result of this step: an ordered list of layers to produce, with target path and 
 
 ---
 
-## Step 11 — plan
+## Step 12 — plan
 
 **Applies to:** `reentry=fresh`.
 
@@ -226,7 +224,7 @@ Use the built-in `Plan` agent (or `general-purpose` if unavailable) to produce a
 
 ---
 
-## Step 12 — docs-dispatch
+## Step 13 — docs-dispatch
 
 **Applies to:** `track=docs AND reentry=fresh`.
 
@@ -250,7 +248,7 @@ Each sub-agent / direct write returns: paths produced, index updates, converged-
 
 ---
 
-## Step 13 — inner-loop
+## Step 14 — inner-loop
 
 **Applies to:** `track=code`.
 
@@ -291,7 +289,7 @@ Per lane (or sequentially if single lane):
 
 ---
 
-## Step 14 — simplify
+## Step 15 — simplify
 
 **Applies to:** `track=code`.
 
@@ -311,7 +309,7 @@ If anything was simplified — commit. `full-review` runs immediately after and 
 
 ---
 
-## Step 15 — full-review
+## Step 16 — full-review
 
 **Applies to:** every run.
 
@@ -328,7 +326,7 @@ No `gh pr review` here — findings are consumed locally only.
 
 ---
 
-## Step 16 — smoke
+## Step 17 — smoke
 
 **Applies to:** `track=code`.
 
@@ -351,11 +349,11 @@ Record a 🟢/🟡/🔴 verdict naming the smoke blocks executed. A bare pass/fa
 
 ---
 
-## Step 17 — enforcement-probe
+## Step 18 — enforcement-probe
 
-**Applies to:** `track=code`.
+**Applies to:** every run.
 
-The deliverable is an enforcement mechanism (custom lint rule, CI guard, git hook, custom Gradle check). If the deliverable is not an enforcer — announce `skip enforcement-probe — no enforcer in deliverable` and move on.
+The gate is the deliverable, not the track: an enforcement mechanism (custom lint rule, CI guard, git hook, custom Gradle check, or a `.claude/` hook / script) often lives outside `src/`, so this is the model's judgment to make. If the deliverable is not an enforcer — announce `skip enforcement-probe — no enforcer in deliverable` and move on.
 
 1. Create a minimal artifact violating the check in a real location (where the enforcer should fire).
 2. Run the corresponding Gradle/CI task.
@@ -368,7 +366,7 @@ Record a 🟢/🟡/🔴 verdict naming the enforcement-probe path. Any 🟡/🔴
 
 ---
 
-## Step 18 — commit-pr
+## Step 19 — commit-pr
 
 **Applies to:** every run.
 
@@ -395,7 +393,7 @@ Branches and worktrees share the same shape — `<N>-<short-slug>`.
 
 ---
 
-## Step 19 — reply-threads
+## Step 20 — reply-threads
 
 **Applies to:** `reentry=pr-feedback`.
 
@@ -403,7 +401,7 @@ After the push, reply to **every** addressed inline comment via `gh api -X POST 
 
 ---
 
-## Step 20 — final-summary
+## Step 21 — final-summary
 
 **Applies to:** every run.
 
