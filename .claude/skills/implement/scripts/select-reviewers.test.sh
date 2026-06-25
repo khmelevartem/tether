@@ -172,7 +172,7 @@ assert_eq "docs wave-b review-adversarial" \
 #
 # Every `## Step` section is gated by an `**Applies to:**` line, except the
 # always-run steps. A new step added without a tag — or a tag dropped — breaks
-# the count and is the closest analogue to the old id↔section coupling check.
+# the count.
 
 ALWAYS_RUN_COUNT=4   # classify, full-review, commit-pr, final-summary
 N_STEPS=$(grep -cE '^## Step [0-9]+ — ' "$STEPS_MD")

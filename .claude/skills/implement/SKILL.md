@@ -18,9 +18,9 @@ Issue number `<N>` — optional.
 
 ## How the skill runs
 
-This file holds the **run principles**; the **algorithm** — the ordered steps — lives in `steps.md`.
+This file holds the **run principles**; the **algorithm** — the ordered steps and how to walk them — lives in `steps.md`.
 
-`classify` (Step 0) profiles the issue and makes the one judgment `classify.sh` cannot: the track (docs vs code). Everything after is the walk of `steps.md`: read it **top to bottom** and run each `## Step` iff its `**Applies to:**` predicate matches the run's `(track, type, reentry)` profile — a step with no such line always runs; skip a non-matching step in place, never reorder. **Announce each step on entry**, so the walk is auditable. The orchestrator never assembles the step list from its own model, and never runs a step from its name — each step is carried out per its section body. Fresh work and post-review re-entry walk different steps because `reentry` is part of the profile.
+`classify` (Step 0) profiles the issue and makes the one judgment `classify.sh` cannot: the track (docs vs code). From there the orchestrator walks `steps.md`: it never assembles the step list from its own model, and never runs a step from its name — each step is carried out per its section body, and announced on entry so the walk stays auditable.
 
 **Step/roster split.** Reviewer selection is always `select-reviewers.sh`'s output, never the model's — computed at the review steps from the live committed diff. Timing and mechanics — see `steps.md` `classify` §Reviewer roster.
 
