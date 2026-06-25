@@ -1,11 +1,7 @@
 #!/usr/bin/env bash
 # Renames the current worktree branch to <issue>-<title-slug> so `git worktree
-# list` and classify.sh map the checkout back to its issue.
-#
-# Branch only — the worktree directory is never moved: a live session's working
-# directory would vanish mid-run and its transcript (keyed on the worktree path)
-# would be orphaned. Hooks key on live git state, not the name, so the rename is
-# transparent to them.
+# list` and classify.sh map the checkout back to its issue. Only the branch ref
+# is renamed; the worktree directory is left untouched.
 #
 # Idempotent: a no-op once the branch already starts with the issue number.
 # Usage: ensure-branch.sh <issue-number>
@@ -24,6 +20,8 @@ slug=$(gh issue view "$issue" --json title -q .title \
   | tr '[:upper:]' '[:lower:]' \
   | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//' \
   | cut -c1-50 | sed -E 's/-+$//')
+
+[ -n "$slug" ] || { echo "empty slug from issue $issue title — check the title" >&2; exit 1; }
 
 git branch -m "$branch" "${issue}-${slug}"
 echo "branch renamed: $branch -> ${issue}-${slug}"
