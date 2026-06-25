@@ -4,7 +4,7 @@ Each `##` section is one step. **Walk this file top to bottom — file order is 
 
 **A blocked profile permits one step.** If `classify` emitted `status=blocked` (the branch is behind `origin/main`), exactly one step is legal — `sync-main` — regardless of any other step's `**Applies to:**`, including `every run`. No other step runs until a re-run of `classify` clears the block.
 
-**Announce each step on entry.** Before executing a section, post a one-line user-visible marker naming the step you are entering (e.g. `→ inner-loop`). Announce a skipped step too, with the reason (`skip recon — docs re-entry`). The announcement makes the walk auditable: the user sees the real sequence, and drift into a remembered shape shows the moment a step is announced out of order or an expected step is never announced.
+**Announce each step on entry.** Before executing a section, post a one-line user-visible marker naming the step you are entering (e.g. `→ inner-loop`). Announce a skipped step too, with the reason (`skip recon — re-entry`). The announcement makes the walk auditable: the user sees the real sequence, and drift into a remembered shape shows the moment a step is announced out of order or an expected step is never announced.
 
 **A step's name is a label, not its specification.** Run each step from its section body, not from what its name suggests.
 
@@ -57,7 +57,7 @@ Rosters are computed by `select-reviewers.sh` from `track`, `type`, and the live
 
 **Applies to:** `drift=behind`.
 
-The branch is behind `origin/main`. Run `/pull-main` to merge fresh main, then re-run `classify.sh <N>` and continue the walk on the now-clean profile (`drift=up-to-date`, with `type` / `touched` present). Reviewing or building before this would diff against a stale `main` and risk a conflicting merge. `classify.sh` withholds the profile until this is done, so no later step can match in the meantime.
+The branch is behind `origin/main`. Run `/pull-main` to merge fresh main, then re-run `classify.sh <N>` and continue the walk on the now-clean profile (`drift=up-to-date`, with `type` / `touched` present). Reviewing or building before this would diff against a stale `main` and risk a conflicting merge.
 
 ---
 
@@ -372,7 +372,7 @@ Record a 🟢/🟡/🔴 verdict naming the enforcement-probe path. Any 🟡/🔴
 
 **Applies to:** every run.
 
-Only after the runtime checks (`smoke` / `enforcement-probe`) are 🟢 (code track) or after `full-review` converges (docs track).
+Only after the runtime checks that applied (`smoke` and/or `enforcement-probe`) are 🟢 (code track) — an announced skip counts as satisfied — or after `full-review` converges (docs track).
 
 **Fresh task (no existing PR).** Before running `gh pr create`:
 
