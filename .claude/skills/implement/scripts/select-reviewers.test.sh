@@ -225,7 +225,8 @@ assert_eq "sync-main is the sole drift=behind gate" "sync-main" "$DRIFT_STEP"
 
 # Order is load-bearing: a behind re-entry must hit sync-main before any other
 # step. A name-only check passes a regression that reorders them, so pin
-# position — sync-main is Step 1, ahead of reentry-reconcile and every work step.
+# position — sync-main is Step 2 (after read-all + classify), ahead of
+# reentry-reconcile and every work step.
 
 SYNC_N=$(awk '/^## Step [0-9]+ — sync-main$/{print $3}' "$STEPS_MD")
 RECONCILE_N=$(awk '/^## Step [0-9]+ — reentry-reconcile$/{print $3}' "$STEPS_MD")

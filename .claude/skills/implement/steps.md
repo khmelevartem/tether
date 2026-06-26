@@ -31,14 +31,13 @@ Read the issue in full — title, body, and **every** comment via `gh issue view
 
 **Applies to:** every run.
 
-Run two scripts and read their key=value output:
+Run `classify-state.sh [<N>]` first and read its key=value output — the volatile state (`issue`, `reentry`, `pr`, `drift`, `touched`). With no argument it resolves which issue you are on from the current branch / open PR. Re-run it whenever current state matters.
 
-- `classify-state.sh [<N>]` — the volatile state (`issue`, `reentry`, `pr`, `drift`, `touched`). Re-run it whenever current state matters; with no argument it resolves which issue you are on from the current branch / open PR.
-- `classify-task.sh <issue>` — the stable task `type`, a pure function of the issue label. Run it once per walk and hold `type` in context; pass the `issue` that `classify-state.sh` resolved.
+If it emitted `status=blocked`, stop here — the preamble's blocked-profile rule governs and `track` is left unresolved.
 
-If `classify-state.sh` emitted `status=blocked`, stop here — the preamble's blocked-profile rule governs and `track` is left unresolved.
+Otherwise run `classify-task.sh <issue>` (pass the `issue` that `classify-state.sh` resolved) for the stable task `type` — a pure function of the issue label, so run it once per walk and hold `type` in context.
 
-Otherwise decide the one judgment neither script can resolve mechanically:
+Then decide the one judgment neither script can resolve mechanically:
 
 ### Track classification
 
@@ -85,7 +84,7 @@ Route each comment to the agent that owns the work surface it objects to, not to
 
 The originating agent returns its revised work to the orchestrator. The orchestrator decides next steps: dispatch `coder` to apply, re-run reviewers, or escalate when the revision changes scope (new top-level types, layer crossings, deleted contracts).
 
-Before re-dispatching reviewers, refresh the roster: run `classify-state.sh` + `select-reviewers.sh` against the current committed `touched` set. Use the returned `inner-loop-reviewers` for this pass — do not eyeball the domain.
+Before re-dispatching reviewers, refresh the roster: re-run `classify-state.sh` for the current committed `touched`, then `select-reviewers.sh <track> <type> <touched>` (`track` held from Step 1, `type` from `classify-task.sh`). Use the returned `inner-loop-reviewers` for this pass — do not eyeball the domain.
 
 The reply-to-every-comment obligation is its own step (`reply-threads`), after the push.
 
@@ -284,9 +283,9 @@ Per lane (or sequentially if single lane):
 
    **Prose discipline carry-forward.** When the plan slice includes prose edits, the dispatch brief must instruct the implementing agent to load [`docs/engineering/long-lived-artifacts.md`](../../../docs/engineering/long-lived-artifacts.md) before writing.
 
-2. **Commit before dispatching the reviewer wave.** Reviewers read `git diff main...HEAD` — the working tree must have no uncommitted changes when they run. Otherwise some agents read a stale state and send phantom `[REQUIRED]` flags. One source of truth = one commit per iteration.
+2. **Commit before dispatching the reviewer wave.** The review steps need a clean committed tree as their input; an uncommitted change yields a stale read and phantom `[REQUIRED]` flags. One source of truth = one commit per iteration.
 
-3. **Refresh roster, then dispatch.** Run `classify-state.sh` to recompute `touched` from the live committed diff, then `select-reviewers.sh` to get the current `inner-loop-reviewers` roster. Dispatch exactly those reviewers. When dispatching `review-ux-conformance`: resolve the feature slug from the issue number (spec link or `docs/product/features/<slug>/` reference in the body, else glob `docs/product/features/**/ux-brief.md` and topic-match the changed paths); pass the resolved brief path in the prompt. Suppress the dispatch entirely when no brief exists — brief-existence is not scriptable; the orchestrator owns this gate. Announce the outcome (`ux-conformance: brief <path> → dispatched` / `ux-conformance: no brief → suppressed`) so this orchestrator-owned judgment is not silently skipped behind the scripted roster.
+3. **Refresh roster, then dispatch.** Run `classify-state.sh` to recompute `touched` from the live committed diff, then `select-reviewers.sh <track> <type> <touched>` to get the current `inner-loop-reviewers` roster. Dispatch exactly those reviewers. When dispatching `review-ux-conformance`: resolve the feature slug from the issue number (spec link or `docs/product/features/<slug>/` reference in the body, else glob `docs/product/features/**/ux-brief.md` and topic-match the changed paths); pass the resolved brief path in the prompt. Suppress the dispatch entirely when no brief exists — brief-existence is not scriptable; the orchestrator owns this gate. Announce the outcome (`ux-conformance: brief <path> → dispatched` / `ux-conformance: no brief → suppressed`) so this orchestrator-owned judgment is not silently skipped behind the scripted roster.
 
    On iterations 2+: re-dispatch only reviewers that raised `[REQUIRED]` the previous round, plus any added by the refreshed roster when the new changes pulled in a new domain. Full-roster coverage is restored at `full-review`.
 
@@ -337,7 +336,7 @@ If anything was simplified — commit.
 Pre-PR review wave, inline — no GitHub publication.
 
 1. **Working tree must be clean** (committed). Reviewers read `git diff main...HEAD`.
-2. **Wave A** in parallel: run `classify-state.sh` + `select-reviewers.sh` to get the `wave-a-reviewers` roster. Dispatch exactly those reviewers. Suppress `review-ux-conformance` dispatch when the touched feature has no `ux-brief.md` (brief-existence is not scriptable). Each agent receives the issue number and reviews the working tree.
+2. **Wave A** in parallel: run `classify-state.sh` for fresh `touched`, then `select-reviewers.sh <track> <type> <touched>` to get the `wave-a-reviewers` roster. Dispatch exactly those reviewers. Suppress `review-ux-conformance` dispatch when the touched feature has no `ux-brief.md` (brief-existence is not scriptable). Each agent receives the issue number and reviews the working tree.
 3. **Wave B**: dispatch exactly the reviewer(s) named in `select-reviewers.sh`'s `wave-b-reviewers` output with the combined Wave A findings as input. (Roster authority is the script — the steps don't name specific reviewers.)
 4. Aggregate. Apply any `[REQUIRED]` via the implementing/writing agent (with the symmetry-pass instruction for code, or via the responsible sub-agent for docs). Re-run until approved or 2 iterations.
 
