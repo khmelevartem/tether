@@ -1,8 +1,8 @@
 # Step catalog
 
-Each `##` section is one step. **Walk this file top to bottom — file order is the sequencing authority and is never overridden.** Every step carries an `**Applies to:**` line: run the section if its predicate matches this run's `(track, type, reentry)` profile, otherwise skip in place — never reorder. A step that runs unconditionally says `**Applies to:** every run`. The one ordering exception is the approach-fork gate (§plan), which is conditional and announces itself.
+Each `##` section is one step. **Walk this file top to bottom — file order is the sequencing authority and is never overridden.** Every step carries an `**Applies to:**` line: run the section if its predicate matches this run's `(track, type, reentry)` profile, otherwise skip in place — never reorder. A step that runs unconditionally says `**Applies to:** every run`. The one ordering exception is §approach-fork, which may pull §smoke forward for fork tasks and announces itself.
 
-**A blocked profile permits one step.** If `classify` emitted `status=blocked` (the branch is behind `origin/main`), exactly one step is legal — `sync-main` — regardless of any other step's `**Applies to:**`, including `every run`. No other step runs until a re-run of `classify` clears the block.
+**A blocked profile permits one step.** If `classify-state` emitted `status=blocked` (the branch is behind `origin/main`), exactly one step is legal — `sync-main` — regardless of any other step's `**Applies to:**`, including `every run`. No other step runs until a re-run of `classify-state` clears the block.
 
 **Announce each step on entry.** Before executing a section, post a one-line user-visible marker naming the step you are entering (e.g. `→ inner-loop`). Announce a skipped step too, with the reason (`skip recon — re-entry`). The announcement makes the walk auditable: the user sees the real sequence, and drift into a remembered shape shows the moment a step is announced out of order or an expected step is never announced.
 
@@ -31,11 +31,14 @@ Read the issue in full — title, body, and **every** comment via `gh issue view
 
 **Applies to:** every run.
 
-Run `classify.sh <N>` (or `classify.sh` — it parses the current branch / open PR when no arg is given). Read the emitted key=value lines.
+Run two scripts and read their key=value output:
 
-**Drift gate.** On a re-entry that is behind `origin/main`, `classify.sh` emits only `drift=behind` + `status=blocked` and exits non-zero — `reentry` / `pr` / `type` / `touched` are all withheld. No step whose predicate names `reentry` / `type` / `track` can match, and the preamble's blocked-profile rule suspends the unconditional steps too, so the one legal step is `sync-main` (Step 2). Do not improvise the withheld fields: run `sync-main`, then re-run `classify.sh` for the clean profile.
+- `classify-state.sh [<N>]` — the volatile state (`issue`, `reentry`, `pr`, `drift`, `touched`). Re-run it whenever current state matters; with no argument it resolves which issue you are on from the current branch / open PR.
+- `classify-task.sh <issue>` — the stable task `type`, a pure function of the issue label. Run it once per walk and hold `type` in context; pass the `issue` that `classify-state.sh` resolved.
 
-Decide the one judgment field `classify.sh` cannot resolve mechanically:
+If `classify-state.sh` emitted `status=blocked`, stop here — the preamble's blocked-profile rule governs and `track` is left unresolved.
+
+Otherwise decide the one judgment neither script can resolve mechanically:
 
 ### Track classification
 
@@ -47,11 +50,11 @@ Decide the one judgment field `classify.sh` cannot resolve mechanically:
 | `type=infra` AND deliverable limited exclusively to editing `.claude/` files | docs |
 | `type=feature` / `bugfix` / `refactor` / `infra` with deliverable in source sets or build/CI/scripts (even if an ADR is also needed) | code |
 
-On re-entry the body is not re-read (`read-all` is fresh-only) — resolve `track` from the committed `touched` set against the rows above. Empty `touched` (build files, CI, root scripts — `classify.sh` buckets none of them) is the **code** track, per the last row, not docs.
+On re-entry, resolve `track` from the committed `touched` set against the rows above; the issue body is not re-read. Empty `touched` (build files, CI, root scripts — `classify-state.sh` buckets none of them) is the **code** track, per the last row, not docs.
 
 ### Profile
 
-`track` is the one judgment `classify.sh` cannot resolve. After deciding it, announce the resolved profile — `track=<…> type=<…> reentry=<…>` — so every later `**Applies to:**` match reads against an on-screen value, not a re-derived one. Treat `reentry=unknown` as `fresh` for matching. From here, walk the steps per the preamble — each `**Applies to:**` now matches against this on-screen profile.
+`track` is the one judgment the scripts cannot resolve. After deciding it, announce the resolved profile — `track=<…> type=<…> reentry=<…>` — so every later `**Applies to:**` match reads against an on-screen value, not a re-derived one. Treat `reentry=unknown` as `fresh` for matching. From here, walk the steps per the preamble — each `**Applies to:**` now matches against this on-screen profile.
 
 ---
 
@@ -59,7 +62,7 @@ On re-entry the body is not re-read (`read-all` is fresh-only) — resolve `trac
 
 **Applies to:** `drift=behind`.
 
-The branch is behind `origin/main`. Run `/pull-main` to merge fresh main, then re-run `classify.sh <N>` and continue the walk on the now-clean profile (`drift=up-to-date`, with `type` / `touched` present). Reviewing or building before this would diff against a stale `main` and risk a conflicting merge.
+The branch is behind `origin/main`. Run `/pull-main` to merge fresh main, then re-run `classify-state.sh <N>` and continue the walk on the now-clean profile (`drift=up-to-date`, `touched` present). Reviewing or building before this would diff against a stale `main` and risk a conflicting merge.
 
 ---
 
@@ -82,7 +85,7 @@ Route each comment to the agent that owns the work surface it objects to, not to
 
 The originating agent returns its revised work to the orchestrator. The orchestrator decides next steps: dispatch `coder` to apply, re-run reviewers, or escalate when the revision changes scope (new top-level types, layer crossings, deleted contracts).
 
-Before re-dispatching reviewers, refresh the roster: run `classify.sh` + `select-reviewers.sh` against the current committed `touched` set. Use the returned `inner-loop-reviewers` for this pass — do not eyeball the domain.
+Before re-dispatching reviewers, refresh the roster: run `classify-state.sh` + `select-reviewers.sh` against the current committed `touched` set. Use the returned `inner-loop-reviewers` for this pass — do not eyeball the domain.
 
 The reply-to-every-comment obligation is its own step (`reply-threads`), after the push.
 
@@ -214,17 +217,35 @@ Use the built-in `Plan` agent (or `general-purpose` if unavailable) to produce a
 
 **Skip when the scope is already clear.** A `size:S` task whose work is unambiguous needs no plan — announce `skip plan — size:S, scope clear` and go straight to the build (`inner-loop` / `docs-dispatch`).
 
-**Choosing the fix level.** When the root cause describes a class of bugs, or parallel implementations contain the same defect — consider fixing one level up: a type / container / contract change that makes the class impossible. Compare costs: N point-fixes vs 1 structural fix. If you choose point-fix — list parallel defective locations explicitly and file a follow-up issue before coding. Announce the decision: `fix-level: structural`, or `fix-level: point-fix → siblings <list>, follow-up #<M> filed` — so the follow-up obligation is on-screen, not assumed.
-
 **Issue scope is a starting point, not a cage.** If touching adjacent classes or neighbouring platforms is needed for a quality solution — expand scope in this PR. Whether to fold a finding or defer it → [`docs/engineering/scope-discipline.md`](../../../docs/engineering/scope-discipline.md). Forced cascade outside the literal **Out of scope** list → SKILL.md gate; do not silently fold.
-
-**Lane splitting.** Default is a single sequential lane. Split into parallel lanes ONLY if the plan enumerates file-level disjoint sets: lane A files ∩ lane B files = ∅. List explicit file paths per lane. Any overlap → execute sequentially. (Use "lane" here — "track" is reserved for docs vs code.)
-
-**Approach-fork empirical gate.** When the task forks into more than one viable implementation, converge on the most suitable one (via `architect` when the choice is non-trivial), implement that candidate, and verify it at runtime under the conditions that distinguish the candidates before investing the full review pipeline. Only an empirically-confirmed approach earns that investment. This pulls `smoke` forward for fork tasks; single-implementation tasks keep the default order.
 
 ---
 
-## Step 13 — docs-dispatch
+## Step 13 — fix-level
+
+**Applies to:** `track=code AND reentry=fresh`.
+
+When the root cause describes a class of bugs, or parallel implementations contain the same defect — consider fixing one level up: a type / container / contract change that makes the class impossible. Compare costs: N point-fixes vs 1 structural fix. If you choose point-fix — list parallel defective locations explicitly and file a follow-up issue before coding. Announce the decision: `fix-level: structural`, or `fix-level: point-fix → siblings <list>, follow-up #<M> filed` — so the follow-up obligation is on-screen, not assumed.
+
+---
+
+## Step 14 — lane-split
+
+**Applies to:** `track=code AND reentry=fresh`.
+
+Default is a single sequential lane. Split into parallel lanes ONLY if the plan enumerates file-level disjoint sets: lane A files ∩ lane B files = ∅. List explicit file paths per lane. Any overlap → execute sequentially. (Use "lane" here — "track" is reserved for docs vs code.)
+
+---
+
+## Step 15 — approach-fork
+
+**Applies to:** `track=code AND reentry=fresh`.
+
+When the task forks into more than one viable implementation, converge on the most suitable one (via `architect` when the choice is non-trivial), implement that candidate, and verify it at runtime under the conditions that distinguish the candidates before investing the full review pipeline. Only an empirically-confirmed approach earns that investment. This pulls `smoke` forward for fork tasks; single-implementation tasks keep the default order.
+
+---
+
+## Step 16 — docs-dispatch
 
 **Applies to:** `track=docs AND reentry=fresh`.
 
@@ -248,7 +269,7 @@ Each sub-agent / direct write returns: paths produced, index updates, converged-
 
 ---
 
-## Step 14 — inner-loop
+## Step 17 — inner-loop
 
 **Applies to:** `track=code`.
 
@@ -265,7 +286,7 @@ Per lane (or sequentially if single lane):
 
 2. **Commit before dispatching the reviewer wave.** Reviewers read `git diff main...HEAD` — the working tree must have no uncommitted changes when they run. Otherwise some agents read a stale state and send phantom `[REQUIRED]` flags. One source of truth = one commit per iteration.
 
-3. **Refresh roster, then dispatch.** Run `classify.sh` to recompute `touched` from the live committed diff, then `select-reviewers.sh` to get the current `inner-loop-reviewers` roster. Dispatch exactly those reviewers. When dispatching `review-ux-conformance`: resolve the feature slug from the issue number (spec link or `docs/product/features/<slug>/` reference in the body, else glob `docs/product/features/**/ux-brief.md` and topic-match the changed paths); pass the resolved brief path in the prompt. Suppress the dispatch entirely when no brief exists — brief-existence is not scriptable; the orchestrator owns this gate. Announce the outcome (`ux-conformance: brief <path> → dispatched` / `ux-conformance: no brief → suppressed`) so this orchestrator-owned judgment is not silently skipped behind the scripted roster.
+3. **Refresh roster, then dispatch.** Run `classify-state.sh` to recompute `touched` from the live committed diff, then `select-reviewers.sh` to get the current `inner-loop-reviewers` roster. Dispatch exactly those reviewers. When dispatching `review-ux-conformance`: resolve the feature slug from the issue number (spec link or `docs/product/features/<slug>/` reference in the body, else glob `docs/product/features/**/ux-brief.md` and topic-match the changed paths); pass the resolved brief path in the prompt. Suppress the dispatch entirely when no brief exists — brief-existence is not scriptable; the orchestrator owns this gate. Announce the outcome (`ux-conformance: brief <path> → dispatched` / `ux-conformance: no brief → suppressed`) so this orchestrator-owned judgment is not silently skipped behind the scripted roster.
 
    On iterations 2+: re-dispatch only reviewers that raised `[REQUIRED]` the previous round, plus any added by the refreshed roster when the new changes pulled in a new domain. Full-roster coverage is restored at `full-review`.
 
@@ -289,7 +310,7 @@ Per lane (or sequentially if single lane):
 
 ---
 
-## Step 15 — simplify
+## Step 18 — simplify
 
 **Applies to:** `track=code`.
 
@@ -305,18 +326,18 @@ Dispatch the implementing agent once:
 >
 > Do not change behaviour; do not touch anything outside the diff. Run `./gradlew allTests -q` after.
 
-If anything was simplified — commit. `full-review` runs immediately after and covers the full roster, so no separate delta re-review here.
+If anything was simplified — commit.
 
 ---
 
-## Step 16 — full-review
+## Step 19 — full-review
 
 **Applies to:** every run.
 
 Pre-PR review wave, inline — no GitHub publication.
 
 1. **Working tree must be clean** (committed). Reviewers read `git diff main...HEAD`.
-2. **Wave A** in parallel: run `classify.sh` + `select-reviewers.sh` to get the `wave-a-reviewers` roster. Dispatch exactly those reviewers. Suppress `review-ux-conformance` dispatch when the touched feature has no `ux-brief.md` (brief-existence is not scriptable). Each agent receives the issue number and reviews the working tree.
+2. **Wave A** in parallel: run `classify-state.sh` + `select-reviewers.sh` to get the `wave-a-reviewers` roster. Dispatch exactly those reviewers. Suppress `review-ux-conformance` dispatch when the touched feature has no `ux-brief.md` (brief-existence is not scriptable). Each agent receives the issue number and reviews the working tree.
 3. **Wave B**: dispatch exactly the reviewer(s) named in `select-reviewers.sh`'s `wave-b-reviewers` output with the combined Wave A findings as input. (Roster authority is the script — the steps don't name specific reviewers.)
 4. Aggregate. Apply any `[REQUIRED]` via the implementing/writing agent (with the symmetry-pass instruction for code, or via the responsible sub-agent for docs). Re-run until approved or 2 iterations.
 
@@ -326,19 +347,19 @@ No `gh pr review` here — findings are consumed locally only.
 
 ---
 
-## Step 17 — smoke
+## Step 20 — smoke
 
 **Applies to:** `track=code`.
 
 Runtime feature behaviour (user path, network exchange, lifecycle). If the deliverable carries none — announce `skip smoke — no runtime feature behaviour` and move on.
 
-Selection from classify.sh's `touched` set:
+Selection from `classify-state.sh`'s `touched` set:
 
 | `touched` contains | Run |
 |---|---|
 | `code` without `platform` | All smoke blocks (Desktop, Android if device attached, iOS sim) — the change is in common sources |
 | `platform` (and possibly `code`) | Smoke block for each platform whose source set is in the diff |
-| `touched` is empty (build files, CI, root scripts — nothing classify.sh buckets) | All smoke blocks — a build-system change can break any target |
+| `touched` is empty (build files, CI, root scripts — nothing `classify-state.sh` buckets) | All smoke blocks — a build-system change can break any target |
 | `touched` is non-empty and only `docs` / `claude` / `engdoc` / `ux-brief` | Nothing |
 
 `ui` always co-occurs with `code` — handled by the first row.
@@ -349,7 +370,7 @@ Record a 🟢/🟡/🔴 verdict naming the smoke blocks executed. A bare pass/fa
 
 ---
 
-## Step 18 — enforcement-probe
+## Step 21 — enforcement-probe
 
 **Applies to:** every run.
 
@@ -366,34 +387,39 @@ Record a 🟢/🟡/🔴 verdict naming the enforcement-probe path. Any 🟡/🔴
 
 ---
 
-## Step 19 — commit-pr
+## Step 22 — commit-push
 
 **Applies to:** every run.
 
-Only after `full-review` has converged and every runtime check that applied is 🟢 — `smoke` (code-track behaviour) and `enforcement-probe` (any track, since enforcers can live in `.claude/`), an announced skip counting as satisfied.
+Only after `full-review` has converged and every runtime check that applied is 🟢 — `smoke` and `enforcement-probe`, an announced skip counting as satisfied.
 
-**Fresh task (no existing PR).** Before running `gh pr create`:
+```bash
+git add <relevant files>
+git commit -m "#<N>: <message>"
+git push origin <N>-<short-slug>   # add -u on the first push of a fresh branch
+```
+
+No force-push. Do not block on explicit OK before push — green runtime checks (`smoke` / `enforcement-probe`) are the gate, not user approval. Branches and worktrees share the same shape — `<N>-<short-slug>`.
+
+---
+
+## Step 23 — open-pr
+
+**Applies to:** `reentry=fresh`.
+
+Open the PR for the just-pushed branch:
 
 1. Read [`.github/pull_request_template.md`](../../../.github/pull_request_template.md) and compose the body using only the sections it defines — do not add sections of your own.
 2. Write the body to a file (e.g. `/tmp/pr-<N>-body.md`); `--body` with an in-shell heredoc silently corrupts multiline markdown and can drop `Closes #<N>`.
 3. Then run:
 
 ```bash
-git add <relevant files>
-git commit -m "#<N>: <message>"
-git push -u origin <N>-<short-slug>
 gh pr create --title "<title>" --body-file /tmp/pr-<N>-body.md
 ```
 
-Do not block on explicit OK before push — green runtime checks (`smoke` / `enforcement-probe`) are the gate, not user approval.
-
-Branches and worktrees share the same shape — `<N>-<short-slug>`.
-
-**Re-entry (PR already exists):** commit into the existing branch, push (no force), no new PR.
-
 ---
 
-## Step 20 — reply-threads
+## Step 24 — reply-threads
 
 **Applies to:** `reentry=pr-feedback`.
 
@@ -401,7 +427,7 @@ After the push, reply to **every** addressed inline comment via `gh api -X POST 
 
 ---
 
-## Step 21 — final-summary
+## Step 25 — final-summary
 
 **Applies to:** every run.
 

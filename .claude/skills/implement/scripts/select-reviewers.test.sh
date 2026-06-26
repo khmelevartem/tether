@@ -210,9 +210,9 @@ EVERY_RUN=$(awk '
 ' "$STEPS_MD" | sort | tr '\n' ' ' | sed 's/ $//')
 
 assert_eq "unconditional steps are exactly the always-run set" \
-  "classify commit-pr enforcement-probe final-summary full-review" "$EVERY_RUN"
+  "classify commit-push enforcement-probe final-summary full-review" "$EVERY_RUN"
 
-# The drift gate: classify.sh withholds the profile when behind main, and the
+# The drift gate: classify-state.sh withholds the state when behind main, and the
 # only step able to match that partial profile is sync-main. Pin it by name so
 # a future edit cannot drop the step or its gate and leave drift prose-handled.
 
@@ -248,6 +248,24 @@ MONO=$(awk '
 ' "$STEPS_MD")
 
 assert_eq "step numbers strictly increase in file order" "yes" "$MONO"
+
+# ── Script split: task (type, once) vs state (every run) ─────────────────────
+#
+# classify.sh was split so a step body never re-derives the stable task type from
+# volatile state. Pin the split: both scripts present, the old one gone, and no
+# stale `classify.sh` reference left behind in the prose (a half-done rename).
+
+if [ -x "$SCRIPT_DIR/classify-task.sh" ]; then PASS=$((PASS + 1)); else
+  FAIL=$((FAIL + 1)); echo "FAIL [classify-task.sh missing or not executable]"; fi
+
+if [ -x "$SCRIPT_DIR/classify-state.sh" ]; then PASS=$((PASS + 1)); else
+  FAIL=$((FAIL + 1)); echo "FAIL [classify-state.sh missing or not executable]"; fi
+
+if [ ! -e "$SCRIPT_DIR/classify.sh" ]; then PASS=$((PASS + 1)); else
+  FAIL=$((FAIL + 1)); echo "FAIL [classify.sh still present after split]"; fi
+
+STALE=$(grep -rl 'classify\.sh' "$SCRIPT_DIR/.." 2>/dev/null | grep -v '\.test\.sh$' || true)
+assert_eq "no stale classify.sh reference in skill prose" "" "$STALE"
 
 # ── Summary ───────────────────────────────────────────────────────────────────
 

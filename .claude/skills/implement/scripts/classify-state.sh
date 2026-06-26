@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
-# Emits mechanical profile facts for /implement.
+# Emits the VOLATILE state facts for /implement — re-run every pass (walk start,
+# and after each commit to refresh `touched`).
 # Output: key=value lines to stdout (no files written).
-# Usage: classify.sh [<issue-number>]
+# Usage: classify-state.sh [<issue-number>]
+# Emits: issue, reentry, pr, drift, touched [, status]
 # touched values: ui, code, platform, docs, engdoc, claude, ux-brief
+#
+# Task type is the STABLE axis and lives in classify-task.sh — run that once per
+# walk and hold the type in context; this script never emits it.
 
 set -euo pipefail
 
@@ -53,13 +58,12 @@ if [ -z "$ISSUE" ]; then
   echo "reentry=unknown"
   echo "pr=-"
   echo "drift=unknown"
-  echo "type=unknown"
   echo "touched="
   exit 0
 fi
 
 if [ $# -ge 1 ] && [ -n "$1" ] && ! echo "$1" | grep -qE '^[0-9]+$'; then
-  echo "classify.sh: issue number must be numeric, got: $1" >&2
+  echo "classify-state.sh: issue number must be numeric, got: $1" >&2
   exit 1
 fi
 
@@ -89,44 +93,19 @@ if [ "$PR_NUMBER" = "-" ]; then
 else
   git fetch origin main --quiet 2>/dev/null || true
   if ! git merge-base --is-ancestor origin/main HEAD 2>/dev/null; then
-    # Behind main: withhold the ENTIRE profile (reentry/pr/type/touched) and exit
+    # Behind main: withhold the rest of the state (reentry/pr/touched) and exit
     # non-zero. Only drift=behind + status=blocked are emitted, so no step whose
-    # predicate names reentry/type/track can match; the preamble's blocked-profile
+    # predicate names reentry/track can match; the preamble's blocked-profile
     # rule covers the unconditional steps. sync-main is the one legal next step.
     echo "drift=behind"
     echo "status=blocked"
-    echo "classify.sh: branch is behind origin/main — run /pull-main, then re-run classify.sh before proceeding." >&2
+    echo "classify-state.sh: branch is behind origin/main — run /pull-main, then re-run classify-state.sh before proceeding." >&2
     exit 3
   fi
   echo "reentry=pr-feedback"
   echo "pr=$PR_NUMBER"
   echo "drift=up-to-date"
 fi
-
-# ── Resolve type from labels ──────────────────────────────────────────────────
-
-LABELS_JSON=$(gh issue view "$ISSUE" --json labels 2>/dev/null || echo '{"labels":[]}')
-TYPE=$(echo "$LABELS_JSON" | python3 -c "
-import json, sys
-aliases = {
-  'enhancement': 'feature',
-  'bug': 'bugfix',
-  'documentation': 'docs',
-}
-types = {'feature','bugfix','refactor','infra','docs','dependency'}
-data = json.loads(sys.stdin.read())
-names = [l['name'] for l in data.get('labels', [])]
-for n in names:
-  if n in types:
-    print(n)
-    sys.exit(0)
-  if n in aliases:
-    print(aliases[n])
-    sys.exit(0)
-print('none')
-" 2>/dev/null || echo "unknown")
-
-echo "type=$TYPE"
 
 # ── Resolve touched set ───────────────────────────────────────────────────────
 # Emit diff only when this worktree owns ISSUE (or worktree issue is unknown,

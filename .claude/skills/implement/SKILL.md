@@ -14,21 +14,21 @@ You are the orchestrator for a single GitHub issue. You do NOT write code, desig
 Issue number `<N>` — optional.
 
 - **`<N>` provided** — may start fresh work or re-enter an existing PR.
-- **`<N>` omitted** — re-entry only; the issue is resolved from the current branch / open PR by `classify.sh`. If neither resolves an issue → STOP immediately.
+- **`<N>` omitted** — re-entry only; the issue is resolved from the current branch / open PR by `classify-state.sh`. If neither resolves an issue → STOP immediately.
 
 ## How the skill runs
 
 The **algorithm** — the ordered steps and how to walk them — lives in `steps.md`; this file holds the **run principles**. Run it like this:
 
-1. On a fresh run, start by reading the issue in full (`read-all`, Step 0); then `classify` (Step 1) makes the one judgment `classify.sh` cannot — the track (docs vs code).
+1. On a fresh run, start by reading the issue in full (`read-all`, Step 0); then `classify` (Step 1) makes the one judgment the scripts cannot — the track (docs vs code).
 2. Walk `steps.md` top to bottom — never assemble the step list from your own model. Its preamble governs how each step is gated, run, and announced; follow it.
 3. At every review step, take the reviewer roster from `select-reviewers.sh`, never your own pick — it is computed from the live committed diff.
 
-Every actionable value `classify.sh` emits is consumed mechanically, never by your reading discipline.
+Every actionable value the classify scripts emit is consumed mechanically, never by your reading discipline.
 
 ## Re-entry contract
 
-The skill is idempotent per issue: `classify.sh` detects PR state (`reentry=fresh` / `pr-feedback`) and the `**Applies to:**` tags gate the rest. The re-entry mechanics live in their own steps — `reentry-reconcile`, `reply-threads`, `commit-pr`.
+The skill is idempotent per issue: `classify-state.sh` detects PR state (`reentry=fresh` / `pr-feedback`) and the `**Applies to:**` tags gate the rest. The re-entry mechanics live in their own steps — `reentry-reconcile`, `commit-push`, `reply-threads`.
 
 ## No-deflection principle
 
