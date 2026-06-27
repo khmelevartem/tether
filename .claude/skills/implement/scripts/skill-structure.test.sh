@@ -102,21 +102,21 @@ else
   echo "FAIL [halt-unresolved precedes transform input to actions] — halt=$HALT_N transform=$TRANSFORM_N"
 fi
 
-# A reentry/drift gate is only evaluable from an on-screen value if the step that
-# emits that state ran first. classify-state.sh (the producer) must therefore
-# precede every reentry/drift-gated step — else those gates fall back to the
-# orchestrator's memory, the exact drift #500 eliminates.
+# A reentry/drift/track/type gate is only evaluable from an on-screen value if the
+# step that emits it ran first. classify-state.sh emits the volatile state and
+# re-surfaces the persisted track/type, so it must precede every such gate — else
+# they fall back to the orchestrator's memory, the exact drift #500 eliminates.
 STATE_N=$(awk '/^## Step [0-9]+ — classify the state$/{print $3}' "$STEPS_MD")
 MIN_GATE_N=$(awk '
   /^## Step [0-9]+[a-z]? — /{ n=$3+0 }
-  /^\*\*Applies to:\*\*.*(reentry|drift)=/{ print n }
+  /^\*\*Applies to:\*\*.*(reentry|drift|track|type)=/{ print n }
 ' "$STEPS_MD" | sort -n | head -1)
 
 if [ -n "$STATE_N" ] && [ -n "$MIN_GATE_N" ] && [ "$STATE_N" -lt "$MIN_GATE_N" ]; then
   PASS=$((PASS + 1))
 else
   FAIL=$((FAIL + 1))
-  echo "FAIL [classify-state precedes every reentry/drift gate] — state=$STATE_N first-gate=$MIN_GATE_N"
+  echo "FAIL [classify-state precedes every reentry/drift/track/type gate] — state=$STATE_N first-gate=$MIN_GATE_N"
 fi
 
 # File order IS the sequencing authority, so the `## Step N` numbers must strictly

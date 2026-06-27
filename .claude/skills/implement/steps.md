@@ -26,7 +26,9 @@ This is a one-shot setup, not part of the walk.
 
 **Applies to:** every run.
 
-Run `classify-state.sh [<N>]` and read its key=value output — the volatile state (`issue`, `reentry`, `pr`, `drift`, `touched`). With no argument it resolves which issue you are on from the current branch / open PR. Re-run it whenever current state matters.
+Run `classify-state.sh [<N>]` and read its key=value output — the volatile state (`issue`, `reentry`, `pr`, `drift`, `touched`), plus the persisted `track`/`type` once a fresh walk has recorded them. With no argument it resolves which issue you are on from the current branch / open PR. Re-run it whenever current state matters.
+
+A non-zero exit means blocked state — read the emitted keys anyway and continue; the next matching gate handles it (`reentry=unknown` → `halt-unresolved` stops; `drift=behind` → `sync-main` syncs and retries). The non-zero exit is not itself the stop.
 
 ---
 ## Step 1 — halt-unresolved
@@ -70,9 +72,13 @@ Then decide the one judgment neither script can resolve mechanically:
 | `type=feature` / `bugfix` / `refactor` / `infra` with deliverable in source sets or build/CI/scripts (even if an ADR is also needed) | code  |
 ### Profile
 
-`track` is the one judgment the scripts cannot resolve. After deciding it, announce the resolved profile — `track=<…> type=<…>` — so every later `**Applies to:**` match reads against an on-screen value, not a re-derived one. 
+`track` is the one judgment the scripts cannot resolve. After deciding it, announce the resolved profile — `track=<…> type=<…>` — so every later `**Applies to:**` match reads against an on-screen value, not a re-derived one.
 
-Pin the `type` and the `track` you discovered to your session memory - they are stable throughout the whole workflow and will be needed for almost every other step tag.
+`track` and `type` are stable for the whole issue and almost every later step gates on them, so persist them physically — a `pr-feedback` re-entry skips this step, and LLM session memory does not survive into a new session. Write them to the per-worktree git dir, from where `classify-state` re-surfaces them on every run:
+
+```bash
+printf 'track=%s\ntype=%s\n' "<track>" "<type>" > "$(git rev-parse --git-dir)/implement-profile"
+```
 
 ---
 ## Step 5 — recon

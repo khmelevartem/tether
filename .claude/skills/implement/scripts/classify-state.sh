@@ -1,13 +1,20 @@
 #!/usr/bin/env bash
 # Emits the VOLATILE state facts for /implement — re-run every pass (walk start,
 # and after each commit to refresh `touched`).
-# Output: key=value lines to stdout (no files written).
+# Output: key=value lines to stdout (writes no files; only reads the profile).
 # Usage: classify-state.sh [<issue-number>]
-# Emits: issue, reentry, pr, drift, touched [, status]
+# Emits: issue, reentry, pr, drift, touched [, status] [, track, type]
 # touched values: ui, code, platform, docs, engdoc, claude, ux-brief
 #
-# Task type is the STABLE axis and lives in classify-task.sh — run that once per
-# walk and hold the type in context; this script never emits it.
+# Non-zero exit signals blocked state, and the two are NOT the same:
+#   exit 2 — terminal: no issue resolves; the walk stops (halt-unresolved step).
+#   exit 3 — recoverable: branch is behind main; the walk syncs and retries
+#            (sync-main step). Callers distinguish by the emitted key
+#            (reentry=unknown vs drift=behind), not by the exit code alone.
+#
+# track+type are the STABLE axes: classify-task.sh computes them once per issue
+# and the fresh walk persists them to the profile; this script only re-surfaces
+# the persisted values so they outlive the session that computed them.
 
 set -euo pipefail
 
@@ -160,3 +167,13 @@ print(','.join(sorted(result)))
 " 2>/dev/null || true)
 
 echo "touched=$TOUCHED"
+
+# ── Surface the persisted profile (track, type) ──────────────────────────────
+# classify-task computes track+type once on a fresh walk and persists them to the
+# per-worktree git dir (survives re-entry, never appears in `git status`). Re-emit
+# them here so every walk — including a pr-feedback re-entry that skips the
+# fresh-only classify-task step — reads them mechanically instead of from memory.
+PROFILE="$(git rev-parse --git-dir 2>/dev/null)/implement-profile"
+if [ -f "$PROFILE" ]; then
+  cat "$PROFILE"
+fi

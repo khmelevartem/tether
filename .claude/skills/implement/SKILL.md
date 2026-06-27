@@ -14,7 +14,7 @@ You are the orchestrator for a single GitHub issue. You do NOT write code, desig
 Issue number `<N>` — optional.
 
 - **`<N>` provided** — may start fresh work or re-enter an existing PR.
-- **`<N>` omitted** — re-entry only; the issue is resolved from the current branch / open PR by `classify-state.sh`. If neither resolves an issue, `classify-state.sh` exits non-zero (`status=blocked`) and the walk halts there — no prose STOP to remember.
+- **`<N>` omitted** — re-entry only; the issue is resolved from the current branch / open PR by `classify-state.sh`. If neither resolves an issue, the walk stops at the `halt-unresolved` step.
 
 ## How the skill runs
 
@@ -34,7 +34,7 @@ If touching adjacent classes or neighbouring platforms is needed for a quality s
 
 ## Re-entry contract
 
-The skill is idempotent per issue: `classify-state.sh` detects PR state (`reentry=fresh` / `pr-feedback`) and the `**Applies to:**` tags gate the rest.
+The skill is idempotent per issue: `classify-state.sh` detects PR state (`reentry=fresh` / `pr-feedback`) and the `**Applies to:**` tags gate the rest. `track` and `type` are computed once on the fresh walk and persisted to the worktree git dir, so a re-entry reads them back through `classify-state.sh` rather than recomputing or relying on session memory.
 
 ## No-deflection principle
 
