@@ -54,7 +54,7 @@ Then decide the one judgment neither script can resolve mechanically:
 Pin the `type` and the `track` you discovered to your session memory - they are stable throughout the whole workflow and will be needed for almost every other step tag.
 
 ---
-## Step 2 - classify the state
+## Step 2 — classify the state
 
 **Applies to:** every run.
 
@@ -170,7 +170,7 @@ Use the built-in `Plan` agent (or `general-purpose` if unavailable) to produce a
 When the task forks into more than one viable implementation, converge on the most suitable one and state your decisions alongside the rejected alternatives to the user.
 
 ---
-## Step 10 - user-interview
+## Step 10 — user-interview
 
 **Applies to:** `reentry=fresh`
 
@@ -198,7 +198,7 @@ Classify every comment worth fixing: is it **pointwise or structural**.
 
 ---
 
-## Step 12 - transform input to actions
+## Step 12 — transform input to actions
 
 **Applies to:** every run
 
@@ -222,7 +222,7 @@ Use the produced action list to form promts for sub-agents in the next step.
 
 ---
 
-## Step 13a - code-dispatch
+## Step 13a — code-dispatch
 
 **Applies to:** `track=code`
 
@@ -254,7 +254,7 @@ Order matters — lower layers depend on upper ones for vocabulary and scope.
 **Prose discipline carry-forward.** Every dispatch brief must instruct the sub-agent to load and every direct edit must follow the principles of  [`docs/engineering/long-lived-artifacts.md`](../../../docs/engineering/long-lived-artifacts.md) before writing and apply it to every paragraph.
 
 ---
-## Step 14 - commit
+## Step 14 — commit
 
 **Applies to:** every run.
 
@@ -262,7 +262,7 @@ Order matters — lower layers depend on upper ones for vocabulary and scope.
 
 ---
 
-## Step 15 - runtime-evidence
+## Step 15 — runtime-evidence
 
 **Applies to:** `track=code`.
 
@@ -276,7 +276,7 @@ If it passes successfully → move forward.
 If it fails → go back to `transform input to actions` step with a clear problem description, logs if any and a reason, if it is obvious from the observed behaviour or logs.
 
 ---
-## Step 16 - fast-review
+## Step 16 — fast-review
 
 **Applies to:** every run.
 
@@ -305,7 +305,7 @@ Remove scaffolding and duplication by dispatching the implementing agent once:
 > Do not change behaviour; do not touch anything outside the diff. Run `./gradlew allTests -q` after.
 
 ---
-## Step 18 - check working tree
+## Step 18 — check working tree
 
 **Applies to:** every run.
 

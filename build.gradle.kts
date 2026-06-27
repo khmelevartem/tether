@@ -37,7 +37,6 @@ subprojects {
     }
 }
 
-// Shell tests for the `.claude` skills (reviewer rosters, steps.md walk invariants).
 val skillTests by tasks.registering(Exec::class) {
     group = "verification"
     description = "Run every .claude/skills/**/*.test.sh shell test."
