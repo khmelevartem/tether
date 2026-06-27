@@ -18,17 +18,23 @@ Issue number `<N>` — optional.
 
 ## How the skill runs
 
-The **algorithm** — the ordered steps and how to walk them — lives in `steps.md`; this file holds the **run principles**. Run it like this:
-
-1. On a fresh run, start by reading the issue in full (`read-all`, Step 0); then `classify` (Step 1) makes the one judgment the scripts cannot — the track (docs vs code).
-2. Walk `steps.md` top to bottom — never assemble the step list from your own model. Its preamble governs how each step is gated, run, and announced; follow it.
-3. At every review step, take the reviewer roster from `select-reviewers.sh`, never your own pick — it is computed from the live committed diff.
+The **algorithm** — the ordered steps and how to walk them — lives in `steps.md`; this file holds the **run principles**. Walk `steps.md` top to bottom — never assemble the step list from your own model. Its preamble governs how each step is gated, run, and announced; follow it. At every review step, take the reviewer roster from `select-reviewers.sh`, never your own pick.
 
 Every actionable value the classify scripts emit is consumed mechanically, never by your reading discipline.
 
+## Token discipline
+
+Hold only the plan, per-iteration finding summaries, and gate decisions. Do not Read doc or source files into the orchestrator thread to understand them — route through a sub-agent that returns a digest. Read a file verbatim only when a gate decision needs the exact text.
+
+## Issue scope is a starting point, not a cage.
+
+What matters is the intention and the benefit the issue can bring, note its verbatim scope boundaries. If the issue has a prebaked reason or solution - it's just a proposal, not a directive. You must come with your own reasoning, design or justification throughout the whole workflow - not directly you as an agent, but with dispatching of proper subagents.
+
+If touching adjacent classes or neighbouring platforms is needed for a quality solution — expand scope in this PR. Whether to fold a finding or defer it → [`docs/engineering/scope-discipline.md`](../../../docs/engineering/scope-discipline.md).
+
 ## Re-entry contract
 
-The skill is idempotent per issue: `classify-state.sh` detects PR state (`reentry=fresh` / `pr-feedback`) and the `**Applies to:**` tags gate the rest. The re-entry mechanics live in their own steps — `reentry-reconcile`, `commit-push`, `reply-threads`.
+The skill is idempotent per issue: `classify-state.sh` detects PR state (`reentry=fresh` / `pr-feedback`) and the `**Applies to:**` tags gate the rest.
 
 ## No-deflection principle
 
@@ -58,5 +64,4 @@ Everything else — implementation details, reviewer findings, fix iterations �
 ## Notes
 
 - This skill is for one issue at a time. Multiple parallel issues = multiple invocations on separate worktrees.
-- Worktree cleanup: `.claude/scripts/cleanup-worktrees.sh` runs on `Stop` hook and removes worktrees whose remote branch is gone and whose PR is merged — it iterates all worktrees by structure, not by naming pattern.
-- Token discipline: hold only the plan, per-iteration finding summaries, and gate decisions. Do not Read doc or source files into the orchestrator thread to understand them — route through a sub-agent that returns a digest. Read a file verbatim only when a gate decision needs the exact text. If context exceeds 50% of the window, pause and summarise before continuing.
+- Worktree cleanup: `.claude/scripts/cleanup-worktrees.sh` runs on `Stop` hook and removes worktrees whose remote branch is gone and whose PR is merged.
