@@ -310,7 +310,12 @@ Else → aggregate `[REQUIRED]` findings, go back to `transform input to actions
 
 **Applies to:** `track=code`.
 
-Remove scaffolding and duplication by dispatching the implementing agent once:
+Which entry into `simplify` is this (counter held in session memory)?
+
+- **1st entry** — run the simplification pass below. If it edited anything, commit it and go back to `fast-review`: simplification changes the diff after the inner-loop reviewers last approved it, so they must re-check it. If it edited nothing, move forward.
+- **2nd entry** — the diff was already simplified and re-reviewed on the 1st pass. Reset the counter, skip the pass, move forward.
+
+Simplification pass — dispatch the implementing agent once:
 
 > All findings are resolved. Make one simplification pass over the diff: remove dead branches, inline single-use helpers, collapse trivial wrappers.
 >
