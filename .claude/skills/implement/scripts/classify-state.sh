@@ -94,9 +94,9 @@ else
   git fetch origin main --quiet 2>/dev/null || true
   if ! git merge-base --is-ancestor origin/main HEAD 2>/dev/null; then
     # Behind main: withhold the rest of the state (reentry/pr/touched) and exit
-    # non-zero. Only drift=behind + status=blocked are emitted, so no step whose
-    # predicate names reentry/track can match; the preamble's blocked-profile
-    # rule covers the unconditional steps. sync-main is the one legal next step.
+    # non-zero. Only drift=behind + status=blocked are emitted, so no reentry/track
+    # step matches — sync-main (Applies to: drift=behind) is the sole legal next
+    # step, and it loops back here after /pull-main.
     echo "drift=behind"
     echo "status=blocked"
     echo "classify-state.sh: branch is behind origin/main — run /pull-main, then re-run classify-state.sh before proceeding." >&2

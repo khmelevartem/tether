@@ -33,7 +33,7 @@ assert_eq() {
 # untagging a gated one.
 
 UNTAGGED=$(awk '
-  /^## Step [0-9]+ — /{ if(id!="" && !tagged) print id; id=$0; sub(/^## Step [0-9]+ — /,"",id); tagged=0 }
+  /^## Step [0-9]+[a-z]? — /{ if(id!="" && !tagged) print id; id=$0; sub(/^## Step [0-9]+[a-z]? — /,"",id); tagged=0 }
   /^\*\*Applies to:\*\*/{ tagged=1 }
   END{ if(id!="" && !tagged) print id }
 ' "$STEPS_MD" | sort | tr '\n' ' ' | sed 's/ $//')
@@ -41,19 +41,20 @@ UNTAGGED=$(awk '
 assert_eq "every step carries an Applies-to line" "" "$UNTAGGED"
 
 EVERY_RUN=$(awk '
-  /^## Step [0-9]+ — /{ id=$0; sub(/^## Step [0-9]+ — /,"",id) }
+  /^## Step [0-9]+[a-z]? — /{ id=$0; sub(/^## Step [0-9]+[a-z]? — /,"",id) }
   /^\*\*Applies to:\*\* every run/{ print id }
 ' "$STEPS_MD" | sort | tr '\n' ' ' | sed 's/ $//')
 
 assert_eq "unconditional steps are exactly the always-run set" \
-  "classify commit-push enforcement-probe final-summary full-review" "$EVERY_RUN"
+  "check working tree classify the state commit fast-review final-summary full-review push transform input to actions" \
+  "$EVERY_RUN"
 
 # The drift gate: classify-state.sh withholds the state when behind main, and the
 # only step able to match that partial profile is sync-main. Pin it by name so
 # a future edit cannot drop the step or its gate and leave drift prose-handled.
 
 DRIFT_STEP=$(awk '
-  /^## Step [0-9]+ — /{ id=$0; sub(/^## Step [0-9]+ — /,"",id) }
+  /^## Step [0-9]+[a-z]? — /{ id=$0; sub(/^## Step [0-9]+[a-z]? — /,"",id) }
   /^\*\*Applies to:\*\*.*drift=behind/{ print id }
 ' "$STEPS_MD" | sort | tr '\n' ' ' | sed 's/ $//')
 
@@ -61,13 +62,13 @@ assert_eq "sync-main is the sole drift=behind gate" "sync-main" "$DRIFT_STEP"
 
 # Order is load-bearing: a behind re-entry must hit sync-main before any other
 # step. A name-only check passes a regression that reorders them, so pin
-# position — sync-main is Step 2 (after read-all + classify), ahead of
-# reentry-reconcile and every work step.
+# position — sync-main is Step 3 (after read-all + classify-task + classify-state),
+# ahead of reentry-reconcile and every work step.
 
 SYNC_N=$(awk '/^## Step [0-9]+ — sync-main$/{print $3}' "$STEPS_MD")
 RECONCILE_N=$(awk '/^## Step [0-9]+ — reentry-reconcile$/{print $3}' "$STEPS_MD")
 
-assert_eq "sync-main is Step 2 (after read-all + classify)" "2" "$SYNC_N"
+assert_eq "sync-main is Step 3 (after read-all + classify-task + classify-state)" "3" "$SYNC_N"
 
 if [ -n "$SYNC_N" ] && [ -n "$RECONCILE_N" ] && [ "$SYNC_N" -lt "$RECONCILE_N" ]; then
   PASS=$((PASS + 1))
@@ -79,8 +80,15 @@ fi
 # File order IS the sequencing authority, so the `## Step N` numbers must strictly
 # increase down the file. Without this, a block moved physically while keeping a
 # stale number would desync the walk from the headings and pass every name check.
+# Suffixed siblings (14a, 14b) share an integer but order by letter, so compare a
+# key of int*100 + letter-position — 14a (1401) < 14b (1402) < 15 (1500).
 MONO=$(awk '
-  /^## Step [0-9]+ — /{ if(prev!="" && $3<=prev){bad=1} prev=$3 }
+  /^## Step [0-9]+[a-z]? — /{
+    hdr=$3; n=hdr+0; suf=hdr; gsub(/[0-9]/,"",suf);
+    key=n*100 + (suf=="" ? 0 : index("abcdefghijklmnopqrstuvwxyz",suf));
+    if(prev!="" && key<=prevkey){bad=1}
+    prevkey=key; prev=hdr
+  }
   END{ print (bad?"no":"yes") }
 ' "$STEPS_MD")
 

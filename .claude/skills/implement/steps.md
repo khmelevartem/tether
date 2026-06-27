@@ -4,7 +4,7 @@
 
 Each `##` section is one step. 
 
-**Walk this file top to bottom — file order is the sequencing authority and is never overridden.** The one ordering exception is §approach-fork, which may pull §smoke forward for fork tasks and announces itself.
+**Walk this file top to bottom — file order is the sequencing authority and is never overridden.** A step sends the walk backward only by naming its target explicitly (a loop-back, e.g. `go back to transform input to actions`); it never silently reorders.
 
 **Run the step only if its condition met.** Every step carries an `**Applies to:**` line: run the section if its predicate matches this run's profile, otherwise skip in place — never reorder. A step that runs unconditionally says `**Applies to:** every run`. 
 
@@ -26,7 +26,7 @@ This is a one-shot setup, not part of the walk.
 
 **Applies to:** `reentry=fresh`.
 
-Read the issue in full — title, body, and **every** comment via `gh issue view <N> --comments`. Comments are potentially a canon-update on the body, not a discussion: when a comment conflicts with the body, the comment takes priority — surface the divergence to the user in one line. This is the complete picture `classify` resolves `track` from.
+Read the issue in full — title, body, and **every** comment via `gh issue view <N> --comments`. Comments are potentially a canon-update on the body, not a discussion: when a comment conflicts with the body, the comment takes priority — surface the divergence to the user in one line. This is the complete picture `classify the task` resolves `track` from.
 
 ---
 
@@ -34,7 +34,7 @@ Read the issue in full — title, body, and **every** comment via `gh issue view
 
 **Applies to:** `reentry=fresh`
 
-Run `classify-task.sh <issue>` (pass the `issue` that `classify-state.sh` resolved) for the stable task `type` — a pure function of the issue label, so run it once per walk and hold `type` in context.
+Run `classify-task.sh <N>` for the stable task `type` — a pure function of the issue label, so run it once per walk and hold `type` in context.
 
 Then decide the one judgment neither script can resolve mechanically:
 
@@ -60,10 +60,15 @@ Pin the `type` and the `track` you discovered to your session memory - they are 
 
 Run `classify-state.sh [<N>]` and read its key=value output — the volatile state (`issue`, `reentry`, `pr`, `drift`, `touched`). With no argument it resolves which issue you are on from the current branch / open PR. Re-run it whenever current state matters.
 
-If the branch is behind `origin/main`. Run `/pull-main` to merge fresh main, then re-run `classify-state.sh <N>` and continue the walk.
+---
+## Step 3 — sync-main
+
+**Applies to:** `drift=behind`.
+
+Run `/pull-main` to merge fresh main, then go back to `classify the state` step.
 
 ---
-## Step 3 — recon
+## Step 4 — recon
 
 **Applies to:** `reentry=fresh`.
 
@@ -89,7 +94,7 @@ Brief for the recon agent (pass the issue title + body):
 
 ---
 
-## Step 4 — early-gates
+## Step 5 — early-gates
 
 **Applies to:** `reentry=fresh`.
 
@@ -108,7 +113,7 @@ Announce the flags raised, or "none".
 
 ---
 
-## Step 5 — bugfix-root-cause
+## Step 6 — bugfix-root-cause
 
 **Applies to:** `track=code AND type=bugfix AND reentry=fresh`.
 
@@ -120,16 +125,16 @@ Otherwise post the confirmed cause as a comment on issue #\<N\> via `gh issue co
 
 ---
 
-## Step 6 — fix-level
+## Step 7 — fix-level
 
 **Applies to:** `track=code AND reentry=fresh`.
 
-When the root cause describes a class of bugs, or parallel implementations contain the same defect — consider fixing one level up: a type / container / contract change that makes the class impossible. Compare costs: N point-fixes vs 1 structural fix. If you choose point-fix — list parallel defective locations explicitly and file a follow-up issue before coding. Announce the decision: `fix-level: structural`, or `fix-level: point-fix → siblings <list>, follow-up #<M> filed` — so the follow-up obligation is on-screen, not assumed.
+When the root cause describes a class of bugs, or parallel implementations contain the same defect — consider fixing one level up: a type / container / contract change that makes the class impossible. Compare costs: N point-fixes vs 1 structural fix. If you choose point-fix — list parallel defective locations explicitly; fold or defer each per [`docs/engineering/scope-discipline.md`](../../../docs/engineering/scope-discipline.md), filing a follow-up issue for any deferred before coding. Announce the decision: `fix-level: structural`, or `fix-level: point-fix → siblings <list>, follow-up #<M> filed` — so the follow-up obligation is on-screen, not assumed.
 
 
 ---
 
-## Step 7 — layer-classify
+## Step 8 — layer-classify
 
 **Applies to:** `track=docs AND reentry=fresh`.
 
@@ -151,7 +156,7 @@ Multiple layers per issue are normal. Classification ambiguity → SKILL.md §Fr
 Result of this step: an ordered list of layers to produce, with target path and writer for each. No artifacts created yet.
 
 ---
-## Step 8 — briefing
+## Step 9 — briefing
 
 **Applies to:** `reentry=fresh`.
 
@@ -159,7 +164,7 @@ Post a short 3–6 line briefing to the user: what we are doing, why (motivation
 
 ---
 
-## Step 9 — plan
+## Step 10 — plan
 
 **Applies to:** `reentry=fresh`.
 
@@ -170,11 +175,11 @@ Use the built-in `Plan` agent (or `general-purpose` if unavailable) to produce a
 When the task forks into more than one viable implementation, converge on the most suitable one and state your decisions alongside the rejected alternatives to the user.
 
 ---
-## Step 10 — user-interview
+## Step 11 — user-interview
 
 **Applies to:** `reentry=fresh`
 
-If there is no opened questions that affect the decision architecture or task intention, proceed. Minor questions that implementers can resolve on their own, must be amended to the plan and passed to implementers to resolve.
+If there are no open questions that affect the decision architecture or task intention, proceed. Minor questions that implementers can resolve on their own, must be amended to the plan and passed to implementers to resolve.
 
 If there are any open questions that implementation bases on, left in documentation or returned by the plan agent, stop immediately and ask user. Give brief context, highlight recommended variant, provide explanation of costs and consequences on each. 
 
@@ -182,13 +187,17 @@ When all the critical questions are answered and the intention gaps are fulfille
 
 ---
 
-## Step 11 — reentry-reconcile
+## Step 12 — reentry-reconcile
 
 **Applies to:** `reentry=pr-feedback`.
 
-TODO #500: ADD PR-LEVEL COMMENTS HANDLING TOO.
+Read **every** human comment on the PR across all three surfaces (paginate each):
 
-Read **every** human inline comment on the PR via `gh api repos/<owner>/<repo>/pulls/<PR>/comments` (paginate). For each, determine: addressed in commits after it, or not. 
+- inline review comments — `gh api repos/<owner>/<repo>/pulls/<PR>/comments`
+- review-summary bodies — `gh api repos/<owner>/<repo>/pulls/<PR>/reviews`
+- PR-level conversation comments — `gh api repos/<owner>/<repo>/issues/<PR>/comments`
+
+For each, determine: addressed in commits after it, or not. 
 
 **Creation date does not determine relevance** — filtering by `created_at > <date>` is forbidden; an unaddressed comment remains relevant regardless of age.
 
@@ -198,11 +207,11 @@ Classify every comment worth fixing: is it **pointwise or structural**.
 
 ---
 
-## Step 12 — transform input to actions
+## Step 13 — transform input to actions
 
 **Applies to:** every run
 
-Form a list of actionable blocks (consequential or parallel) to dispatch to writing agents in the next step composed from only relevant inputs (your judge) you discovered earlier in **this** run: 
+Form a list of actionable blocks (sequential or parallel) to dispatch to writing agents in the next step, composed from only the relevant inputs (your judgment) you discovered earlier in **this** run: 
 
 * issue
 * recon's digest
@@ -214,19 +223,19 @@ Form a list of actionable blocks (consequential or parallel) to dispatch to writ
 * reviewers findings
 * fail description
 
-**For structural findings, the action must contain a symmetry pass** — check sibling files, sibling methods, sibling platforms, sibling source sets for the same anti-pattern, and fix in this same pass. If a required adjacent fix falls outside the PR's scope, the agent will have to escalate to the orchestrator — do not silently skip.
+**For structural findings, the action must contain a symmetry pass** — check sibling files, sibling methods, sibling platforms, sibling source sets for the same anti-pattern, and fix in this same pass. Whether an adjacent fix is folded here or deferred is the single criterion in [`docs/engineering/scope-discipline.md`](../../../docs/engineering/scope-discipline.md) — apply it, do not invent a local rule. If it defers, the agent escalates to the orchestrator — never silently skip.
 
 **Review transmission accuracy.** Pass findings close to the reviewer's original wording; do not narrow or soften. If several findings converge on one principle — name the principle explicitly and list ALL sites where it applies. If interpretation is unclear → escalate to the user before re-dispatching, not after the next review round.
 
-Use the produced action list to form promts for sub-agents in the next step.
+Use the produced action list to form prompts for sub-agents in the next step.
 
 ---
 
-## Step 13a — code-dispatch
+## Step 14a — code-dispatch
 
 **Applies to:** `track=code`
 
-Dispatch every corresponding writing agent with a proper promt :
+Dispatch every corresponding writing agent with a proper prompt:
 
 - non-trivial mechanism / library / structural choice → `architect` first
 - UI work (Compose, screens, components, theming, navigation) → `ui-expert`
@@ -234,11 +243,11 @@ Dispatch every corresponding writing agent with a proper promt :
 
 ---
 
-## Step 13b — docs-dispatch
+## Step 14b — docs-dispatch
 
 **Applies to:** `track=docs`
 
-Dispatch every corresponding writing agent with a proper promt :
+Dispatch every corresponding writing agent with a proper prompt:
 
 1. documentation:
 	- Layering / placement / dependency-direction / mechanism choice / new glossary entry → `architect`
@@ -254,7 +263,7 @@ Order matters — lower layers depend on upper ones for vocabulary and scope.
 **Prose discipline carry-forward.** Every dispatch brief must instruct the sub-agent to load and every direct edit must follow the principles of  [`docs/engineering/long-lived-artifacts.md`](../../../docs/engineering/long-lived-artifacts.md) before writing and apply it to every paragraph.
 
 ---
-## Step 14 — commit
+## Step 15 — commit
 
 **Applies to:** every run.
 
@@ -262,7 +271,7 @@ Order matters — lower layers depend on upper ones for vocabulary and scope.
 
 ---
 
-## Step 15 — runtime-evidence
+## Step 16 — runtime-evidence
 
 **Applies to:** `track=code`.
 
@@ -276,7 +285,7 @@ If it passes successfully → move forward.
 If it fails → go back to `transform input to actions` step with a clear problem description, logs if any and a reason, if it is obvious from the observed behaviour or logs.
 
 ---
-## Step 16 — fast-review
+## Step 17 — fast-review
 
 **Applies to:** every run.
 
@@ -290,7 +299,7 @@ If every reviewer says `APPROVE` and zero `[REQUIRED]` → step done, reset the 
 Else → aggregate `[REQUIRED]` findings, go back to `transform input to actions` step.
 
 ---
-## Step 17 — simplify
+## Step 18 — simplify
 
 **Applies to:** `track=code`.
 
@@ -305,7 +314,7 @@ Remove scaffolding and duplication by dispatching the implementing agent once:
 > Do not change behaviour; do not touch anything outside the diff. Run `./gradlew allTests -q` after.
 
 ---
-## Step 18 — check working tree
+## Step 19 — check working tree
 
 **Applies to:** every run.
 
@@ -313,7 +322,7 @@ Remove scaffolding and duplication by dispatching the implementing agent once:
 
 ---
 
-## Step 19 — full-review
+## Step 20 — full-review
 
 **Applies to:** every run.
 
@@ -325,7 +334,7 @@ Else → aggregate `[REQUIRED]` findings, go back to `transform input to actions
 
 ---
 
-## Step 20 — smoke
+## Step 21 — smoke
 
 **Applies to:** `track=code`.
 
@@ -344,7 +353,7 @@ Record a 🟢/🟡/🔴 verdict naming the smoke blocks executed. A bare pass/fa
 
 ---
 
-## Step 21 — enforcement-probe
+## Step 22 — enforcement-probe
 
 **Applies to:** `type=infra`.
 
@@ -361,7 +370,7 @@ Record a 🟢/🟡/🔴 verdict naming the enforcement-probe path. Any 🟡/🔴
 
 ---
 
-## Step 22 — push
+## Step 23 — push
 
 **Applies to:** every run.
 
@@ -373,7 +382,7 @@ No force-push. Do not block on explicit OK before push — green runtime checks 
 
 ---
 
-## Step 23 — open-pr
+## Step 24 — open-pr
 
 **Applies to:** `reentry=fresh`.
 
@@ -389,17 +398,18 @@ gh pr create --title "<title>" --body-file /tmp/pr-<N>-body.md
 
 ---
 
-## Step 24 — reply-threads
+## Step 25 — reply-threads
 
 **Applies to:** `reentry=pr-feedback`.
 
-TODO #500: REPLY TO PR-LEVEL COMMENT TOO
+After the push, acknowledge **every** addressed comment — what was done + the commit SHA, or explicit reasoning if deliberately declined. The acknowledgement is the "addressed" signal; without it the next re-entry re-reads the comment as unaddressed. Match the surface:
 
-After the push, reply to **every** addressed inline comment via `gh api -X POST repos/<owner>/<repo>/pulls/<PR>/comments/<comment_id>/replies -f body="<reply>"`: what was done + the commit SHA, or explicit reasoning if deliberately declined. A reply is the "addressed" signal; without it the next re-entry re-reads the comment as unaddressed.
+- inline review comment → reply in-thread: `gh api -X POST repos/<owner>/<repo>/pulls/<PR>/comments/<comment_id>/replies -f body="<reply>"`
+- review-summary body / PR-level conversation comment (no thread to reply into) → post one PR conversation comment naming which comment it answers: `gh pr comment <PR> --body "<reply>"`
 
 ---
 
-## Step 25 — final-summary
+## Step 26 — final-summary
 
 **Applies to:** every run.
 
