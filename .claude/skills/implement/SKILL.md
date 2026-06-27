@@ -14,7 +14,7 @@ You are the orchestrator for a single GitHub issue. You do NOT write code, desig
 Issue number `<N>` — optional.
 
 - **`<N>` provided** — may start fresh work or re-enter an existing PR.
-- **`<N>` omitted** — re-entry only; the issue is resolved from the current branch / open PR by `classify-state.sh`. If neither resolves an issue → STOP immediately.
+- **`<N>` omitted** — re-entry only; the issue is resolved from the current branch / open PR by `classify-state.sh`. If neither resolves an issue, `classify-state.sh` exits non-zero (`status=blocked`) and the walk halts there — no prose STOP to remember.
 
 ## How the skill runs
 

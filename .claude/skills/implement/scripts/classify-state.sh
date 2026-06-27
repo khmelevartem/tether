@@ -54,12 +54,16 @@ else
 fi
 
 if [ -z "$ISSUE" ]; then
+  # No issue resolves from the arg, the branch, or an open PR — there is nothing
+  # to walk. Withhold the rest of the state and exit non-zero so the walk halts
+  # here mechanically rather than falling through to the every-run steps with
+  # empty context (the SKILL.md "STOP if neither resolves an issue" rule, enforced
+  # by the exit code instead of reading discipline).
   echo "issue=unknown"
   echo "reentry=unknown"
-  echo "pr=-"
-  echo "drift=unknown"
-  echo "touched="
-  exit 0
+  echo "status=blocked"
+  echo "classify-state.sh: no issue resolved from the branch or an open PR — run /implement <N> or check out the issue branch, then re-run." >&2
+  exit 2
 fi
 
 if [ $# -ge 1 ] && [ -n "$1" ] && ! echo "$1" | grep -qE '^[0-9]+$'; then

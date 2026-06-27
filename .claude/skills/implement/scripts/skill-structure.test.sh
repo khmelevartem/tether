@@ -60,21 +60,45 @@ DRIFT_STEP=$(awk '
 
 assert_eq "sync-main is the sole drift=behind gate" "sync-main" "$DRIFT_STEP"
 
+# The unresolved-issue gate: classify-state.sh exits non-zero with reentry=unknown
+# when no issue resolves. Only halt-unresolved matches that profile, and it must
+# sit ahead of every every-run step so the walk cannot fall through. Pin it by
+# name so a future edit cannot drop the step and leave the STOP prose-handled.
+
+UNKNOWN_STEP=$(awk '
+  /^## Step [0-9]+[a-z]? — /{ id=$0; sub(/^## Step [0-9]+[a-z]? — /,"",id) }
+  /^\*\*Applies to:\*\*.*reentry=unknown/{ print id }
+' "$STEPS_MD" | sort | tr '\n' ' ' | sed 's/ $//')
+
+assert_eq "halt-unresolved is the sole reentry=unknown gate" "halt-unresolved" "$UNKNOWN_STEP"
+
 # Order is load-bearing: a behind re-entry must hit sync-main before any other
 # step. A name-only check passes a regression that reorders them, so pin
-# position — sync-main is Step 3 (after read-all + classify-task + classify-state),
-# ahead of reentry-reconcile and every work step.
+# position — sync-main is Step 4 (after read-all + classify-task + classify-state
+# + halt-unresolved), ahead of reentry-reconcile and every work step.
 
 SYNC_N=$(awk '/^## Step [0-9]+ — sync-main$/{print $3}' "$STEPS_MD")
 RECONCILE_N=$(awk '/^## Step [0-9]+ — reentry-reconcile$/{print $3}' "$STEPS_MD")
 
-assert_eq "sync-main is Step 3 (after read-all + classify-task + classify-state)" "3" "$SYNC_N"
+assert_eq "sync-main is Step 4 (after read-all + classify-task + classify-state + halt-unresolved)" "4" "$SYNC_N"
 
 if [ -n "$SYNC_N" ] && [ -n "$RECONCILE_N" ] && [ "$SYNC_N" -lt "$RECONCILE_N" ]; then
   PASS=$((PASS + 1))
 else
   FAIL=$((FAIL + 1))
   echo "FAIL [sync-main precedes reentry-reconcile] — sync=$SYNC_N reconcile=$RECONCILE_N"
+fi
+
+# halt-unresolved only closes the unknown hole if it precedes the first every-run
+# step — otherwise the walk falls through to it on a reentry=unknown profile.
+HALT_N=$(awk '/^## Step [0-9]+ — halt-unresolved$/{print $3}' "$STEPS_MD")
+TRANSFORM_N=$(awk '/^## Step [0-9]+ — transform input to actions$/{print $3}' "$STEPS_MD")
+
+if [ -n "$HALT_N" ] && [ -n "$TRANSFORM_N" ] && [ "$HALT_N" -lt "$TRANSFORM_N" ]; then
+  PASS=$((PASS + 1))
+else
+  FAIL=$((FAIL + 1))
+  echo "FAIL [halt-unresolved precedes transform input to actions] — halt=$HALT_N transform=$TRANSFORM_N"
 fi
 
 # File order IS the sequencing authority, so the `## Step N` numbers must strictly
