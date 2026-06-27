@@ -333,8 +333,8 @@ Remove scaffolding and duplication by dispatching the implementing agent once:
 
 **Applies to:** every run.
 
-1. **Wave A** in parallel: run `classify-state.sh` for fresh `touched`, then `select-reviewers.sh <track> <type> <touched>` to get the `wave-a-reviewers` roster. Dispatch exactly those reviewers. Suppress `review-ux-conformance` dispatch when the touched feature has no `ux-brief.md`. Each agent receives the issue number and reviews the working tree.
-2. **Wave B**: dispatch exactly the reviewer(s) named in `select-reviewers.sh`'s `wave-b-reviewers` output with the combined Wave A findings as input. (Roster authority is the script — the steps don't name specific reviewers.)
+1. **Wave A** in parallel: run `classify-state.sh` for fresh `touched`, then `select-reviewers.sh <track> <type> <touched>` to get the `wave-a-reviewers` roster. The script already subtracts the inner-loop reviewers — they approved the final tree in `fast-review`, so the full wave runs only the reviewers that have not yet seen it. Dispatch exactly those reviewers. Suppress `review-ux-conformance` dispatch when the touched feature has no `ux-brief.md`. Each agent receives the issue number and reviews the working tree.
+2. **Wave B**: dispatch exactly the reviewer(s) named in `select-reviewers.sh`'s `wave-b-reviewers` output. Pass the combined Wave A findings **and** the inner-loop reviewers' approvals from `fast-review` (name them) as input — so the adversarial cross-check sees the complete reviewer picture, not only the reduced Wave A. (Roster authority is the script — the steps don't name specific reviewers.)
 
 If every reviewer says `APPROVE` and zero `[REQUIRED]` → step done, move forward.
 Else → aggregate `[REQUIRED]` findings, go back to `transform input to actions` step.

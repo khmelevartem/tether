@@ -62,7 +62,7 @@ assert_eq "c1 inner" \
   "$(inner_line "$OUT")"
 
 assert_eq "c1 wave-a" \
-  "wave-a-reviewers: review-dod review-guides review-glossary review-reuse review-architecture review-correctness review-tests" \
+  "wave-a-reviewers: review-dod review-glossary review-reuse review-tests" \
   "$(wave_a_line "$OUT")"
 
 # ── Case 2: code feature ui+code+platform ─────────────────────────────────────
@@ -74,7 +74,7 @@ assert_eq "c2 inner" \
   "$(inner_line "$OUT")"
 
 assert_eq "c2 wave-a" \
-  "wave-a-reviewers: review-dod review-guides review-glossary review-reuse review-architecture review-correctness review-tests review-platform review-ux-conformance review-design-system review-visual" \
+  "wave-a-reviewers: review-dod review-glossary review-reuse review-tests review-design-system review-visual" \
   "$(wave_a_line "$OUT")"
 
 # ── Case 3: code bugfix ───────────────────────────────────────────────────────
@@ -86,7 +86,7 @@ assert_eq "c3 inner" \
   "$(inner_line "$OUT")"
 
 assert_eq "c3 wave-a" \
-  "wave-a-reviewers: review-dod review-guides review-glossary review-reuse review-architecture review-correctness review-tests" \
+  "wave-a-reviewers: review-dod review-glossary review-reuse review-tests" \
   "$(wave_a_line "$OUT")"
 
 # ── Case 4: code refactor ─────────────────────────────────────────────────────
@@ -98,7 +98,7 @@ assert_eq "c4 inner" \
   "$(inner_line "$OUT")"
 
 assert_eq "c4 wave-a" \
-  "wave-a-reviewers: review-dod review-guides review-glossary review-reuse review-architecture review-tests" \
+  "wave-a-reviewers: review-dod review-glossary review-reuse review-tests" \
   "$(wave_a_line "$OUT")"
 
 # ── Case 5: code infra ───────────────────────────────────────────────────────
@@ -110,7 +110,7 @@ assert_eq "c5 inner" \
   "$(inner_line "$OUT")"
 
 assert_eq "c5 wave-a" \
-  "wave-a-reviewers: review-dod review-guides review-glossary review-reuse review-architecture review-correctness" \
+  "wave-a-reviewers: review-dod review-glossary review-reuse" \
   "$(wave_a_line "$OUT")"
 
 # ── Case 7: docs docs docs ───────────────────────────────────────────────────
@@ -121,8 +121,9 @@ OUT=$(run docs docs "docs")
 # (no engdoc), and never review-glossary (mechanical, deferred to the final wave).
 assert_eq "c7 inner" "inner-loop-reviewers: review-consistency" "$(inner_line "$OUT")"
 
+# Wave A excludes review-consistency — it ran (and approved) in the fast wave.
 assert_eq "c7 wave-a" \
-  "wave-a-reviewers: review-dod review-guides review-glossary review-reuse review-consistency" \
+  "wave-a-reviewers: review-dod review-guides review-glossary review-reuse" \
   "$(wave_a_line "$OUT")"
 
 # ── Case 8: docs docs docs+engdoc ────────────────────────────────────────────
@@ -141,7 +142,7 @@ else
 fi
 
 assert_eq "c8 wave-a" \
-  "wave-a-reviewers: review-dod review-guides review-glossary review-reuse review-consistency review-architecture" \
+  "wave-a-reviewers: review-dod review-guides review-glossary review-reuse" \
   "$(wave_a_line "$OUT")"
 
 # ── Case 9: docs feature ux-brief ────────────────────────────────────────────
@@ -152,7 +153,7 @@ OUT=$(run docs feature "ux-brief")
 assert_eq "c9 inner" "inner-loop-reviewers: review-consistency" "$(inner_line "$OUT")"
 
 assert_eq "c9 wave-a" \
-  "wave-a-reviewers: review-dod review-guides review-glossary review-reuse review-consistency review-ux-brief" \
+  "wave-a-reviewers: review-dod review-guides review-glossary review-reuse review-ux-brief" \
   "$(wave_a_line "$OUT")"
 
 # ── Case 9b: code feature touching docs gets review-consistency ──────────────
@@ -191,9 +192,20 @@ for touched in "" "ui,code,platform"; do
   for reviewer in review-correctness review-guides review-architecture; do
     assert_contains "always-inner $reviewer (touched=$touched)" "$reviewer" "$(inner_line "$OUT")"
   done
-  # Always in Wave A (broad final-gate roster).
-  for reviewer in review-dod review-guides review-glossary; do
+  # Always in Wave A (broad final-gate roster) — review-guides is NOT here, it is
+  # an inner-loop reviewer for the code track and so excluded from the full wave.
+  for reviewer in review-dod review-glossary; do
     assert_contains "always-wave-a $reviewer (touched=$touched)" "$reviewer" "$(wave_a_line "$OUT")"
+  done
+  # The core invariant: no inner-loop reviewer reappears in Wave A.
+  INNER_LIST=$(inner_line "$OUT" | sed 's/^inner-loop-reviewers: //')
+  for reviewer in $INNER_LIST; do
+    if echo "$(wave_a_line "$OUT")" | grep -qF "$reviewer"; then
+      FAIL=$((FAIL + 1))
+      echo "FAIL [wave-a excludes inner $reviewer (touched=$touched)] — unexpectedly present"
+    else
+      PASS=$((PASS + 1))
+    fi
   done
   assert_eq "wave-b review-adversarial (touched=$touched)" \
     "wave-b-reviewers: review-adversarial" "$(wave_b_line "$OUT")"
@@ -201,9 +213,21 @@ done
 
 # ── Wave B present on docs track ─────────────────────────────────────────────
 
-OUT=$(run docs docs "docs")
+OUT=$(run docs docs "docs,engdoc")
 assert_eq "docs wave-b review-adversarial" \
   "wave-b-reviewers: review-adversarial" "$(wave_b_line "$OUT")"
+
+# Disjointness holds on the docs track too (engdoc pulls both consistency and
+# architecture into the inner loop — neither may reappear in Wave A).
+INNER_LIST=$(inner_line "$OUT" | sed 's/^inner-loop-reviewers: //')
+for reviewer in $INNER_LIST; do
+  if echo "$(wave_a_line "$OUT")" | grep -qF "$reviewer"; then
+    FAIL=$((FAIL + 1))
+    echo "FAIL [docs wave-a excludes inner $reviewer] — unexpectedly present"
+  else
+    PASS=$((PASS + 1))
+  fi
+done
 
 # ── Summary ───────────────────────────────────────────────────────────────────
 

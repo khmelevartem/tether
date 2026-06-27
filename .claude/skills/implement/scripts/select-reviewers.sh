@@ -10,7 +10,9 @@
 #
 # Output (stdout):
 #   inner-loop-reviewers: <space-separated> (narrow fast-wave roster per track)
-#   wave-a-reviewers: <space-separated>
+#   wave-a-reviewers: <space-separated> (broad final gate, minus the inner-loop
+#                     reviewers — they already approved the final tree in the fast
+#                     wave, so re-running them is duplication)
 #   wave-b-reviewers: review-adversarial
 
 set -euo pipefail
@@ -133,5 +135,17 @@ else
   fi
 fi
 
-echo "wave-a-reviewers: $WAVE_A"
+# Subtract the inner-loop roster: those reviewers already approved the final tree
+# during the fast wave, so the full wave runs only the reviewers that have not yet
+# seen it. (review-adversarial, Wave B, still receives the inner-loop approvals as
+# context so its cross-check sees the complete reviewer picture.)
+WAVE_A_FINAL=""
+for r in $WAVE_A; do
+  case " $INNER_REVIEWERS " in
+    *" $r "*) ;;
+    *) WAVE_A_FINAL="${WAVE_A_FINAL:+$WAVE_A_FINAL }$r" ;;
+  esac
+done
+
+echo "wave-a-reviewers: $WAVE_A_FINAL"
 echo "wave-b-reviewers: review-adversarial"
