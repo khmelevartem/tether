@@ -36,3 +36,20 @@ subprojects {
         }
     }
 }
+
+// Shell tests for the `.claude` skills (reviewer rosters, steps.md walk invariants).
+val skillTests by tasks.registering(Exec::class) {
+    group = "verification"
+    description = "Run every .claude/skills/**/*.test.sh shell test."
+    workingDir = rootDir
+    commandLine("bash", ".claude/scripts/run-skill-tests.sh")
+}
+
+tasks.register("allTests") {
+    group = "verification"
+    description = "Run every project test."
+    dependsOn(skillTests)
+    subprojects {
+        dependsOn(tasks.matching { it.name == "allTests" })
+    }
+}

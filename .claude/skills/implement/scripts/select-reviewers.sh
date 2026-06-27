@@ -9,7 +9,7 @@
 #   touched: comma-separated subset of {ui,code,platform,docs,engdoc,claude,ux-brief} (empty ok)
 #
 # Output (stdout):
-#   inner-loop-reviewers: <space-separated> (empty when track=docs)
+#   inner-loop-reviewers: <space-separated> (narrow fast-wave roster per track)
 #   wave-a-reviewers: <space-separated>
 #   wave-b-reviewers: review-adversarial
 
@@ -47,15 +47,14 @@ has_doc_artifact() {
   has_touched "docs" || has_touched "engdoc" || has_touched "ux-brief" || has_touched "claude"
 }
 
-# ── Inner-loop reviewer roster (code track only) ────────────────────────────
+# ── Inner-loop reviewer roster ──────────────────────────────────────────────
+# Narrow on purpose: only reviewers whose miss cost compounds — across iterations
+# (code) or down the dependent-layer DAG (docs). Wave A is the broad final gate.
 
 INNER_REVIEWERS=""
+add_inner() { INNER_REVIEWERS="${INNER_REVIEWERS:+$INNER_REVIEWERS }$1"; }
 
 if [ "$TRACK" = "code" ]; then
-  add_inner() { INNER_REVIEWERS="${INNER_REVIEWERS:+$INNER_REVIEWERS }$1"; }
-
-  # Inner-loop is narrow on purpose: only reviewers whose miss cost compounds
-  # across iterations belong here. Wave A is the broad final-gate roster.
   if ! is_refactor; then
     add_inner "review-correctness"
   fi
@@ -71,6 +70,16 @@ if [ "$TRACK" = "code" ]; then
     # orchestrator resolves this at dispatch time — we include it here when ui
     # is touched; the orchestrator suppresses dispatch when no brief exists.
     add_inner "review-ux-conformance"
+  fi
+else
+  # docs track — foundation gate before dependent layers are written on top.
+  # consistency (cross-refs / scope) and architecture (engdoc / ADR) compound
+  # down the layer DAG; glossary fixes are mechanical and left to the final wave.
+  if has_doc_artifact; then
+    add_inner "review-consistency"
+  fi
+  if has_touched "engdoc"; then
+    add_inner "review-architecture"
   fi
 fi
 
