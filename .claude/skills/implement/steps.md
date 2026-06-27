@@ -22,7 +22,28 @@ git worktree add .claude/worktrees/<N>-<short-slug> -b <N>-<short-slug> origin/m
 This is a one-shot setup, not part of the walk.
 
 ---
-## Step 0 — read-all
+## Step 0 — classify the state
+
+**Applies to:** every run.
+
+Run `classify-state.sh [<N>]` and read its key=value output — the volatile state (`issue`, `reentry`, `pr`, `drift`, `touched`). With no argument it resolves which issue you are on from the current branch / open PR. Re-run it whenever current state matters.
+
+---
+## Step 1 — halt-unresolved
+
+**Applies to:** `reentry=unknown`.
+
+`classify-state.sh` resolved no issue from the arg, the branch, or an open PR — it exits non-zero with `status=blocked`. STOP immediately and tell the user to run `/implement <N>` or check out the issue branch. Do not continue the walk. This step sits ahead of every every-run step so the walk cannot fall through to them with empty context.
+
+---
+## Step 2 — sync-main
+
+**Applies to:** `drift=behind`.
+
+Run `/pull-main` to merge fresh main, then go back to `classify the state` step.
+
+---
+## Step 3 — read-all
 
 **Applies to:** `reentry=fresh`.
 
@@ -30,7 +51,7 @@ Read the issue in full — title, body, and **every** comment via `gh issue view
 
 ---
 
-## Step 1 — classify the task
+## Step 4 — classify the task
 
 **Applies to:** `reentry=fresh`
 
@@ -52,27 +73,6 @@ Then decide the one judgment neither script can resolve mechanically:
 `track` is the one judgment the scripts cannot resolve. After deciding it, announce the resolved profile — `track=<…> type=<…>` — so every later `**Applies to:**` match reads against an on-screen value, not a re-derived one. 
 
 Pin the `type` and the `track` you discovered to your session memory - they are stable throughout the whole workflow and will be needed for almost every other step tag.
-
----
-## Step 2 — classify the state
-
-**Applies to:** every run.
-
-Run `classify-state.sh [<N>]` and read its key=value output — the volatile state (`issue`, `reentry`, `pr`, `drift`, `touched`). With no argument it resolves which issue you are on from the current branch / open PR. Re-run it whenever current state matters.
-
----
-## Step 3 — halt-unresolved
-
-**Applies to:** `reentry=unknown`.
-
-`classify-state.sh` resolved no issue from the arg, the branch, or an open PR — it exits non-zero with `status=blocked`. STOP immediately and tell the user to run `/implement <N>` or check out the issue branch. Do not continue the walk. This step sits ahead of every every-run step so the walk cannot fall through to them with empty context.
-
----
-## Step 4 — sync-main
-
-**Applies to:** `drift=behind`.
-
-Run `/pull-main` to merge fresh main, then go back to `classify the state` step.
 
 ---
 ## Step 5 — recon

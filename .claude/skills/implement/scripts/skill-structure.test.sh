@@ -72,15 +72,16 @@ UNKNOWN_STEP=$(awk '
 
 assert_eq "halt-unresolved is the sole reentry=unknown gate" "halt-unresolved" "$UNKNOWN_STEP"
 
-# Order is load-bearing: a behind re-entry must hit sync-main before any other
-# step. A name-only check passes a regression that reorders them, so pin
-# position — sync-main is Step 4 (after read-all + classify-task + classify-state
-# + halt-unresolved), ahead of reentry-reconcile and every work step.
+# Order is load-bearing: state resolution must lead the walk so every
+# reentry/drift-gated step reads an already-emitted value, and a behind re-entry
+# must hit sync-main before any work step. Pin position — classify-state is Step 0,
+# then halt-unresolved (1), then sync-main (2), all ahead of read-all and every
+# reentry=fresh step.
 
 SYNC_N=$(awk '/^## Step [0-9]+ — sync-main$/{print $3}' "$STEPS_MD")
 RECONCILE_N=$(awk '/^## Step [0-9]+ — reentry-reconcile$/{print $3}' "$STEPS_MD")
 
-assert_eq "sync-main is Step 4 (after read-all + classify-task + classify-state + halt-unresolved)" "4" "$SYNC_N"
+assert_eq "sync-main is Step 2 (after classify-state + halt-unresolved)" "2" "$SYNC_N"
 
 if [ -n "$SYNC_N" ] && [ -n "$RECONCILE_N" ] && [ "$SYNC_N" -lt "$RECONCILE_N" ]; then
   PASS=$((PASS + 1))
@@ -99,6 +100,23 @@ if [ -n "$HALT_N" ] && [ -n "$TRANSFORM_N" ] && [ "$HALT_N" -lt "$TRANSFORM_N" ]
 else
   FAIL=$((FAIL + 1))
   echo "FAIL [halt-unresolved precedes transform input to actions] — halt=$HALT_N transform=$TRANSFORM_N"
+fi
+
+# A reentry/drift gate is only evaluable from an on-screen value if the step that
+# emits that state ran first. classify-state.sh (the producer) must therefore
+# precede every reentry/drift-gated step — else those gates fall back to the
+# orchestrator's memory, the exact drift #500 eliminates.
+STATE_N=$(awk '/^## Step [0-9]+ — classify the state$/{print $3}' "$STEPS_MD")
+MIN_GATE_N=$(awk '
+  /^## Step [0-9]+[a-z]? — /{ n=$3+0 }
+  /^\*\*Applies to:\*\*.*(reentry|drift)=/{ print n }
+' "$STEPS_MD" | sort -n | head -1)
+
+if [ -n "$STATE_N" ] && [ -n "$MIN_GATE_N" ] && [ "$STATE_N" -lt "$MIN_GATE_N" ]; then
+  PASS=$((PASS + 1))
+else
+  FAIL=$((FAIL + 1))
+  echo "FAIL [classify-state precedes every reentry/drift gate] — state=$STATE_N first-gate=$MIN_GATE_N"
 fi
 
 # File order IS the sequencing authority, so the `## Step N` numbers must strictly
