@@ -83,3 +83,14 @@ If a proper name unavoidably must appear (the artifact is specifically *about* i
 When prose describes the behaviour of an external tool, 3rd-party API, library, platform SDK, or specification — link to the authoritative doc next to the claim. Do not write from memory. External tools change; memory drifts; an unverified claim becomes permanently wrong and propagates through every artifact that references it.
 
 If the authoritative doc does not cover what you need — say so explicitly rather than presenting a project-invented rule as the tool's behaviour.
+
+## Numbering reflects structure, not insertion order
+
+A numbered sequence — ordered steps, an enumerated procedure — keeps its numbers contiguous and positional. When an item is inserted or removed in the middle, renumber the whole tail; do not graft the new item on with a fractional or letter suffix (`3` → `3.5`, `4` → `4a`) to dodge touching later numbers. Such a graft freezes the insertion into the numbering and reads as structure where there is none.
+
+A suffix or sub-number is valid only when it expresses real structure, never as an insertion shortcut:
+
+- **sub-items** of one entry — `2.1`, `2.2`, `2.3`;
+- **parallel siblings** at one position — mutually-exclusive variants chosen at the same point, `1a`, `1b`.
+
+Touching a number mid-list is a full renumber. Accept the wider diff.

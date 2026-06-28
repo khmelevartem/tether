@@ -36,14 +36,14 @@ A non-zero exit means blocked state — read the emitted keys anyway and continu
 Run `/pull-main` to merge fresh main, then go back to `classify the state` step.
 
 ---
-## Step 2a — ensure-branch
+## Step 3 — ensure-branch
 
 **Applies to:** `reentry=fresh`.
 
 Run `.claude/skills/implement/scripts/ensure-branch.sh <N>` to give the branch the issue number (`<N>-<title-slug>`), so `git worktree list` and `classify-state.sh` map the checkout to its issue.
 
 ---
-## Step 3 — read-all
+## Step 4 — read-all
 
 **Applies to:** `reentry=fresh`.
 
@@ -51,7 +51,7 @@ Read the issue in full — title, body, and **every** comment via `gh issue view
 
 ---
 
-## Step 4 — classify the task
+## Step 5 — classify the task
 
 **Applies to:** `reentry=fresh`
 
@@ -81,7 +81,7 @@ printf 'track=%s\ntype=%s\n' "<track>" "<type>" > "$(git rev-parse --git-dir)/im
 The label is read once, here. Re-classifying mid-PR (a label change) requires deleting `$(git rev-parse --git-dir)/implement-profile` so the next fresh walk recomputes — `classify-state` only re-surfaces the cached values, it never re-derives them.
 
 ---
-## Step 5 — recon
+## Step 6 — recon
 
 **Applies to:** `reentry=fresh`.
 
@@ -91,7 +91,7 @@ Dispatch one read-only recon agent (`Explore`) to sweep the doc corpus and retur
 
 ---
 
-## Step 6 — early-gates
+## Step 7 — early-gates
 
 **Applies to:** `reentry=fresh`.
 
@@ -110,7 +110,7 @@ Announce the flags raised, or "none".
 
 ---
 
-## Step 7 — bugfix-root-cause
+## Step 8 — bugfix-root-cause
 
 **Applies to:** `track=code AND type=bugfix AND reentry=fresh`.
 
@@ -122,7 +122,7 @@ Otherwise post the confirmed cause as a comment on issue #\<N\> via `gh issue co
 
 ---
 
-## Step 8 — fix-level
+## Step 9 — fix-level
 
 **Applies to:** `track=code AND reentry=fresh`.
 
@@ -131,7 +131,7 @@ When the root cause describes a class of bugs, or parallel implementations conta
 
 ---
 
-## Step 9 — layer-classify
+## Step 10 — layer-classify
 
 **Applies to:** `track=docs AND reentry=fresh`.
 
@@ -153,7 +153,7 @@ Multiple layers per issue are normal. Classification ambiguity → SKILL.md §Fr
 Result of this step: an ordered list of layers to produce, with target path and writer for each. No artifacts created yet.
 
 ---
-## Step 10 — briefing
+## Step 11 — briefing
 
 **Applies to:** `reentry=fresh`.
 
@@ -161,7 +161,7 @@ Post a short 3–6 line briefing to the user: what we are doing, why (motivation
 
 ---
 
-## Step 11 — plan
+## Step 12 — plan
 
 **Applies to:** `reentry=fresh`.
 
@@ -172,7 +172,7 @@ Use the built-in `Plan` agent (or `general-purpose` if unavailable) to produce a
 When the task forks into more than one viable implementation, converge on the most suitable one and state your decisions alongside the rejected alternatives to the user.
 
 ---
-## Step 12 — user-interview
+## Step 13 — user-interview
 
 **Applies to:** `reentry=fresh`
 
@@ -184,7 +184,7 @@ When all the critical questions are answered and the intention gaps are fulfille
 
 ---
 
-## Step 13 — reentry-reconcile
+## Step 14 — reentry-reconcile
 
 **Applies to:** `reentry=pr-feedback`.
 
@@ -204,7 +204,7 @@ Classify every comment worth fixing: is it **pointwise or structural**.
 
 ---
 
-## Step 14 — transform input to actions
+## Step 15 — transform input to actions
 
 **Applies to:** every run
 
@@ -228,7 +228,7 @@ Use the produced action list to form prompts for sub-agents in the next step.
 
 ---
 
-## Step 15a — code-dispatch
+## Step 16a — code-dispatch
 
 **Applies to:** `track=code`
 
@@ -240,7 +240,7 @@ Dispatch every corresponding writing agent with a proper prompt:
 
 ---
 
-## Step 15b — docs-dispatch
+## Step 16b — docs-dispatch
 
 **Applies to:** `track=docs`
 
@@ -259,7 +259,7 @@ Order matters — lower layers depend on upper ones for vocabulary and scope.
 **Prose discipline carry-forward.** Every dispatch brief must instruct the sub-agent to load and every direct edit must follow the principles of  [`docs/engineering/long-lived-artifacts.md`](../../../docs/engineering/long-lived-artifacts.md) before writing and apply it to every paragraph.
 
 ---
-## Step 16 — commit
+## Step 17 — commit
 
 **Applies to:** every run.
 
@@ -267,7 +267,7 @@ Order matters — lower layers depend on upper ones for vocabulary and scope.
 
 ---
 
-## Step 17 — runtime-evidence
+## Step 18 — runtime-evidence
 
 **Applies to:** `track=code`.
 
@@ -281,7 +281,7 @@ If it passes successfully → move forward.
 If it fails → go back to `transform input to actions` step with a clear problem description, logs if any and a reason, if it is obvious from the observed behaviour or logs.
 
 ---
-## Step 18 — fast-review
+## Step 19 — fast-review
 
 **Applies to:** every run.
 
@@ -295,7 +295,7 @@ If every reviewer says `APPROVE` and zero `[REQUIRED]` → step done, reset the 
 Else → aggregate `[REQUIRED]` findings, go back to `transform input to actions` step.
 
 ---
-## Step 19 — simplify
+## Step 20 — simplify
 
 **Applies to:** `track=code`.
 
@@ -305,7 +305,7 @@ Which entry into `simplify` is this (counter held in session memory)?
 - **2nd entry** — the diff was already simplified and re-reviewed on the 1st pass. Reset the counter, skip the pass, move forward.
 
 ---
-## Step 20 — check working tree
+## Step 21 — check working tree
 
 **Applies to:** every run.
 
@@ -313,7 +313,7 @@ Which entry into `simplify` is this (counter held in session memory)?
 
 ---
 
-## Step 21 — full-review
+## Step 22 — full-review
 
 **Applies to:** every run.
 
@@ -325,7 +325,7 @@ Else → aggregate `[REQUIRED]` findings, go back to `transform input to actions
 
 ---
 
-## Step 22 — smoke
+## Step 23 — smoke
 
 **Applies to:** `track=code`.
 
@@ -344,7 +344,7 @@ Record a 🟢/🟡/🔴 verdict naming the smoke blocks executed. A bare pass/fa
 
 ---
 
-## Step 23 — enforcement-probe
+## Step 24 — enforcement-probe
 
 **Applies to:** `type=infra`.
 
@@ -361,7 +361,7 @@ Record a 🟢/🟡/🔴 verdict naming the enforcement-probe path. Any 🟡/🔴
 
 ---
 
-## Step 24 — push
+## Step 25 — push
 
 **Applies to:** every run.
 
@@ -373,7 +373,7 @@ No force-push. Do not block on explicit OK before push — green runtime checks 
 
 ---
 
-## Step 25 — open-pr
+## Step 26 — open-pr
 
 **Applies to:** `reentry=fresh`.
 
@@ -389,7 +389,7 @@ gh pr create --title "<title>" --body-file /tmp/pr-<N>-body.md
 
 ---
 
-## Step 26 — reply-threads
+## Step 27 — reply-threads
 
 **Applies to:** `reentry=pr-feedback`.
 
@@ -400,7 +400,7 @@ After the push, acknowledge **every** addressed comment — what was done + the 
 
 ---
 
-## Step 27 — final-summary
+## Step 28 — final-summary
 
 **Applies to:** every run.
 
