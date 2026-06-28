@@ -303,10 +303,8 @@ Else → aggregate `[REQUIRED]` findings, go back to `transform input to actions
 
 Which entry into `simplify` is this (counter held in session memory)?
 
-- **1st entry** — run the simplification pass below. If it edited anything, commit it and go back to `fast-review`: simplification changes the diff after the inner-loop reviewers last approved it, so they must re-check it. If it edited nothing, move forward.
+- **1st entry** — run the simplification pass. Dispatch the implementing agent once with the prompt in [`prompts/simplify-pass.md`](prompts/simplify-pass.md). If it edited anything, commit it and go back to `fast-review`: simplification changes the diff after the inner-loop reviewers last approved it, so they must re-check it. If it edited nothing, move forward.
 - **2nd entry** — the diff was already simplified and re-reviewed on the 1st pass. Reset the counter, skip the pass, move forward.
-
-Simplification pass — dispatch the implementing agent once with the prompt in [`prompts/simplify-pass.md`](prompts/simplify-pass.md).
 
 ---
 ## Step 20 — check working tree
