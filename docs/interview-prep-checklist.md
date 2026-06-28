@@ -14,7 +14,7 @@
 ### Классы и объекты
 - [ ] `data class` — что генерирует компилятор: `equals`, `hashCode`, `toString`, `copy`, `componentN`
 - [ ] `copy` — поверхностная копия, что с этим делать
-- [ ] `value class` (`@JvmInline`) — боксинг/анбоксинг, когда vs `data class`
+- [x] `value class` (`@JvmInline`) — боксинг/анбоксинг, когда vs `data class`
 - [x] `data object` (Kotlin 1.9+) — чем отличается от `object` и `data class`
 - [x] `sealed class` vs `sealed interface` — когда что, exhaustive `when`
 - [ ] `object` — singleton, companion object, thread-safety, порядок инициализации

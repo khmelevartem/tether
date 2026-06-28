@@ -1,8 +1,22 @@
 #!/usr/bin/env bash
-# Emits mechanical profile facts for /implement.
-# Output: key=value lines to stdout (no files written).
-# Usage: classify.sh [<issue-number>]
+# Emits the per-run state for /implement: the VOLATILE facts (issue, reentry, pr,
+# drift, touched) plus the persisted STABLE profile (track, type) re-surfaced from
+# the git dir. Re-run every pass (walk start, and after each commit to refresh
+# `touched`).
+# Output: key=value lines to stdout (writes no files; only reads the profile).
+# Usage: classify-state.sh [<issue-number>]
+# Emits: issue, reentry, pr, drift, touched [, status] [, track, type]
 # touched values: ui, code, platform, docs, engdoc, claude, ux-brief
+#
+# Non-zero exit signals blocked state, and the two are NOT the same:
+#   exit 2 — terminal: no issue resolves; the walk stops (halt-unresolved step).
+#   exit 3 — recoverable: branch is behind main; the walk syncs and retries
+#            (sync-main step). Callers distinguish by the emitted key
+#            (reentry=unknown vs drift=behind), not by the exit code alone.
+#
+# track+type are the STABLE axes: classify-task.sh computes them once per issue
+# and the fresh walk persists them to the profile; this script only re-surfaces
+# the persisted values so they outlive the session that computed them.
 
 set -euo pipefail
 
@@ -49,17 +63,20 @@ else
 fi
 
 if [ -z "$ISSUE" ]; then
+  # No issue resolves from the arg, the branch, or an open PR — there is nothing
+  # to walk. Withhold the rest of the state and exit non-zero so the walk halts
+  # here mechanically rather than falling through to the every-run steps with
+  # empty context (the SKILL.md "STOP if neither resolves an issue" rule, enforced
+  # by the exit code instead of reading discipline).
   echo "issue=unknown"
   echo "reentry=unknown"
-  echo "pr=-"
-  echo "drift=unknown"
-  echo "type=unknown"
-  echo "touched="
-  exit 0
+  echo "status=blocked"
+  echo "classify-state.sh: no issue resolved from the branch or an open PR — run /implement <N> or check out the issue branch, then re-run." >&2
+  exit 2
 fi
 
 if [ $# -ge 1 ] && [ -n "$1" ] && ! echo "$1" | grep -qE '^[0-9]+$'; then
-  echo "classify.sh: issue number must be numeric, got: $1" >&2
+  echo "classify-state.sh: issue number must be numeric, got: $1" >&2
   exit 1
 fi
 
@@ -87,40 +104,21 @@ if [ "$PR_NUMBER" = "-" ]; then
   echo "pr=-"
   echo "drift=na"
 else
+  git fetch origin main --quiet 2>/dev/null || true
+  if ! git merge-base --is-ancestor origin/main HEAD 2>/dev/null; then
+    # Behind main: withhold the rest of the state (reentry/pr/touched) and exit
+    # non-zero. Only drift=behind + status=blocked are emitted, so no reentry/track
+    # step matches — sync-main (Applies to: drift=behind) is the sole legal next
+    # step, and it loops back here after /pull-main.
+    echo "drift=behind"
+    echo "status=blocked"
+    echo "classify-state.sh: branch is behind origin/main — run /pull-main, then re-run classify-state.sh before proceeding." >&2
+    exit 3
+  fi
   echo "reentry=pr-feedback"
   echo "pr=$PR_NUMBER"
-  git fetch origin main --quiet 2>/dev/null || true
-  if git merge-base --is-ancestor origin/main HEAD 2>/dev/null; then
-    echo "drift=up-to-date"
-  else
-    echo "drift=behind"
-  fi
+  echo "drift=up-to-date"
 fi
-
-# ── Resolve type from labels ──────────────────────────────────────────────────
-
-LABELS_JSON=$(gh issue view "$ISSUE" --json labels 2>/dev/null || echo '{"labels":[]}')
-TYPE=$(echo "$LABELS_JSON" | python3 -c "
-import json, sys
-aliases = {
-  'enhancement': 'feature',
-  'bug': 'bugfix',
-  'documentation': 'docs',
-}
-types = {'feature','bugfix','refactor','infra','docs','dependency'}
-data = json.loads(sys.stdin.read())
-names = [l['name'] for l in data.get('labels', [])]
-for n in names:
-  if n in types:
-    print(n)
-    sys.exit(0)
-  if n in aliases:
-    print(aliases[n])
-    sys.exit(0)
-print('none')
-" 2>/dev/null || echo "unknown")
-
-echo "type=$TYPE"
 
 # ── Resolve touched set ───────────────────────────────────────────────────────
 # Emit diff only when this worktree owns ISSUE (or worktree issue is unknown,
@@ -171,3 +169,13 @@ print(','.join(sorted(result)))
 " 2>/dev/null || true)
 
 echo "touched=$TOUCHED"
+
+# ── Surface the persisted profile (track, type) ──────────────────────────────
+# classify-task computes track+type once on a fresh walk and persists them to the
+# per-worktree git dir (survives re-entry, never appears in `git status`). Re-emit
+# them here so every walk — including a pr-feedback re-entry that skips the
+# fresh-only classify-task step — reads them mechanically instead of from memory.
+PROFILE="$(git rev-parse --git-dir 2>/dev/null)/implement-profile"
+if [ -f "$PROFILE" ]; then
+  cat "$PROFILE"
+fi

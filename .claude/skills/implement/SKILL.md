@@ -14,17 +14,27 @@ You are the orchestrator for a single GitHub issue. You do NOT write code, desig
 Issue number `<N>` — optional.
 
 - **`<N>` provided** — may start fresh work or re-enter an existing PR.
-- **`<N>` omitted** — re-entry only; the issue is resolved from the current branch / open PR by `classify.sh`. If neither resolves an issue → STOP immediately.
+- **`<N>` omitted** — re-entry only; the issue is resolved from the current branch / open PR by `classify-state.sh`. If neither resolves an issue, the walk stops at the `halt-unresolved` step.
 
 ## How the skill runs
 
-The pipeline is data-driven. On every invocation the orchestrator regenerates a manifest of ordered step IDs and reviewer rosters from the current profile, then walks `steps.md` in that order. Step 0 — `classify` — produces the profile; everything after follows the manifest. Fresh work and post-review re-entry produce different active-step sets because `reentry` is part of the profile.
+The **algorithm** — the ordered steps and how to walk them — lives in `steps.md`; this file holds the **run principles**. Walk `steps.md` top to bottom — never assemble the step list from your own model. Its preamble governs how each step is gated, run, and announced; follow it. At every review step, take the reviewer roster from `select-reviewers.sh`, never your own pick.
 
-**Step/roster split.** Reviewer selection is always the script's output, never the model's. Timing and mechanics — see `steps.md` `classify` §Step/roster split.
+Every actionable value the classify scripts emit is consumed mechanically, never by your reading discipline.
+
+## Token discipline
+
+Hold only the plan, per-iteration finding summaries, and gate decisions. Do not Read doc or source files into the orchestrator thread to understand them — route through a sub-agent that returns a digest. Read a file verbatim only when a gate decision needs the exact text.
+
+## Issue scope is a starting point, not a cage.
+
+What matters is the intention and the benefit the issue can bring, note its verbatim scope boundaries. If the issue has a prebaked reason or solution - it's just a proposal, not a directive. You must come with your own reasoning, design or justification throughout the whole workflow - not directly you as an agent, but with dispatching of proper subagents.
+
+If touching adjacent classes or neighbouring platforms is needed for a quality solution — expand scope in this PR. Whether to fold a finding or defer it → [`docs/engineering/scope-discipline.md`](../../../docs/engineering/scope-discipline.md).
 
 ## Re-entry contract
 
-The skill is idempotent per issue. `classify.sh` detects PR state and emits `reentry=fresh` or `reentry=pr-feedback`; `select-pipeline.sh` selects the re-entry step set accordingly. Full reconciliation mechanics — drift gate, reading every PR comment, "counted is not read", by-agent attribution routing, and the reply-after-push rule — live in `reentry-reconcile`. The re-entry commit rule (commit into existing branch, no force-push, no new PR) lives in `commit-pr`.
+The skill is idempotent per issue: `classify-state.sh` detects PR state (`reentry=fresh` / `pr-feedback`) and the `**Applies to:**` tags gate the rest. `track` and `type` are computed once on the fresh walk and persisted to the worktree git dir, so a re-entry reads them back through `classify-state.sh` rather than recomputing or relying on session memory.
 
 ## No-deflection principle
 
@@ -46,7 +56,7 @@ You MUST stop and ask the user:
 - **Cause-vs-issue divergence** — confirmed cause materially diverges from issue body (different mechanism / scope / symptom / severity). Ask: close #N as misdiagnosis and open a new issue, or post a clarifying comment to the issue. Do not silently edit the issue body.
 - **Plan conflicts with engineering guides** — surfaced by the `Plan` agent or by recon's living-doc digest, with no clean resolution.
 - **Forced-cascade scope expansion** — a change is technically forced but violates an explicit entry in the issue's **Out of scope** section. Ask: fold, split, or re-frame.
-- **Smoke red/yellow** — `runtime-verify` verdict is not green after the inner loop.
+- **Smoke red/yellow** — the `smoke` or `enforcement-probe` verdict is not green after the inner loop.
 - **Sub-agent open question** — a sub-agent returns a question it cannot converge on. Relay verbatim, collect answers, re-dispatch the same agent. Routing a contradiction to the owning sub-agent (`spec-writer` / `architect` / `ux-expert`) is automatic — stop at the user only when the sub-agent itself surfaces an unresolvable question.
 
 Everything else — implementation details, reviewer findings, fix iterations — you handle internally.
@@ -54,5 +64,4 @@ Everything else — implementation details, reviewer findings, fix iterations �
 ## Notes
 
 - This skill is for one issue at a time. Multiple parallel issues = multiple invocations on separate worktrees.
-- Worktree cleanup: `.claude/scripts/cleanup-worktrees.sh` runs on `Stop` hook and removes worktrees whose remote branch is gone and whose PR is merged — it iterates all worktrees by structure, not by naming pattern.
-- Token discipline: hold only the plan, per-iteration finding summaries, and gate decisions. Do not Read doc or source files into the orchestrator thread to understand them — route through a sub-agent that returns a digest. Read a file verbatim only when a gate decision needs the exact text. If context exceeds 50% of the window, pause and summarise before continuing.
+- Worktree cleanup: `.claude/scripts/cleanup-worktrees.sh` runs on `Stop` hook and removes worktrees whose remote branch is gone and whose PR is merged.

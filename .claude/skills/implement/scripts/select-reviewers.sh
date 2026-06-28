@@ -1,28 +1,32 @@
 #!/usr/bin/env bash
-# Emits the manifest: ordered active step IDs + reviewer rosters.
-# The model passes the two judgment fields classify.sh cannot resolve.
+# Emits the reviewer rosters for a run, computed from the live committed diff.
+# Called at each review step (inner-loop, full-review); the model never
+# self-selects reviewers.
 #
-# Usage: select-pipeline.sh <track> <type> <reentry> <touched>
+# Usage: select-reviewers.sh <track> <type> <touched>
 #   track:   docs | code
 #   type:    feature | bugfix | refactor | infra | docs | dependency | none | unknown
-#   reentry: fresh | pr-feedback | unknown
 #   touched: comma-separated subset of {ui,code,platform,docs,engdoc,claude,ux-brief} (empty ok)
 #
 # Output (stdout):
-#   steps: <space-separated ordered step ids>
-#   inner-loop-reviewers: <space-separated> (empty when track=docs)
-#   wave-a-reviewers: <space-separated>
+#   inner-loop-reviewers: <space-separated> (narrow fast-wave roster per track)
+#   wave-a-reviewers: <space-separated> (broad final gate, minus the inner-loop
+#                     reviewers — they already approved the final tree in the fast
+#                     wave, so re-running them is duplication)
 #   wave-b-reviewers: review-adversarial
 
 set -euo pipefail
 
 TRACK="${1:-}"
 TYPE="${2:-unknown}"
-REENTRY="${3:-fresh}"
-TOUCHED="${4:-}"
+TOUCHED="${3:-}"
 
 if [ -z "$TRACK" ]; then
   echo "error: track argument required (docs|code)" >&2
+  exit 1
+fi
+if [ "$TRACK" != "code" ] && [ "$TRACK" != "docs" ]; then
+  echo "error: unknown track '$TRACK'; expected docs or code" >&2
   exit 1
 fi
 
@@ -38,43 +42,26 @@ is_refactor() {
   return 1
 }
 
-# ── Step selection ───────────────────────────────────────────────────────────
+# Documentation artifacts under review — `review-consistency` covers these
+# whatever the track, so a code change that also edits docs still gets the
+# cross-cutting consistency pass.
+has_doc_artifact() {
+  has_touched "docs" || has_touched "engdoc" || has_touched "ux-brief" || has_touched "claude"
+}
 
-if [ "$TRACK" = "code" ]; then
-  if [ "$REENTRY" = "pr-feedback" ]; then
-    STEPS="classify reentry-reconcile recon inner-loop simplify full-review runtime-verify commit-pr final-summary"
-  elif [ "$TYPE" = "bugfix" ]; then
-    STEPS="classify recon early-gates bugfix-root-cause plan inner-loop simplify full-review runtime-verify commit-pr final-summary"
-  else
-    STEPS="classify recon early-gates plan inner-loop simplify full-review runtime-verify commit-pr final-summary"
-  fi
-elif [ "$TRACK" = "docs" ]; then
-  if [ "$REENTRY" = "pr-feedback" ]; then
-    STEPS="classify reentry-reconcile consistency full-review commit-pr final-summary"
-  else
-    STEPS="classify recon layer-classify docs-dispatch consistency full-review commit-pr final-summary"
-  fi
-else
-  echo "error: unknown track '$TRACK'; expected docs or code" >&2
-  exit 1
-fi
-
-echo "steps: $STEPS"
-
-# ── Inner-loop reviewer roster (code track only) ────────────────────────────
+# ── Inner-loop reviewer roster ──────────────────────────────────────────────
+# Narrow on purpose: only reviewers whose miss cost compounds — across iterations
+# (code) or down the dependent-layer DAG (docs). Wave A is the broad final gate.
 
 INNER_REVIEWERS=""
+add_inner() { INNER_REVIEWERS="${INNER_REVIEWERS:+$INNER_REVIEWERS }$1"; }
 
 if [ "$TRACK" = "code" ]; then
-  add_inner() { INNER_REVIEWERS="${INNER_REVIEWERS:+$INNER_REVIEWERS }$1"; }
-
-  # Inner-loop is narrow on purpose: only reviewers whose miss cost compounds
-  # across iterations belong here. Wave A is the broad final-gate roster.
   if ! is_refactor; then
     add_inner "review-correctness"
   fi
-  # review-architecture runs for all code-track work; over-inclusion is safe
-  # because a reviewer with nothing to flag returns APPROVE.
+  # review-architecture runs unconditionally for code-track work; over-inclusion
+  # is harmless, so no per-change threshold is applied.
   add_inner "review-architecture"
   add_inner "review-guides"
   if has_touched "platform"; then
@@ -85,6 +72,16 @@ if [ "$TRACK" = "code" ]; then
     # orchestrator resolves this at dispatch time — we include it here when ui
     # is touched; the orchestrator suppresses dispatch when no brief exists.
     add_inner "review-ux-conformance"
+  fi
+else
+  # docs track — foundation gate before dependent layers are written on top.
+  # consistency (cross-refs / scope) and architecture (engdoc / ADR) compound
+  # down the layer DAG; glossary fixes are mechanical and left to the final wave.
+  if has_doc_artifact; then
+    add_inner "review-consistency"
+  fi
+  if has_touched "engdoc"; then
+    add_inner "review-architecture"
   fi
 fi
 
@@ -100,6 +97,9 @@ if [ "$TRACK" = "code" ]; then
   add_a "review-guides"
   add_a "review-glossary"
   add_a "review-reuse"
+  if has_doc_artifact; then
+    add_a "review-consistency"
+  fi
   add_a "review-architecture"
   if [ "$TYPE" != "docs" ] && ! is_refactor; then
     add_a "review-correctness"
@@ -123,6 +123,9 @@ else
   add_a "review-guides"
   add_a "review-glossary"
   add_a "review-reuse"
+  if has_doc_artifact; then
+    add_a "review-consistency"
+  fi
   # review-architecture only when docs/engineering/** touched (ADR, living-doc, architecture-principles.md)
   if has_touched "engdoc"; then
     add_a "review-architecture"
@@ -132,5 +135,17 @@ else
   fi
 fi
 
-echo "wave-a-reviewers: $WAVE_A"
+# Subtract the inner-loop roster: those reviewers already approved the final tree
+# during the fast wave, so the full wave runs only the reviewers that have not yet
+# seen it. (review-adversarial, Wave B, still receives the inner-loop approvals as
+# context so its cross-check sees the complete reviewer picture.)
+WAVE_A_FINAL=""
+for r in $WAVE_A; do
+  case " $INNER_REVIEWERS " in
+    *" $r "*) ;;
+    *) WAVE_A_FINAL="${WAVE_A_FINAL:+$WAVE_A_FINAL }$r" ;;
+  esac
+done
+
+echo "wave-a-reviewers: $WAVE_A_FINAL"
 echo "wave-b-reviewers: review-adversarial"
