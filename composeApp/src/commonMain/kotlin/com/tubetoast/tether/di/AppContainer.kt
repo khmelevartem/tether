@@ -29,6 +29,7 @@ import com.tubetoast.tether.transfer.BatchSender
 import com.tubetoast.tether.transfer.ConnectionMonitor
 import com.tubetoast.tether.transfer.DefaultTransferActivityTracker
 import com.tubetoast.tether.transfer.FilePicker
+import com.tubetoast.tether.transfer.InboundEventRouter
 import com.tubetoast.tether.transfer.NoOpConnectionMonitor
 import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PeerTransferEngine
@@ -97,6 +98,10 @@ abstract class AppContainer {
         )
     }
 
+    open val inboundEventRouter: InboundEventRouter by lazy {
+        InboundEventRouter(scope = appScope, inboundEvents = fileServer.events)
+    }
+
     open val peerTransferEngineRegistry: PeerTransferEngineRegistry by lazy {
         PeerTransferEngineRegistry(
             appScope = appScope,
@@ -104,7 +109,7 @@ abstract class AppContainer {
                 PeerTransferEngine(
                     peer = peer,
                     batchSenderFactory = { batchSenderFactory(peer) },
-                    // TODO(#195): wire real ReceiveEvent source when Receiver UI lands
+                    inboundEvents = inboundEventRouter.eventsFor(peer),
                     reconnectionTimeout = ReconnectionTimeout.DEFAULT,
                     scope = engineScope,
                     peerPreferencesStore = peerPreferencesStore,

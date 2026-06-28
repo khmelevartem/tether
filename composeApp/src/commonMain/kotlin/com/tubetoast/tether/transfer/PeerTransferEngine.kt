@@ -4,7 +4,6 @@ import com.tubetoast.tether.preferences.PeerPreferencesStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,8 +21,7 @@ import kotlin.time.Duration
 class PeerTransferEngine(
     private val peer: PeerIdentity,
     private val batchSenderFactory: () -> BatchSender,
-    // TODO(#195): wire real ReceiveEvent source when Receiver UI lands
-    private val inboundEvents: Flow<ReceiveEvent> = MutableSharedFlow(),
+    private val inboundEvents: Flow<ReceiveEvent>,
     private val reconnectionTimeout: Duration = ReconnectionTimeout.DEFAULT,
     private val scope: CoroutineScope,
     private val peerPreferencesStore: PeerPreferencesStore,
@@ -36,6 +34,27 @@ class PeerTransferEngine(
     private val originalSources = MutableStateFlow<List<FileSource>>(emptyList())
     private val confirmedReceived = MutableStateFlow<Set<String>>(emptySet())
     private val cancelledFileNames = MutableStateFlow<Set<String>>(emptySet())
+    private val inboundReconnectCountdown = ReconnectCountdown(
+        timeout = reconnectionTimeout,
+        scope = scope,
+        onTick = { remaining ->
+            _state.update { s ->
+                (s as? PeerTransferState.Reconnecting)?.copy(remainingSeconds = remaining) ?: s
+            }
+        },
+        onExpired = {
+            _state.update { s ->
+                val perFile = (s as? PeerTransferState.Reconnecting)
+                    ?.let { (it.snapshotBeforeDrop as? PeerTransferState.ActiveInbound)?.perFile }
+                    ?: emptyList()
+                PeerTransferState.Error(
+                    reason = TransferErrorReason.NetworkLost,
+                    sent = perFile.count { it is PerFileStatus.Done },
+                    perFile = perFile,
+                )
+            }
+        },
+    )
 
     init {
         scope.launch {
@@ -249,6 +268,7 @@ class PeerTransferEngine(
     private fun handleInbound(event: ReceiveEvent) {
         when (event) {
             is ReceiveEvent.Started -> {
+                inboundReconnectCountdown.cancel()
                 val perFile: List<PerFileStatus> = List(event.totalFiles) { i ->
                     if (i == 0) PerFileStatus.Queued(event.currentFile, null) else PerFileStatus.Queued("", null)
                 }
@@ -265,6 +285,7 @@ class PeerTransferEngine(
                 }
             }
             is ReceiveEvent.Progress -> {
+                inboundReconnectCountdown.cancel()
                 _state.update { s ->
                     val active = s as? PeerTransferState.ActiveInbound ?: return@update s
                     val index = active.perFile.indexOfFirst { it.name == event.name }.takeIf { it >= 0 }
@@ -281,6 +302,7 @@ class PeerTransferEngine(
                 }
             }
             is ReceiveEvent.FileCompleted -> {
+                inboundReconnectCountdown.cancel()
                 confirmedReceived.update { it + event.name }
                 _state.update { s ->
                     val active = s as? PeerTransferState.ActiveInbound ?: return@update s
@@ -295,6 +317,7 @@ class PeerTransferEngine(
                 }
             }
             is ReceiveEvent.BatchCompleted -> {
+                inboundReconnectCountdown.cancel()
                 _state.update { s ->
                     val perFile = (s as? PeerTransferState.ActiveInbound)?.perFile ?: emptyList()
                     val partialReason = if (event.received < event.total) {
@@ -334,8 +357,10 @@ class PeerTransferEngine(
                         snapshotBeforeDrop = snapshot,
                     )
                 }
+                inboundReconnectCountdown.start()
             }
             ReceiveEvent.ReceiverSuspended -> {
+                inboundReconnectCountdown.cancel()
                 _state.update { s ->
                     val perFile = (s as? PeerTransferState.ActiveInbound)?.perFile ?: emptyList()
                     val doneCount = perFile.count { it is PerFileStatus.Done }

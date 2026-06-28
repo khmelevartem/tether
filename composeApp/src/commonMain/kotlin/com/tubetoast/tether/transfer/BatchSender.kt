@@ -166,13 +166,8 @@ class BatchSender(
                 }
 
                 if (dropDetected) {
-                    emit(
-                        BatchProgress.Reconnecting(
-                            remainingSeconds = reconnectionTimeout.inWholeSeconds.toInt(),
-                            snapshotBeforeDrop = lastSending,
-                        ),
-                    )
-                    if (connectionMonitor.awaitReconnect(reconnectionTimeout)) {
+                    val reconnected = awaitReconnectWithCountdown(lastSending, emit)
+                    if (reconnected) {
                         sentBytes -= bytesDone
                         perFile[i] = PerFileStatus.Queued(src.name, src.sizeBytes)
                         continue
@@ -210,6 +205,24 @@ class BatchSender(
         }
 
         return@withContext finalizeOutcome(perFile, emit)
+    }
+
+    private suspend fun awaitReconnectWithCountdown(
+        lastSending: BatchProgress.Sending,
+        emit: suspend (BatchProgress) -> Unit,
+    ): Boolean = coroutineScope {
+        val countdown = ReconnectCountdown(
+            timeout = reconnectionTimeout,
+            scope = this,
+            onTick = { remaining ->
+                emit(BatchProgress.Reconnecting(remainingSeconds = remaining, snapshotBeforeDrop = lastSending))
+            },
+            onExpired = {},
+        )
+        countdown.start()
+        val reconnected = connectionMonitor.awaitReconnect(reconnectionTimeout)
+        countdown.cancel()
+        reconnected
     }
 
     private fun buildSending(

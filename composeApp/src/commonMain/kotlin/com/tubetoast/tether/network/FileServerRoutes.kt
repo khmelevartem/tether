@@ -8,8 +8,10 @@ import com.tubetoast.tether.protocol.PairResponse
 import com.tubetoast.tether.protocol.PeerAnnouncement
 import com.tubetoast.tether.security.TrustedDeviceStore
 import com.tubetoast.tether.security.deviceIdFromPublicKey
+import com.tubetoast.tether.transfer.InboundEvent
 import com.tubetoast.tether.transfer.NoOpTransferActivityTracker
 import com.tubetoast.tether.transfer.TransferActivityTracker
+import com.tubetoast.tether.transfer.toPeerIdentity
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
@@ -25,6 +27,7 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.readAvailable
+import kotlinx.coroutines.flow.MutableSharedFlow
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.debug
 import ru.pocketbyte.kydra.log.error
@@ -79,6 +82,7 @@ internal fun Application.installFileServerRoutes(
     tracker: TransferActivityTracker = NoOpTransferActivityTracker,
     deviceIdentityStore: DeviceIdentityStore? = null,
     discoveredDevicesStore: DiscoveredDevicesStore? = null,
+    inboundEvents: MutableSharedFlow<InboundEvent>? = null,
 ) {
     install(ContentNegotiation) { json() }
     routing {
@@ -141,11 +145,19 @@ internal fun Application.installFileServerRoutes(
                 )
                 return@post
             }
+            val remoteHost = call.request.origin.remoteAddress
+            val peer = discoveredDevicesStore
+                ?.devices
+                ?.value
+                ?.firstOrNull { it.host == remoteHost }
+                ?.toPeerIdentity()
+            val contentLength = call.request.contentLength()
             var uploadComplete = false
             var handle: UploadHandle? = null
             try {
                 val resolved = storage.resolveDestination(relativePath)
                 handle = resolved
+                if (peer != null) inboundEvents?.tryEmit(InboundEvent.FileStarted(peer, relativePath))
                 tracker.withActiveTransfer {
                     val body = call.receiveChannel()
                     val bytesWritten = storage.writeBody(body, resolved)
@@ -153,17 +165,28 @@ internal fun Application.installFileServerRoutes(
                     // mid-stream. closedCause covers exceptional close; the Content-Length
                     // comparison covers clean close on incomplete bodies.
                     body.closedCause?.let { throw it }
-                    val expected = call.request.contentLength()
+                    val expected = contentLength
                     if (expected != null && bytesWritten < expected) {
                         error("FileServer: incomplete upload — got $bytesWritten of $expected bytes")
                     }
                     storage.commit(resolved)
                     uploadComplete = true
                     log.info { "received '$relativePath' — $bytesWritten bytes → ${resolved.destination}" }
+                    if (peer != null) {
+                        inboundEvents?.tryEmit(
+                            InboundEvent.Progress(peer, relativePath, bytesWritten, contentLength),
+                        )
+                        inboundEvents?.tryEmit(
+                            InboundEvent.FileCompleted(peer, relativePath, resolved.destination),
+                        )
+                    }
                     call.respond(HttpStatusCode.OK, mapOf("savedPath" to resolved.destination))
                 }
             } catch (e: Exception) {
                 log.error { "upload failed for '$relativePath' — ${e.message ?: "unknown error"}" }
+                if (peer != null && !uploadComplete) {
+                    inboundEvents?.tryEmit(InboundEvent.ConnectionLost(peer, receivedSoFar = 0))
+                }
                 try {
                     call.respond(
                         HttpStatusCode.InternalServerError,

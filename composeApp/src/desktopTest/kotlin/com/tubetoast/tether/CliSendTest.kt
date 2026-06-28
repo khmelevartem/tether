@@ -27,6 +27,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -108,6 +109,7 @@ class CliSendTest {
                     },
                     scope = engineScope,
                     peerPreferencesStore = FakePeerPreferencesStore(),
+                    inboundEvents = MutableSharedFlow(),
                 )
             },
         )
@@ -360,6 +362,7 @@ class CliSendTest {
                     },
                     scope = engineScope,
                     peerPreferencesStore = FakePeerPreferencesStore(),
+                    inboundEvents = MutableSharedFlow(),
                 )
             },
         )
@@ -433,6 +436,7 @@ class CliSendTest {
                     },
                     scope = engineScope,
                     peerPreferencesStore = FakePeerPreferencesStore(),
+                    inboundEvents = MutableSharedFlow(),
                 )
             },
         )
@@ -765,6 +769,7 @@ class CliSendTest {
                     },
                     scope = engineScope,
                     peerPreferencesStore = FakePeerPreferencesStore(),
+                    inboundEvents = MutableSharedFlow(),
                 )
             },
         )
