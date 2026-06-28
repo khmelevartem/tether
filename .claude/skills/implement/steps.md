@@ -350,7 +350,7 @@ Record a 🟢/🟡/🔴 verdict naming the smoke blocks executed. A bare pass/fa
 
 **Applies to:** `type=infra`.
 
-If the gate is the deliverable, not the track: an enforcement mechanism (custom lint rule, CI guard, git hook, custom Gradle check, or a `.claude/` hook / script) often lives outside `src/`, so this is the model's judgment to make. If the deliverable is not an enforcer — announce `skip enforcement-probe — no enforcer in deliverable` and move on.
+An infra deliverable is often an enforcement mechanism (custom lint rule, CI guard, git hook, custom Gradle check, or a `.claude/` hook / script) that lives outside `src/` and so is not covered by unit tests. If this infra task ships no such enforcer — announce `skip enforcement-probe — no enforcer in deliverable` and move on.
 
 1. Create a minimal artifact violating the check in a real location (where the enforcer should fire).
 2. Run the corresponding Gradle/CI task.
