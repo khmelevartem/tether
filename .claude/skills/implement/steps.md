@@ -87,23 +87,7 @@ The label is read once, here. Re-classifying mid-PR (a label change) requires de
 
 **Applies to:** `reentry=fresh`.
 
-Dispatch one read-only recon agent (`Explore`) to sweep the doc corpus and return a compact digest — do NOT read the corpus into the orchestrator thread.
-
-Brief for the recon agent (pass the issue title + body):
-
-> Read-only sweep for issue #\<N\>. Return a compact digest — binding constraints and relevant paths, no file dumps:
->
-> - **Product features** — `ls docs/product/features/` (+ `README.md` index). Slug(s) matching this issue; binding constraints from each `spec.md` / `ux-brief.md` in 1-2 lines.
-> - **Product context** — `docs/product/*.md`. The framing that binds this issue's scope / audience / timing.
-> - **Engineering living docs** — `docs/engineering/*.md`. Present-tense rules whose topic matches the task; flag any rule the planned change would violate.
-> - **ADR** — `docs/engineering/adr/adr-*.md`. ADRs matching the topic; for each, its **Revisit if** section and whether this task trips a trigger.
-> - **Knowledge** — `docs/knowledge/*.md`. Solved-problem notes relevant to the task.
-> - **Glossary** — `docs/glossary.md`. Terms this issue's domain touches, with their locked definitions.
-> - **Prior `#<N>` mentions** — ranked list of file:line hits across the repo with one-line summary of what each expects. Every hit must be addressed in this PR or explicitly deferred to another issue.
->
-> For each layer in `docLayers`, note whether the target artifact exists, is a stub, or has open questions. Flag whether a doc already covers the subsystem this task targets.
-> 
-> Explicitly list all the relevant open questions.
+Dispatch one read-only recon agent (`Explore`) to sweep the doc corpus and return a compact digest — do NOT read the corpus into the orchestrator thread. Pass the brief in [`prompts/recon-brief.md`](prompts/recon-brief.md) (substitute `<N>`; add the issue title + body).
 
 `CLAUDE.md` is harness-injected — not part of the sweep.
 
@@ -264,14 +248,13 @@ Dispatch every corresponding writing agent with a proper prompt:
 
 Dispatch every corresponding writing agent with a proper prompt:
 
-1. documentation:
-	- Layering / placement / dependency-direction / mechanism choice / new glossary entry → `architect`
-	- Spec gap, AC scope, or product framing → `spec-writer`
-	- Screen / interaction / state-flow decision → `ux-expert`
-	- UI rendering, theme, accessibility specifics → `ui-expert`
-	- Pointwise correctness or style → apply a mechanical fix inline
-	- .claude/ needing a non-trivial behavioural choice → `architect` for the decision, then write directly
-	- .claude/ trivial or short-scoped fixes → write directly
+- Layering / placement / dependency-direction / mechanism choice / new glossary entry → `architect`
+- Spec gap, AC scope, or product framing → `spec-writer`
+- Screen / interaction / state-flow decision → `ux-expert`
+- UI rendering, theme, accessibility specifics → `ui-expert`
+- Pointwise correctness or style → apply a mechanical fix inline
+- .claude/ needing a non-trivial behavioural choice → `architect` for the decision, then write directly
+- .claude/ trivial or short-scoped fixes → write directly
 
 Order matters — lower layers depend on upper ones for vocabulary and scope.
 
@@ -323,15 +306,7 @@ Which entry into `simplify` is this (counter held in session memory)?
 - **1st entry** — run the simplification pass below. If it edited anything, commit it and go back to `fast-review`: simplification changes the diff after the inner-loop reviewers last approved it, so they must re-check it. If it edited nothing, move forward.
 - **2nd entry** — the diff was already simplified and re-reviewed on the 1st pass. Reset the counter, skip the pass, move forward.
 
-Simplification pass — dispatch the implementing agent once:
-
-> All findings are resolved. Make one simplification pass over the diff: remove dead branches, inline single-use helpers, collapse trivial wrappers.
->
-> **For every comment / KDoc / prose paragraph in the diff — including `.claude/skills/**`, `docs/`, and Markdown — apply CLAUDE.md §Code style and [`docs/engineering/long-lived-artifacts.md`](../../../docs/engineering/long-lived-artifacts.md).**
->
-> **Do not rephrase prose for brevity.** If a sentence is load-bearing and free of the issues above, leave its wording alone. Cut whole sentences when they fail the rule; otherwise keep them as written.
->
-> Do not change behaviour; do not touch anything outside the diff. Run `./gradlew allTests -q` after.
+Simplification pass — dispatch the implementing agent once with the prompt in [`prompts/simplify-pass.md`](prompts/simplify-pass.md).
 
 ---
 ## Step 20 — check working tree
