@@ -98,8 +98,12 @@ PNGs land in `composeApp/build/outputs/roborazzi/`. Filenames encode the composa
 ## Running
 
 ```bash
-./gradlew allTests -q                                    # all tests; pre-commit / pre-push hooks run them automatically
+./gradlew allTests -q                                    # modules + skill tests; pre-commit / pre-push hooks run them automatically
 ./gradlew :composeApp:desktopTest -q                     # Desktop JVM only
 ./gradlew :composeApp:commonTest -q                      # common only
 ./gradlew :composeApp:desktopTest --tests "com.tubetoast.tether.network.FileServerTest"
 ```
+
+## Skill tests
+
+Skills under `.claude/skills/` carry shell tests named `*.test.sh` (e.g. roster output, skill-structure invariants). `.claude/scripts/run-skill-tests.sh` discovers and runs every one; the root `allTests` task depends on it, so `./gradlew allTests` and CI run them alongside the module tests. A new `*.test.sh` anywhere under `.claude/skills/` is picked up with no wiring change.

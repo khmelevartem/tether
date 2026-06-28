@@ -35,7 +35,7 @@ Clean Architecture and adjacent patterns are full of ceremony that doesn't pay r
 
 Everything that can live in `commonMain` lives there; platform source sets are for code that requires platform API only. This applies to everything — domain, network, presentation, UI. An implementation in `commonMain` ships to all active targets from a single codebase.
 
-- Compilation ≠ correctness: code runs on all targets, but visual / runtime correctness on each is not guaranteed by the build. **A manual smoke test is mandatory on every platform** before requesting review (`/implement`'s `runtime-verify` step).
+- Compilation ≠ correctness: code runs on all targets, but visual / runtime correctness on each is not guaranteed by the build. **A manual smoke test is mandatory on every platform** before requesting review (`/implement`'s `smoke` step).
 
 **UI specifically** is the most visible multiplier: Compose Multiplatform in `commonMain` ships to Android, iOS, and Desktop (when the entry point calls `App()`) as a single implementation.
 
