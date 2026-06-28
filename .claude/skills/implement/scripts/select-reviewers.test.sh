@@ -1,0 +1,236 @@
+#!/usr/bin/env bash
+# Standalone tests for select-reviewers.sh roster output.
+# Skill-structure invariants (steps.md walk, classify script split) live in
+# skill-structure.test.sh.
+
+set -uo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT="$SCRIPT_DIR/select-reviewers.sh"
+
+PASS=0
+FAIL=0
+
+run() {
+  bash "$SCRIPT" "$@" 2>/dev/null
+}
+
+assert_eq() {
+  local label="$1" expected="$2" actual="$3"
+  if [ "$expected" = "$actual" ]; then
+    PASS=$((PASS + 1))
+  else
+    FAIL=$((FAIL + 1))
+    echo "FAIL [$label]"
+    echo "  expected: $expected"
+    echo "  actual:   $actual"
+  fi
+}
+
+assert_contains() {
+  local label="$1" needle="$2" haystack="$3"
+  if echo "$haystack" | grep -qF "$needle"; then
+    PASS=$((PASS + 1))
+  else
+    FAIL=$((FAIL + 1))
+    echo "FAIL [$label] — expected '$needle' in: $haystack"
+  fi
+}
+
+assert_nonzero_exit() {
+  local label="$1"; shift
+  local code=0
+  bash "$SCRIPT" "$@" >/dev/null 2>&1 || code=$?
+  if [ "$code" -ne 0 ]; then
+    PASS=$((PASS + 1))
+  else
+    FAIL=$((FAIL + 1))
+    echo "FAIL [$label] — expected non-zero exit, got 0"
+  fi
+}
+
+inner_line()  { echo "$1" | grep '^inner-loop-reviewers:'; }
+wave_a_line() { echo "$1" | grep '^wave-a-reviewers:'; }
+wave_b_line() { echo "$1" | grep '^wave-b-reviewers:'; }
+
+# ── Case 1: code feature (no touched) ─────────────────────────────────────────
+
+OUT=$(run code feature "")
+
+assert_eq "c1 inner" \
+  "inner-loop-reviewers: review-correctness review-architecture review-guides" \
+  "$(inner_line "$OUT")"
+
+assert_eq "c1 wave-a" \
+  "wave-a-reviewers: review-dod review-glossary review-reuse review-tests" \
+  "$(wave_a_line "$OUT")"
+
+# ── Case 2: code feature ui+code+platform ─────────────────────────────────────
+
+OUT=$(run code feature "ui,code,platform")
+
+assert_eq "c2 inner" \
+  "inner-loop-reviewers: review-correctness review-architecture review-guides review-platform review-ux-conformance" \
+  "$(inner_line "$OUT")"
+
+assert_eq "c2 wave-a" \
+  "wave-a-reviewers: review-dod review-glossary review-reuse review-tests review-design-system review-visual" \
+  "$(wave_a_line "$OUT")"
+
+# ── Case 3: code bugfix ───────────────────────────────────────────────────────
+
+OUT=$(run code bugfix "")
+
+assert_eq "c3 inner" \
+  "inner-loop-reviewers: review-correctness review-architecture review-guides" \
+  "$(inner_line "$OUT")"
+
+assert_eq "c3 wave-a" \
+  "wave-a-reviewers: review-dod review-glossary review-reuse review-tests" \
+  "$(wave_a_line "$OUT")"
+
+# ── Case 4: code refactor ─────────────────────────────────────────────────────
+
+OUT=$(run code refactor "")
+
+assert_eq "c4 inner" \
+  "inner-loop-reviewers: review-architecture review-guides" \
+  "$(inner_line "$OUT")"
+
+assert_eq "c4 wave-a" \
+  "wave-a-reviewers: review-dod review-glossary review-reuse review-tests" \
+  "$(wave_a_line "$OUT")"
+
+# ── Case 5: code infra ───────────────────────────────────────────────────────
+
+OUT=$(run code infra "")
+
+assert_eq "c5 inner" \
+  "inner-loop-reviewers: review-correctness review-architecture review-guides" \
+  "$(inner_line "$OUT")"
+
+assert_eq "c5 wave-a" \
+  "wave-a-reviewers: review-dod review-glossary review-reuse" \
+  "$(wave_a_line "$OUT")"
+
+# ── Case 7: docs docs docs ───────────────────────────────────────────────────
+
+OUT=$(run docs docs "docs")
+
+# docs fast wave: review-consistency (doc artifact touched), no architecture
+# (no engdoc), and never review-glossary (mechanical, deferred to the final wave).
+assert_eq "c7 inner" "inner-loop-reviewers: review-consistency" "$(inner_line "$OUT")"
+
+# Wave A excludes review-consistency — it ran (and approved) in the fast wave.
+assert_eq "c7 wave-a" \
+  "wave-a-reviewers: review-dod review-guides review-glossary review-reuse" \
+  "$(wave_a_line "$OUT")"
+
+# ── Case 8: docs docs docs+engdoc ────────────────────────────────────────────
+
+OUT=$(run docs docs "docs,engdoc")
+
+# engdoc pulls review-architecture into the docs fast wave alongside consistency.
+assert_eq "c8 inner" \
+  "inner-loop-reviewers: review-consistency review-architecture" "$(inner_line "$OUT")"
+
+if echo "$(inner_line "$OUT")" | grep -qF "review-glossary"; then
+  FAIL=$((FAIL + 1))
+  echo "FAIL [c8 docs inner excludes review-glossary] — unexpectedly present"
+else
+  PASS=$((PASS + 1))
+fi
+
+assert_eq "c8 wave-a" \
+  "wave-a-reviewers: review-dod review-guides review-glossary review-reuse" \
+  "$(wave_a_line "$OUT")"
+
+# ── Case 9: docs feature ux-brief ────────────────────────────────────────────
+
+OUT=$(run docs feature "ux-brief")
+
+# ux-brief is a doc artifact → consistency in the fast wave; no engdoc → no architecture.
+assert_eq "c9 inner" "inner-loop-reviewers: review-consistency" "$(inner_line "$OUT")"
+
+assert_eq "c9 wave-a" \
+  "wave-a-reviewers: review-dod review-guides review-glossary review-reuse review-ux-brief" \
+  "$(wave_a_line "$OUT")"
+
+# ── Case 9b: code feature touching docs gets review-consistency ──────────────
+#
+# A code task that also edits docs still earns the cross-cutting consistency
+# pass; a code task that touches no docs does not.
+
+OUT=$(run code feature "code,docs")
+assert_contains "c9b code+docs has review-consistency" \
+  "review-consistency" "$(wave_a_line "$OUT")"
+assert_eq "c9b code+docs inner unaffected" \
+  "inner-loop-reviewers: review-correctness review-architecture review-guides" \
+  "$(inner_line "$OUT")"
+
+OUT=$(run code feature "code")
+if echo "$(wave_a_line "$OUT")" | grep -qF "review-consistency"; then
+  FAIL=$((FAIL + 1))
+  echo "FAIL [c9b code-no-docs omits review-consistency] — unexpectedly present"
+else
+  PASS=$((PASS + 1))
+fi
+
+# ── Case 10: error — no args ──────────────────────────────────────────────────
+
+assert_nonzero_exit "c10 no-args"
+
+# ── Case 11: error — unknown track ───────────────────────────────────────────
+
+assert_nonzero_exit "c11 unknown-track" banana feature ""
+
+# ── Always-present: code track rosters ───────────────────────────────────────
+
+for touched in "" "ui,code,platform"; do
+  OUT=$(run code feature "$touched")
+  # Always in inner-loop for non-refactor types (narrow roster — compounding-cost reviewers only).
+  for reviewer in review-correctness review-guides review-architecture; do
+    assert_contains "always-inner $reviewer (touched=$touched)" "$reviewer" "$(inner_line "$OUT")"
+  done
+  # Always in Wave A (broad final-gate roster) — review-guides is NOT here, it is
+  # an inner-loop reviewer for the code track and so excluded from the full wave.
+  for reviewer in review-dod review-glossary; do
+    assert_contains "always-wave-a $reviewer (touched=$touched)" "$reviewer" "$(wave_a_line "$OUT")"
+  done
+  # The core invariant: no inner-loop reviewer reappears in Wave A.
+  INNER_LIST=$(inner_line "$OUT" | sed 's/^inner-loop-reviewers: //')
+  for reviewer in $INNER_LIST; do
+    if echo "$(wave_a_line "$OUT")" | grep -qF "$reviewer"; then
+      FAIL=$((FAIL + 1))
+      echo "FAIL [wave-a excludes inner $reviewer (touched=$touched)] — unexpectedly present"
+    else
+      PASS=$((PASS + 1))
+    fi
+  done
+  assert_eq "wave-b review-adversarial (touched=$touched)" \
+    "wave-b-reviewers: review-adversarial" "$(wave_b_line "$OUT")"
+done
+
+# ── Wave B present on docs track ─────────────────────────────────────────────
+
+OUT=$(run docs docs "docs,engdoc")
+assert_eq "docs wave-b review-adversarial" \
+  "wave-b-reviewers: review-adversarial" "$(wave_b_line "$OUT")"
+
+# Disjointness holds on the docs track too (engdoc pulls both consistency and
+# architecture into the inner loop — neither may reappear in Wave A).
+INNER_LIST=$(inner_line "$OUT" | sed 's/^inner-loop-reviewers: //')
+for reviewer in $INNER_LIST; do
+  if echo "$(wave_a_line "$OUT")" | grep -qF "$reviewer"; then
+    FAIL=$((FAIL + 1))
+    echo "FAIL [docs wave-a excludes inner $reviewer] — unexpectedly present"
+  else
+    PASS=$((PASS + 1))
+  fi
+done
+
+# ── Summary ───────────────────────────────────────────────────────────────────
+
+TOTAL=$((PASS + FAIL))
+echo "Results: $PASS/$TOTAL passed"
+[ "$FAIL" -eq 0 ] && exit 0 || exit 1

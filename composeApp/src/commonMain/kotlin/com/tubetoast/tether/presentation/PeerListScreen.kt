@@ -1,10 +1,13 @@
 package com.tubetoast.tether.presentation
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
@@ -14,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.unit.dp
 import com.arkivanov.decompose.extensions.compose.subscribeAsState
 import com.composables.core.SheetDetent
 import com.composables.core.rememberModalBottomSheetState
@@ -31,19 +35,25 @@ import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.transfer.PendingFilesSummary
 import com.tubetoast.tether.transfer.PickKind
 import com.tubetoast.tether.ui.designsystem.BodyText
-import com.tubetoast.tether.ui.designsystem.BrandMark
-import com.tubetoast.tether.ui.designsystem.BrandMarkState
+import com.tubetoast.tether.ui.designsystem.ProgressBar
+import com.tubetoast.tether.ui.designsystem.SettingsIconButton
+import com.tubetoast.tether.ui.designsystem.TitleText
 import com.tubetoast.tether.ui.preview.PreviewFixtures
 import com.tubetoast.tether.ui.preview.PreviewSurface
 import com.tubetoast.tether.ui.preview.Themes
 import com.tubetoast.tether.ui.preview.TransferPreviewFixtures
 import com.tubetoast.tether.ui.theme.TetherTheme
+import com.tubetoast.tether.ui.theme.tetherMinTouchTarget
 
 @Composable
 fun PeerListScreen(component: PeerListComponent, modifier: Modifier = Modifier) {
     val state by component.state.subscribeAsState()
 
     Column(modifier = modifier.fillMaxSize()) {
+        DeviceListTopBar(
+            onOpenSettings = component::openSettings,
+            modifier = Modifier.fillMaxWidth(),
+        )
         BannersSection(
             component = component.bannersComponent,
             modifier = Modifier.fillMaxWidth(),
@@ -63,6 +73,32 @@ fun PeerListScreen(component: PeerListComponent, modifier: Modifier = Modifier) 
 }
 
 @Composable
+private fun DeviceListTopBar(
+    onOpenSettings: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val spacing = TetherTheme.spacing
+
+    Row(
+        modifier = modifier.padding(horizontal = spacing.sm, vertical = spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Box(modifier = Modifier.tetherMinTouchTarget())
+        Box(
+            modifier = Modifier.weight(1f).padding(horizontal = spacing.sm),
+            contentAlignment = Alignment.Center,
+        ) {
+            TitleText(text = "Tether")
+        }
+        SettingsIconButton(
+            onClick = onOpenSettings,
+            contentDescription = "Settings",
+        )
+    }
+}
+
+@Composable
 private fun PeerListContent(
     rows: List<PeerTransferComponent>,
     modifier: Modifier = Modifier,
@@ -76,7 +112,11 @@ private fun PeerListContent(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                BrandMark(state = BrandMarkState.Searching)
+                ProgressBar(
+                    progress = 0f,
+                    indeterminate = true,
+                    modifier = Modifier.width(120.dp),
+                )
                 BodyText(
                     text = "Ищем устройства в сети…",
                     color = TetherTheme.colors.textMuted,
@@ -199,6 +239,7 @@ private fun PeerListContentPreview(
     val spacing = TetherTheme.spacing
 
     Column(modifier = Modifier.fillMaxSize()) {
+        DeviceListTopBar(onOpenSettings = {}, modifier = Modifier.fillMaxWidth())
         ThisDeviceStripContent(
             state = PreviewFixtures.DeviceName.display,
             onEditClick = {},
@@ -223,7 +264,11 @@ private fun PeerListContentPreview(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                BrandMark(state = BrandMarkState.Searching)
+                ProgressBar(
+                    progress = 0f,
+                    indeterminate = true,
+                    modifier = Modifier.width(120.dp),
+                )
                 BodyText(
                     text = "Ищем устройства в сети…",
                     color = TetherTheme.colors.textMuted,

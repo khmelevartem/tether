@@ -1,0 +1,85 @@
+# Medium publishing checklist (EN)
+
+Distilled from Medium's distribution and formatting guides (sources at the bottom). Covers `en.md`. Image specs live in [`image-prep.md`](image-prep.md).
+
+## Account and publishing
+
+Anyone publishes immediately — no sandbox. Two paths:
+
+- **Personal profile** — fastest, full control, reach limited to followers plus whatever curation picks up. For a first post with no followers, reach is near-zero.
+- **A publication** — editor review first, but a much larger built-in audience and a quality signal. The story stays on the **author's** account, under the author's name, and shows in the author's profile — a publication wraps it, it doesn't take authorship. A story can be in only one publication at a time; a rejection is not public.
+
+## Choosing a publication (Kotlin / KMP)
+
+There is **no large, open-submission KMP-exclusive publication.** *Touchlab* is the KMP authority but its Medium is a closed company blog; `medium.com/tag/kotlin-multiplatform` is a tag feed, not a submission target. The two viable open publications:
+
+- **Kt. Academy** (`medium.com/kotlin-academy`) — Kotlin-first, JetBrains partner. Best fit for **language-level / architecture / Kotlin-craft** pieces and for a prestige hiring signal. Submit by emailing a link to **contact@kt.academy** (optionally cc `marcinmoskala@gmail.com`); you write on your own account, they add the story. ([Write for Kt. Academy](https://blog.kotlin-academy.com/write-for-kotlin-academy-abebd70937ce))
+- **ProAndroidDev** — largest open Android/KMP publication (droidcon, 45k+), heavy KMP content, easier entry and higher raw reach, slightly Android-framed. Email **editors@proandroiddev.com** to be added as a writer, then *Submit to publication* from the draft. Material rules: code over 5 lines in gists, a featured image, **no paywall**, no excessive GIFs, spell-check first. ([Submission Guidelines](https://proandroiddev.com/submission-guidelines-b2efa7f46272))
+
+Strategy: a rejection is invisible, so **submit to the higher-prestige / better-topic-matched publication first, fall back to the broader one, personal profile last.** Match the venue to the article — Kotlin/architecture → Kt. Academy first; Android-framework specifics → ProAndroidDev first. Record the chosen order and the outreach email(s) in the article's `publishing.md`.
+
+## Title, subtitle, cover (first three lines)
+
+Medium expects a fixed layout: **line 1 = title** (big "T"), **line 2 = subtitle** (small "T"), **line 3 = cover image**.
+
+- [ ] Title is the first line and styled as title (big "T").
+- [ ] **Subtitle present** as line 2, styled as subtitle (small "T"). It is indexed and shown in the feed/social-card preview — verify the style survived markdown import; if it landed as a body paragraph, re-apply.
+- [ ] Title + subtitle + cover **invite the reader in and the content delivers** — not sensationalistic/tabloid, and not overly generic, mysterious, or formulaic.
+- [ ] Proper case, no grammatical errors.
+- [ ] Cover set as the **feature image** in publish settings; AI-generated covers carry a credit caption (see [`image-prep.md`](image-prep.md)).
+
+## Lead
+
+- [ ] The lead is a **hook**, not a flat thesis (mirrors the RU lead's framing).
+
+## Formatting
+
+- [ ] Section headings use the **primary header** (big "T"), sub-sections the **secondary header** (small "T"). Don't fake headers with bold — it's less readable and the algorithm reads real headers as structure.
+- [ ] Short paragraphs; bold for key takeaways, italics for nuance, bullets for lists.
+- [ ] **Internal header anchors are not supported.** Flatten any `[text](#anchor)` cross-reference to plain prose ("see the X section below/above"). Anchor-form links break on import.
+- [ ] Code is **text, not images** (accessibility + copy-paste).
+- [ ] **Image captions** go in Medium's native caption field (select the image → caption beneath), not as a blockquote — a blockquote renders as a pull-quote under the image. After importing markdown, move each `> caption` into the caption field and delete the quote. A long/structured caption (e.g. a numbered list) stays normal body text under the image, not a caption. See [`image-prep.md`](image-prep.md).
+
+## Code → gists
+
+Medium's native code block has no real syntax highlighting. The fix is GitHub Gist embeds.
+
+- [ ] Generate one gist for the article with [`scripts/md-code-to-gist.sh`](scripts/md-code-to-gist.sh) — **one gist, one file per block**, numeric-prefixed to hold article order. One gist keeps the GitHub profile to a single entry.
+- [ ] Embed each file individually via the `?file=<name>` query so each snippet lands at its own spot — paste each URL on its own line, in article order.
+- [ ] **Verify the first embed** renders a single file, not the whole gist. If it shows all files, the `?file=` syntax didn't take — fall back to one gist per block.
+- [ ] Non-code fenced blocks (e.g. ASCII diagrams) stay plain Medium code blocks — no gist.
+- [ ] Public vs secret gist: **public** gives discovery/forks/stars (good for a showcase); **secret** keeps the profile clean but loses discovery.
+- [ ] Record the gist URL and the per-file substitution list in the article's `publishing.md`.
+
+> The gist-creation script must be run by a human: creating gists from repo code is blocked by the agent auto-mode as data exfiltration.
+
+## Distribution and curation
+
+Human curators mark stories for Boost / General / Network distribution; **writing quality is the lever**, not comments or popularity.
+
+Disqualifiers from General Distribution — check against them:
+
+- [ ] No clickbait, including visual clickbait.
+- [ ] No misinformation or factually inaccurate claims (fact-check load-bearing statements).
+- [ ] Tags match the content (tag-spam disqualifies).
+- [ ] No large numbers of `@mentions`.
+- [ ] At least 150 words (shorter is ineligible for curation).
+
+## Tags
+
+- [ ] Up to **5 tags**; curators distribute to the followers of those tags. Use specific, on-topic terms.
+
+## Paywall and Partner Program
+
+- [ ] Decide per-article: paywalled (counts against readers' free-articles quota) vs free. For a showcase / attract-contributors goal, **free** maximizes reach.
+- [ ] **Friend links** bypass the quota — useful for social sharing.
+- [ ] Partner Program (earnings) requires ≥ 100 followers to enroll.
+
+---
+
+Sources:
+
+- [Medium's Distribution Guidelines (Boost / General / Network)](https://help.medium.com/hc/en-us/articles/360006362473-Medium-s-Distribution-Guidelines-How-curators-review-stories-for-Boost-General-and-Network-Distribution)
+- [Tips for Formatting Your Title and Headers](https://blog.medium.com/tips-for-formatting-your-title-and-headers-1ff1a016ef75)
+- [Writing on Medium: the ultimate guide / nickwolny.com](https://nickwolny.com/writing-on-medium-guide/)
+- [6 Ways to Embed Source Code in Medium Articles](https://medium.com/@vegetablecode/6-ways-to-embed-source-code-in-medium-articles-a0b2f0ce24c7)

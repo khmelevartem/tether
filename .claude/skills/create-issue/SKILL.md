@@ -1,6 +1,6 @@
 ---
 name: create-issue
-description: Create a GitHub issue via `gh` CLI — single issue or epic + sub-issues. Trigger whenever the user asks to file a task, open a ticket, draft an issue, log a bug into the tracker, or split a large task into an epic + children — including colloquial / non-English phrasings like "заведи задачу", "заведи тикет", "создай issue", "оформи задачу", "запиши в трекер", "оформи багу". Also trigger when the user describes a feature or bug and implies it goes into the tracker, even without saying the word "issue". Do NOT trigger for in-chat discussion, writing into a spec / UX brief (that's spec-writer / `/document`), or creating a PR / starting implementation (that's `/implement`).
+description: Create a GitHub issue via `gh` CLI — single issue or epic + sub-issues. Trigger whenever the user asks to file a task, open a ticket, draft an issue, log a bug into the tracker, or split a large task into an epic + children — including colloquial / non-English phrasings like "заведи задачу", "заведи тикет", "создай issue", "оформи задачу", "запиши в трекер", "оформи багу". Also trigger when the user describes a feature or bug and implies it goes into the tracker, even without saying the word "issue". Do NOT trigger for in-chat discussion, writing into a spec / UX brief (that's spec-writer / `/implement`), or creating a PR / starting implementation (that's `/implement`).
 ---
 
 # Create Issue
@@ -17,7 +17,7 @@ Default — **English**. Titles and bodies are in English; technical terms (clas
 
 The matcher in the frontmatter already filtered positive cases. One last check before you start the process: this skill is for **filing a new GitHub issue**. If the request is actually one of the below, hand off instead of proceeding:
 
-- writing or extending a spec / UX brief — `spec-writer` or `/document`
+- writing or extending a spec / UX brief — `spec-writer` or `/implement`
 - starting implementation / opening a PR — `/implement`
 - in-chat discussion that doesn't need a tracker entry — answer in chat
 

@@ -8,6 +8,9 @@ import com.arkivanov.essenty.statekeeper.StateKeeperDispatcher
 import com.tubetoast.tether.discovery.FakeDeviceDiscovery
 import com.tubetoast.tether.foundation.IsPickerModeChooserNeeded
 import com.tubetoast.tether.peer.PeersRepository
+import com.tubetoast.tether.preferences.FakeFileTransferPreferences
+import com.tubetoast.tether.presentation.settings.FileTransferSettingsComponent
+import com.tubetoast.tether.presentation.settings.SettingsComponent
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.transfer.FakeFilePicker
 import com.tubetoast.tether.transfer.FakeFileSource
@@ -293,6 +296,89 @@ class RootComponentTest {
         assertIs<RootComponent.Child.TransferDetailsChild>(active)
     }
 
+    @Test
+    fun `openSettings pushes SettingsChild onto stack`() = runTest {
+        val component = buildComponent(coroutineScope = backgroundScope)
+
+        component.openSettings()
+
+        assertEquals(2, component.stack.value.items.size)
+        assertIs<RootComponent.Child.SettingsChild>(component.stack.value.active.instance)
+    }
+
+    @Test
+    fun `openSettings then back dispatcher pops to PeerListChild`() = runTest {
+        val backDispatcher = BackDispatcher()
+        val component = buildComponent(
+            backDispatcher = backDispatcher,
+            coroutineScope = backgroundScope,
+        )
+
+        component.openSettings()
+        assertEquals(2, component.stack.value.items.size)
+        assertIs<RootComponent.Child.SettingsChild>(component.stack.value.active.instance)
+
+        backDispatcher.back()
+
+        assertEquals(1, component.stack.value.items.size)
+        assertIs<RootComponent.Child.PeerListChild>(component.stack.value.active.instance)
+    }
+
+    @Test
+    fun `settingsChild component onBack pops to PeerListChild`() = runTest {
+        val component = buildComponent(coroutineScope = backgroundScope)
+
+        component.openSettings()
+        val settingsChild = component.stack.value.active.instance
+        assertIs<RootComponent.Child.SettingsChild>(settingsChild)
+
+        settingsChild.component.onBack()
+
+        assertEquals(1, component.stack.value.items.size)
+        assertIs<RootComponent.Child.PeerListChild>(component.stack.value.active.instance)
+    }
+
+    @Test
+    fun `settingsChild component fileTransfer is non-null`() = runTest {
+        val component = buildComponent(coroutineScope = backgroundScope)
+
+        component.openSettings()
+        val settingsChild = component.stack.value.active.instance
+        assertIs<RootComponent.Child.SettingsChild>(settingsChild)
+
+        assertNotNull(settingsChild.component.fileTransfer)
+    }
+
+    @Test
+    fun `openSettings twice keeps stack size 2 with SettingsChild active — pushNew dedup`() = runTest {
+        val component = buildComponent(coroutineScope = backgroundScope)
+
+        component.openSettings()
+        component.openSettings()
+
+        assertEquals(2, component.stack.value.items.size)
+        assertIs<RootComponent.Child.SettingsChild>(component.stack.value.active.instance)
+    }
+
+    @Test
+    fun `openSettings then back then openSettings again shows SettingsChild at stack size 2`() = runTest {
+        val backDispatcher = BackDispatcher()
+        val component = buildComponent(
+            backDispatcher = backDispatcher,
+            coroutineScope = backgroundScope,
+        )
+
+        component.openSettings()
+        backDispatcher.back()
+        assertEquals(1, component.stack.value.items.size)
+        assertIs<RootComponent.Child.PeerListChild>(component.stack.value.active.instance)
+
+        component.openSettings()
+
+        assertEquals(2, component.stack.value.items.size)
+        assertIs<RootComponent.Child.SettingsChild>(component.stack.value.active.instance)
+    }
+
     private fun buildComponent(
         context: DefaultComponentContext = defaultContext(),
         backDispatcher: BackDispatcher? = null,
@@ -318,7 +404,7 @@ class RootComponentTest {
         return RootComponent(
             componentContext = ctx,
             pendingFilesRepository = pendingFilesRepository,
-            peerListFactory = { childCtx, onShowDetails ->
+            peerListFactory = { childCtx, onShowDetails, onOpenSettings ->
                 PeerListComponent(
                     componentContext = childCtx,
                     peersRepository = peersRepository,
@@ -335,6 +421,19 @@ class RootComponentTest {
                     ),
                     deviceNameComponentFactory = fakeDeviceNameComponentFactory(coroutineScope),
                     coroutineScope = coroutineScope,
+                    onOpenSettings = onOpenSettings,
+                )
+            },
+            settingsFactory = { settingsCtx, onBack ->
+                SettingsComponent(
+                    componentContext = settingsCtx,
+                    fileTransferComponentFactory = { ftCtx ->
+                        FileTransferSettingsComponent(
+                            componentContext = ftCtx,
+                            preferences = FakeFileTransferPreferences(),
+                        )
+                    },
+                    onBack = onBack,
                 )
             },
         )

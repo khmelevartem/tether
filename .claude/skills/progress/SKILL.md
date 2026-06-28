@@ -25,15 +25,7 @@ Run `collect.py` — it resolves `owner/repo` from `gh repo view` and writes eve
 python3 .claude/skills/progress/collect.py --raw-data /tmp/tether-progress-raw --repo-root .
 ```
 
-Outputs into `--raw-data`: `prs.json`, `issues.json`, `blocked_by.json`, `loc.json`, `sprint_cutoff.txt`. Do not hand-roll these in chat — edit `collect.py` if collection needs to change.
-
-What it gathers, and the quirks baked into the script:
-
-1. **PR statistics via GraphQL** → `prs.json`. Paginated over `repository.pullRequests`, sorted ascending by date (only the first commit node feeds cycleHours). Fields: `number, title, state, createdAt, mergedAt, additions, deletions, changedFiles, commits { totalCount nodes { commit { committedDate } } }, comments { totalCount }, reviews { totalCount }, reviewThreads { totalCount }`. The REST `/pulls` list endpoint omits commits/comments/review_threads — GraphQL is required.
-2. **Issues** → `issues.json`. `--paginate --slurp` over `repos/<owner>/<repo>/issues?state=all`, objects with a `pull_request` key filtered out. Carries `parent_issue_url` and `issue_dependencies_summary`.
-3. **Issue dependencies** → `blocked_by.json`. For each issue with `total_blocked_by > 0`, REST `…/dependencies/blocked_by`, collected as `{ "<N>": [blockers] }` (`{}` when none). The `addIssueDependency` GraphQL mutation does not exist — REST only.
-4. **LOC by source set** → `loc.json`. Lines and files in `.kt`/`.swift` under `composeApp/src/<source_set>/` for each entry in `assets/locations.json`; emits `<sourceSet>` and `<sourceSet>_files` (0 when the dir is absent).
-5. **Sprint cutoff** → `sprint_cutoff.txt`. Last `git log --diff-filter=A --follow` date for `docs/sprints/sprint-01.md`.
+Outputs into `--raw-data`: `prs.json`, `issues.json`, `blocked_by.json`, `loc.json`, `sprint_cutoff.txt`. Do not hand-roll these in chat — `collect.py` owns collection (fields, pagination, GraphQL-vs-REST quirks are documented in the script); edit it if collection needs to change.
 
 ## MVP chapters — compose in chat
 
@@ -64,99 +56,15 @@ python3 .claude/skills/progress/build.py \
   --output /tmp/tether-progress.html
 ```
 
-`build.py` renders the HTML — sections, layout, and all formulae are fixed there. Cosmetic colour/font tuning → `assets/palette.json`. New mechanical section → edit `build.py`. Tone / MVP judgement / diary → here, in chat.
+`build.py` owns every section — formulae, layout, the dependency graph, and the in-report **Book of Knowledge** that explains the formulae to the reader. None of that is restated in this skill (the prose only drifts from the code); to change a section or formula, edit `build.py`, cosmetics → `assets/palette.json`. What stays a chat-time judgment, because the script can't make it:
 
-## Calculation rules
-
-### Hero class
-One class per the rules in `assets/classes.json` (ordinal matching, first match wins). Justify in one line ("every fifth PR is a retro").
-
-### Level and XP
-`Level = floor(sqrt(2·merged_PRs + closed_issues))`. XP bar:
-- `xp_total = 2·merged_PRs + closed_issues`
-- `xp_in_level = xp_total − level²`
-- `xp_needed = (level+1)² − level²`
-
-### PR / issue categorisation
-Per `assets/keywords.json`. Used in the Chronicle of Deeds, Seal of Debt, hero class.
-
-### MVP (Main Quest)
-One chapter per MVP product feature (see §MVP chapters above), each with an epic subtitle and backing-epic refs. Four-column table: seal medallion (numeral + status ring), name + subtitle, clickable epic titles, percent + 10-pip track. Completed (100 %) chapters hidden by default behind a toggle; a coverage caption lists which epics are intentionally out of MVP scope.
-
-### Artifacts (top-5 PRs)
-Weight: `commits·2 + comments + review_threads·3 + (additions+deletions)/200`. Top-5 with rarity-colour frames per `assets/palette.json#artifact_rarity`. Inside each card: commits, discussions (`comments + review_threads`), `+/−` lines.
-
-### Hot Battles / Heavy Marches
-- **Hot** — top-5 PRs by `comments + review_threads`.
-- **Heavy** — top-5 PRs by `additions + deletions`.
-
-Tables `#PR | title | value`, monospace numbers right-aligned. No RPG translation in values — pure statistics.
-
-### Seal of Debt — planned vs improvised
-**Planned** = issues referenced in any `## Состав` section across `docs/sprints/sprint-*.md`. **Cutoff:** count only issues created **after** the date `sprint-01.md` was filed in git. Retro-PRs are not counted.
-
-- `planned ∩ closed` after cutoff — "By the Sprint Scroll"
-- `closed − planned` after cutoff — "Random Encounters"
-
-Three numbers + a two-colour stacked bar (gold ↔ purple).
-
-### Quest Map — dependency graph
-Force-directed graph via D3 v7 with clustering by schools from `assets/schools.json`.
-
-**Layout:**
-- School anchors on a radial circle `R = min(W,H)·0.30` equidistant by angle.
-- School labels on the outer ring `R_LBL = min(W·0.46, H·0.48)` with dynamic `text-anchor` by angle (cos<−0.3 → end, cos>0.3 → start, otherwise middle).
-- Node attraction force toward its cluster anchor: `0.14`.
-- Charge `-50`, link distance `38`, collide `13`, alphaDecay `.025`.
-- Node coordinates clamped to `[PAD, W-PAD]` × `[PAD, H-PAD]` on each tick.
-
-**Colours** — `assets/palette.json#graph_nodes` and `#graph_edges`. Lone node = no parent, no blocked_by, no blocks, and not an epic (complete isolation). In chains = open AND at least one open `blocked_by` ancestor. Epic node = parents at least one sub-issue **and** has `EPIC:` in its title (both required — a hub without the `EPIC:` prefix is a plain node, just never "lone"); rendered larger (r 10 open / 7 closed) in `graph_nodes.epic` purple with a bright ring and a bigger bold label. Epic styling takes priority over free/blocked/orphan; a closed epic keeps the closed fill but a purple ring.
-
-**Interactivity:**
-- Node drag (D3 drag behaviour, fx/fy fixed during drag). A near-zero drag (< 4px) is treated as a click and opens the issue's `html_url` on GitHub in a new tab.
-- Scroll wheel / drag-on-empty-space → pan+zoom via `d3.zoom().scaleExtent([0.3, 4])`. Filter: do not zoom when the cursor is over a node.
-- `+ / − / ⤺` buttons for zoom.
-
-**Tooltip** — appears on `mouseenter` with opacity transition. Contains: `#N`, full title, cluster, status (`эпик` prefix when the node is an epic, then `open`/`closed`, `in chains`/`lone`).
-
-**Node labels** in `JetBrains Mono 9px` with stroke halo for readability.
-
-**Summary above the graph** — 3 cards: free open nodes, in chains, lone open nodes.
-
-**Below the graph** — two legends: node/edge colours (epic swatch first); school descriptions (name + `summary` from `schools.json`).
-
-### Glory of Days — daily hero speed
-
-Sum of "valour" of quests closed on a given day:
-
-```
-valor(task) = base(size) + 0.3·comments + LOC/200 + cycleHours/24
-```
-
-- `base(size)` — `S`/`M`/`L` from [`.claude/sizing-bands.json`](../../sizing-bands.json) (mean review burden per size; regenerate with `python3 .claude/scripts/review-burden.py --write`); `unlabeled`/`retro` from `assets/palette.json#valor_size`. Mapped via the `size:` label on the issue closed by the PR.
-- `comments` = `comments.totalCount + reviewThreads.totalCount` of the PR.
-- `LOC` = `additions + deletions` of the PR.
-- `cycleHours` — hours between the first PR commit and `mergedAt`.
-
-Linking PR ↔ issue by the `#N:` prefix in the PR title. If the PR is a retro / has no issue — `base = 1`.
-
-`valor(day D) = Σ valor(task)` for PRs with `mergedAt::date == D`, split into `valor_feature` and `valor_infra`.
-
-Rendered as a Chart.js stacked area chart by day (from sprint cutoff to `--today`). Two stacked areas: feature (`gold.primary`) and infra (`gold.dim`). Below: three cards — total valour / average daily valour / most glorious day.
-
-### Artifact Spread
-Doughnut of merged PRs by size: S / M / L / ретро-планнинг / прочее. Process PRs are split off first — a title starting with `retro` or `plan sprint` → "process" (own purple sector), since they have no backing issue and would otherwise swamp the grey remainder. For the rest, size is derived from the `size:S|M|L` label on the linked issue (via `#N:` title prefix); a PR without a matching issue or label → "unlabeled" (shown as "прочее" — early/service PRs before the `#N:` convention).
-
-### Balance of the Week — feature share over the last 7 days
-
-One number on a card: `feature_share(last 7d), %`, in parentheses — change from the previous 7-day period. Format `25% (−6%)`. Sign rendered explicitly: `(+X%)` in green `#5a8a3a`, `(−X%)` in blood `blood`, `(±0%)` in muted `text.muted`. The card sits in the Character Sheet next to the Journey Chronicle.
-
-### Book of Knowledge
-At the bottom of the page — formulae and explanations: level+XP, artifact weight, class determination, MVP chapter progress, Hot/Heavy. Two-column layout.
+- **MVP chapters** — compose them (§MVP chapters above).
+- **Hero class** — `build.py` picks the class from `assets/classes.json`; you write the one-line *why* (e.g. "every fifth PR is a retro").
+- **Tone and the diary** — §Digest in chat below.
 
 ## Digest in chat
 
-After running `build.py` — output an **adventurer's diary entry**, 6–10 lines in first person. Form:
+After running `build.py`, read the figures off the rendered report and output an **adventurer's diary entry**, 6–10 lines in first person. Form:
 
 - opening line with the entry date in a stylised calendar system (day + month from a Skyrim-style set: Morning Star / Sunrise / Hearthfire / Starset and so on) + one mood sentence;
 - one line about class and level;
@@ -174,7 +82,6 @@ Forbidden in narrative blocks: bare percentages without RPG framing, "KPI", "vel
 - Don't edit the HTML by hand — cosmetic tuning → `assets/palette.json`; new section → `build.py`.
 - Don't assess a location if LOC = 0 — write "not opened", hide from the chart.
 - Don't invent schools/locations/classes/colours beyond those listed in `assets/` — the fixed palette ensures snapshot comparability between runs. Need a new school — add it to `schools.json`, not here.
-- Don't use the REST `/pulls` list endpoint for PR statistics — it doesn't return commits/comments/review_threads. GraphQL only.
 
 ## When the dry version is needed — `/progress-boring`
 

@@ -23,16 +23,6 @@ What does NOT qualify, even if it recurs in the diff:
 
 A symbol from the code that also names a stable engineering concept (the server, the storage, a view, a test fixture) does qualify — the entry is about the concept, the symbol name happens to match.
 
-## How drift is caught
-
-`review-glossary` runs in every PR review wave:
-
-- `/implement` Step 4 (inner-loop reviewer wave) and Step 6 (full pre-PR review wave A);
-- `/document` Step 5 (review wave);
-- `create-issue` Step 4 (before showing the draft to the user).
-
-The agent samples load-bearing nouns in the prose surfaces of the diff (KDoc, docstrings, comments, every touched file under `docs/` and `.claude/`), compares against the glossary, and emits `[REQUIRED]` findings for drift and for new domain terms without an entry.
-
 ## Adding and editing terms
 
 A glossary entry is added by the writing agent (`spec-writer` / `ux-expert` / `architect`, or the orchestrator for inline edits) as part of addressing a `[REQUIRED]` finding from `review-glossary`. The agent picks the section (Product / Technical), writes one line in the shape declared by the glossary header, and re-runs the review wave; the next pass verifies the entry shape.

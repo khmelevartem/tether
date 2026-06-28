@@ -15,13 +15,14 @@ esac
 read -r -d '' CHECKLIST <<'EOF' || true
 Pre-commit checklist (быстрая проверка перед `git commit`):
 
-- [ ] правки внутри worktree (`.claude/worktrees/<branch>/`), не в корне
+- [ ] правки внутри worktree (`.claude/worktrees/<name>/`), не в корне
 - [ ] новый код в `commonMain`, если не нужен platform API → docs/engineering/architecture-principles.md
 - [ ] правильный source set / hierarchy (`jvmMain` > android+desktop, `appleMain` > ios) → docs/engineering/modules.md
 - [ ] DI: компонент зарегистрирован и резолвится через граф, без ручных `new`/`object` → docs/engineering/dependency-injection.md
 - [ ] UI/state — по слоям presentation, без бизнес-логики во вьюхах → docs/engineering/presentation-layer.md
 - [ ] покрытие тестами: ≥70% для общей логики, ≥90% для алгоритмов → docs/engineering/testing.md
 - [ ] комментарии минимальны (приватные методы вместо пояснений)
+- [ ] долгоживущие артефакты (docs, `.claude/**`, KDoc, комментарии) следуют правилам письма → docs/engineering/long-lived-artifacts.md
 - [ ] странное поведение платформы? — сначала загляни в `docs/knowledge/`
 
 Сомневаешься в архитектурном решении — открой соответствующий файл из `docs/engineering/` прежде чем коммитить.

@@ -10,6 +10,12 @@ A long-lived artifact states what is / what to do / what equals — in present t
 
 If a rule is unreadable without referring to an incident, that's a weak formulation. Rewrite the rule; do not append the incident.
 
+## State the decision, not the alternatives it rejected
+
+When a rule encodes a choice, write only the choice. Do not append «А, а not Б», «not Y», «instead of Z» unless naming the rejected variant is genuinely load-bearing for understanding the choice. The next reader would not have considered the rejected option until the artifact named it — surfacing it here only widens the surface they must hold in mind.
+
+Counter-rejections age the same way as incident-rooted rationale: they freeze the writing-time context, and they make every later rewrite negotiate with a ghost variant.
+
 ## Code does not belong in long-lived artifacts
 
 A long-lived artifact describes a mechanism conceptually — what something is, why it exists, what invariants hold. It does not name the classes, methods, or library calls that implement it; those live in the code, where readers can see them in context. Class names in backticks, method signatures, and concrete API calls inside prose are signs the rule is being expressed through implementation, not as a rule.
@@ -66,8 +72,8 @@ Functional name vs proper name — examples of the wrong and the right form:
 
 | Wrong (proper name / inlined form)                                          | Right (functional name)             |
 |-----------------------------------------------------------------------------|-------------------------------------|
-| `the •—• mark in transferring state (line fills L→R)`                       | `the transfer progress bar`         |
-| `the •—• in its searching state (hollow right dot, opacity oscillation)`    | `the animated searching indicator`  |
+| `the dashed circle with clockwise sweep animation`                           | `the transfer progress bar`         |
+| `the hollow dot with pulsing opacity on the right side`                      | `the animated searching indicator`  |
 | `the Bélo logo's left lobe`                                                 | `the brand mark's identity region`  |
 
 If a proper name unavoidably must appear (the artifact is specifically *about* it), keep the mention to that one canonical document and link from elsewhere.
@@ -77,3 +83,14 @@ If a proper name unavoidably must appear (the artifact is specifically *about* i
 When prose describes the behaviour of an external tool, 3rd-party API, library, platform SDK, or specification — link to the authoritative doc next to the claim. Do not write from memory. External tools change; memory drifts; an unverified claim becomes permanently wrong and propagates through every artifact that references it.
 
 If the authoritative doc does not cover what you need — say so explicitly rather than presenting a project-invented rule as the tool's behaviour.
+
+## Numbering reflects structure, not insertion order
+
+A numbered sequence — ordered steps, an enumerated procedure — keeps its numbers contiguous and positional. When an item is inserted or removed in the middle, renumber the whole tail; do not graft the new item on with a fractional or letter suffix (`3` → `3.5`, `4` → `4a`) to dodge touching later numbers. Such a graft freezes the insertion into the numbering and reads as structure where there is none.
+
+A suffix or sub-number is valid only when it expresses real structure, never as an insertion shortcut:
+
+- **sub-items** of one entry — `2.1`, `2.2`, `2.3`;
+- **parallel siblings** at one position — mutually-exclusive variants chosen at the same point, `1a`, `1b`.
+
+Touching a number mid-list is a full renumber. Accept the wider diff.

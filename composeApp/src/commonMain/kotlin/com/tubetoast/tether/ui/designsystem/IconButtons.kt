@@ -31,6 +31,7 @@ import compose.icons.tablericons.ChevronDown
 import compose.icons.tablericons.ChevronLeft
 import compose.icons.tablericons.ChevronUp
 import compose.icons.tablericons.InfoCircle
+import compose.icons.tablericons.Settings
 import compose.icons.tablericons.X
 
 private val IconSize = 24.dp
@@ -200,6 +201,26 @@ fun PrimaryActionIconButton(
     }
 }
 
+@Composable
+fun SettingsIconButton(
+    onClick: () -> Unit,
+    contentDescription: String,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .tetherMinTouchTarget()
+            .clickable(onClick = onClick)
+            .semantics {
+                this.contentDescription = contentDescription
+                this.role = Role.Button
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        TetherIcon(imageVector = TablerIcons.Settings, tint = TetherTheme.colors.textPrimary)
+    }
+}
+
 @Preview(name = "Icon buttons")
 @Composable
 private fun PreviewIconButtons(@PreviewParameter(Themes::class) dark: Boolean) =
@@ -219,5 +240,6 @@ private fun PreviewIconButtons(@PreviewParameter(Themes::class) dark: Boolean) =
                 icon = TablerIcons.Check,
                 enabled = false,
             )
+            SettingsIconButton(onClick = {}, contentDescription = "Settings")
         }
     }

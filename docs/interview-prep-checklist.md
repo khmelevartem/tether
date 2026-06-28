@@ -3,6 +3,64 @@
 
 ---
 
+## Блок 0 — Gradle (заявлен как сильная сторона)
+
+> Подаётся в резюме как сильная сторона → ждать углублённых вопросов, а не «что такое `implementation`». Уметь объяснять механику (что делает Gradle под капотом) и компромиссы, а не только API.
+
+### Модель сборки и жизненный цикл
+- [ ] Три фазы: **Initialization** (читает `settings.gradle`, строит граф проектов) → **Configuration** (исполняет build-скрипты ВСЕХ проектов, строит task graph) → **Execution** (гоняет выбранные таски). Что исполняется на configuration, а что на execution
+- [ ] Почему «тяжёлый» код в теле build-скрипта (вне таски) — антипаттерн: configuration-фаза гоняется на КАЖДУЮ сборку, даже `./gradlew help`
+- [ ] `Project` vs `Task` vs `Gradle` объекты — что когда живёт
+- [ ] `settings.gradle(.kts)` — за что отвечает, `include` vs `includeBuild`
+- [ ] Gradle Daemon — зачем, что кэширует между сборками, когда «протухает»
+
+### Configuration avoidance (ключевой senior-вопрос)
+- [ ] `tasks.register` vs `tasks.create` — почему register ленивый и предпочтителен
+- [ ] `Provider<T>` / `Property<T>` — ленивые значения, почему не читать `.get()` на configuration-фазе
+- [ ] `TaskProvider` — отложенная конфигурация, `configure { }`
+- [ ] Почему `afterEvaluate { }` — code smell и что вместо него
+
+### Инкрементальность и кэши
+- [x] Up-to-date checks — как Gradle решает пропустить таску (хэши inputs/outputs)
+- [ ] `@Input` / `@InputFiles` / `@OutputFiles` / `@OutputDirectory` — аннотации кастомной таски, как влияют на incremental
+- [x] **Build Cache** (local + remote) — переиспользование outputs между сборками/машинами/CI; чем отличается от up-to-date
+- [x] Что делает таску `cacheable` и почему не все таски кэшируемы (non-deterministic outputs, absolute paths)
+- [ ] **Configuration Cache** — что кэширует (результат configuration-фазы), какие ограничения накладывает на скрипты (нельзя `Project` в execution, нельзя `Task.project`)
+- [ ] `--profile`, Build Scan (`--scan`) — где смотреть, что тормозит сборку
+
+### Управление зависимостями
+- [ ] `api` vs `implementation` — что протекает в транзитивный classpath потребителя, влияние на incremental compilation и build time
+- [ ] `compileOnly` / `runtimeOnly` / `testImplementation` — когда что
+- [ ] Configurations как граф — resolvable vs consumable vs dependency-scope
+- [ ] **Version Catalogs** (`libs.versions.toml`) — зачем, type-safe accessors, `bundles`, `plugins`
+- [ ] BOM / `platform()` / `enforcedPlatform()` — выравнивание версий транзитивных зависимостей
+- [ ] Dependency constraints vs `resolutionStrategy.force` — разница, когда что
+- [ ] Как разрулить конфликт версий — стратегия по умолчанию (highest wins), как переопределить
+- [ ] Variant-aware resolution и **attributes** — как Gradle выбирает нужный артефакт (особенно остро в KMP/Android)
+
+### Плагины и переиспользование build-логики
+- [ ] Script plugins vs precompiled script plugins vs binary plugins — три уровня
+- [ ] **Convention plugins** — precompiled `*.gradle.kts` в `build-logic`, как убирают копипасту между модулями
+- [ ] `buildSrc` vs `build-logic` как included build — почему `build-logic`/composite предпочтительнее (buildSrc инвалидирует кэш всего проекта при любом изменении)
+- [ ] **Composite builds** (`includeBuild`) — подмена зависимости локальным проектом, разработка библиотеки + потребителя вместе
+- [ ] Жизненный цикл плагина: `Plugin<Project>.apply()`, `project.extensions.create()` для DSL-конфига
+- [ ] `PluginManagement` блок в settings — откуда резолвятся плагины
+
+### Производительность
+- [ ] Parallel execution (`org.gradle.parallel`), `--max-workers` — на чём параллелит (на уровне проектов/тасок)
+- [ ] `org.gradle.jvmargs` в `gradle.properties` — heap демона, типичные OOM
+- [ ] JVM Toolchains (`kotlin { jvmToolchain(17) }`) — зачем, как Gradle авто-провижинит JDK
+- [ ] `dependsOn` vs `mustRunAfter` vs `finalizedBy` — ordering vs dependency; implicit deps через input/output провайдеры
+
+### Kotlin DSL и KMP-специфика (твой проект)
+- [ ] Kotlin DSL vs Groovy DSL — type safety, IDE-автокомплит, цена компиляции скриптов
+- [ ] Как KMP-плагин порождает source sets и компиляции на target; иерархия `commonMain` → `androidMain`/`iosMain`/`jvmMain` в терминах Gradle-конфигов
+- [ ] `dependsOn` между source set'ами vs `associateWith` (friend-компиляция) — на уровне Gradle (см. твой разбор `desktopCli associateWith main`)
+- [ ] Почему рассинхрон версий Kotlin/Compose-плагина — реальный риск в multi-module KMP (Compose Compiler version-locked к Kotlin)
+- [ ] Android Gradle Plugin поверх KMP — flavors, build types, как влияют на variant resolution
+
+---
+
 ## Блок 1 — Kotlin
 
 ### Система типов
@@ -14,8 +72,8 @@
 ### Классы и объекты
 - [ ] `data class` — что генерирует компилятор: `equals`, `hashCode`, `toString`, `copy`, `componentN`
 - [ ] `copy` — поверхностная копия, что с этим делать
-- [ ] `value class` (`@JvmInline`) — боксинг/анбоксинг, когда vs `data class`
-- [ ] `data object` (Kotlin 1.9+) — чем отличается от `object` и `data class`
+- [x] `value class` (`@JvmInline`) — боксинг/анбоксинг, когда vs `data class`
+- [x] `data object` (Kotlin 1.9+) — чем отличается от `object` и `data class`
 - [x] `sealed class` vs `sealed interface` — когда что, exhaustive `when`
 - [ ] `object` — singleton, companion object, thread-safety, порядок инициализации
 - [ ] `inner class` vs вложенный класс — захват ссылки, утечки памяти
@@ -45,7 +103,7 @@
 
 ### Механика
 - [x] `suspend` под капотом — CPS, state machine, что компилятор делает с функцией
-- [ ] `Continuation<T>` — интерфейс, как реализуется возобновление
+- [x] `Continuation<T>` — интерфейс, как реализуется возобновление
 - [ ] Корутины vs потоки — почему «легковесные», как маппируются на потоки
 - [ ] `CoroutineContext` — `Job`, `Dispatcher`, `CoroutineName`, `CoroutineExceptionHandler`, наследование
 - [x] `suspend` vs `blocking` — чем `delay` отличается от `Thread.sleep`
@@ -75,7 +133,7 @@
 - [ ] Cold flow vs Hot flow — новый поток на каждого collector vs один общий
 - [x] `StateFlow` vs `SharedFlow` — replay, conflation, начальное значение
 - [x] `StateFlow` под нагрузкой — механизм conflation, 100 collectors + 120 updates/sec
-- [ ] `flatMapLatest` vs `flatMapMerge` vs `flatMapConcat` — параллелизм
+- [x] `flatMapLatest` vs `flatMapMerge` vs `flatMapConcat` — параллелизм
 - [ ] `combine` vs `zip` — эмит при любом изменении vs ждёт пару
 - [ ] `debounce`, `throttleFirst` — поиск с задержкой
 - [x] `buffer` / `conflate` / `collectLatest` — backpressure
@@ -146,7 +204,7 @@
 
 ### Архитектура
 - [x] State hoisting — паттерн, зачем
-- [ ] `CompositionLocal` — когда применять, чем опасен
+- [x] `CompositionLocal` — когда применять, чем опасен
 - [ ] Navigation в Compose — `NavController`, `NavHost`, back stack, deep links
 
 ### Performance
@@ -173,7 +231,7 @@
 
 ### DI
 - [ ] Hilt — `@HiltViewModel`, scopes, `@EntryPoint`
-- [ ] Koin — отличие от Hilt, service locator vs DI
+- [x] Koin — отличие от Hilt, service locator vs DI
 - [x] Без фреймворка (твой опыт) — manual DI, когда оправдан в KMP
 
 ---
@@ -307,7 +365,7 @@
 - [x] Что в поведении Claude Code меняется, когда инструкция лежит как skill (`.claude/skills/<name>/SKILL.md` с YAML frontmatter `description`) против command (plain prompt в `.claude/commands/<name>.md`)? Почему Anthropic смержил commands в skills, и какие практические следствия для проекта.
 - [x] Где проходит граница между обоснованным override ревьюверского `[REQUIRED]` блока и deflection'ом — какие признаки делают override честным (knowledge gap у ревьювера, опора на более авторитетный источник, асимметрия в пользу согласия), а какие превращают его в маскировку scope creep (накопление overrides, удобство, апелляция к «общему контексту» без конкретики).
 - [x] Какой механизм даёт skill auto-invocation, которого нет у command — что Claude Code загружает в контекст и когда (progressive disclosure: metadata всегда, body лениво при вызове), и почему промоут не «бесплатный» — каждая строка `description` сидит в контексте каждого turn'а, поэтому короткие шаблоны без natural-language триггеров оставляют как commands.
-- [x] Какие практики проектирования long-lived artifacts (docs, agent prompts, specs) минимизируют сцепление с конкретными доменными концептами — чтобы отзыв концепта стоил 1–2 файла, а не 13: (a) single source of truth и ссылки на канон вместо его цитирования; (b) layer separation с точной границей «state semantics — product, state visual realization — UI»; (c) функциональное имя слота вместо собственного (`progress bar` vs `the •—• mark`); (d) агент-промты — такой же long-lived слой, в нём те же правила применимы.
+- [x] Какие практики проектирования long-lived artifacts (docs, agent prompts, specs) минимизируют сцепление с конкретными доменными концептами — чтобы отзыв концепта стоил 1–2 файла, а не 13: (a) single source of truth и ссылки на канон вместо его цитирования; (b) layer separation с точной границей «state semantics — product, state visual realization — UI»; (c) функциональное имя слота вместо собственного (`progress bar` вместо визуального описания конкретного элемента); (d) агент-промты — такой же long-lived слой, в нём те же правила применимы.
 - [x] Должен ли ревьюер блокировать PR на основании правила, которого нет в каноне (кодстайл / архгайды), — и почему. Глубинный механизм: блок без цитируемого канона разрушает контракт «автор — ревьюер» (нет воспроизводимости между ревьюерами), создаёт силент-дрейф между тем, что енфорсится, и тем, к чему у автора есть доступ. Корректный путь: SUGGESTION/nit допустим без канона (мягкий сигнал); REQUIRED требует строки канона; если правило ощущается как настоящее (scale × frequency × pain) — эскалация на обновление канона ДО следующего применения, иначе invented-rule-проблема просто переносится с ревьюера на коллектив.
 - [x] Как Compose Multiplatform рендерит на каждой из трёх платформ и почему это даёт «single visual language». Compose владеет composition → measure → layout везде одинаково, вниз делегирует только draw. Бэкенды РАЗНЫЕ: Android рисует через родной `android.graphics.Canvas` (аппаратное ускорение через RenderNode; Skia внутри ОС, но НЕ Skiko), Desktop и iOS — через Skiko (Skia for Kotlin). Визуальное парити берётся НЕ из единого рендерера, а из того, что Compose сам рисует каждый пиксель кастомными примитивами вместо инстанцирования нативных OS-компонентов (противоположность нативным тулкитам из Option 2 ADR). Риск «iOS младше Android» — про интеграционный слой (UIKit interop, ввод текста, accessibility, momentum-скролл, run-loop), не про Skia: рисующее ядро зрелое везде, молодая именно платформенная склейка на Apple.
 - [x] Зачем нужен enforcement probe (положить заведомо битый артефакт, прогнать чек, убедиться, что упал с ожидаемым сообщением, удалить), если есть юнит-тесты самого правила или мы используем заведомо рабочий инструмент типа lychee. Юнит-тест покрывает логику правила («битая ссылка → ошибка»); probe валидирует wiring — что правило/инструмент действительно подключён в реальную цепь (ServiceLoader для ktlint custom rule, gradle task graph, CI workflow step, git hook chain) и что exit code пропихнут наружу без проглатывания shell-обёрткой. Это место «всё по отдельности работает, а вместе — нет»: probe бьёт через ту же дверь, что и реальный нарушитель. Принципиально это валидация negative case вместе с positive — нужно убедиться, что чек не только не срабатывает, когда всё правильно, но и срабатывает, когда есть реальное нарушение.

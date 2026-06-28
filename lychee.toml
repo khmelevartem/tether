@@ -1,3 +1,18 @@
 # Exclude the UX brief template — it contains intentional placeholder links.
 # Entries are regexes (not globs); escape dots and anchor with `$` to avoid accidental matches.
 exclude_path = ["docs/product/features/_ux-brief-template\\.md$"]
+
+# medium.com (incl. help./blog. subdomains) and Medium-hosted publication custom
+# domains (proandroiddev.com, blog.kotlin-academy.com) — Medium answers automated
+# link checkers with HTTP 403 (bot protection) or fails the TLS handshake
+# regardless of user agent, so their links can't be verified online.
+# habr.com — fails the TLS handshake for the link checker from CI/hook
+# environments, so its links can't be verified online either.
+# All are cited by the articles and the Habr/Medium publishing checklists;
+# the URLs are valid, the checkers just can't reach them.
+exclude = [
+    "^https://([a-z0-9-]+\\.)?medium\\.com/",
+    "^https://habr\\.com/",
+    "^https://proandroiddev\\.com/",
+    "^https://blog\\.kotlin-academy\\.com/",
+]
