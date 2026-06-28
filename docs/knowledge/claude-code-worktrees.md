@@ -21,4 +21,3 @@ The transcript lives in a directory derived from the worktree's absolute path, u
 
 - [`.claude/skills/implement/scripts/ensure-branch.sh`](../../.claude/skills/implement/scripts/ensure-branch.sh) — the after-the-fact branch rename
 - [`.claude/scripts/cleanup-worktrees.sh`](../../.claude/scripts/cleanup-worktrees.sh)
-- [#482](https://github.com/khmelevartem/tether/issues/482)
