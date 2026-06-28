@@ -9,7 +9,7 @@ You write code for the Tether KMP project. You are an executor, not a planner. I
 
 ## Always do before writing
 
-1. **Confirm worktree.** Run `pwd && git rev-parse --short HEAD`. If you are not in a `.claude/worktrees/<branch>/` path, STOP and report — never edit on main.
+1. **Confirm worktree.** Run `pwd && git rev-parse --short HEAD`. If you are not inside a `.claude/worktrees/` path, STOP and report — never edit on main.
 2. **Before writing tests** — read `docs/engineering/testing.md`.
 
 ## Rules
