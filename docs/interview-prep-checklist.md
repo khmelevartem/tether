@@ -3,6 +3,64 @@
 
 ---
 
+## Блок 0 — Gradle (заявлен как сильная сторона)
+
+> Подаётся в резюме как сильная сторона → ждать углублённых вопросов, а не «что такое `implementation`». Уметь объяснять механику (что делает Gradle под капотом) и компромиссы, а не только API.
+
+### Модель сборки и жизненный цикл
+- [ ] Три фазы: **Initialization** (читает `settings.gradle`, строит граф проектов) → **Configuration** (исполняет build-скрипты ВСЕХ проектов, строит task graph) → **Execution** (гоняет выбранные таски). Что исполняется на configuration, а что на execution
+- [ ] Почему «тяжёлый» код в теле build-скрипта (вне таски) — антипаттерн: configuration-фаза гоняется на КАЖДУЮ сборку, даже `./gradlew help`
+- [ ] `Project` vs `Task` vs `Gradle` объекты — что когда живёт
+- [ ] `settings.gradle(.kts)` — за что отвечает, `include` vs `includeBuild`
+- [ ] Gradle Daemon — зачем, что кэширует между сборками, когда «протухает»
+
+### Configuration avoidance (ключевой senior-вопрос)
+- [ ] `tasks.register` vs `tasks.create` — почему register ленивый и предпочтителен
+- [ ] `Provider<T>` / `Property<T>` — ленивые значения, почему не читать `.get()` на configuration-фазе
+- [ ] `TaskProvider` — отложенная конфигурация, `configure { }`
+- [ ] Почему `afterEvaluate { }` — code smell и что вместо него
+
+### Инкрементальность и кэши
+- [ ] Up-to-date checks — как Gradle решает пропустить таску (хэши inputs/outputs)
+- [ ] `@Input` / `@InputFiles` / `@OutputFiles` / `@OutputDirectory` — аннотации кастомной таски, как влияют на incremental
+- [ ] **Build Cache** (local + remote) — переиспользование outputs между сборками/машинами/CI; чем отличается от up-to-date
+- [ ] Что делает таску `cacheable` и почему не все таски кэшируемы (non-deterministic outputs, absolute paths)
+- [ ] **Configuration Cache** — что кэширует (результат configuration-фазы), какие ограничения накладывает на скрипты (нельзя `Project` в execution, нельзя `Task.project`)
+- [ ] `--profile`, Build Scan (`--scan`) — где смотреть, что тормозит сборку
+
+### Управление зависимостями
+- [ ] `api` vs `implementation` — что протекает в транзитивный classpath потребителя, влияние на incremental compilation и build time
+- [ ] `compileOnly` / `runtimeOnly` / `testImplementation` — когда что
+- [ ] Configurations как граф — resolvable vs consumable vs dependency-scope
+- [ ] **Version Catalogs** (`libs.versions.toml`) — зачем, type-safe accessors, `bundles`, `plugins`
+- [ ] BOM / `platform()` / `enforcedPlatform()` — выравнивание версий транзитивных зависимостей
+- [ ] Dependency constraints vs `resolutionStrategy.force` — разница, когда что
+- [ ] Как разрулить конфликт версий — стратегия по умолчанию (highest wins), как переопределить
+- [ ] Variant-aware resolution и **attributes** — как Gradle выбирает нужный артефакт (особенно остро в KMP/Android)
+
+### Плагины и переиспользование build-логики
+- [ ] Script plugins vs precompiled script plugins vs binary plugins — три уровня
+- [ ] **Convention plugins** — precompiled `*.gradle.kts` в `build-logic`, как убирают копипасту между модулями
+- [ ] `buildSrc` vs `build-logic` как included build — почему `build-logic`/composite предпочтительнее (buildSrc инвалидирует кэш всего проекта при любом изменении)
+- [ ] **Composite builds** (`includeBuild`) — подмена зависимости локальным проектом, разработка библиотеки + потребителя вместе
+- [ ] Жизненный цикл плагина: `Plugin<Project>.apply()`, `project.extensions.create()` для DSL-конфига
+- [ ] `PluginManagement` блок в settings — откуда резолвятся плагины
+
+### Производительность
+- [ ] Parallel execution (`org.gradle.parallel`), `--max-workers` — на чём параллелит (на уровне проектов/тасок)
+- [ ] `org.gradle.jvmargs` в `gradle.properties` — heap демона, типичные OOM
+- [ ] JVM Toolchains (`kotlin { jvmToolchain(17) }`) — зачем, как Gradle авто-провижинит JDK
+- [ ] `dependsOn` vs `mustRunAfter` vs `finalizedBy` — ordering vs dependency; implicit deps через input/output провайдеры
+
+### Kotlin DSL и KMP-специфика (твой проект)
+- [ ] Kotlin DSL vs Groovy DSL — type safety, IDE-автокомплит, цена компиляции скриптов
+- [ ] Как KMP-плагин порождает source sets и компиляции на target; иерархия `commonMain` → `androidMain`/`iosMain`/`jvmMain` в терминах Gradle-конфигов
+- [ ] `dependsOn` между source set'ами vs `associateWith` (friend-компиляция) — на уровне Gradle (см. твой разбор `desktopCli associateWith main`)
+- [ ] Почему рассинхрон версий Kotlin/Compose-плагина — реальный риск в multi-module KMP (Compose Compiler version-locked к Kotlin)
+- [ ] Android Gradle Plugin поверх KMP — flavors, build types, как влияют на variant resolution
+
+---
+
 ## Блок 1 — Kotlin
 
 ### Система типов
