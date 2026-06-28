@@ -12,8 +12,6 @@ Each `##` section is one step.
 
 **Announce each step on entry.** Before executing a section, post a one-line user-visible marker naming the step you are entering. Announce a skipped step too, with the reason (`skip recon — re-entry`). The announcement makes the walk auditable: the user sees the real sequence, and drift into a remembered shape shows the moment a step is announced out of order or an expected step is never announced.
 
-**Worktree precondition (mandatory).** Once `classify the state` resolves `<N>`, run `.claude/skills/implement/scripts/ensure-branch.sh <N>` before any file-writing step. One-shot, not part of the walk.
-
 ---
 ## Step 0 — classify the state
 
@@ -36,6 +34,13 @@ A non-zero exit means blocked state — read the emitted keys anyway and continu
 **Applies to:** `drift=behind`.
 
 Run `/pull-main` to merge fresh main, then go back to `classify the state` step.
+
+---
+## Step 2a — ensure-branch
+
+**Applies to:** `reentry=fresh`.
+
+Run `.claude/skills/implement/scripts/ensure-branch.sh <N>` to give the branch the issue number (`<N>-<title-slug>`), so `git worktree list` and `classify-state.sh` map the checkout to its issue.
 
 ---
 ## Step 3 — read-all
