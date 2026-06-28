@@ -40,7 +40,7 @@ Run `/pull-main` to merge fresh main, then go back to `classify the state` step.
 
 **Applies to:** `reentry=fresh`.
 
-Run `.claude/skills/implement/scripts/ensure-branch.sh <N>` to give the branch the issue number (`<N>-<title-slug>`), so `git worktree list` and `classify-state.sh` map the checkout to its issue.
+Run `.claude/skills/implement/scripts/ensure-branch.sh <N>` to give the branch the issue number (`<N>-<title-slug>`), so `classify-state.sh` maps the checkout to its issue.
 
 ---
 ## Step 4 — read-all

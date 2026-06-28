@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Renames the current worktree branch to <issue>-<title-slug> so `git worktree
-# list` and classify-state.sh map the checkout back to its issue. Only the branch ref
-# is renamed; the worktree directory is left untouched.
+# Renames the current worktree branch to <issue>-<title-slug> so the worktree
+# listing and state classification map the checkout back to its issue. Only the
+# branch ref is renamed; the worktree directory is left untouched.
 #
 # Idempotent: a no-op once the branch already starts with the issue number.
 # Usage: ensure-branch.sh <issue-number>
