@@ -10,6 +10,7 @@ import com.tubetoast.tether.security.TrustedDeviceStore
 import com.tubetoast.tether.security.deviceIdFromPublicKey
 import com.tubetoast.tether.transfer.InboundEvent
 import com.tubetoast.tether.transfer.NoOpTransferActivityTracker
+import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.TransferActivityTracker
 import com.tubetoast.tether.transfer.toPeerIdentity
 import io.ktor.http.HttpStatusCode
@@ -27,7 +28,10 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.readAvailable
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.supervisorScope
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.debug
 import ru.pocketbyte.kydra.log.error
@@ -83,6 +87,8 @@ internal fun Application.installFileServerRoutes(
     deviceIdentityStore: DeviceIdentityStore? = null,
     discoveredDevicesStore: DiscoveredDevicesStore? = null,
     inboundEvents: MutableSharedFlow<InboundEvent>? = null,
+    isCancelRequested: ((PeerIdentity) -> Boolean)? = null,
+    onCancelConsumed: ((PeerIdentity) -> Unit)? = null,
 ) {
     install(ContentNegotiation) { json() }
     routing {
@@ -153,6 +159,7 @@ internal fun Application.installFileServerRoutes(
                 ?.toPeerIdentity()
             val contentLength = call.request.contentLength()
             var uploadComplete = false
+            var cancelledByReceiver = false
             var handle: UploadHandle? = null
             try {
                 val resolved = storage.resolveDestination(relativePath)
@@ -160,11 +167,31 @@ internal fun Application.installFileServerRoutes(
                 if (peer != null) inboundEvents?.tryEmit(InboundEvent.FileStarted(peer, relativePath))
                 tracker.withActiveTransfer {
                     val body = call.receiveChannel()
-                    val bytesWritten = storage.writeBody(body, resolved)
+                    val bytesResult = CompletableDeferred<Long>()
+                    supervisorScope {
+                        val writeJob = launch {
+                            bytesResult.complete(storage.writeBody(body, resolved))
+                        }
+                        if (peer != null && isCancelRequested != null) {
+                            launch {
+                                while (writeJob.isActive) {
+                                    if (isCancelRequested(peer)) {
+                                        cancelledByReceiver = true
+                                        writeJob.cancel()
+                                        break
+                                    }
+                                    kotlinx.coroutines.delay(50)
+                                }
+                            }
+                        }
+                        writeJob.join()
+                    }
                     // Ktor closes the body channel silently when the client disconnects
                     // mid-stream. closedCause covers exceptional close; the Content-Length
                     // comparison covers clean close on incomplete bodies.
                     body.closedCause?.let { throw it }
+                    if (cancelledByReceiver) throw CancelledByReceiverException()
+                    val bytesWritten = bytesResult.await()
                     val expected = contentLength
                     if (expected != null && bytesWritten < expected) {
                         error("FileServer: incomplete upload — got $bytesWritten of $expected bytes")
@@ -185,7 +212,10 @@ internal fun Application.installFileServerRoutes(
             } catch (e: Exception) {
                 log.error { "upload failed for '$relativePath' — ${e.message ?: "unknown error"}" }
                 if (peer != null && !uploadComplete) {
-                    inboundEvents?.tryEmit(InboundEvent.ConnectionLost(peer, receivedSoFar = 0))
+                    if (cancelledByReceiver) onCancelConsumed?.invoke(peer)
+                    inboundEvents?.tryEmit(
+                        InboundEvent.ConnectionLost(peer, receivedSoFar = 0, cancelled = cancelledByReceiver),
+                    )
                 }
                 try {
                     call.respond(
@@ -201,12 +231,16 @@ internal fun Application.installFileServerRoutes(
     }
 }
 
+internal class CancelledByReceiverException : Exception("upload cancelled by receiver")
+
 internal suspend fun streamUploadBody(
     input: ByteReadChannel,
     write: (buffer: ByteArray, length: Int) -> Unit,
+    isCancelled: () -> Boolean = { false },
 ) {
     val buffer = ByteArray(UPLOAD_BUFFER_SIZE)
     while (!input.isClosedForRead) {
+        if (isCancelled()) throw CancelledByReceiverException()
         val n = input.readAvailable(buffer, 0, buffer.size)
         if (n <= 0) break
         write(buffer, n)

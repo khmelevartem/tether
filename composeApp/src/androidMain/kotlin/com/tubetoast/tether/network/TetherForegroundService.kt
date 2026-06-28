@@ -17,6 +17,7 @@ import androidx.lifecycle.lifecycleScope
 import com.tubetoast.tether.R
 import com.tubetoast.tether.di.AppContainerProvider
 import com.tubetoast.tether.discovery.MdnsDiscovery
+import com.tubetoast.tether.transfer.InboundEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -87,6 +88,11 @@ class TetherForegroundService : LifecycleService() {
                 runningFileServer = null
                 stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
+                return@launch
+            }
+
+            launch {
+                fileServer.events.collect { event -> handleInboundNotification(event) }
             }
         }
     }
@@ -163,7 +169,32 @@ class TetherForegroundService : LifecycleService() {
         false
     }
 
-    private fun buildNotification(): Notification {
+    private fun handleInboundNotification(event: InboundEvent) {
+        val nm = getSystemService(NotificationManager::class.java) ?: return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) !=
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        val text = when (event) {
+            is InboundEvent.FileStarted -> getString(
+                R.string.fg_notification_receiving,
+                event.name,
+                event.peer.fingerprint,
+            )
+            is InboundEvent.FileCompleted -> getString(
+                R.string.fg_notification_receiving,
+                event.name,
+                event.peer.fingerprint,
+            )
+            is InboundEvent.ConnectionLost -> getString(R.string.fg_notification_received, event.receivedSoFar)
+            else -> return
+        }
+        nm.notify(NOTIFICATION_ID, buildNotification(text))
+    }
+
+    private fun buildNotification(contentText: String? = null): Notification {
         val stopIntent = Intent(this, TetherForegroundService::class.java).setAction(ACTION_STOP)
         val stopPendingIntent = PendingIntent.getService(
             this,
@@ -174,7 +205,7 @@ class TetherForegroundService : LifecycleService() {
         return NotificationCompat
             .Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.fg_notification_title))
-            .setContentText(getString(R.string.fg_notification_text))
+            .setContentText(contentText ?: getString(R.string.fg_notification_text))
             .setSmallIcon(R.mipmap.ic_launcher)
             .setOngoing(true)
             .addAction(

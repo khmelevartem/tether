@@ -12,11 +12,10 @@ import kotlinx.coroutines.launch
  * which have no direct wire equivalent (see `docs/engineering/file-transfer-wire.md`).
  *
  * **Batch-end heuristic:** each file arrives as a separate HTTP request with no manifest.
- * [ReceiveEvent.BatchCompleted] is synthesized when [InboundEvent.ConnectionLost] arrives,
- * using files completed so far as `received` and files seen as `total`. A peer that delivers
- * all files cleanly without a disconnect does not produce a [ConnectionLost] event — in that
- * case the engine's [ReconnectCountdown] fires after the reconnection timeout and transitions
- * to [PeerTransferState.Error]. Adding a wire-level batch manifest is tracked in #507.
+ * [ReceiveEvent.BatchCompleted] is synthesized only on a deliberate receiver cancel
+ * ([InboundEvent.ConnectionLost.cancelled] = true); a genuine network drop emits only
+ * [ReceiveEvent.ConnectionLost], which drives the engine into Reconnecting and then (on
+ * timeout) to Error(NetworkLost). Adding a wire-level batch manifest is tracked in #507.
  */
 class InboundEventRouter(
     scope: CoroutineScope,
@@ -73,7 +72,9 @@ class InboundEventRouter(
             is InboundEvent.ConnectionLost -> {
                 val received = peerFilesDone[peer] ?: 0
                 val total = seen.size.coerceAtLeast(received)
-                flow.tryEmit(ReceiveEvent.BatchCompleted(received = received, total = total))
+                if (event.cancelled) {
+                    flow.tryEmit(ReceiveEvent.BatchCompleted(received = received, total = total))
+                }
                 flow.tryEmit(ReceiveEvent.ConnectionLost(receivedSoFar = received))
                 peerFilesSeen.remove(peer)
                 peerFilesDone.remove(peer)

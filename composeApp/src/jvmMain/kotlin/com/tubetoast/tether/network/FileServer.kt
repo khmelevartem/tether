@@ -42,6 +42,9 @@ actual class FileServer internal constructor(
     )
     actual val events: SharedFlow<InboundEvent> = _events.asSharedFlow()
 
+    // Thread-safe: written by cancelInbound (external caller), read by Ktor route coroutines.
+    @Volatile private var cancelledPeers: Set<PeerIdentity> = emptySet()
+
     @Volatile private var _port: Int = -1
     actual val port: Int get() = _port
 
@@ -58,6 +61,8 @@ actual class FileServer internal constructor(
                     deviceIdentityStore,
                     discoveredDevicesStore,
                     _events,
+                    isCancelRequested = { peer -> peer in cancelledPeers },
+                    onCancelConsumed = { peer -> cancelledPeers = cancelledPeers - peer },
                 )
             }.start(wait = false)
         } catch (e: Exception) {
@@ -81,8 +86,7 @@ actual class FileServer internal constructor(
     }
 
     actual suspend fun cancelInbound(peer: PeerIdentity) {
-        // Ktor CIO does not expose per-connection close. The router's reconnection
-        // countdown handles forced termination after timeout. This call is a no-op
-        // until a per-connection cancel mechanism is available.
+        cancelledPeers = cancelledPeers + peer
+        log.info { "cancel requested for peer ${peer.id}" }
     }
 }

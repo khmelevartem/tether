@@ -350,14 +350,19 @@ class PeerTransferEngine(
                 }
             }
             is ReceiveEvent.ConnectionLost -> {
+                // When a deliberate cancel already transitioned us to Received, the ConnectionLost
+                // that follows is the socket teardown confirming the cancel — do not override.
+                var started = false
                 _state.update { snapshot ->
+                    if (snapshot is PeerTransferState.Received) return@update snapshot
+                    started = true
                     PeerTransferState.Reconnecting(
                         direction = Direction.Inbound,
                         remainingSeconds = reconnectionTimeout.inWholeSeconds.toInt(),
                         snapshotBeforeDrop = snapshot,
                     )
                 }
-                inboundReconnectCountdown.start()
+                if (started) inboundReconnectCountdown.start()
             }
             ReceiveEvent.ReceiverSuspended -> {
                 inboundReconnectCountdown.cancel()

@@ -106,7 +106,7 @@ class ReceiverEventRoutingTest {
     }
 
     @Test
-    fun `ConnectionLost synthesizes BatchCompleted then ConnectionLost`() = runTest {
+    fun `cancelled ConnectionLost synthesizes BatchCompleted then ConnectionLost`() = runTest {
         val inbound = MutableSharedFlow<InboundEvent>(extraBufferCapacity = 16)
         val router = buildRouter(inbound, backgroundScope)
         val received = mutableListOf<ReceiveEvent>()
@@ -115,13 +115,32 @@ class ReceiverEventRoutingTest {
 
         inbound.emit(InboundEvent.FileStarted(peerA, "a.txt"))
         inbound.emit(InboundEvent.FileCompleted(peerA, "a.txt", null))
-        inbound.emit(InboundEvent.ConnectionLost(peerA, receivedSoFar = 1))
+        inbound.emit(InboundEvent.ConnectionLost(peerA, receivedSoFar = 1, cancelled = true))
         runCurrent()
 
         val batchCompleted = received.filterIsInstance<ReceiveEvent.BatchCompleted>()
         assertEquals(1, batchCompleted.size)
         assertEquals(1, batchCompleted[0].received)
         assertEquals(1, batchCompleted[0].total)
+
+        val connLost = received.filterIsInstance<ReceiveEvent.ConnectionLost>()
+        assertEquals(1, connLost.size)
+    }
+
+    @Test
+    fun `genuine ConnectionLost emits only ConnectionLost without BatchCompleted`() = runTest {
+        val inbound = MutableSharedFlow<InboundEvent>(extraBufferCapacity = 16)
+        val router = buildRouter(inbound, backgroundScope)
+        val received = mutableListOf<ReceiveEvent>()
+        backgroundScope.launch { router.eventsFor(peerA).toList(received) }
+        runCurrent()
+
+        inbound.emit(InboundEvent.FileStarted(peerA, "a.txt"))
+        inbound.emit(InboundEvent.ConnectionLost(peerA, receivedSoFar = 0, cancelled = false))
+        runCurrent()
+
+        val batchCompleted = received.filterIsInstance<ReceiveEvent.BatchCompleted>()
+        assertEquals(0, batchCompleted.size, "genuine drop must not emit BatchCompleted")
 
         val connLost = received.filterIsInstance<ReceiveEvent.ConnectionLost>()
         assertEquals(1, connLost.size)

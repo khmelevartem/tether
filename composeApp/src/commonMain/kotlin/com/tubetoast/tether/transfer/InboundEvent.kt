@@ -28,12 +28,14 @@ sealed interface InboundEvent {
     ) : InboundEvent
 
     /**
-     * Emitted when a mid-stream client disconnect is detected for the peer's upload connection.
-     * The transfer layer interprets this as the batch-end signal when reconnection does not occur
-     * within the reconnection timeout.
+     * Emitted when the upload connection for this peer is gone — either a genuine network drop
+     * ([cancelled] = false) or a deliberate receiver-side cancel ([cancelled] = true).
+     * The router uses [cancelled] to decide whether to synthesize [ReceiveEvent.BatchCompleted]
+     * (cancel → clean batch end) or emit only [ReceiveEvent.ConnectionLost] (drop → Reconnecting).
      */
     data class ConnectionLost(
         override val peer: PeerIdentity,
         val receivedSoFar: Int,
+        val cancelled: Boolean = false,
     ) : InboundEvent
 }

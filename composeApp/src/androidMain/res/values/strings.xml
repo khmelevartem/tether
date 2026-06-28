@@ -4,4 +4,6 @@
     <string name="fg_notification_title">Tether is active</string>
     <string name="fg_notification_text">Receiving files on this network</string>
     <string name="fg_notification_stop_action">Stop</string>
+    <string name="fg_notification_receiving">Receiving %1$s from %2$s</string>
+    <string name="fg_notification_received">Received %1$d file(s)</string>
 </resources>

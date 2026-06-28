@@ -34,6 +34,11 @@ fun main() = runBlocking {
     container.nameStore.init()
     val handle = container.startBackendOrFail()
     container.autoSendDispatcher.start()
+    DesktopInboundNotifier(
+        windowHolder = container.windowHolder,
+        events = container.fileServer.events,
+        scope = container.appScope,
+    ).start()
     registerShutdownHook(handle)
 
     val lifecycle = LifecycleRegistry()

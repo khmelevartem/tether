@@ -151,6 +151,45 @@ class FileServerEventsTest {
     }
 
     @Test
+    fun `cancelInbound during upload emits ConnectionLost with cancelled=true`() {
+        val (server, port) = newServerWithPeer()
+        val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
+        try {
+            runBlocking {
+                val collected = mutableListOf<InboundEvent>()
+                val collectionJob = launch {
+                    server.events.collect { collected += it }
+                }
+                val uploadJob = launch {
+                    try {
+                        client.post("http://localhost:$port/upload?name=cancel.bin") {
+                            setBody(SlowEventsContent(totalBytes = 8L * 1024 * 1024))
+                        }
+                    } catch (_: Exception) {
+                    }
+                }
+                // Wait until the upload has started (FileStarted received)
+                withTimeout(5.seconds) {
+                    while (collected.none { it is InboundEvent.FileStarted }) delay(10.milliseconds)
+                }
+                server.cancelInbound(peer)
+                // Wait for ConnectionLost
+                withTimeout(5.seconds) {
+                    while (collected.none { it is InboundEvent.ConnectionLost }) delay(10.milliseconds)
+                }
+                uploadJob.cancel()
+                collectionJob.cancel()
+
+                val lostEvent = collected.filterIsInstance<InboundEvent.ConnectionLost>().first()
+                assertEquals(peer, lostEvent.peer)
+                assertTrue(lostEvent.cancelled, "ConnectionLost.cancelled must be true on explicit cancel")
+            }
+        } finally {
+            client.close()
+        }
+    }
+
+    @Test
     fun `upload without peer in store emits no events`() {
         // Server without a discoveredDevicesStore: events flow stays empty for unknown hosts.
         val configDir = Files.createTempDirectory("tether-fs-events-keys2").toFile().also(cleanupPaths::add)
