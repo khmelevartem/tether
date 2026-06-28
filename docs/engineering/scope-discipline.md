@@ -22,3 +22,9 @@ If any of the three is false, **defer** it — a follow-up issue or a `spawn_tas
 ## Volume is not the primary axis
 
 A large but mechanical fix in already-touched files can be in-scope; a small fix that drags in a new contract or a new platform is not. Weigh reach, blast radius, and verifiability — not line count.
+
+## A mid-task push is defensive by default
+
+When the user surfaces a "while we're here" adjacent fix during the task, treat it as defensive — the kernel change has usually just turned a previously benign coupling or dual representation into a stale-copy hazard, or seeded a pattern that will spread before any later cleanup. Fold it unless it is clearly outside the change's blast radius and fails the test above. Refactor and pattern-hygiene items left for "later" rot in the backlog while the next implementer pays to re-derive the context.
+
+Reserve a follow-up issue or a `spawn_task` chip for items that genuinely cannot ride along — their own framing, doc home, new contract, or unpredictable volume. Never auto-file: confirm with the user before creating a separate ticket.
