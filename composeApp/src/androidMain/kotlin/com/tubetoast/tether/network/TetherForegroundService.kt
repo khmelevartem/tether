@@ -181,12 +181,12 @@ class TetherForegroundService : LifecycleService() {
             is InboundEvent.FileStarted -> getString(
                 R.string.fg_notification_receiving,
                 event.name,
-                event.peer.fingerprint,
+                event.peer.id,
             )
             is InboundEvent.FileCompleted -> getString(
                 R.string.fg_notification_receiving,
                 event.name,
-                event.peer.fingerprint,
+                event.peer.id,
             )
             is InboundEvent.ConnectionLost -> getString(R.string.fg_notification_received, event.receivedSoFar)
             else -> return

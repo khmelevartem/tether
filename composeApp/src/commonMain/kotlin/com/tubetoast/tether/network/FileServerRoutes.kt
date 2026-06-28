@@ -236,11 +236,9 @@ internal class CancelledByReceiverException : Exception("upload cancelled by rec
 internal suspend fun streamUploadBody(
     input: ByteReadChannel,
     write: (buffer: ByteArray, length: Int) -> Unit,
-    isCancelled: () -> Boolean = { false },
 ) {
     val buffer = ByteArray(UPLOAD_BUFFER_SIZE)
     while (!input.isClosedForRead) {
-        if (isCancelled()) throw CancelledByReceiverException()
         val n = input.readAvailable(buffer, 0, buffer.size)
         if (n <= 0) break
         write(buffer, n)

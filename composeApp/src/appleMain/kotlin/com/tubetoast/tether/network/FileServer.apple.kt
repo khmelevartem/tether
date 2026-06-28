@@ -21,6 +21,7 @@ import ru.pocketbyte.kydra.log.error
 import ru.pocketbyte.kydra.log.info
 import ru.pocketbyte.kydra.log.withMessage
 import ru.pocketbyte.kydra.log.wrapper.withTag
+import kotlin.concurrent.Volatile
 
 private val log = KydraLog.withTag(default = "FileServer")
 
@@ -42,7 +43,7 @@ actual class FileServer internal constructor(
     )
     actual val events: SharedFlow<InboundEvent> = _events.asSharedFlow()
 
-    // Kotlin/Native: @Volatile on an immutable-set reference is safe for single-writer (cancelInbound).
+    // Thread-safe: written by cancelInbound (external caller), read by Ktor route coroutines.
     @Volatile private var cancelledPeers: Set<PeerIdentity> = emptySet()
 
     private var _port: Int = -1
