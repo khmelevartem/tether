@@ -119,6 +119,22 @@ else
   echo "FAIL [classify-state precedes every reentry/drift/track/type gate] — state=$STATE_N first-gate=$MIN_GATE_N"
 fi
 
+# On a fresh walk classify-state has nothing to surface until classify-task writes
+# the profile, so the writer itself must also precede every track/type gate — else
+# a track/type gate placed between classify-state and classify-task reads empty.
+TASK_N=$(awk '/^## Step [0-9]+ — classify the task$/{print $3}' "$STEPS_MD")
+MIN_TT_N=$(awk '
+  /^## Step [0-9]+[a-z]? — /{ n=$3+0 }
+  /^\*\*Applies to:\*\*.*(track|type)=/{ print n }
+' "$STEPS_MD" | sort -n | head -1)
+
+if [ -n "$TASK_N" ] && [ -n "$MIN_TT_N" ] && [ "$TASK_N" -lt "$MIN_TT_N" ]; then
+  PASS=$((PASS + 1))
+else
+  FAIL=$((FAIL + 1))
+  echo "FAIL [classify-task (profile writer) precedes every track/type gate] — task=$TASK_N first-gate=$MIN_TT_N"
+fi
+
 # File order IS the sequencing authority, so the `## Step N` numbers must strictly
 # increase down the file. Without this, a block moved physically while keeping a
 # stale number would desync the walk from the headings and pass every name check.

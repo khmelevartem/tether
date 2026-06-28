@@ -80,6 +80,8 @@ Then decide the one judgment neither script can resolve mechanically:
 printf 'track=%s\ntype=%s\n' "<track>" "<type>" > "$(git rev-parse --git-dir)/implement-profile"
 ```
 
+The label is read once, here. Re-classifying mid-PR (a label change) requires deleting `$(git rev-parse --git-dir)/implement-profile` so the next fresh walk recomputes — `classify-state` only re-surfaces the cached values, it never re-derives them.
+
 ---
 ## Step 5 — recon
 

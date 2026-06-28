@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# Emits the VOLATILE state facts for /implement — re-run every pass (walk start,
-# and after each commit to refresh `touched`).
+# Emits the per-run state for /implement: the VOLATILE facts (issue, reentry, pr,
+# drift, touched) plus the persisted STABLE profile (track, type) re-surfaced from
+# the git dir. Re-run every pass (walk start, and after each commit to refresh
+# `touched`).
 # Output: key=value lines to stdout (writes no files; only reads the profile).
 # Usage: classify-state.sh [<issue-number>]
 # Emits: issue, reentry, pr, drift, touched [, status] [, track, type]
