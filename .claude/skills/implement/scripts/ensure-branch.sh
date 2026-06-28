@@ -12,7 +12,7 @@ issue="${1:?usage: ensure-branch.sh <issue-number>}"
 branch=$(git rev-parse --abbrev-ref HEAD)
 
 case "$branch" in
-  [0-9]*-*)    exit 0 ;;                                                    # already issue-numbered
+  [0-9]*-*)   echo "branch name ok"; exit 0 ;;                                          # already issue-numbered
   main|master) echo "refusing to rename $branch — run from a worktree" >&2; exit 1 ;;
 esac
 
