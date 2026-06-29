@@ -2,6 +2,7 @@ package com.tubetoast.tether.network
 
 import com.tubetoast.tether.discovery.DiscoveredDevicesStore
 import com.tubetoast.tether.identity.DeviceIdentityStore
+import com.tubetoast.tether.protocol.BatchBeginRequest
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.protocol.PairRequest
 import com.tubetoast.tether.protocol.PairResponse
@@ -28,10 +29,9 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.readAvailable
-import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.supervisorScope
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.debug
 import ru.pocketbyte.kydra.log.error
@@ -89,6 +89,7 @@ internal fun Application.installFileServerRoutes(
     inboundEvents: MutableSharedFlow<InboundEvent>? = null,
     isCancelRequested: ((PeerIdentity) -> Boolean)? = null,
     onCancelConsumed: ((PeerIdentity) -> Unit)? = null,
+    onBatchStarted: ((PeerIdentity) -> Unit)? = null,
 ) {
     install(ContentNegotiation) { json() }
     routing {
@@ -140,6 +141,37 @@ internal fun Application.installFileServerRoutes(
             }
             call.respond(HttpStatusCode.OK, PairResponse(publicKey = serverPublicKey))
         }
+        post("/batch-begin") {
+            val body = try {
+                call.receive<BatchBeginRequest>()
+            } catch (_: Exception) {
+                call.respond(HttpStatusCode.BadRequest, mapOf("error" to "invalid_body"))
+                return@post
+            }
+            if (body.totalFiles < 1) {
+                call.respond(HttpStatusCode.BadRequest, mapOf("error" to "invalid_batch"))
+                return@post
+            }
+            val remoteHost = call.request.origin.remoteAddress
+            val peer = discoveredDevicesStore
+                ?.devices
+                ?.value
+                ?.firstOrNull { it.host == remoteHost }
+                ?.toPeerIdentity()
+            if (peer != null && inboundEvents != null) {
+                onBatchStarted?.invoke(peer)
+                inboundEvents.tryEmit(
+                    InboundEvent.BatchStarted(
+                        peer = peer,
+                        batchId = body.batchId,
+                        totalFiles = body.totalFiles,
+                        totalBytes = body.totalBytes,
+                    ),
+                )
+                log.info { "batch-begin from ${peer.id}: id=${body.batchId} files=${body.totalFiles}" }
+            }
+            call.respond(HttpStatusCode.OK, emptyMap<String, String>())
+        }
         post("/upload") {
             val rawName = call.request.rawQueryParameters["name"]
             val relativePath = rawName?.let { PathSanitization.sanitizeRelativePath(it) }
@@ -158,6 +190,8 @@ internal fun Application.installFileServerRoutes(
                 ?.firstOrNull { it.host == remoteHost }
                 ?.toPeerIdentity()
             val contentLength = call.request.contentLength()
+            // Clear any stale cancel flag from a previous transfer so it cannot abort this one.
+            if (peer != null) onBatchStarted?.invoke(peer)
             var uploadComplete = false
             var cancelledByReceiver = false
             var handle: UploadHandle? = null
@@ -167,10 +201,10 @@ internal fun Application.installFileServerRoutes(
                 if (peer != null) inboundEvents?.tryEmit(InboundEvent.FileStarted(peer, relativePath))
                 tracker.withActiveTransfer {
                     val body = call.receiveChannel()
-                    val bytesResult = CompletableDeferred<Long>()
-                    supervisorScope {
+                    var bytesWritten = 0L
+                    coroutineScope {
                         val writeJob = launch {
-                            bytesResult.complete(storage.writeBody(body, resolved))
+                            bytesWritten = storage.writeBody(body, resolved)
                         }
                         if (peer != null && isCancelRequested != null) {
                             launch {
@@ -191,7 +225,6 @@ internal fun Application.installFileServerRoutes(
                     // comparison covers clean close on incomplete bodies.
                     body.closedCause?.let { throw it }
                     if (cancelledByReceiver) throw CancelledByReceiverException()
-                    val bytesWritten = bytesResult.await()
                     val expected = contentLength
                     if (expected != null && bytesWritten < expected) {
                         error("FileServer: incomplete upload — got $bytesWritten of $expected bytes")

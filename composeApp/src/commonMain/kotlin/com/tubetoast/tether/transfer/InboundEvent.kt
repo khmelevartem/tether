@@ -3,6 +3,13 @@ package com.tubetoast.tether.transfer
 sealed interface InboundEvent {
     val peer: PeerIdentity
 
+    data class BatchStarted(
+        override val peer: PeerIdentity,
+        val batchId: String,
+        val totalFiles: Int,
+        val totalBytes: Long?,
+    ) : InboundEvent
+
     data class FileStarted(
         override val peer: PeerIdentity,
         val name: String,

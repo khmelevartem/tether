@@ -739,6 +739,49 @@ class BatchSenderTest {
         assertEquals(1, bCount, "b.txt confirmDelivered must fire once")
     }
 
+    @Test
+    fun `beginBatch called once before file sends`() = runTest {
+        var beginCount = 0
+        val sender = BatchSender(
+            sendOne = instantSend(),
+            connectionMonitor = FakeConnectionMonitor(),
+            beginBatch = { _, _, _ -> beginCount++ },
+            batchId = "test-id",
+            progressThrottle = 100.milliseconds,
+            dispatcher = Dispatchers.Unconfined,
+        )
+
+        sender.run(sources("a.txt", "b.txt")) {}
+
+        assertEquals(1, beginCount, "beginBatch called exactly once before the file loop")
+    }
+
+    @Test
+    fun `beginBatch failure short-circuits with PeerUnreachable outcome and no files sent`() = runTest {
+        val called = mutableListOf<String>()
+        val emitted = mutableListOf<BatchProgress>()
+        val sender = BatchSender(
+            sendOne = { src, onProgress ->
+                called.add(src.name)
+                onProgress(src.sizeBytes ?: 0L, src.sizeBytes)
+            },
+            connectionMonitor = FakeConnectionMonitor(),
+            beginBatch = { _, _, _ -> throw PeerUnreachableException() },
+            batchId = "test-id",
+            progressThrottle = 100.milliseconds,
+            dispatcher = Dispatchers.Unconfined,
+        )
+
+        val outcome = sender.run(sources("a.txt", "b.txt")) { emitted.add(it) }
+
+        assertTrue(called.isEmpty(), "no files should be sent when beginBatch fails")
+        assertIs<BatchOutcome.Failed>(outcome)
+        assertEquals(TransferErrorReason.PeerUnreachable, outcome.reason)
+        assertEquals(0, outcome.sent)
+        val completed = assertIs<BatchProgress.Completed>(emitted.last())
+        assertIs<BatchOutcome.Failed>(completed.outcome)
+    }
+
     private class LateSizeSource(
         override val name: String,
         private val realSize: Long,

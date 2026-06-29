@@ -1,5 +1,6 @@
 package com.tubetoast.tether.network
 
+import com.tubetoast.tether.protocol.BatchBeginRequest
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.protocol.PeerAnnouncement
 import com.tubetoast.tether.protocol.SendResult
@@ -54,6 +55,28 @@ open class FileClient(
                 }
             },
         )
+    }
+
+    open suspend fun beginBatch(
+        target: Device,
+        batchId: String,
+        totalFiles: Int,
+        totalBytes: Long?,
+    ): Boolean = try {
+        val response = client.post("http://${target.host}:${target.port}/batch-begin") {
+            contentType(ContentType.Application.Json)
+            setBody(BatchBeginRequest(batchId = batchId, totalFiles = totalFiles, totalBytes = totalBytes))
+        }
+        val ok = response.status.isSuccess()
+        if (ok) {
+            log.info { "batch-begin sent → ${target.host}:${target.port} id=$batchId files=$totalFiles" }
+        } else {
+            log.warn { "batch-begin rejected ${response.status} → ${target.host}:${target.port}" }
+        }
+        ok
+    } catch (e: Exception) {
+        log.warn { "batch-begin failed → ${target.host}:${target.port} — ${e.message}" }
+        false
     }
 
     open suspend fun sendHello(target: Device, ownInfo: PeerAnnouncement): Boolean = try {

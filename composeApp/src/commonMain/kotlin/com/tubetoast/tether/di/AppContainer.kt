@@ -76,10 +76,23 @@ abstract class AppContainer {
     open val peerFileSender: PeerFileSender by lazy { PeerFileSender(fileClient, discoveredDevicesStore) }
 
     // Factory: BatchSender holds per-transfer state — one instance per concurrent peer transfer.
+    @OptIn(kotlin.uuid.ExperimentalUuidApi::class)
     open val batchSenderFactory: (PeerIdentity) -> BatchSender by lazy {
         { peer ->
+            val batchId = kotlin.uuid.Uuid
+                .random()
+                .toString()
             BatchSender(
                 sendOne = { source, onProgress -> peerFileSender.send(peer, source, onProgress) },
+                beginBatch = { id, totalFiles, totalBytes ->
+                    peerFileSender.beginBatch(
+                        peer,
+                        id,
+                        totalFiles,
+                        totalBytes,
+                    )
+                },
+                batchId = batchId,
                 connectionMonitor = connectionMonitor,
                 tracker = transferActivityTracker,
             )

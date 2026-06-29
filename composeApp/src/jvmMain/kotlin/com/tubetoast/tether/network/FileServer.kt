@@ -4,7 +4,6 @@ import com.tubetoast.tether.discovery.DiscoveredDevicesStore
 import com.tubetoast.tether.identity.DeviceIdentityStore
 import com.tubetoast.tether.security.DeviceKeyPair
 import com.tubetoast.tether.security.TrustedDeviceStore
-import com.tubetoast.tether.transfer.InboundEvent
 import com.tubetoast.tether.transfer.NoOpTransferActivityTracker
 import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.TransferActivityTracker
@@ -12,9 +11,7 @@ import io.ktor.server.cio.CIO
 import io.ktor.server.cio.CIOApplicationEngine
 import io.ktor.server.engine.EmbeddedServer
 import io.ktor.server.engine.embeddedServer
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.runBlocking
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.error
@@ -32,18 +29,10 @@ actual class FileServer internal constructor(
     private val tracker: TransferActivityTracker = NoOpTransferActivityTracker,
     private val deviceIdentityStore: DeviceIdentityStore? = null,
     private val discoveredDevicesStore: DiscoveredDevicesStore? = null,
-) {
+) : FileServerBase() {
     private var server: EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration>? = null
 
-    private val _events = MutableSharedFlow<InboundEvent>(
-        replay = 0,
-        extraBufferCapacity = 64,
-        onBufferOverflow = kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST,
-    )
-    actual val events: SharedFlow<InboundEvent> = _events.asSharedFlow()
-
-    // Thread-safe: written by cancelInbound (external caller), read by Ktor route coroutines.
-    @Volatile private var cancelledPeers: Set<PeerIdentity> = emptySet()
+    actual val events: SharedFlow<com.tubetoast.tether.transfer.InboundEvent> get() = eventsSharedFlow
 
     @Volatile private var _port: Int = -1
     actual val port: Int get() = _port
@@ -60,9 +49,10 @@ actual class FileServer internal constructor(
                     tracker,
                     deviceIdentityStore,
                     discoveredDevicesStore,
-                    _events,
-                    isCancelRequested = { peer -> peer in cancelledPeers },
-                    onCancelConsumed = { peer -> cancelledPeers = cancelledPeers - peer },
+                    mutableEvents,
+                    isCancelRequested = isCancelRequested,
+                    onCancelConsumed = onCancelConsumed,
+                    onBatchStarted = ::clearCancelFlag,
                 )
             }.start(wait = false)
         } catch (e: Exception) {
@@ -85,8 +75,5 @@ actual class FileServer internal constructor(
         log.info { "stopped" }
     }
 
-    actual suspend fun cancelInbound(peer: PeerIdentity) {
-        cancelledPeers = cancelledPeers + peer
-        log.info { "cancel requested for peer ${peer.id}" }
-    }
+    actual suspend fun cancelInbound(peer: PeerIdentity) = doCancelInbound(peer)
 }

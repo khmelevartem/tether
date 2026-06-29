@@ -1,3 +1,5 @@
+@file:OptIn(kotlin.concurrent.atomics.ExperimentalAtomicApi::class)
+
 package com.tubetoast.tether.transfer
 
 import kotlinx.coroutines.CoroutineScope
@@ -5,25 +7,37 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
+import kotlin.concurrent.atomics.AtomicReference
 
 /**
  * Fans out [InboundEvent]s from the FileServer to per-peer [ReceiveEvent] flows consumed by
- * [PeerTransferEngine]. Synthesizes [ReceiveEvent.Started] and [ReceiveEvent.BatchCompleted]
- * which have no direct wire equivalent (see `docs/engineering/file-transfer-wire.md`).
+ * [PeerTransferEngine], and to the aggregate [receiveEvents] flow consumed by platform notifiers.
  *
- * **Batch-end heuristic:** each file arrives as a separate HTTP request with no manifest.
- * [ReceiveEvent.BatchCompleted] is synthesized only on a deliberate receiver cancel
- * ([InboundEvent.ConnectionLost.cancelled] = true); a genuine network drop emits only
- * [ReceiveEvent.ConnectionLost], which drives the engine into Reconnecting and then (on
- * timeout) to Error(NetworkLost). Adding a wire-level batch manifest is tracked in #507.
+ * Synthesizes [ReceiveEvent.Started] on [InboundEvent.BatchStarted] (or on the first file event
+ * for senders that skip the batch-begin call), and [ReceiveEvent.BatchCompleted] when the
+ * per-peer file completion count reaches the declared total.
+ *
+ * A sender that posts to /upload without a preceding /batch-begin is treated as an implicit
+ * single-file batch: [ReceiveEvent.Started] is synthesized before the file's events and
+ * [ReceiveEvent.BatchCompleted] fires after the single file completes.
+ *
+ * Map mutations in [route] run on the single collector coroutine. [eventsFor] reads and
+ * potentially inserts into [peerFlows] from the engine-creation thread, so that map is an
+ * [AtomicReference] over an immutable snapshot updated via CAS, matching the pattern in
+ * [PeerTransferEngineRegistry].
  */
 class InboundEventRouter(
     scope: CoroutineScope,
     inboundEvents: SharedFlow<InboundEvent>,
 ) {
-    private val peerFlows = mutableMapOf<PeerIdentity, MutableSharedFlow<ReceiveEvent>>()
-    private val peerFilesSeen = mutableMapOf<PeerIdentity, MutableList<String>>()
-    private val peerFilesDone = mutableMapOf<PeerIdentity, Int>()
+    private val peerFlows = AtomicReference(emptyMap<PeerIdentity, MutableSharedFlow<ReceiveEvent>>())
+    private val peerBatch = mutableMapOf<PeerIdentity, PeerBatch>()
+
+    private val _receiveEvents = MutableSharedFlow<Pair<PeerIdentity, ReceiveEvent>>(
+        replay = 0,
+        extraBufferCapacity = 64,
+    )
+    val receiveEvents: SharedFlow<Pair<PeerIdentity, ReceiveEvent>> = _receiveEvents.asSharedFlow()
 
     init {
         scope.launch {
@@ -31,30 +45,52 @@ class InboundEventRouter(
         }
     }
 
-    fun eventsFor(peer: PeerIdentity): SharedFlow<ReceiveEvent> = flowFor(peer).asSharedFlow()
-
-    private fun flowFor(peer: PeerIdentity): MutableSharedFlow<ReceiveEvent> =
-        peerFlows.getOrPut(peer) {
-            MutableSharedFlow(replay = 0, extraBufferCapacity = 64)
+    fun eventsFor(peer: PeerIdentity): SharedFlow<ReceiveEvent> {
+        while (true) {
+            val current = peerFlows.load()
+            val existing = current[peer]
+            if (existing != null) return existing.asSharedFlow()
+            val newFlow = MutableSharedFlow<ReceiveEvent>(replay = 0, extraBufferCapacity = 64)
+            val next = current + (peer to newFlow)
+            if (peerFlows.compareAndSet(current, next)) return newFlow.asSharedFlow()
         }
+    }
+
+    private fun flowFor(peer: PeerIdentity): MutableSharedFlow<ReceiveEvent> {
+        while (true) {
+            val current = peerFlows.load()
+            val existing = current[peer]
+            if (existing != null) return existing
+            val newFlow = MutableSharedFlow<ReceiveEvent>(replay = 0, extraBufferCapacity = 64)
+            val next = current + (peer to newFlow)
+            if (peerFlows.compareAndSet(current, next)) return newFlow
+        }
+    }
+
+    private fun emit(peer: PeerIdentity, flow: MutableSharedFlow<ReceiveEvent>, event: ReceiveEvent) {
+        flow.tryEmit(event)
+        _receiveEvents.tryEmit(peer to event)
+    }
 
     private fun route(event: InboundEvent) {
         val peer = event.peer
         val flow = flowFor(peer)
-        val seen = peerFilesSeen.getOrPut(peer) { mutableListOf() }
 
         when (event) {
+            is InboundEvent.BatchStarted -> {
+                val batch = peerBatch[peer]
+                if (batch == null || batch.batchId != event.batchId) {
+                    peerBatch[peer] = PeerBatch(batchId = event.batchId, totalFiles = event.totalFiles)
+                    emit(peer, flow, ReceiveEvent.Started(currentFile = "", totalFiles = event.totalFiles))
+                }
+            }
             is InboundEvent.FileStarted -> {
-                if (event.name !in seen) seen += event.name
-                flow.tryEmit(
-                    ReceiveEvent.Started(
-                        currentFile = event.name,
-                        totalFiles = seen.size,
-                    ),
-                )
+                ensureImplicitBatch(peer, flow)
             }
             is InboundEvent.Progress -> {
-                flow.tryEmit(
+                emit(
+                    peer,
+                    flow,
                     ReceiveEvent.Progress(
                         name = event.name,
                         receivedBytes = event.receivedBytes,
@@ -63,22 +99,49 @@ class InboundEventRouter(
                 )
             }
             is InboundEvent.FileCompleted -> {
-                peerFilesDone[peer] = (peerFilesDone[peer] ?: 0) + 1
-                flow.tryEmit(ReceiveEvent.FileCompleted(name = event.name))
+                val batch = ensureImplicitBatch(peer, flow)
+                emit(peer, flow, ReceiveEvent.FileCompleted(name = event.name))
+                batch.receivedCount++
+                if (batch.receivedCount >= batch.totalFiles) {
+                    emit(
+                        peer,
+                        flow,
+                        ReceiveEvent.BatchCompleted(received = batch.receivedCount, total = batch.totalFiles),
+                    )
+                    peerBatch.remove(peer)
+                }
             }
             is InboundEvent.Failed -> {
-                flow.tryEmit(ReceiveEvent.Failed(file = event.name, reason = event.reason))
+                emit(peer, flow, ReceiveEvent.Failed(file = event.name, reason = event.reason))
             }
             is InboundEvent.ConnectionLost -> {
-                val received = peerFilesDone[peer] ?: 0
-                val total = seen.size.coerceAtLeast(received)
-                if (event.cancelled) {
-                    flow.tryEmit(ReceiveEvent.BatchCompleted(received = received, total = total))
+                val batch = peerBatch.remove(peer)
+                val received = batch?.receivedCount ?: 0
+                val total = (batch?.totalFiles ?: 0).coerceAtLeast(received)
+                if (event.cancelled && batch != null) {
+                    emit(peer, flow, ReceiveEvent.BatchCompleted(received = received, total = total))
                 }
-                flow.tryEmit(ReceiveEvent.ConnectionLost(receivedSoFar = received))
-                peerFilesSeen.remove(peer)
-                peerFilesDone.remove(peer)
+                emit(peer, flow, ReceiveEvent.ConnectionLost(receivedSoFar = received))
             }
         }
     }
+
+    private fun ensureImplicitBatch(peer: PeerIdentity, flow: MutableSharedFlow<ReceiveEvent>): PeerBatch {
+        val existing = peerBatch[peer]
+        if (existing != null) return existing
+        val implicit = PeerBatch(batchId = IMPLICIT_BATCH_ID, totalFiles = 1)
+        peerBatch[peer] = implicit
+        emit(peer, flow, ReceiveEvent.Started(currentFile = "", totalFiles = 1))
+        return implicit
+    }
+
+    private companion object {
+        const val IMPLICIT_BATCH_ID = "__implicit__"
+    }
 }
+
+private data class PeerBatch(
+    val batchId: String,
+    val totalFiles: Int,
+    var receivedCount: Int = 0,
+)

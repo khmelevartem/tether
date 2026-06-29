@@ -16,6 +16,13 @@ class PeerFileSender(
     private val fileClient: FileClient,
     private val discoveredDevicesStore: DiscoveredDevicesStore,
 ) {
+    suspend fun beginBatch(peer: PeerIdentity, batchId: String, totalFiles: Int, totalBytes: Long?) {
+        val device = discoveredDevicesStore.devices.value
+            .firstOrNull { it.toPeerIdentity() == peer }
+            ?: throw PeerUnreachableException()
+        if (!fileClient.beginBatch(device, batchId, totalFiles, totalBytes)) throw PeerUnreachableException()
+    }
+
     suspend fun send(
         peer: PeerIdentity,
         source: FileSource,

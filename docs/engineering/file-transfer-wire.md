@@ -86,9 +86,13 @@ For each, the reason it was rejected — short, because none was close.
 - **`multipart/form-data` with a `relativePath` text part and a `file` binary part.** Standards-friendly but adds a multipart parser on the hot path of every file transfer, against the streaming-not-buffering invariant. Multipart parsing differences between the engines in play across `adr-network-stack.md` are exactly the kind of cross-platform surface this contract is trying to keep small.
 - **Custom framing inside the body (length-prefixed JSON header, then bytes).** Defeats curl- and Wireshark-level debuggability for no scope this doc covers. Listed for completeness — the rejection is the rule.
 
+## Batch framing
+
+A folder or multi-file send opens with `POST /batch-begin`, body `{"batchId","totalFiles","totalBytes"}` (totalBytes null when unknown). The receiver registers the batch against the sending peer (resolved by remote address, as for `/upload`) and answers `200 {}`, or `400 {"error":"invalid_batch"}` when totalFiles < 1. The batchId scopes one send attempt: a begin with a new id resets the peer's receive counter and totals; a repeat of the same id is idempotent. There is no batch-end call — the receiver completes the batch when its per-file completion count reaches totalFiles; a batch that drops or is cancelled never reaches that count and terminates through the per-file failure path. A sender that posts to `/upload` without a preceding `/batch-begin` is treated as a one-file implicit batch.
+
 ## What this doc does *not* commit to
 
-- The exact set of fields in a future "transfer manifest" if folder sends ever need pre-flight negotiation (size totals, peer free space, abort token). The current contract is per-file; a manifest, if added, gets its own endpoint, not a new field in `?name=`.
+- The exact set of fields in a future multi-batch session protocol if sequential sends to the same peer ever need additional wire framing.
 - The MediaStore-side shape of the storage seam on Android.
 - Resume / partial-transfer semantics. Post-MVP; out of scope.
 - The Ktor engine carrying these routes — owned by [`adr-network-stack.md`](adr/adr-network-stack.md). The contract above must remain expressible on every engine that ADR allows.

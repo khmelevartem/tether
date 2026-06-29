@@ -37,6 +37,8 @@ class PeerUnreachableException(
 class BatchSender(
     private val sendOne: suspend (FileSource, onProgress: (Long, Long?) -> Unit) -> Unit,
     private val connectionMonitor: ConnectionMonitor,
+    private val beginBatch: suspend (batchId: String, totalFiles: Int, totalBytes: Long?) -> Unit = { _, _, _ -> },
+    private val batchId: String = "",
     private val reconnectionTimeout: Duration = ReconnectionTimeout.DEFAULT,
     private val progressThrottle: Duration = 100.milliseconds,
     private val timeSource: TimeSource = TimeSource.Monotonic,
@@ -74,6 +76,22 @@ class BatchSender(
         val perFile: MutableList<PerFileStatus> = sources
             .map { PerFileStatus.Queued(it.name, it.sizeBytes) }
             .toMutableList()
+
+        val totalBytes = sources.fold(0L as Long?) { acc, src ->
+            val size = src.sizeBytes
+            if (acc != null && size != null) acc + size else null
+        }
+        try {
+            beginBatch(batchId, sources.size, totalBytes)
+        } catch (e: PeerUnreachableException) {
+            for (j in sources.indices) {
+                perFile[j] = PerFileStatus.Failed(sources[j].name, sources[j].sizeBytes, FailureReason.PeerUnreachable)
+            }
+            val outcome = BatchOutcome.Failed(TransferErrorReason.PeerUnreachable, sent = 0)
+            emit(BatchProgress.Completed(outcome, perFile.toList()))
+            return@withContext outcome
+        }
+
         var sentBytes = 0L
 
         try {
