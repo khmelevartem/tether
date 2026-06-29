@@ -344,6 +344,48 @@ class ReceiverEventRoutingTest {
     }
 
     @Test
+    fun `ConnectionLost then BatchCancelled matching batchId emits BatchCompleted SenderCancelled`() = runTest {
+        val inbound = MutableSharedFlow<InboundEvent>(extraBufferCapacity = 16)
+        val router = buildRouter(inbound, backgroundScope)
+        val received = mutableListOf<ReceiveEvent>()
+        backgroundScope.launch { router.eventsFor(peerA).toList(received) }
+        runCurrent()
+
+        inbound.emit(InboundEvent.BatchStarted(peerA, batchId = "b1", totalFiles = 3, totalBytes = null))
+        inbound.emit(InboundEvent.FileCompleted(peerA, "a.txt", null))
+        inbound.emit(InboundEvent.ConnectionLost(peerA, cancelled = false))
+        inbound.emit(InboundEvent.BatchCancelled(peerA, batchId = "b1"))
+        runCurrent()
+
+        val batchCompleted = received.filterIsInstance<ReceiveEvent.BatchCompleted>()
+        assertEquals(1, batchCompleted.size)
+        assertEquals(PartialOutcome.SenderCancelled, batchCompleted[0].partialReason)
+        assertEquals(1, batchCompleted[0].received)
+        assertEquals(3, batchCompleted[0].total)
+    }
+
+    @Test
+    fun `ConnectionLost then FileCompleted reaching count emits BatchCompleted full`() = runTest {
+        val inbound = MutableSharedFlow<InboundEvent>(extraBufferCapacity = 16)
+        val router = buildRouter(inbound, backgroundScope)
+        val received = mutableListOf<ReceiveEvent>()
+        backgroundScope.launch { router.eventsFor(peerA).toList(received) }
+        runCurrent()
+
+        inbound.emit(InboundEvent.BatchStarted(peerA, batchId = "b1", totalFiles = 2, totalBytes = null))
+        inbound.emit(InboundEvent.FileCompleted(peerA, "a.txt", null))
+        inbound.emit(InboundEvent.ConnectionLost(peerA, cancelled = false))
+        inbound.emit(InboundEvent.FileCompleted(peerA, "b.txt", null))
+        runCurrent()
+
+        val batchCompleted = received.filterIsInstance<ReceiveEvent.BatchCompleted>()
+        assertEquals(1, batchCompleted.size)
+        assertEquals(null, batchCompleted[0].partialReason)
+        assertEquals(2, batchCompleted[0].received)
+        assertEquals(2, batchCompleted[0].total)
+    }
+
+    @Test
     fun `aggregate receiveEvents flow carries all events tagged with peer`() = runTest {
         val inbound = MutableSharedFlow<InboundEvent>(extraBufferCapacity = 16)
         val router = buildRouter(inbound, backgroundScope)

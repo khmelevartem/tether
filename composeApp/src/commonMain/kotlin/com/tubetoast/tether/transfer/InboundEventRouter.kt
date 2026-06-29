@@ -105,7 +105,7 @@ class InboundEventRouter(
                 emit(peer, flow, ReceiveEvent.Failed(file = event.name, reason = event.reason))
             }
             is InboundEvent.ConnectionLost -> {
-                val batch = peerBatch.remove(peer)
+                val batch = if (event.cancelled) peerBatch.remove(peer) else peerBatch[peer]
                 val received = batch?.receivedCount ?: 0
                 val total = (batch?.totalFiles ?: 0).coerceAtLeast(received)
                 if (event.cancelled && batch != null) {

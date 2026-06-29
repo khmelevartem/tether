@@ -325,7 +325,10 @@ class PeerTransferEngine(
             is ReceiveEvent.BatchCompleted -> {
                 inboundReconnectCountdown.cancel()
                 _state.update { s ->
-                    val perFile = (s as? PeerTransferState.ActiveInbound)?.perFile ?: emptyList()
+                    val active = s as? PeerTransferState.ActiveInbound
+                        ?: (s as? PeerTransferState.Reconnecting)
+                            ?.snapshotBeforeDrop as? PeerTransferState.ActiveInbound
+                    val perFile = active?.perFile ?: emptyList()
                     val partialReason = event.partialReason ?: derivePartialReason(event, perFile)
                     PeerTransferState.Received(
                         received = event.received,

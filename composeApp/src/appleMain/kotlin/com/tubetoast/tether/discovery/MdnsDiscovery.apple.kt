@@ -19,6 +19,7 @@ import platform.Foundation.NSNetServiceBrowser
 import platform.Foundation.NSNetServiceBrowserDelegateProtocol
 import platform.Foundation.NSNetServiceDelegateProtocol
 import platform.darwin.NSObject
+import platform.posix.AF_INET
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.debug
 import ru.pocketbyte.kydra.log.info
@@ -191,9 +192,9 @@ actual class MdnsDiscovery(
             return
         }
 
-        val host = service.hostName
+        val host = resolvedIpv4(service) ?: service.hostName
         if (host.isNullOrEmpty()) {
-            log.warn { "could not get hostname for $serviceName, skipping" }
+            log.warn { "could not get host for $serviceName, skipping" }
             return
         }
 
@@ -212,6 +213,20 @@ actual class MdnsDiscovery(
 
         log.info { "peer discovered: ${device.name}@${device.host}:${device.port}" }
         store.upsert(device)
+    }
+
+    private fun resolvedIpv4(service: NSNetService): String? {
+        val addresses = service.addresses ?: return null
+        for (item in addresses) {
+            val data = item as? NSData ?: continue
+            val length = data.length.toInt()
+            if (length < 8) continue
+            val rawPtr = data.bytes ?: continue
+            val bytesPtr = interpretCPointer<ByteVar>(rawPtr.rawValue) ?: continue
+            val ip = sockaddrBytesToIpv4(bytesPtr.readBytes(length))
+            if (ip != null) return ip
+        }
+        return null
     }
 
     private fun extractFingerprintFromTxt(service: NSNetService): String? {
@@ -316,4 +331,21 @@ actual class MdnsDiscovery(
             discovery.resolutionDelegates.remove(this)
         }
     }
+}
+
+/**
+ * Parses a Darwin sockaddr_in byte array and returns a dotted-quad IPv4 string, or null
+ * if the bytes don't represent an AF_INET address.
+ *
+ * Darwin layout: sin_len(1) + sin_family(1) + sin_port(2) + sin_addr(4) + sin_zero(8) = 16 bytes.
+ * AF_INET = 2.
+ */
+internal fun sockaddrBytesToIpv4(bytes: ByteArray): String? {
+    if (bytes.size < 8) return null
+    if (bytes[1].toInt() and 0xFF != AF_INET) return null
+    val a = bytes[4].toInt() and 0xFF
+    val b = bytes[5].toInt() and 0xFF
+    val c = bytes[6].toInt() and 0xFF
+    val d = bytes[7].toInt() and 0xFF
+    return "$a.$b.$c.$d"
 }

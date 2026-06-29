@@ -110,6 +110,25 @@ class PeerTransferEngineInboundTest {
     }
 
     @Test
+    fun `ConnectionLost then SenderCancelled BatchCompleted reaches Received without NetworkLost`() = runTest {
+        val events = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
+        val engine = engineInReconnecting(events, timeout = 5.seconds)
+
+        events.emit(
+            ReceiveEvent.BatchCompleted(received = 1, total = 3, partialReason = PartialOutcome.SenderCancelled),
+        )
+        runCurrent()
+
+        val state = assertIs<PeerTransferState.Received>(engine.state.value)
+        assertEquals(PartialOutcome.SenderCancelled, state.partialReason)
+
+        advanceTimeBy(10_000)
+        runCurrent()
+
+        assertIs<PeerTransferState.Received>(engine.state.value)
+    }
+
+    @Test
     fun `second ConnectionLost restarts countdown from full timeout`() = runTest {
         val events = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
         val engine = engineInReconnecting(events, timeout = 5.seconds)
