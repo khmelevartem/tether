@@ -190,7 +190,7 @@ class ReceiverEventRoutingTest {
 
         inbound.emit(InboundEvent.BatchStarted(peerA, batchId = "b1", totalFiles = 3, totalBytes = null))
         inbound.emit(InboundEvent.FileCompleted(peerA, "a.txt", null))
-        inbound.emit(InboundEvent.ConnectionLost(peerA, receivedSoFar = 1, cancelled = true))
+        inbound.emit(InboundEvent.ConnectionLost(peerA, cancelled = true))
         runCurrent()
 
         val batchCompleted = received.filterIsInstance<ReceiveEvent.BatchCompleted>()
@@ -204,7 +204,7 @@ class ReceiverEventRoutingTest {
     }
 
     @Test
-    fun `genuine ConnectionLost emits ConnectionLost with real receivedSoFar`() = runTest {
+    fun `genuine ConnectionLost emits ConnectionLost with receivedSoFar from router count`() = runTest {
         val inbound = MutableSharedFlow<InboundEvent>(extraBufferCapacity = 16)
         val router = buildRouter(inbound, backgroundScope)
         val received = mutableListOf<ReceiveEvent>()
@@ -213,7 +213,7 @@ class ReceiverEventRoutingTest {
 
         inbound.emit(InboundEvent.BatchStarted(peerA, batchId = "b1", totalFiles = 3, totalBytes = null))
         inbound.emit(InboundEvent.FileCompleted(peerA, "a.txt", null))
-        inbound.emit(InboundEvent.ConnectionLost(peerA, receivedSoFar = 1, cancelled = false))
+        inbound.emit(InboundEvent.ConnectionLost(peerA, cancelled = false))
         runCurrent()
 
         val batchCompleted = received.filterIsInstance<ReceiveEvent.BatchCompleted>()
@@ -234,7 +234,7 @@ class ReceiverEventRoutingTest {
 
         inbound.emit(InboundEvent.BatchStarted(peerA, batchId = "b1", totalFiles = 1, totalBytes = null))
         inbound.emit(InboundEvent.FileCompleted(peerA, "a.txt", null))
-        inbound.emit(InboundEvent.ConnectionLost(peerA, receivedSoFar = 1))
+        inbound.emit(InboundEvent.ConnectionLost(peerA))
         runCurrent()
 
         inbound.emit(InboundEvent.BatchStarted(peerA, batchId = "b2", totalFiles = 2, totalBytes = null))
@@ -243,6 +243,57 @@ class ReceiverEventRoutingTest {
         val started = received.filterIsInstance<ReceiveEvent.Started>()
         val lastStarted = started.last()
         assertEquals(2, lastStarted.totalFiles)
+    }
+
+    @Test
+    fun `BatchCancelled matching active batchId synthesizes BatchCompleted with SenderCancelled`() = runTest {
+        val inbound = MutableSharedFlow<InboundEvent>(extraBufferCapacity = 16)
+        val router = buildRouter(inbound, backgroundScope)
+        val received = mutableListOf<ReceiveEvent>()
+        backgroundScope.launch { router.eventsFor(peerA).toList(received) }
+        runCurrent()
+
+        inbound.emit(InboundEvent.BatchStarted(peerA, batchId = "b1", totalFiles = 3, totalBytes = null))
+        inbound.emit(InboundEvent.FileCompleted(peerA, "a.txt", null))
+        inbound.emit(InboundEvent.BatchCancelled(peerA, batchId = "b1"))
+        runCurrent()
+
+        val batchCompleted = received.filterIsInstance<ReceiveEvent.BatchCompleted>()
+        assertEquals(1, batchCompleted.size)
+        assertEquals(1, batchCompleted[0].received)
+        assertEquals(3, batchCompleted[0].total)
+        assertEquals(PartialOutcome.SenderCancelled, batchCompleted[0].partialReason)
+    }
+
+    @Test
+    fun `BatchCancelled with unknown batchId is silently ignored`() = runTest {
+        val inbound = MutableSharedFlow<InboundEvent>(extraBufferCapacity = 16)
+        val router = buildRouter(inbound, backgroundScope)
+        val received = mutableListOf<ReceiveEvent>()
+        backgroundScope.launch { router.eventsFor(peerA).toList(received) }
+        runCurrent()
+
+        inbound.emit(InboundEvent.BatchStarted(peerA, batchId = "b1", totalFiles = 2, totalBytes = null))
+        inbound.emit(InboundEvent.BatchCancelled(peerA, batchId = "stale-id"))
+        runCurrent()
+
+        val batchCompleted = received.filterIsInstance<ReceiveEvent.BatchCompleted>()
+        assertEquals(0, batchCompleted.size, "stale batchId must not synthesize BatchCompleted")
+    }
+
+    @Test
+    fun `BatchCancelled with no active batch is silently ignored`() = runTest {
+        val inbound = MutableSharedFlow<InboundEvent>(extraBufferCapacity = 16)
+        val router = buildRouter(inbound, backgroundScope)
+        val received = mutableListOf<ReceiveEvent>()
+        backgroundScope.launch { router.eventsFor(peerA).toList(received) }
+        runCurrent()
+
+        inbound.emit(InboundEvent.BatchCancelled(peerA, batchId = "b1"))
+        runCurrent()
+
+        val batchCompleted = received.filterIsInstance<ReceiveEvent.BatchCompleted>()
+        assertEquals(0, batchCompleted.size, "BatchCancelled with no active batch must not emit BatchCompleted")
     }
 
     @Test

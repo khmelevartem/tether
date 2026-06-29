@@ -38,7 +38,7 @@ class BatchSender(
     private val sendOne: suspend (FileSource, onProgress: (Long, Long?) -> Unit) -> Unit,
     private val connectionMonitor: ConnectionMonitor,
     private val beginBatch: suspend (batchId: String, totalFiles: Int, totalBytes: Long?) -> Unit = { _, _, _ -> },
-    private val batchId: String = "",
+    val batchId: String = "",
     private val reconnectionTimeout: Duration = ReconnectionTimeout.DEFAULT,
     private val progressThrottle: Duration = 100.milliseconds,
     private val timeSource: TimeSource = TimeSource.Monotonic,

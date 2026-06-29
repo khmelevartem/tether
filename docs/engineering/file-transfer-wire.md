@@ -90,6 +90,8 @@ For each, the reason it was rejected — short, because none was close.
 
 A folder or multi-file send opens with `POST /batch-begin`, body `{"batchId","totalFiles","totalBytes"}` (totalBytes null when unknown). The receiver registers the batch against the sending peer (resolved by remote address, as for `/upload`) and answers `200 {}`, or `400 {"error":"invalid_batch"}` when totalFiles < 1. The batchId scopes one send attempt: a begin with a new id resets the peer's receive counter and totals; a repeat of the same id is idempotent. There is no batch-end call — the receiver completes the batch when its per-file completion count reaches totalFiles; a batch that drops or is cancelled never reaches that count and terminates through the per-file failure path. A sender that posts to `/upload` without a preceding `/batch-begin` is treated as a one-file implicit batch.
 
+When the sender deliberately cancels an in-flight batch, it signals this with `POST /batch-cancel`, body `{"batchId"}`. The receiver answers `200 {}` and records the batch as a sender-cancelled partial, which lets the receiver card show a distinct sender-cancelled state rather than treating the termination as a network drop. The call is best-effort — if the peer is already unreachable the receiver will time out on its own — and idempotent: an unknown or already-completed batchId is silently ignored.
+
 ## What this doc does *not* commit to
 
 - The exact set of fields in a future multi-batch session protocol if sequential sends to the same peer ever need additional wire framing.

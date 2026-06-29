@@ -53,7 +53,7 @@ actual class FileServer internal constructor(
                     mutableEvents,
                     isCancelRequested = isCancelRequested,
                     onCancelConsumed = onCancelConsumed,
-                    onBatchStarted = ::clearCancelFlag,
+                    clearStaleCancel = ::clearCancelFlag,
                 )
             }.start(wait = false)
         } catch (e: Exception) {

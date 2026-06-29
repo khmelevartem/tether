@@ -21,10 +21,9 @@ import kotlin.concurrent.atomics.AtomicReference
  * single-file batch: [ReceiveEvent.Started] is synthesized before the file's events and
  * [ReceiveEvent.BatchCompleted] fires after the single file completes.
  *
- * Map mutations in [route] run on the single collector coroutine. [eventsFor] reads and
- * potentially inserts into [peerFlows] from the engine-creation thread, so that map is an
- * [AtomicReference] over an immutable snapshot updated via CAS, matching the pattern in
- * [PeerTransferEngineRegistry].
+ * All mutations to the per-peer batch state run on the single collector coroutine; the
+ * per-peer flow map is an immutable snapshot updated via CAS so engines can register from
+ * any thread without coordination with the collector.
  */
 class InboundEventRouter(
     scope: CoroutineScope,
@@ -45,16 +44,7 @@ class InboundEventRouter(
         }
     }
 
-    fun eventsFor(peer: PeerIdentity): SharedFlow<ReceiveEvent> {
-        while (true) {
-            val current = peerFlows.load()
-            val existing = current[peer]
-            if (existing != null) return existing.asSharedFlow()
-            val newFlow = MutableSharedFlow<ReceiveEvent>(replay = 0, extraBufferCapacity = 64)
-            val next = current + (peer to newFlow)
-            if (peerFlows.compareAndSet(current, next)) return newFlow.asSharedFlow()
-        }
-    }
+    fun eventsFor(peer: PeerIdentity): SharedFlow<ReceiveEvent> = flowFor(peer).asSharedFlow()
 
     private fun flowFor(peer: PeerIdentity): MutableSharedFlow<ReceiveEvent> {
         while (true) {
@@ -122,6 +112,20 @@ class InboundEventRouter(
                     emit(peer, flow, ReceiveEvent.BatchCompleted(received = received, total = total))
                 }
                 emit(peer, flow, ReceiveEvent.ConnectionLost(receivedSoFar = received))
+            }
+            is InboundEvent.BatchCancelled -> {
+                val batch = peerBatch.remove(peer)
+                if (batch != null && batch.batchId == event.batchId) {
+                    emit(
+                        peer,
+                        flow,
+                        ReceiveEvent.BatchCompleted(
+                            received = batch.receivedCount,
+                            total = batch.totalFiles,
+                            partialReason = PartialOutcome.SenderCancelled,
+                        ),
+                    )
+                }
             }
         }
     }

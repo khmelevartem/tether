@@ -126,6 +126,7 @@ abstract class AppContainer {
                     reconnectionTimeout = ReconnectionTimeout.DEFAULT,
                     scope = engineScope,
                     peerPreferencesStore = peerPreferencesStore,
+                    cancelBatch = { batchId -> peerFileSender.cancelBatch(peer, batchId) },
                 )
             },
         )

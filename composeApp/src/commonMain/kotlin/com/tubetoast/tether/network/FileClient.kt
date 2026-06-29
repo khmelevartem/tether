@@ -1,6 +1,7 @@
 package com.tubetoast.tether.network
 
 import com.tubetoast.tether.protocol.BatchBeginRequest
+import com.tubetoast.tether.protocol.BatchCancelRequest
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.protocol.PeerAnnouncement
 import com.tubetoast.tether.protocol.SendResult
@@ -76,6 +77,23 @@ open class FileClient(
         ok
     } catch (e: Exception) {
         log.warn { "batch-begin failed → ${target.host}:${target.port} — ${e.message}" }
+        false
+    }
+
+    open suspend fun cancelBatch(target: Device, batchId: String): Boolean = try {
+        val response = client.post("http://${target.host}:${target.port}/batch-cancel") {
+            contentType(ContentType.Application.Json)
+            setBody(BatchCancelRequest(batchId = batchId))
+        }
+        val ok = response.status.isSuccess()
+        if (ok) {
+            log.info { "batch-cancel sent → ${target.host}:${target.port} id=$batchId" }
+        } else {
+            log.warn { "batch-cancel rejected ${response.status} → ${target.host}:${target.port}" }
+        }
+        ok
+    } catch (e: Exception) {
+        log.warn { "batch-cancel failed → ${target.host}:${target.port} — ${e.message}" }
         false
     }
 

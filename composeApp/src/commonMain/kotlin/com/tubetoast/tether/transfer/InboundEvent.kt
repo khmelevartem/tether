@@ -42,7 +42,12 @@ sealed interface InboundEvent {
      */
     data class ConnectionLost(
         override val peer: PeerIdentity,
-        val receivedSoFar: Int,
         val cancelled: Boolean = false,
+    ) : InboundEvent
+
+    /** Emitted when the sender signals a deliberate batch cancel via /batch-cancel. */
+    data class BatchCancelled(
+        override val peer: PeerIdentity,
+        val batchId: String,
     ) : InboundEvent
 }

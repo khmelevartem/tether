@@ -14,10 +14,8 @@ import ru.pocketbyte.kydra.log.wrapper.withTag
 import kotlin.concurrent.atomics.AtomicReference
 
 /**
- * Holds the inbound event bus and atomic cancel state shared by all platform FileServer actuals.
- * Platform actuals extend this class and implement start/stop using their Ktor engine.
- * The [events] flow and [cancelInbound] are provided here; actuals declare them as [actual]
- * and delegate to [mutableEvents]/[doCancelInbound].
+ * Holds the inbound event bus and the atomic per-peer cancel flag shared by all platform
+ * FileServer actuals. Platform actuals extend this class and implement start/stop.
  */
 abstract class FileServerBase {
     private val log = KydraLog.withTag(default = "FileServer")

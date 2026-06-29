@@ -3,6 +3,7 @@ package com.tubetoast.tether.network
 import com.tubetoast.tether.discovery.DiscoveredDevicesStore
 import com.tubetoast.tether.identity.DeviceIdentityStore
 import com.tubetoast.tether.protocol.BatchBeginRequest
+import com.tubetoast.tether.protocol.BatchCancelRequest
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.protocol.PairRequest
 import com.tubetoast.tether.protocol.PairResponse
@@ -89,7 +90,7 @@ internal fun Application.installFileServerRoutes(
     inboundEvents: MutableSharedFlow<InboundEvent>? = null,
     isCancelRequested: ((PeerIdentity) -> Boolean)? = null,
     onCancelConsumed: ((PeerIdentity) -> Unit)? = null,
-    onBatchStarted: ((PeerIdentity) -> Unit)? = null,
+    clearStaleCancel: ((PeerIdentity) -> Unit)? = null,
 ) {
     install(ContentNegotiation) { json() }
     routing {
@@ -159,7 +160,7 @@ internal fun Application.installFileServerRoutes(
                 ?.firstOrNull { it.host == remoteHost }
                 ?.toPeerIdentity()
             if (peer != null && inboundEvents != null) {
-                onBatchStarted?.invoke(peer)
+                clearStaleCancel?.invoke(peer)
                 inboundEvents.tryEmit(
                     InboundEvent.BatchStarted(
                         peer = peer,
@@ -169,6 +170,25 @@ internal fun Application.installFileServerRoutes(
                     ),
                 )
                 log.info { "batch-begin from ${peer.id}: id=${body.batchId} files=${body.totalFiles}" }
+            }
+            call.respond(HttpStatusCode.OK, emptyMap<String, String>())
+        }
+        post("/batch-cancel") {
+            val body = try {
+                call.receive<BatchCancelRequest>()
+            } catch (_: Exception) {
+                call.respond(HttpStatusCode.BadRequest, mapOf("error" to "invalid_body"))
+                return@post
+            }
+            val remoteHost = call.request.origin.remoteAddress
+            val peer = discoveredDevicesStore
+                ?.devices
+                ?.value
+                ?.firstOrNull { it.host == remoteHost }
+                ?.toPeerIdentity()
+            if (peer != null && inboundEvents != null) {
+                inboundEvents.tryEmit(InboundEvent.BatchCancelled(peer = peer, batchId = body.batchId))
+                log.info { "batch-cancel from ${peer.id}: id=${body.batchId}" }
             }
             call.respond(HttpStatusCode.OK, emptyMap<String, String>())
         }
@@ -191,7 +211,7 @@ internal fun Application.installFileServerRoutes(
                 ?.toPeerIdentity()
             val contentLength = call.request.contentLength()
             // Clear any stale cancel flag from a previous transfer so it cannot abort this one.
-            if (peer != null) onBatchStarted?.invoke(peer)
+            if (peer != null) clearStaleCancel?.invoke(peer)
             var uploadComplete = false
             var cancelledByReceiver = false
             var handle: UploadHandle? = null
@@ -247,7 +267,7 @@ internal fun Application.installFileServerRoutes(
                 if (peer != null && !uploadComplete) {
                     if (cancelledByReceiver) onCancelConsumed?.invoke(peer)
                     inboundEvents?.tryEmit(
-                        InboundEvent.ConnectionLost(peer, receivedSoFar = 0, cancelled = cancelledByReceiver),
+                        InboundEvent.ConnectionLost(peer, cancelled = cancelledByReceiver),
                     )
                 }
                 try {

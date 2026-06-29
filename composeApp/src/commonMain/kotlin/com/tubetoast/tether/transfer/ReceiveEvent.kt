@@ -19,6 +19,7 @@ sealed interface ReceiveEvent {
     data class BatchCompleted(
         val received: Int,
         val total: Int,
+        val partialReason: PartialOutcome? = null,
     ) : ReceiveEvent
 
     data class Failed(

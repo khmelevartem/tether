@@ -583,4 +583,79 @@ class PeerTransferEngineTest {
 
         assertIs<PeerTransferState.Idle>(engine.state.value)
     }
+
+    @Test
+    fun `BatchCompleted with SenderCancelled partialReason reaches Received with that reason`() = runTest {
+        val events = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
+        val engine = engineInActiveInbound(events)
+
+        events.emit(
+            ReceiveEvent.BatchCompleted(received = 1, total = 3, partialReason = PartialOutcome.SenderCancelled),
+        )
+        runCurrent()
+
+        val state = assertIs<PeerTransferState.Received>(engine.state.value)
+        assertEquals(PartialOutcome.SenderCancelled, state.partialReason)
+    }
+
+    @Test
+    fun `onCancel of active outbound batch fires cancelBatch`() = runTest {
+        val cancelledBatchIds = mutableListOf<String>()
+        val pauseChannel = kotlinx.coroutines.channels.Channel<Unit>(0)
+        val engine = PeerTransferEngine(
+            peer = peer,
+            batchSenderFactory = fakeBatchSender(pauseChannel = pauseChannel),
+            inboundEvents = MutableSharedFlow(),
+            scope = backgroundScope,
+            peerPreferencesStore = FakePeerPreferencesStore(),
+            cancelBatch = { batchId -> cancelledBatchIds.add(batchId) },
+        )
+
+        engine.startOutbound(listOf(FakeFileSource("a.txt", 100L)))
+        runCurrent()
+        assertIs<PeerTransferState.ActiveOutbound>(engine.state.value)
+
+        engine.onCancel()
+        runCurrent()
+
+        assertIs<PeerTransferState.Cancelled>(engine.state.value)
+        assertEquals(1, cancelledBatchIds.size, "cancelBatch must fire exactly once on outbound cancel")
+    }
+
+    @Test
+    fun `onCancel without active batch does not fire cancelBatch`() = runTest {
+        val cancelledBatchIds = mutableListOf<String>()
+        val engine = PeerTransferEngine(
+            peer = peer,
+            batchSenderFactory = fakeBatchSender(),
+            inboundEvents = MutableSharedFlow(),
+            scope = backgroundScope,
+            peerPreferencesStore = FakePeerPreferencesStore(),
+            cancelBatch = { batchId -> cancelledBatchIds.add(batchId) },
+        )
+
+        engine.onCancel()
+        runCurrent()
+
+        assertEquals(0, cancelledBatchIds.size, "cancelBatch must not fire when there is no active sender")
+    }
+
+    @Test
+    fun `normal outbound completion does not fire cancelBatch`() = runTest {
+        val cancelledBatchIds = mutableListOf<String>()
+        val engine = PeerTransferEngine(
+            peer = peer,
+            batchSenderFactory = fakeBatchSender(),
+            inboundEvents = MutableSharedFlow(),
+            scope = backgroundScope,
+            peerPreferencesStore = FakePeerPreferencesStore(),
+            cancelBatch = { batchId -> cancelledBatchIds.add(batchId) },
+        )
+
+        engine.startOutbound(listOf(FakeFileSource("a.txt", 100L)))
+        runCurrent()
+
+        assertIs<PeerTransferState.Sent>(engine.state.value)
+        assertEquals(0, cancelledBatchIds.size, "cancelBatch must not fire on normal completion")
+    }
 }

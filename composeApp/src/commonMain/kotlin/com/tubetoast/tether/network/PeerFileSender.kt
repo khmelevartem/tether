@@ -23,6 +23,14 @@ class PeerFileSender(
         if (!fileClient.beginBatch(device, batchId, totalFiles, totalBytes)) throw PeerUnreachableException()
     }
 
+    /** Best-effort: swallows [PeerUnreachableException] — if the peer is gone the receiver times out on its own. */
+    suspend fun cancelBatch(peer: PeerIdentity, batchId: String) {
+        val device = discoveredDevicesStore.devices.value
+            .firstOrNull { it.toPeerIdentity() == peer }
+            ?: return
+        fileClient.cancelBatch(device, batchId)
+    }
+
     suspend fun send(
         peer: PeerIdentity,
         source: FileSource,

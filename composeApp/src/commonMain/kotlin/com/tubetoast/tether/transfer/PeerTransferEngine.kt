@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.launch
 import kotlin.time.Duration
 
@@ -25,6 +26,7 @@ class PeerTransferEngine(
     private val reconnectionTimeout: Duration = ReconnectionTimeout.DEFAULT,
     private val scope: CoroutineScope,
     private val peerPreferencesStore: PeerPreferencesStore,
+    private val cancelBatch: (suspend (batchId: String) -> Unit)? = null,
 ) {
     private val _state = MutableStateFlow<PeerTransferState>(PeerTransferState.Idle)
     val state: StateFlow<PeerTransferState> = _state.asStateFlow()
@@ -78,10 +80,14 @@ class PeerTransferEngine(
     }
 
     fun onCancel() {
+        val sender = currentSender
         activeJob?.cancel()
         activeJob = null
         _state.update { current ->
             if (current is PeerTransferState.ActiveOutbound) cancelledFromActive(current) else current
+        }
+        if (sender != null && cancelBatch != null) {
+            scope.launch { cancelBatch.invoke(sender.batchId) }
         }
     }
 
@@ -320,17 +326,7 @@ class PeerTransferEngine(
                 inboundReconnectCountdown.cancel()
                 _state.update { s ->
                     val perFile = (s as? PeerTransferState.ActiveInbound)?.perFile ?: emptyList()
-                    val partialReason = if (event.received < event.total) {
-                        val failedEntries = perFile.filterIsInstance<PerFileStatus.Failed>()
-                        val cancelledCount = failedEntries.count { it.reason is FailureReason.CancelledByUser }
-                        if (cancelledCount > 0 && cancelledCount == failedEntries.size) {
-                            PartialOutcome.ReceiverCancelled
-                        } else {
-                            PartialOutcome.ConnectionLost
-                        }
-                    } else {
-                        null
-                    }
+                    val partialReason = event.partialReason ?: derivePartialReason(event, perFile)
                     PeerTransferState.Received(
                         received = event.received,
                         total = event.total,
@@ -352,17 +348,18 @@ class PeerTransferEngine(
             is ReceiveEvent.ConnectionLost -> {
                 // When a deliberate cancel already transitioned us to Received, the ConnectionLost
                 // that follows is the socket teardown confirming the cancel — do not override.
-                var started = false
-                _state.update { snapshot ->
-                    if (snapshot is PeerTransferState.Received) return@update snapshot
-                    started = true
-                    PeerTransferState.Reconnecting(
-                        direction = Direction.Inbound,
-                        remainingSeconds = reconnectionTimeout.inWholeSeconds.toInt(),
-                        snapshotBeforeDrop = snapshot,
-                    )
+                val after = _state.updateAndGet { snapshot ->
+                    if (snapshot is PeerTransferState.Received) {
+                        snapshot
+                    } else {
+                        PeerTransferState.Reconnecting(
+                            direction = Direction.Inbound,
+                            remainingSeconds = reconnectionTimeout.inWholeSeconds.toInt(),
+                            snapshotBeforeDrop = snapshot,
+                        )
+                    }
                 }
-                if (started) inboundReconnectCountdown.start()
+                if (after is PeerTransferState.Reconnecting) inboundReconnectCountdown.start()
             }
             ReceiveEvent.ReceiverSuspended -> {
                 inboundReconnectCountdown.cancel()
@@ -376,6 +373,17 @@ class PeerTransferEngine(
                     )
                 }
             }
+        }
+    }
+
+    private fun derivePartialReason(event: ReceiveEvent.BatchCompleted, perFile: List<PerFileStatus>): PartialOutcome? {
+        if (event.received >= event.total) return null
+        val failedEntries = perFile.filterIsInstance<PerFileStatus.Failed>()
+        val cancelledCount = failedEntries.count { it.reason is FailureReason.CancelledByUser }
+        return if (cancelledCount > 0 && cancelledCount == failedEntries.size) {
+            PartialOutcome.ReceiverCancelled
+        } else {
+            PartialOutcome.ConnectionLost
         }
     }
 }
