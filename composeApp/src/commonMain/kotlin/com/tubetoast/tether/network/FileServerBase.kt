@@ -33,13 +33,6 @@ abstract class FileServerBase {
         peer in cancelledSet.load()
     }
 
-    protected val onCancelConsumed: (PeerIdentity) -> Unit = { peer ->
-        while (true) {
-            val current = cancelledSet.load()
-            if (cancelledSet.compareAndSet(current, current - peer)) break
-        }
-    }
-
     /** Clears any stale cancel flag for the peer so a previous cancel cannot abort a new transfer. */
     protected fun clearCancelFlag(peer: PeerIdentity) {
         while (true) {

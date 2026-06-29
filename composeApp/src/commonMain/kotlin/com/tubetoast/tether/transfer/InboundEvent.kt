@@ -37,8 +37,6 @@ sealed interface InboundEvent {
     /**
      * Emitted when the upload connection for this peer is gone — either a genuine network drop
      * ([cancelled] = false) or a deliberate receiver-side cancel ([cancelled] = true).
-     * The router uses [cancelled] to decide whether to synthesize [ReceiveEvent.BatchCompleted]
-     * (cancel → clean batch end) or emit only [ReceiveEvent.ConnectionLost] (drop → Reconnecting).
      */
     data class ConnectionLost(
         override val peer: PeerIdentity,

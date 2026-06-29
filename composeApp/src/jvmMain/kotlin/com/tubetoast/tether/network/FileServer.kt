@@ -51,7 +51,7 @@ actual class FileServer internal constructor(
                     discoveredDevicesStore,
                     mutableEvents,
                     isCancelRequested = isCancelRequested,
-                    onCancelConsumed = onCancelConsumed,
+                    onCancelConsumed = ::clearCancelFlag,
                     clearStaleCancel = ::clearCancelFlag,
                 )
             }.start(wait = false)
