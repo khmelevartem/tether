@@ -17,10 +17,6 @@ The transcript lives in a directory derived from the worktree's absolute path, u
 - **The name cannot be set at creation time from the repo.** The harness names the worktree before any repo hook runs, so the only lever is an after-the-fact rename.
 - **Removing a worktree mid-session relocates its transcript** to the origin project directory rather than deleting it; retention follows the harness cleanup-period setting.
 
-## Targeting git inside a worktree
-
-A Bash call's working directory is not guaranteed to persist across calls — between long sub-agent dispatches, parallel background tasks, or hook-injected reminders it can drift back to the main checkout. So every `git` call inside a worktree must carry the worktree path explicitly: `git -C <worktree> …`, or `cd <worktree> && git …` in the same call (never split across calls). Verify `git status` shows the expected branch before any commit; if it shows files you did not stage, stop and investigate rather than `git add -A` over them — an unscoped commit can land on the main checkout's branch and sweep in unrelated untracked work.
-
 ## See also
 
 - [`.claude/skills/implement/scripts/ensure-branch.sh`](../../.claude/skills/implement/scripts/ensure-branch.sh) — the after-the-fact branch rename
