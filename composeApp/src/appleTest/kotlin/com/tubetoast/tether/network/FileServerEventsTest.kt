@@ -5,6 +5,8 @@ package com.tubetoast.tether.network
 import com.tubetoast.tether.TempDirs
 import com.tubetoast.tether.discovery.DiscoveredDevicesStore
 import com.tubetoast.tether.preferences.TempDataStore
+import com.tubetoast.tether.protocol.BatchBeginRequest
+import com.tubetoast.tether.protocol.BatchCancelRequest
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.security.DefaultTrustedDeviceStore
 import com.tubetoast.tether.security.DeviceKeyPair
@@ -16,7 +18,9 @@ import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.OutgoingContent
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
@@ -145,6 +149,103 @@ class FileServerEventsTest {
                 val lostEvent = collected.filterIsInstance<InboundEvent.ConnectionLost>().first()
                 assertEquals(peer, lostEvent.peer)
                 assertTrue(lostEvent.cancelled, "ConnectionLost.cancelled must be true on explicit cancel")
+            }
+        } finally {
+            client.close()
+        }
+    }
+
+    @Test
+    fun batch_begin_with_valid_body_emits_BatchStarted_with_correct_batchId_and_totalFiles() {
+        val (server, port) = newServerWithPeer()
+        val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
+        try {
+            runBlocking {
+                val collected = mutableListOf<InboundEvent>()
+                val collectionJob = launch { server.events.collect { collected += it } }
+                val response: HttpResponse = withTimeout(5.seconds) {
+                    client.post("http://localhost:$port/batch-begin") {
+                        contentType(ContentType.Application.Json)
+                        setBody(BatchBeginRequest(batchId = "test-batch-1", totalFiles = 3, totalBytes = null))
+                    }
+                }
+                withTimeout(2.seconds) {
+                    while (collected.none { it is InboundEvent.BatchStarted }) delay(10.milliseconds)
+                }
+                collectionJob.cancel()
+
+                assertEquals(HttpStatusCode.OK, response.status)
+                val event = collected.filterIsInstance<InboundEvent.BatchStarted>().first()
+                assertEquals("test-batch-1", event.batchId)
+                assertEquals(3, event.totalFiles)
+                assertEquals(peer, event.peer)
+            }
+        } finally {
+            client.close()
+        }
+    }
+
+    @Test
+    fun batch_begin_with_totalFiles_less_than_1_returns_400() {
+        val (_, port) = newServerWithPeer()
+        val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
+        try {
+            runBlocking {
+                val response: HttpResponse = withTimeout(5.seconds) {
+                    client.post("http://localhost:$port/batch-begin") {
+                        contentType(ContentType.Application.Json)
+                        setBody(BatchBeginRequest(batchId = "bad-batch", totalFiles = 0))
+                    }
+                }
+                assertEquals(HttpStatusCode.BadRequest, response.status)
+            }
+        } finally {
+            client.close()
+        }
+    }
+
+    @Test
+    fun batch_cancel_with_valid_body_returns_200_and_emits_BatchCancelled() {
+        val (server, port) = newServerWithPeer()
+        val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
+        try {
+            runBlocking {
+                val collected = mutableListOf<InboundEvent>()
+                val collectionJob = launch { server.events.collect { collected += it } }
+                val response: HttpResponse = withTimeout(5.seconds) {
+                    client.post("http://localhost:$port/batch-cancel") {
+                        contentType(ContentType.Application.Json)
+                        setBody(BatchCancelRequest(batchId = "batch-to-cancel"))
+                    }
+                }
+                withTimeout(2.seconds) {
+                    while (collected.none { it is InboundEvent.BatchCancelled }) delay(10.milliseconds)
+                }
+                collectionJob.cancel()
+
+                assertEquals(HttpStatusCode.OK, response.status)
+                val event = collected.filterIsInstance<InboundEvent.BatchCancelled>().first()
+                assertEquals("batch-to-cancel", event.batchId)
+                assertEquals(peer, event.peer)
+            }
+        } finally {
+            client.close()
+        }
+    }
+
+    @Test
+    fun batch_cancel_with_malformed_body_returns_400() {
+        val (_, port) = newServerWithPeer()
+        val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
+        try {
+            runBlocking {
+                val response: HttpResponse = withTimeout(5.seconds) {
+                    client.post("http://localhost:$port/batch-cancel") {
+                        contentType(ContentType.Application.Json)
+                        setBody("not-valid-json")
+                    }
+                }
+                assertEquals(HttpStatusCode.BadRequest, response.status)
             }
         } finally {
             client.close()

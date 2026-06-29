@@ -18,6 +18,7 @@ import com.tubetoast.tether.transfer.toPeerIdentity
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
+import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.install
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.origin
@@ -57,6 +58,15 @@ internal fun dedupFilename(leafName: String, exists: (candidate: String) -> Bool
 }
 
 private val log = KydraLog.withTag(default = "FileServerRoutes")
+
+private fun ApplicationCall.resolvePeer(discoveredDevicesStore: DiscoveredDevicesStore?): PeerIdentity? {
+    val remoteHost = request.origin.remoteAddress
+    return discoveredDevicesStore
+        ?.devices
+        ?.value
+        ?.firstOrNull { it.host == remoteHost }
+        ?.toPeerIdentity()
+}
 
 internal data class UploadHandle(
     val destination: String,
@@ -153,12 +163,7 @@ internal fun Application.installFileServerRoutes(
                 call.respond(HttpStatusCode.BadRequest, mapOf("error" to "invalid_batch"))
                 return@post
             }
-            val remoteHost = call.request.origin.remoteAddress
-            val peer = discoveredDevicesStore
-                ?.devices
-                ?.value
-                ?.firstOrNull { it.host == remoteHost }
-                ?.toPeerIdentity()
+            val peer = call.resolvePeer(discoveredDevicesStore)
             if (peer != null && inboundEvents != null) {
                 clearStaleCancel?.invoke(peer)
                 inboundEvents.tryEmit(
@@ -180,12 +185,7 @@ internal fun Application.installFileServerRoutes(
                 call.respond(HttpStatusCode.BadRequest, mapOf("error" to "invalid_body"))
                 return@post
             }
-            val remoteHost = call.request.origin.remoteAddress
-            val peer = discoveredDevicesStore
-                ?.devices
-                ?.value
-                ?.firstOrNull { it.host == remoteHost }
-                ?.toPeerIdentity()
+            val peer = call.resolvePeer(discoveredDevicesStore)
             if (peer != null && inboundEvents != null) {
                 inboundEvents.tryEmit(InboundEvent.BatchCancelled(peer = peer, batchId = body.batchId))
                 log.info { "batch-cancel from ${peer.id}: id=${body.batchId}" }
@@ -203,12 +203,7 @@ internal fun Application.installFileServerRoutes(
                 )
                 return@post
             }
-            val remoteHost = call.request.origin.remoteAddress
-            val peer = discoveredDevicesStore
-                ?.devices
-                ?.value
-                ?.firstOrNull { it.host == remoteHost }
-                ?.toPeerIdentity()
+            val peer = call.resolvePeer(discoveredDevicesStore)
             val contentLength = call.request.contentLength()
             // Clear any stale cancel flag from a previous transfer so it cannot abort this one.
             if (peer != null) clearStaleCancel?.invoke(peer)

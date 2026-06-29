@@ -32,7 +32,7 @@ The server listens on port 0 (OS-assigned ephemeral) and writes received files t
 ### Why CIO Native over hand-rolled
 
 1. **No HTTP parser to maintain.** The JVM impl gets HTTP/1.1 framing, query parsing, status codes, and chunked transfer encoding from Ktor. A hand-rolled NSStream or POSIX listener would need all of that — large surface for protocol bugs, every one of which would also have a JVM-side counterpart written differently.
-2. **One mental model, two actuals.** The JVM and Apple `FileServer.actual`s now read the same: `embeddedServer(CIO, port) { routing { get("/health"); post("/upload") } }`. Reviewers and future contributors don't context-switch between two server architectures when changing the protocol.
+2. **One mental model, two actuals.** The JVM and Apple `FileServer.actual`s now read the same: `embeddedServer(CIO, port) { routing { get("/health"); post("/upload"); post("/batch-begin"); post("/batch-cancel") } }`. Reviewers and future contributors don't context-switch between two server architectures when changing the protocol.
 3. **TLS later is cheaper.** When channel encryption lands ([security.md](../../security/README.md)), Ktor's engine already understands TLS. With a hand-rolled listener we'd be writing TLS handling ourselves on Native.
 
 ### Costs accepted

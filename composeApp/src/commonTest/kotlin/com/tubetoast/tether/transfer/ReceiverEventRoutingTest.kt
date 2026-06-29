@@ -297,6 +297,53 @@ class ReceiverEventRoutingTest {
     }
 
     @Test
+    fun `FileCompleted after batch completion is ignored and does not emit spurious BatchCompleted`() = runTest {
+        val inbound = MutableSharedFlow<InboundEvent>(extraBufferCapacity = 16)
+        val router = buildRouter(inbound, backgroundScope)
+        val received = mutableListOf<ReceiveEvent>()
+        backgroundScope.launch { router.eventsFor(peerA).toList(received) }
+        runCurrent()
+
+        inbound.emit(InboundEvent.BatchStarted(peerA, batchId = "b1", totalFiles = 1, totalBytes = null))
+        inbound.emit(InboundEvent.FileStarted(peerA, "a.txt"))
+        inbound.emit(InboundEvent.FileCompleted(peerA, "a.txt", null))
+        runCurrent()
+
+        val batchesAfterFirst = received.filterIsInstance<ReceiveEvent.BatchCompleted>()
+        assertEquals(1, batchesAfterFirst.size)
+
+        // Stale FileCompleted after batch is gone — must be a no-op
+        inbound.emit(InboundEvent.FileCompleted(peerA, "a.txt", null))
+        runCurrent()
+
+        val batchesTotal = received.filterIsInstance<ReceiveEvent.BatchCompleted>()
+        assertEquals(1, batchesTotal.size, "stale FileCompleted must not emit a second BatchCompleted")
+        val startedEvents = received.filterIsInstance<ReceiveEvent.Started>()
+        assertEquals(1, startedEvents.size, "stale FileCompleted must not create a new implicit batch")
+    }
+
+    @Test
+    fun `BatchCancelled with mismatched batchId leaves active batch intact`() = runTest {
+        val inbound = MutableSharedFlow<InboundEvent>(extraBufferCapacity = 16)
+        val router = buildRouter(inbound, backgroundScope)
+        val received = mutableListOf<ReceiveEvent>()
+        backgroundScope.launch { router.eventsFor(peerA).toList(received) }
+        runCurrent()
+
+        inbound.emit(InboundEvent.BatchStarted(peerA, batchId = "b1", totalFiles = 2, totalBytes = null))
+        inbound.emit(InboundEvent.FileCompleted(peerA, "a.txt", null))
+        // Mismatched cancel must not clear the active batch
+        inbound.emit(InboundEvent.BatchCancelled(peerA, batchId = "stale-id"))
+        inbound.emit(InboundEvent.FileCompleted(peerA, "b.txt", null))
+        runCurrent()
+
+        val batchCompleted = received.filterIsInstance<ReceiveEvent.BatchCompleted>()
+        assertEquals(1, batchCompleted.size, "mismatched cancel must not emit BatchCompleted")
+        assertEquals(2, batchCompleted[0].received, "batch must complete normally after mismatched cancel")
+        assertEquals(null, batchCompleted[0].partialReason, "normally completed batch has no partial reason")
+    }
+
+    @Test
     fun `aggregate receiveEvents flow carries all events tagged with peer`() = runTest {
         val inbound = MutableSharedFlow<InboundEvent>(extraBufferCapacity = 16)
         val router = buildRouter(inbound, backgroundScope)

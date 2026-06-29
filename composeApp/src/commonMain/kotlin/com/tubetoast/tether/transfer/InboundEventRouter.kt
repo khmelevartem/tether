@@ -89,7 +89,7 @@ class InboundEventRouter(
                 )
             }
             is InboundEvent.FileCompleted -> {
-                val batch = ensureImplicitBatch(peer, flow)
+                val batch = peerBatch[peer] ?: return
                 emit(peer, flow, ReceiveEvent.FileCompleted(name = event.name))
                 batch.receivedCount++
                 if (batch.receivedCount >= batch.totalFiles) {
@@ -114,18 +114,18 @@ class InboundEventRouter(
                 emit(peer, flow, ReceiveEvent.ConnectionLost(receivedSoFar = received))
             }
             is InboundEvent.BatchCancelled -> {
-                val batch = peerBatch.remove(peer)
-                if (batch != null && batch.batchId == event.batchId) {
-                    emit(
-                        peer,
-                        flow,
-                        ReceiveEvent.BatchCompleted(
-                            received = batch.receivedCount,
-                            total = batch.totalFiles,
-                            partialReason = PartialOutcome.SenderCancelled,
-                        ),
-                    )
-                }
+                val batch = peerBatch[peer]
+                if (batch == null || batch.batchId != event.batchId) return
+                peerBatch.remove(peer)
+                emit(
+                    peer,
+                    flow,
+                    ReceiveEvent.BatchCompleted(
+                        received = batch.receivedCount,
+                        total = batch.totalFiles,
+                        partialReason = PartialOutcome.SenderCancelled,
+                    ),
+                )
             }
         }
     }

@@ -12,7 +12,7 @@ Product-side docs (vision, audience, features) live in [`docs/product/`](../prod
 - [Dependency Injection](dependency-injection.md) — DI strategy now (manual composition root) and later (Metro). Concrete rules for new code.
 - [Presentation Layer](presentation-layer.md) — Decompose-based components; how to write them, subscribe from Compose, and test.
 - [Peer Discovery](discovery.md) — layered model (mDNS + rendezvous + HTTP-scan + UDP-broadcast + manual entry), contracts, identity, liveness.
-- [File transfer wire contract](file-transfer-wire.md) — `POST /upload?name=<relative-path>` shape, two-layer path sanitization (lexical in route + canonical-realisation in `UploadStorage`), per-platform storage seam.
+- [File transfer wire contract](file-transfer-wire.md) — `POST /batch-begin` / `POST /batch-cancel` batch framing, `POST /upload?name=<relative-path>` per-file transfer, two-layer path sanitization (lexical in route + canonical-realisation in `UploadStorage`), per-platform storage seam.
 - [Local-network availability](wifi-availability.md) — single common stream gating discovery and the no-local-network UI; per-platform sources (Android `NetworkCallback`, Apple `NWPathMonitor`, Desktop `NetworkInterface` polling).
 - [UI Style Guide](ui-style-guide.md) — token tables, `TetherTheme` rule, Tabler Icons usage, motion specs, accessibility checklist.
 - [Testing](testing.md) — test structure by source set, style (`runTest` / virtual time), Apple-target specifics.
