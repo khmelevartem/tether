@@ -36,7 +36,7 @@ fun main() = runBlocking {
     container.autoSendDispatcher.start()
     DesktopInboundNotifier(
         windowHolder = container.windowHolder,
-        events = container.fileServer.events,
+        receiveEvents = container.inboundEventRouter.receiveEvents,
         scope = container.appScope,
     ).start()
     registerShutdownHook(handle)

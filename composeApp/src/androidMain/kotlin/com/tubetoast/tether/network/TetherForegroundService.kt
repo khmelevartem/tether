@@ -17,7 +17,8 @@ import androidx.lifecycle.lifecycleScope
 import com.tubetoast.tether.R
 import com.tubetoast.tether.di.AppContainerProvider
 import com.tubetoast.tether.discovery.MdnsDiscovery
-import com.tubetoast.tether.transfer.InboundEvent
+import com.tubetoast.tether.transfer.PeerIdentity
+import com.tubetoast.tether.transfer.ReceiveEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -92,7 +93,9 @@ class TetherForegroundService : LifecycleService() {
             }
 
             launch {
-                fileServer.events.collect { event -> handleInboundNotification(event) }
+                container.inboundEventRouter.receiveEvents.collect { (peer, event) ->
+                    handleInboundNotification(peer, event)
+                }
             }
         }
     }
@@ -169,7 +172,7 @@ class TetherForegroundService : LifecycleService() {
         false
     }
 
-    private fun handleInboundNotification(event: InboundEvent) {
+    private fun handleInboundNotification(peer: PeerIdentity, event: ReceiveEvent) {
         val nm = getSystemService(NotificationManager::class.java) ?: return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) !=
@@ -178,17 +181,20 @@ class TetherForegroundService : LifecycleService() {
             return
         }
         val text = when (event) {
-            is InboundEvent.FileStarted -> getString(
+            is ReceiveEvent.Started -> getString(
                 R.string.fg_notification_receiving,
-                event.name,
-                event.peer.id,
+                event.currentFile.ifEmpty { "…" },
+                peer.id,
             )
-            is InboundEvent.FileCompleted -> getString(
-                R.string.fg_notification_receiving,
-                event.name,
-                event.peer.id,
+            is ReceiveEvent.Progress -> {
+                val pct = event.totalBytes?.let { " (${(event.receivedBytes * 100 / it).toInt()}%)" }.orEmpty()
+                getString(R.string.fg_notification_receiving, "${event.name}$pct", peer.id)
+            }
+            is ReceiveEvent.BatchCompleted -> getString(
+                R.string.fg_notification_received,
+                event.received,
+                peer.id,
             )
-            is InboundEvent.ConnectionLost -> getString(R.string.fg_notification_received, event.receivedSoFar)
             else -> return
         }
         nm.notify(NOTIFICATION_ID, buildNotification(text))

@@ -1,6 +1,7 @@
 package com.tubetoast.tether
 
-import com.tubetoast.tether.transfer.InboundEvent
+import com.tubetoast.tether.transfer.PeerIdentity
+import com.tubetoast.tether.transfer.ReceiveEvent
 import com.tubetoast.tether.transfer.WindowHolder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharedFlow
@@ -16,17 +17,17 @@ private val log = KydraLog.withTag(default = "DesktopInboundNotifier")
 
 internal class DesktopInboundNotifier(
     private val windowHolder: WindowHolder,
-    private val events: SharedFlow<InboundEvent>,
+    private val receiveEvents: SharedFlow<Pair<PeerIdentity, ReceiveEvent>>,
     private val scope: CoroutineScope,
 ) {
     private val trayIcon: TrayIcon? by lazy { tryInstallTrayIcon() }
 
     fun start() {
         scope.launch {
-            events.collect { event ->
+            receiveEvents.collect { (_, event) ->
                 when (event) {
-                    is InboundEvent.FileStarted -> bringWindowToFront()
-                    is InboundEvent.ConnectionLost -> showTrayNotification(event.receivedSoFar)
+                    is ReceiveEvent.Started -> bringWindowToFront()
+                    is ReceiveEvent.BatchCompleted -> showTrayNotification(event.received)
                     else -> Unit
                 }
             }

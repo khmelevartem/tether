@@ -66,7 +66,7 @@ fun MainViewController() = run {
                 container.nameRepublisher.start(scope)
                 container.rendezvousAnnouncer.start(scope)
                 container.autoSendDispatcher.start()
-                IosInboundNotifier(container.fileServer.events, scope).start()
+                IosInboundNotifier(container.inboundEventRouter.receiveEvents, scope).start()
                 drainSharedFiles()
             }
 

@@ -1,22 +1,25 @@
 package com.tubetoast.tether
 
-import com.tubetoast.tether.transfer.InboundEvent
+import com.tubetoast.tether.transfer.PeerIdentity
+import com.tubetoast.tether.transfer.ReceiveEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
+import platform.UserNotifications.UNAuthorizationStatusAuthorized
+import platform.UserNotifications.UNAuthorizationStatusProvisional
 import platform.UserNotifications.UNMutableNotificationContent
 import platform.UserNotifications.UNNotificationRequest
 import platform.UserNotifications.UNUserNotificationCenter
 
 internal class IosInboundNotifier(
-    private val events: SharedFlow<InboundEvent>,
+    private val receiveEvents: SharedFlow<Pair<PeerIdentity, ReceiveEvent>>,
     private val scope: CoroutineScope,
 ) {
     fun start() {
         scope.launch {
-            events.collect { event ->
-                if (event is InboundEvent.ConnectionLost && event.cancelled.not()) {
-                    scheduleLocalNotification(event.receivedSoFar)
+            receiveEvents.collect { (_, event) ->
+                if (event is ReceiveEvent.BatchCompleted) {
+                    scheduleLocalNotification(event.received)
                 }
             }
         }
@@ -27,6 +30,12 @@ internal class IosInboundNotifier(
             .currentNotificationCenter()
             .getNotificationSettingsWithCompletionHandler { settings ->
                 if (settings == null) return@getNotificationSettingsWithCompletionHandler
+                val status = settings.authorizationStatus
+                if (status != UNAuthorizationStatusAuthorized &&
+                    status != UNAuthorizationStatusProvisional
+                ) {
+                    return@getNotificationSettingsWithCompletionHandler
+                }
                 val content = UNMutableNotificationContent()
                 content.setTitle("Tether")
                 content.setBody("Received $receivedCount file(s)")
