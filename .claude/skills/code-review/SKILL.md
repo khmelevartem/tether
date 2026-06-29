@@ -56,7 +56,7 @@ Agents to launch (subject to skip matrix):
 - `review-design-system` (if diff touches `composeApp/src/**`)
 - `review-visual` (renders PNGs itself when invoked; reads them against the brief)
 
-`review-visual` is the most expensive reviewer — it renders every changed preview through Roborazzi before reviewing. Dispatch it once on the authoritative final diff, not per iteration. Do not re-dispatch it for a change whose visual effect is determinable from code reasoning (e.g. a single-child `Column(CenterHorizontally)` → `Box(contentAlignment = Center)` swap is visually identical) — reason from the source instead. When a layout / centring bug is found in one of several sibling composables (top bars, rows, cards), fix all siblings in the same pass so one render covers them rather than triggering another slow round. If the user offers to eyeball the visuals, take it and skip the agent.
+`review-visual` is the most expensive reviewer — it must render the changed previews before it can review them. Dispatch it once on the authoritative final diff, not per iteration. Do not re-dispatch it for a change whose visual effect is determinable from code reasoning (e.g. swapping one layout container for another with equivalent alignment) — reason from the source instead. When a layout / centring bug is found in one of several sibling composables (top bars, rows, cards), fix all siblings in the same pass so one render covers them rather than triggering another slow round. If the user offers to eyeball the visuals, take it and skip the agent.
 
 Each runs in its own context; their token usage does not pollute yours. Collect each `PHASE` block verbatim.
 
