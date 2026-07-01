@@ -334,7 +334,7 @@ class HelloRouteTest {
     }
 
     @Test
-    fun `fresh hello survives mdns serviceLost within staleGrace (issue 326)`() {
+    fun `fresh hello survives mdns serviceLost within staleGrace`() {
         // staleGrace=10s (default) — the /hello stamps lastSeen, so an immediate removeByName must NOT evict.
         val store = DiscoveredDevicesStore()
         val server = newServer(store = store)
