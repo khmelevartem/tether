@@ -267,4 +267,34 @@ class HealthMonitorTest {
 
         m.stop()
     }
+
+    @Test
+    fun `concurrent peers accumulate independent failure streaks`() = runTest(UnconfinedTestDispatcher()) {
+        val store = DiscoveredDevicesStore()
+        store.upsert(device("fp-1"))
+        store.upsert(device("fp-2"))
+        val client = ScriptedFileClient(
+            mutableMapOf(
+                "fp-1" to mutableListOf(false, false, false),
+                "fp-2" to mutableListOf(false, true, false, true, false, true),
+            ),
+        )
+        val m = monitor(store, client)
+
+        m.start(backgroundScope)
+        repeat(threshold) {
+            advanceTimeBy(period)
+            runCurrent()
+        }
+
+        val remaining = store.devices.value.map { it.fingerprint }
+        assertEquals(
+            listOf("fp-2"),
+            remaining,
+            "fp-1 fails every probe and must be evicted after $threshold ticks; " +
+                "fp-2 alternates and must remain since its streak keeps resetting",
+        )
+
+        m.stop()
+    }
 }
