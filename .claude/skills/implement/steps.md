@@ -234,7 +234,7 @@ Use the produced action list to form prompts for sub-agents in the next step.
 
 Dispatch every corresponding writing agent with a proper prompt:
 
-- non-trivial mechanism / library / structural choice → `architect` first
+- non-trivial mechanism / library / structural choice → `architect` first. When the issue prescribes a solution shape, brief the architect to treat it as one option to weigh, not the anchor.
 - UI work (Compose, screens, components, theming, navigation) → `ui-expert`
 - Everything else → `coder`
 

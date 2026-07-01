@@ -54,7 +54,6 @@ Index and selection rules (skill vs command) — [`.claude/README.md`](.claude/R
 
 ## Code style
 
-- **Minimal comments.** Before adding one — try extracting the block into a private method: the method name often makes the comment unnecessary. A comment only where code cannot express intent (deliberately swallowed exception, non-obvious external-library invariant).
-- **KDoc vs `//`.** KDoc — only for contracts (nullable semantics, non-obvious pre-/postconditions, non-obvious WHY). Do not restate the method name or signature — that is noise. If KDoc adds no information relative to the code — remove it.
+- **Minimal comments and KDoc** — default to none; comment only where code cannot express intent. Full rule: [`long-lived-artifacts.md` §A comment earns its place](docs/engineering/long-lived-artifacts.md#a-comment-earns-its-place-or-it-goes).
 - **Kotlin official style** (enforced by KtLint).
 - **Long-lived artifacts discipline** (CLAUDE.md, `docs/`, `.claude/`, KDoc, inline comments) — [`long-lived-artifacts.md`](docs/engineering/long-lived-artifacts.md).
