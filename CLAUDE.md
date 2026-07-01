@@ -54,6 +54,6 @@ Index and selection rules (skill vs command) — [`.claude/README.md`](.claude/R
 
 ## Code style
 
-- **Minimal comments and KDoc** — default to none; comment only where code cannot express intent. Full rule in the discipline doc below.
+- **Minimal comments and KDoc** — default to none; comment only where code cannot express intent. Full rule: [`long-lived-artifacts.md` §A comment earns its place](docs/engineering/long-lived-artifacts.md#a-comment-earns-its-place-or-it-goes).
 - **Kotlin official style** (enforced by KtLint).
 - **Long-lived artifacts discipline** (CLAUDE.md, `docs/`, `.claude/`, KDoc, inline comments) — [`long-lived-artifacts.md`](docs/engineering/long-lived-artifacts.md).
