@@ -7,11 +7,13 @@ import com.tubetoast.tether.security.DefaultTrustedDeviceStore
 import com.tubetoast.tether.security.DeviceKeyPair
 import kotlinx.coroutines.runBlocking
 import java.io.File
+import java.net.ServerSocket
 import java.nio.file.Files
 import kotlin.io.path.writeBytes
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
@@ -66,6 +68,22 @@ class FileClientIntegrationTest {
         }
 
         Files.deleteIfExists(file)
+    }
+
+    @Test
+    fun `checkHealth returns true against a live server`() {
+        runBlocking {
+            assertTrue(client.checkHealth(device), "A live /health endpoint must report reachable")
+        }
+    }
+
+    @Test
+    fun `checkHealth returns false against a closed port`() {
+        val closedPort = ServerSocket(0).use { it.localPort }
+        val dead = Device(name = "dead", host = "127.0.0.1", port = closedPort)
+        runBlocking {
+            assertFalse(client.checkHealth(dead), "A refused connection must report unreachable")
+        }
     }
 
     @Test
