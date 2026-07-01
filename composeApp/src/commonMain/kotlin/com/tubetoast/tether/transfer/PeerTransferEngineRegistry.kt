@@ -5,6 +5,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
@@ -25,6 +29,9 @@ class PeerTransferEngineRegistry(
 
     private val entries = AtomicReference(emptyMap<PeerIdentity, Entry>())
 
+    private val _engines = MutableStateFlow<Map<PeerIdentity, PeerTransferEngine>>(emptyMap())
+    val engines: StateFlow<Map<PeerIdentity, PeerTransferEngine>> = _engines.asStateFlow()
+
     fun engineFor(peer: PeerIdentity): PeerTransferEngine {
         while (true) {
             val current = entries.load()
@@ -33,7 +40,10 @@ class PeerTransferEngineRegistry(
             val engineScope = CoroutineScope(SupervisorJob(appScope.coroutineContext[Job]) + Dispatchers.Default)
             val newEntry = Entry(engineFactory(peer, engineScope), engineScope)
             val next = current + (peer to newEntry)
-            if (entries.compareAndSet(current, next)) return newEntry.engine
+            if (entries.compareAndSet(current, next)) {
+                _engines.update { it + (peer to newEntry.engine) }
+                return newEntry.engine
+            }
             engineScope.cancel()
         }
     }
@@ -46,6 +56,7 @@ class PeerTransferEngineRegistry(
             val next = current - peer
             if (entries.compareAndSet(current, next)) {
                 evicted?.scope?.cancel()
+                _engines.update { it - peer }
                 return
             }
         }

@@ -2,15 +2,13 @@ package com.tubetoast.tether.discovery
 
 import com.tubetoast.tether.network.FileClient
 import com.tubetoast.tether.protocol.Device
+import com.tubetoast.tether.util.ScopedJob
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.debug
 import ru.pocketbyte.kydra.log.wrapper.withTag
-import kotlin.concurrent.Volatile
 
 private val log = KydraLog.withTag(default = "RendezvousAnnouncer")
 
@@ -19,12 +17,11 @@ class RendezvousAnnouncer(
     private val client: FileClient,
     private val selfAnnouncementProvider: SelfAnnouncementProvider,
 ) {
-    @Volatile private var collectJob: Job? = null
+    private val scopedJob = ScopedJob()
     private val acknowledgedKeys = MutableStateFlow(emptySet<String>())
 
     fun start(scope: CoroutineScope) {
-        if (collectJob != null) return
-        collectJob = scope.launch {
+        scopedJob.start(scope) {
             store.devices.collect { devices ->
                 val info = selfAnnouncementProvider.get()
                 for (device in devices) {
@@ -39,8 +36,7 @@ class RendezvousAnnouncer(
     }
 
     fun stop() {
-        collectJob?.cancel()
-        collectJob = null
+        scopedJob.stop()
         acknowledgedKeys.value = emptySet()
     }
 

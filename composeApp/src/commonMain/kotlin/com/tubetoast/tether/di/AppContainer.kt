@@ -4,9 +4,11 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import com.tubetoast.tether.config.DeviceNamePersistence
 import com.tubetoast.tether.config.DeviceNameStore
+import com.tubetoast.tether.discovery.ActiveTransfers
 import com.tubetoast.tether.discovery.DefaultSelfAnnouncementProvider
 import com.tubetoast.tether.discovery.DeviceNameRepublisher
 import com.tubetoast.tether.discovery.DiscoveredDevicesStore
+import com.tubetoast.tether.discovery.HealthMonitor
 import com.tubetoast.tether.discovery.MdnsDiscovery
 import com.tubetoast.tether.discovery.RendezvousAnnouncer
 import com.tubetoast.tether.discovery.SelfAnnouncementProvider
@@ -35,6 +37,7 @@ import com.tubetoast.tether.transfer.PeerTransferEngine
 import com.tubetoast.tether.transfer.PeerTransferEngineRegistry
 import com.tubetoast.tether.transfer.PendingFilesRepository
 import com.tubetoast.tether.transfer.ReconnectionTimeout
+import com.tubetoast.tether.transfer.RegistryActiveTransfers
 import com.tubetoast.tether.transfer.TransferActivityTracker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -110,6 +113,18 @@ abstract class AppContainer {
                     peerPreferencesStore = peerPreferencesStore,
                 )
             },
+        )
+    }
+
+    open val activeTransfers: ActiveTransfers by lazy {
+        RegistryActiveTransfers(peerTransferEngineRegistry, appScope)
+    }
+
+    open val healthMonitor: HealthMonitor by lazy {
+        HealthMonitor(
+            store = discoveredDevicesStore,
+            fileClient = fileClient,
+            activeTransfers = activeTransfers,
         )
     }
 

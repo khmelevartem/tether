@@ -9,6 +9,8 @@ import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.HttpTimeoutConfig
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.timeout
+import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
@@ -43,6 +45,7 @@ private val log = KydraLog.withTag(default = "FileClient")
 open class FileClient(
     private val client: HttpClient,
     private val noProgressTimeout: Duration = DEFAULT_NO_PROGRESS_TIMEOUT,
+    private val healthTimeout: Duration = DEFAULT_HEALTH_TIMEOUT,
 ) : Closeable {
     companion object {
         fun default(): FileClient = FileClient(
@@ -66,6 +69,16 @@ open class FileClient(
         ok
     } catch (e: Exception) {
         log.warn { "hello failed → ${target.host}:${target.port} — ${e.message}" }
+        false
+    }
+
+    open suspend fun checkHealth(device: Device): Boolean = try {
+        val response = client.get("http://${device.host}:${device.port}/health") {
+            timeout { requestTimeoutMillis = healthTimeout.inWholeMilliseconds }
+        }
+        response.status == HttpStatusCode.OK
+    } catch (e: Exception) {
+        log.warn { "health probe failed → ${device.host}:${device.port} — ${e.message}" }
         false
     }
 
@@ -159,6 +172,7 @@ open class FileClient(
 }
 
 private val DEFAULT_NO_PROGRESS_TIMEOUT: Duration = 60.seconds
+private val DEFAULT_HEALTH_TIMEOUT: Duration = 2.seconds
 
 private fun ByteReadChannel.asOctetStreamContent(totalBytes: Long?): OutgoingContent =
     object : OutgoingContent.ReadChannelContent() {

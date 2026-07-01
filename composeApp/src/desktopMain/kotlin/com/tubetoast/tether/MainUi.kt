@@ -3,6 +3,7 @@
 package com.tubetoast.tether
 
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -23,6 +24,8 @@ import kotlinx.coroutines.runBlocking
 import org.jetbrains.compose.resources.painterResource
 import tether.composeapp.generated.resources.Res
 import tether.composeapp.generated.resources.icon
+import java.awt.event.WindowEvent
+import java.awt.event.WindowFocusListener
 
 fun main() = runBlocking {
     // see docs/knowledge/desktop-system-theme.md — must be set before any Swing/AWT class loads
@@ -54,6 +57,23 @@ fun main() = runBlocking {
 
                 LaunchedEffect(window) {
                     container.windowHolder.window = window
+                }
+
+                DisposableEffect(window) {
+                    val listener = object : WindowFocusListener {
+                        override fun windowGainedFocus(e: WindowEvent) {
+                            container.healthMonitor.start(container.appScope)
+                        }
+
+                        override fun windowLostFocus(e: WindowEvent) {
+                            container.healthMonitor.stop()
+                        }
+                    }
+                    window.addWindowFocusListener(listener)
+                    onDispose {
+                        window.removeWindowFocusListener(listener)
+                        container.healthMonitor.stop()
+                    }
                 }
 
                 val dropHandler = remember(component) { WindowDropHandler(component, scope) }

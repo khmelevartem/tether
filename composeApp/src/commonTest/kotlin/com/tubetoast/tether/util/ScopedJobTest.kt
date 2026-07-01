@@ -1,0 +1,74 @@
+package com.tubetoast.tether.util
+
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class ScopedJobTest {
+    @Test
+    fun `start launches the block`() = runTest(UnconfinedTestDispatcher()) {
+        val job = ScopedJob()
+        var runs = 0
+        job.start(this) { runs++ }
+        advanceUntilIdle()
+        assertEquals(1, runs)
+    }
+
+    @Test
+    fun `double start while active is a no-op`() {
+        val scope = TestScope(UnconfinedTestDispatcher())
+        val job = ScopedJob()
+        var runs = 0
+        // Block suspends so the job remains active when the second start is attempted.
+        job.start(scope) {
+            runs++
+            awaitCancellation()
+        }
+        job.start(scope) { runs++ }
+        job.stop()
+        scope.advanceUntilIdle()
+        assertEquals(1, runs)
+    }
+
+    @Test
+    fun `stop cancels the running job`() {
+        val scope = TestScope(UnconfinedTestDispatcher())
+        val job = ScopedJob()
+        var cancelled = false
+        job.start(scope) {
+            try {
+                awaitCancellation()
+            } finally {
+                cancelled = true
+            }
+        }
+        job.stop()
+        scope.advanceUntilIdle()
+        assertTrue(cancelled)
+    }
+
+    @Test
+    fun `stop on a never-started ScopedJob is a no-op`() {
+        ScopedJob().stop()
+    }
+
+    @Test
+    fun `start after stop re-launches the block`() {
+        val scope = TestScope(UnconfinedTestDispatcher())
+        val job = ScopedJob()
+        var runs = 0
+        job.start(scope) { runs++ }
+        scope.advanceUntilIdle()
+        job.stop()
+        job.start(scope) { runs++ }
+        scope.advanceUntilIdle()
+        assertEquals(2, runs)
+    }
+}

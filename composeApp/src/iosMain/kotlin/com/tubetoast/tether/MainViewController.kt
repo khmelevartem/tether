@@ -21,6 +21,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import platform.Foundation.NSNotificationCenter
 import platform.UIKit.UIApplicationDidBecomeActiveNotification
+import platform.UIKit.UIApplicationWillResignActiveNotification
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.error
 import ru.pocketbyte.kydra.log.wrapper.withTag
@@ -73,7 +74,16 @@ fun MainViewController() = run {
                 name = UIApplicationDidBecomeActiveNotification,
                 `object` = null,
                 queue = null,
-            ) { _ -> drainSharedFiles() }
+            ) { _ ->
+                drainSharedFiles()
+                container.healthMonitor.start(scope)
+            }
+
+            val willResignActiveObserver = NSNotificationCenter.defaultCenter.addObserverForName(
+                name = UIApplicationWillResignActiveNotification,
+                `object` = null,
+                queue = null,
+            ) { _ -> container.healthMonitor.stop() }
 
             val sharedFilesObserver = NSNotificationCenter.defaultCenter.addObserverForName(
                 name = SHARED_FILES_AVAILABLE_NOTIFICATION,
@@ -83,7 +93,9 @@ fun MainViewController() = run {
 
             onDispose {
                 NSNotificationCenter.defaultCenter.removeObserver(becomeActiveObserver)
+                NSNotificationCenter.defaultCenter.removeObserver(willResignActiveObserver)
                 NSNotificationCenter.defaultCenter.removeObserver(sharedFilesObserver)
+                container.healthMonitor.stop()
                 container.nameRepublisher.stop()
                 container.rendezvousAnnouncer.stop()
                 scope.cancel()
