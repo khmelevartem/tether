@@ -184,19 +184,44 @@ class HealthMonitorTest {
     }
 
     @Test
-    fun `refreshNow triggers an out-of-cadence probe`() = runTest(UnconfinedTestDispatcher()) {
+    fun `counter cleared on exclusion exit requires a full fresh streak to evict`() = runTest(
+        UnconfinedTestDispatcher(),
+    ) {
         val store = DiscoveredDevicesStore()
         store.upsert(device("fp-1"))
-        val client = ScriptedFileClient(mutableMapOf())
-        val m = monitor(store, client)
+        val client = ScriptedFileClient(mutableMapOf("fp-1" to mutableListOf(false)))
+        val activeTransfers = FakeActiveTransfers()
+        val m = monitor(store, client, activeTransfers)
 
         m.start(backgroundScope)
         runCurrent()
-        val probesAfterStart = client.probed.size
-
-        m.refreshNow()
+        advanceTimeBy(period)
         runCurrent()
-        assertEquals(probesAfterStart + 1, client.probed.size, "refreshNow must probe once, out of cadence")
+        // Two consecutive failures recorded (K-1 of 3) — one more would evict.
+        assertTrue(store.devices.value.any { it.fingerprint == "fp-1" }, "must survive after 2 failures")
+
+        activeTransfers.setActive(setOf("fp-1"))
+        advanceTimeBy(period)
+        runCurrent()
+        advanceTimeBy(period)
+        runCurrent()
+        activeTransfers.setActive(emptySet())
+
+        advanceTimeBy(period)
+        runCurrent()
+        assertTrue(
+            store.devices.value.any { it.fingerprint == "fp-1" },
+            "counter must have been cleared on exclusion exit — 1 failure post-resume must not evict",
+        )
+
+        advanceTimeBy(period)
+        runCurrent()
+        advanceTimeBy(period)
+        runCurrent()
+        assertTrue(
+            store.devices.value.none { it.fingerprint == "fp-1" },
+            "must evict only after a full fresh streak of 3 failures post-resume",
+        )
 
         m.stop()
     }

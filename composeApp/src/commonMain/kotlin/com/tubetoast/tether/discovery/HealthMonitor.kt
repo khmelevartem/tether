@@ -9,12 +9,10 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.info
 import ru.pocketbyte.kydra.log.warn
 import ru.pocketbyte.kydra.log.wrapper.withTag
-import kotlin.concurrent.Volatile
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
@@ -34,37 +32,28 @@ class HealthMonitor(
     private val failureThreshold: Int = DEFAULT_FAILURE_THRESHOLD,
 ) {
     private val scopedJob = ScopedJob()
-    private val failureCounts = mutableMapOf<String, Int>()
-
-    @Volatile private var runningScope: CoroutineScope? = null
 
     fun start(scope: CoroutineScope) {
-        runningScope = scope
         log.info { "started — period=$period, failureThreshold=$failureThreshold" }
         scopedJob.start(scope) {
-            probeOnce()
+            val failureCounts = mutableMapOf<String, Int>()
+            probeOnce(failureCounts)
             while (isActive) {
                 delay(period)
-                probeOnce()
+                probeOnce(failureCounts)
             }
         }
     }
 
     fun stop() {
         scopedJob.stop()
-        runningScope = null
-        failureCounts.clear()
         log.info { "stopped" }
     }
 
-    fun refreshNow() {
-        runningScope?.launch { probeOnce() }
-    }
-
-    private suspend fun probeOnce() {
+    private suspend fun probeOnce(failureCounts: MutableMap<String, Int>) {
         val excluded = activeTransfers.peers.value
         val candidates = store.devices.value.filter { device -> device.fingerprint?.let { it !in excluded } == true }
-        pruneStaleCounters(candidates, excluded)
+        pruneStaleCounters(candidates, failureCounts)
 
         val results = coroutineScope {
             val probes = candidates.map { device ->
@@ -73,10 +62,10 @@ class HealthMonitor(
             probes.awaitAll()
         }
 
-        results.forEach { (fingerprint, reachable) -> applyProbeResult(fingerprint, reachable) }
+        results.forEach { (fingerprint, reachable) -> applyProbeResult(fingerprint, reachable, failureCounts) }
     }
 
-    private fun applyProbeResult(fingerprint: String, reachable: Boolean) {
+    private fun applyProbeResult(fingerprint: String, reachable: Boolean, failureCounts: MutableMap<String, Int>) {
         if (reachable) {
             failureCounts.remove(fingerprint)
             return
@@ -91,9 +80,9 @@ class HealthMonitor(
         }
     }
 
-    private fun pruneStaleCounters(candidates: List<Device>, excluded: Set<String>) {
+    private fun pruneStaleCounters(candidates: List<Device>, failureCounts: MutableMap<String, Int>) {
         val live = candidates.mapNotNull { it.fingerprint }.toSet()
-        failureCounts.keys.retainAll { it in live || it in excluded }
+        failureCounts.keys.retainAll { it in live }
     }
 }
 
