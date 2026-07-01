@@ -163,16 +163,19 @@ The fingerprint denotes identity, not trust: no code path treats it as authentic
 
 For app installs (Android, iOS, Desktop UI) the key pair lives in the platform secure store, so a reinstall regenerates it and the fingerprint changes — matching the user-visible "reinstall produces a new identity" behaviour. For the CLI (`tether-cli`) the identity is per-process ephemeral by default: each process generates a fresh key pair in a temporary directory, so two CLI processes on the same host derive distinct fingerprints; passing `--config-dir` persists the key pair so the identity survives restart. See [`docs/knowledge/cli-multi-instance.md`](../knowledge/cli-multi-instance.md).
 
-## Liveness and TTL
+## Liveness — reachability probing
 
-mDNS provides `serviceLost` notifications (NSD, Bonjour); JmDNS surfaces equivalent events. mDNS-discovered peers are removed from the store when their announce times out.
+Two removal paths keep the store honest, one per discovery channel.
 
-Peers learned via `/hello` or fallback channels do not have a built-in expiry. They are kept while the device has any reason to believe them present:
+mDNS owns removal for the peers it added: `serviceLost` notifications (NSD, Bonjour; JmDNS surfaces equivalents) drop a peer from the store when its announce times out. This path is unchanged.
 
-- **Active reuse extends life.** A successful `GET /health` or any other request to the peer resets a lightweight last-seen timestamp.
-- **Idle expiry.** After a configurable idle window (no successful contact and no recent rediscovery via any layer), the peer is dropped from the store. The user can recover it by triggering rediscovery (any layer) or by selecting it from the recent-peers list (Layer 4).
+Every other removal is reachability-driven. A peer is kept while the device can still reach it, and dropped once it cannot — no last-seen timestamp, no idle clock. Reachability is measured by active probing: a health monitor issues `GET /health` to each peer in the store on a fixed period, all peers concurrently, each probe under a short timeout. A peer that fails K consecutive probes is removed; any success resets its failure count. The probe targets the same `/health` endpoint the `FileServer` already exposes.
 
-The idle window is intentionally generous — peers reappear cheaply, and stale entries are a smaller cost than flicker.
+The monitor runs only in the foreground and stops entirely in the background, because probing has no value while the user is not looking at the device list and would spend battery and radio on a screen nobody sees. Discovery *ingest* keeps running to app/service lifetime; only the probe loop is foreground-bound (see [Cancellation and lifecycle](#cancellation-and-lifecycle)). Returning to the foreground — opening the device list or the share-sheet — forces an immediate probe cycle, so the list is fresh by the time it is drawn rather than waiting up to a full period.
+
+A peer with a file transfer in flight, inbound or outbound, is excluded from probing until that transfer completes. An active transfer already proves the peer reachable, and a probe competing with a saturated transfer could time out and evict a peer that is demonstrably present. When the transfer ends, the peer rejoins the probed set with its failure count cleared.
+
+The foreground signal is platform-supplied: Android activity resume and pause, iOS `didBecomeActive` and `willResignActive`, Desktop window focus and blur. Each platform maps its lifecycle to a single foreground flag the monitor observes; the monitor itself is platform-agnostic.
 
 ## Trust
 
@@ -192,6 +195,8 @@ Trust is established exclusively at [pairing](../security/README.md#pairing-flow
 
 Discovery is a single component started and stopped with the app. Inside, every layer is a coroutine (or set of coroutines) owned by a discovery-scope `CoroutineScope` cancelled on `stop()`. Layer 3 fallbacks observe `DiscoveredDevicesStore` and start themselves; nothing in the UI orchestrates them.
 
+Discovery ingest — mDNS and rendezvous adding peers — keeps this app/service lifetime. Reachability probing does not: it is bound to a foreground signal, not to app lifetime, so it starts and stops as the app enters and leaves the foreground independently of the ingest scope (see [Liveness — reachability probing](#liveness--reachability-probing)).
+
 ### Source-set placement
 
 Per [modules.md](modules.md), discovery code lives in `commonMain` wherever possible. Concrete placement:
@@ -201,6 +206,6 @@ Per [modules.md](modules.md), discovery code lives in `commonMain` wherever poss
 
 ## What this doc does *not* commit to
 
-- **Exact timing constants.** Fallback-activation window, idle-expiry window, scan concurrency. These are implementation choices and live in the implementation issue and code, not here.
+- **Exact timing constants.** Fallback-activation window, scan concurrency, and the reachability-probe tunables — probe period, per-probe timeout, consecutive-failure threshold before removal, and probe concurrency. These are implementation choices and live in the implementation issue and code, not here.
 - **Exact port number for the rendezvous UDP/TCP fixed port.** A well-known port is chosen in the implementation issue; revisiting it is a small follow-up, not an ADR.
 - **Wire-protocol-level interop with LocalSend.** The `/hello` payload follows the LocalSend `/api/localsend/v2/register` shape, but is not declared compatible. Compatibility would warrant its own ADR.
