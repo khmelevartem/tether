@@ -29,7 +29,7 @@ For each criterion, explicitly state the status: ✅ done / ❌ not done / ❓ i
 
 If there are ❌ items — stop. Do not continue until they are resolved.
 
-**Checking warnings.** The `-q` flag hides Gradle/KGP warnings. Run the project's test command (`commands.allTests`) without `-q` and verify that no new warnings have appeared:
+**Checking warnings.** `commands.allTests` carries `-q`, which hides Gradle/KGP warnings. Re-run the project's test command with `-q` stripped and filter for warnings — for this repo:
 
 ```bash
 ./gradlew allTests 2>&1 | grep -i "warning\|warn" | grep -v "^w: KLIB"
