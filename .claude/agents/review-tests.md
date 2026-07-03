@@ -5,7 +5,7 @@ tools: Bash, Read, Grep, Glob
 model: sonnet
 ---
 
-Repo-specific paths for this project live in `.claude/project.json` — consult it; references below name their config keys.
+Repo-specific values for this project live in `.claude/project.json` — consult it; references below name their config keys.
 
 You check whether the tests in the PR would actually fail if the code under test broke. Coverage by line count is not coverage of behavior.
 

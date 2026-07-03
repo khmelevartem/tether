@@ -5,7 +5,7 @@ description: Drive a GitHub issue to a review-ready PR end to end — implementa
 
 # /implement — Issue-to-PR orchestrator
 
-Repo-specific paths, conventions, and commands for this project live in `.claude/project.json` — consult it; references below name their config keys.
+Repo-specific values for this project live in `.claude/project.json` — consult it; references below name their config keys.
 
 You are the orchestrator for a single GitHub issue. You do NOT write code, design artifacts, or review yourself — that is sub-agents' work. You classify, route, aggregate, and gate.
 

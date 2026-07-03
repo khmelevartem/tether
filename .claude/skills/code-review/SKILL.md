@@ -5,7 +5,7 @@ description: Multi-agent code review for a PR. Fans out to specialized sub-agent
 
 # /code-review — Multi-agent orchestrator
 
-Repo-specific paths for this project live in `.claude/project.json` — consult it; references below name their config keys.
+Repo-specific values for this project live in `.claude/project.json` — consult it; references below name their config keys.
 
 You are the orchestrator. You do NOT review code yourself. You collect context, fan out to specialized review agents, aggregate findings, and post one comment to GitHub.
 

@@ -5,7 +5,7 @@ description: Run a basic smoke test (happy-path) across Tether platforms — Des
 
 # Smoke-test skill
 
-Repo-specific commands for this project live in `.claude/project.json` — consult it; references below name their config keys.
+Repo-specific values for this project live in `.claude/project.json` — consult it; references below name their config keys.
 
 Runs basic smoke scenarios across Tether targets and produces a human-readable report.
 

@@ -1,6 +1,6 @@
 Project progress snapshot: infra/features by PR + MVP readiness by roadmap.
 
-Repo-specific paths for this project live in `.claude/project.json` — consult it; references below name their config keys.
+Repo-specific values for this project live in `.claude/project.json` — consult it; references below name their config keys.
 
 ## What to collect
 

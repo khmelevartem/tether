@@ -8,6 +8,24 @@ How Tether extends Claude Code. Two artifact homes, both creating a `/slash-comm
 
 Skill, command, and agent inventories are surfaced automatically to every agent invocation — no manual index is maintained here.
 
+## Project-context adapter
+
+Every repo-specific value the framework needs lives in one adapter, so the prompts, agents, and roster scripts carry no hardcoded project specifics. Two files, one schema:
+
+- `.claude/project.json` — this repo's filled instance.
+- `.claude/project.json.template` — the empty template a consumer repo copies and fills.
+
+Key groups:
+
+- `repo.slug` — `owner/repo` for `gh api` calls that cannot infer it from context.
+- `git` — commit-message prefix, deferred-work marker, branch / PR-title patterns, PR-template path.
+- `docCorpus` — the doc-corpus roots and templated slots (feature spec, UX brief, engineering doc, ADR, knowledge, glossary). Prompts name these keys functionally instead of embedding paths.
+- `commands` — the runtime commands (tests, snapshot record, build, run).
+- `reviewers.projectSpecific` — the project-specific reviewers keyed by the `touched` bucket that triggers them (`ui`, `platform`, `ux-brief`), each split into `inner` / `waveA` rosters. Domain-agnostic core reviewers are not listed here; they are the framework baseline. A bucket absent from this map contributes no reviewers, so a repo without that surface degrades cleanly.
+- `touchedBuckets` — the path patterns mapping changed files to the `touched` buckets.
+
+Scripts (`select-reviewers.sh`, `classify-state.sh`, `derive-touched.py`) read the JSON directly; prompts reference its keys by name.
+
 ## Skill or command — checkable criteria
 
 Prefer a **skill** if any of these holds:

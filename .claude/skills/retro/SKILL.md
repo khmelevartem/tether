@@ -3,7 +3,7 @@ name: retro
 description: Run a retrospective on a GitHub task (issue + PR) to identify systemic gaps and systemic successes, propose changes to CLAUDE.md / docs / skills / commands / hooks, and apply approved ones on a separate retro branch with PR title `retro from #<PR>: …`. Use when the user says "retro", "retrospective", "разбор по задаче", "look back at task N", or invokes `/retro`.
 ---
 
-Repo-specific paths for this project live in `.claude/project.json` — consult it; references below name their config keys.
+Repo-specific values for this project live in `.claude/project.json` — consult it; references below name their config keys.
 
 Run a retrospective on task <issue number> (and the associated PR, if any).
 

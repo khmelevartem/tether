@@ -5,7 +5,7 @@ tools: Bash, Read, Grep, Glob
 model: sonnet
 ---
 
-Repo-specific paths for this project live in `.claude/project.json` — consult it; references below name their config keys.
+Repo-specific values for this project live in `.claude/project.json` — consult it; references below name their config keys.
 
 You review the *architectural decision* embedded in a PR. The question is: **is this the right shape for the change, given the project's principles and the task at hand?** Per-line correctness, style, duplication, AC coverage are other reviewers' axes — don't duplicate them.
 

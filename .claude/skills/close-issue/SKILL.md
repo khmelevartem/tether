@@ -3,7 +3,7 @@ name: close-issue
 description: Finish a GitHub issue and merge its PR — pull main, walk acceptance criteria, gate on manual smoke + user confirmation, ask one interview-prep comprehension question, sweep PR review comments, update docs touched by the change, record any engineering decisions made in chat, post-factum size label, squash-merge, follow-ups, optional retro. Use when the user says "close issue N", "merge the PR", "finish task N", "ship #N", or invokes `/close-issue`.
 ---
 
-Repo-specific paths and commands for this project live in `.claude/project.json` — consult it; references below name their config keys.
+Repo-specific values for this project live in `.claude/project.json` — consult it; references below name their config keys.
 
 Complete task <issue number> and merge the PR.
 

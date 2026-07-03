@@ -5,7 +5,7 @@ description: Create a GitHub issue via `gh` CLI — single issue or epic + sub-i
 
 # Create Issue
 
-Repo-specific paths for this project live in `.claude/project.json` — consult it; references below name their config keys.
+Repo-specific values for this project live in `.claude/project.json` — consult it; references below name their config keys.
 
 ## Body responsibility
 

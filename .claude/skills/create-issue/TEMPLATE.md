@@ -1,6 +1,6 @@
 # GitHub Issue Body Template
 
-Repo-specific paths and commands for this project live in `.claude/project.json` — consult it; references below name their config keys.
+Repo-specific values for this project live in `.claude/project.json` — consult it; references below name their config keys.
 
 Mandatory body sections in order: **Context → Goal → Entry point → Definition of Done → Out of scope**. Everything else is optional and dropped when there's nothing to say. Task type and size live on the issue as labels, not in the body.
 

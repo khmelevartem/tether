@@ -3,7 +3,7 @@ name: grooming
 description: Run a backlog grooming session — close the current sprint-NN.md by actuals (task statuses, extra results within the window), go through open issues, find unfiled tasks via gap-analysis (platform symmetry, TODOs in code, MVP blockers from the roadmap) and compose a compact candidate for the next sprint in a fixed format (directions tag / composition / what it unblocks / optional merge order). Use when the user says "groom", "grooming", "plan the sprint", "close the sprint".
 ---
 
-Repo-specific paths for this project live in `.claude/project.json` — consult it; references below name their config keys.
+Repo-specific values for this project live in `.claude/project.json` — consult it; references below name their config keys.
 
 Run a backlog grooming session and compose a candidate plan for the next sprint.
 

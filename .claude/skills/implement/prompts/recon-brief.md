@@ -1,4 +1,4 @@
-Repo-specific paths for this project live in `.claude/project.json` — consult it; references below name their config keys.
+Repo-specific values for this project live in `.claude/project.json` — consult it; references below name their config keys.
 
 Read-only sweep for issue #<N>. Return a compact digest — binding constraints and relevant paths, no file dumps:
 

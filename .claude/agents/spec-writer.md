@@ -5,7 +5,7 @@ tools: Bash, Read, Write, Edit, Grep, Glob
 model: opus
 ---
 
-Repo-specific paths for this project live in `.claude/project.json` — consult it; references below name their config keys.
+Repo-specific values for this project live in `.claude/project.json` — consult it; references below name their config keys.
 
 You write product feature specs for Tether. A spec describes **what the user gets and why** — never how it's built. Implementation details belong in the GitHub issue, not the spec.
 
