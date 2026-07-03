@@ -3,6 +3,8 @@ name: check-review
 description: Read the latest review comments on the PR you are working on, classify each as pointwise or structural (re-auditing the whole diff for structural ones), reject reviewer-priority labels in favor of own value assessment, fix valid ones, reply to invalid ones in the original thread via `in_reply_to`, push. Use when the user says "check review", "process PR comments", "address review", "посмотри ревью", "обработай комменты", or invokes `/check-review`.
 ---
 
+Repo-specific paths for this project live in `.claude/project.json` — consult it; references below name their config keys.
+
 Review the latest comments on the PR you are working on. Assess which of them are valid, fix the valid ones. If there are invalid ones, reply to them explaining why you consider them invalid. Push the changes.
 
 ## Important: pointwise fix vs structural finding
@@ -39,7 +41,7 @@ Before agreeing to move an "optional" item out of scope, ask yourself:
 
 If at least one of these questions is answered "yes", and the overall volume does not exceed a reasonable extension — **do it in this same PR**. The "optional" tag does not cancel the value of the fix or exempt you from it.
 
-"Scope grows critically" = new target / new component / changing a public contract / needing to change adjacent layers / unpredictable volume due to revealing a hidden bug. Volume in lines is not the main criterion; the main criterion is relevance to the current task. Full fold-vs-defer test — [`scope-discipline.md`](../../../docs/engineering/scope-discipline.md); provenance is not an axis.
+"Scope grows critically" = new target / new component / changing a public contract / needing to change adjacent layers / unpredictable volume due to revealing a hidden bug. Volume in lines is not the main criterion; the main criterion is relevance to the current task. Full fold-vs-defer test — the [scope-discipline canon](../../../docs/engineering/scope-discipline.md) (under `docCorpus.engineeringDir`); provenance is not an axis.
 
 Especially careful: when the reviewer themselves referenced a DoD item or edge case from the issue, the "optional" tag in that case often means "not a blocker for me personally", but strictly speaking this is a **gap in the DoD**, and closing it is the responsibility of the current task's assignee, not the next review or a future contributor. Do not offload your DoD onto someone else's backlog.
 

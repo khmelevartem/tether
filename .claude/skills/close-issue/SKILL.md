@@ -3,6 +3,8 @@ name: close-issue
 description: Finish a GitHub issue and merge its PR — pull main, walk acceptance criteria, gate on manual smoke + user confirmation, ask one interview-prep comprehension question, sweep PR review comments, update docs touched by the change, record any engineering decisions made in chat, post-factum size label, squash-merge, follow-ups, optional retro. Use when the user says "close issue N", "merge the PR", "finish task N", "ship #N", or invokes `/close-issue`.
 ---
 
+Repo-specific paths and commands for this project live in `.claude/project.json` — consult it; references below name their config keys.
+
 Complete task <issue number> and merge the PR.
 
 Work strictly step by step. Each step is a stop point: if something is not done, report it explicitly and wait for the user's confirmation or correction. Do not proceed to the next step without an explicit OK.
@@ -19,7 +21,7 @@ Run `/pull-main` — it will pull `origin/main` and assess semantic overlap with
 
 Obtain the list of acceptance criteria:
 - from the issue (DoD / Acceptance Criteria section)
-- from the feature spec in `docs/product/features/`, if there is a file for this task
+- from the feature spec (`docCorpus.featureSpec`), if there is a file for this task
 
 **If neither a DoD nor a feature spec exists** (typical for infrastructure and meta tasks) — extract the goals from the issue body, formulate a verifiable checklist yourself, and explicitly show it to the user with the note "AC extracted from issue body, confirm or adjust". Do not proceed to the next step until the user has confirmed.
 
@@ -27,7 +29,7 @@ For each criterion, explicitly state the status: ✅ done / ❌ not done / ❓ i
 
 If there are ❌ items — stop. Do not continue until they are resolved.
 
-**Checking warnings.** The `-q` flag hides Gradle/KGP warnings. Run one pass without it and verify that no new warnings have appeared:
+**Checking warnings.** The `-q` flag hides Gradle/KGP warnings. Run the project's test command (`commands.allTests`) without `-q` and verify that no new warnings have appeared:
 
 ```bash
 ./gradlew allTests 2>&1 | grep -i "warning\|warn" | grep -v "^w: KLIB"
@@ -92,35 +94,35 @@ Make sure all review comments are resolved (resolved or replied to with a justif
 
 ## Step 4 — Update documentation
 
-### 4.1 Status in features/README.md
+### 4.1 Status in the features dir's README.md
 
-If the task implemented a feature from `docs/product/features/README.md` — update its status to `done`.
+If the task implemented a feature from the features dir's `README.md` (`docCorpus.featuresDir`) — update its status to `done`.
 If this is an intermediate task (part of a feature) — update the status only if the feature is fully complete.
 
 ### 4.2 Affected documentation
 
 Review the PR diff and determine: were any architectural or product decisions made during this task that diverge from the current documentation?
 
-Files to check:
-- `docs/product/` — if feature behavior, target audience, or stack changed
-- `docs/engineering/` — if architectural principles, module layout, or DI rules changed
+Roots to check:
+- the product docs root (`docCorpus.productDir`) — if feature behavior, target audience, or stack changed
+- the engineering docs root (`docCorpus.engineeringDir`) — if architectural principles, module layout, or DI rules changed
 - `CLAUDE.md` — if build, testing processes, or project structure changed
 
 If the documentation is out of date — update it. Small edits do immediately, large ones — create a separate issue.
 
-**Apply the writing discipline.** Before writing or editing any long-lived artifact here, re-read [`long-lived-artifacts.md`](../../../docs/engineering/long-lived-artifacts.md) and apply it — do not write from memory.
+**Apply the writing discipline.** Before writing or editing any long-lived artifact here, re-read [`long-lived-artifacts.md`](../../../docs/engineering/long-lived-artifacts.md) (under `docCorpus.engineeringDir`) and apply it — do not write from memory.
 
-**Doc-as-spec on first implementation of an architectural sketch.** If the PR is the first real implementation of a pattern that was a sketch in `docs/engineering/` (marker: "skeleton lands in #N" or code examples without a working implementation) — the doc must be updated in the same PR. Otherwise, the next implementor will follow an outdated example.
+**Doc-as-spec on first implementation of an architectural sketch.** If the PR is the first real implementation of a pattern that was a sketch under the engineering docs root (marker: "skeleton lands in #N" or code examples without a working implementation) — the doc must be updated in the same PR. Otherwise, the next implementor will follow an outdated example.
 
-**New runtime flag — the entry-point doc must mention it.** If the PR introduces a new runtime flag (env var, JVM system property, CLI option, build flag) that affects observable application behavior — the README or the corresponding entry-point section must mention it with at least one line and a link to the engineering doc. Engineering doc as the only documentation location does not count as coverage: a contributor / user looks in the README, not in `docs/engineering/`.
+**New runtime flag — the entry-point doc must mention it.** If the PR introduces a new runtime flag (env var, JVM system property, CLI option, build flag) that affects observable application behavior — the README or the corresponding entry-point section must mention it with at least one line and a link to the engineering doc. An engineering doc as the only documentation location does not count as coverage: a contributor / user looks in the README, not under `docCorpus.engineeringDir`.
 
-**New rule in a live document — audit actual code.** If the PR adds or extends a policy or rule in `docs/engineering/` (sensitive-data policy, naming convention, layering rule, etc.) — run it against the code actually touched in the fresh PR and make sure the diff does not violate the just-introduced rule. Otherwise the doc will immediately diverge from reality, or the rule will silently create invisible violations.
+**New rule in a live document — audit actual code.** If the PR adds or extends a policy or rule under the engineering docs root (sensitive-data policy, naming convention, layering rule, etc.) — run it against the code actually touched in the fresh PR and make sure the diff does not violate the just-introduced rule. Otherwise the doc will immediately diverge from reality, or the rule will silently create invisible violations.
 
 ---
 
 ## Step 5 — Record engineering decisions made along the way
 
-Review the issue, the conversation with the user, and comments in the PR: were any architectural / technical / process decisions made that are **not recorded** in `docs/engineering/` or `CLAUDE.md`?
+Review the issue, the conversation with the user, and comments in the PR: were any architectural / technical / process decisions made that are **not recorded** under the engineering docs root (`docCorpus.engineeringDir`) or `CLAUDE.md`?
 
 Examples of such decisions:
 - Choice of library, technology, or specific pattern
@@ -132,7 +134,7 @@ If such a decision exists and is not recorded anywhere — **before merging**, r
 
 Do not let a decision live only in the chat: sessions are lost, and the next contributor (or yourself a month later) won't see the history and will reopen the same question.
 
-**Apply the writing discipline.** Before writing or editing any long-lived artifact while recording a decision (doc, ADR, KDoc, `.claude/**`), re-read [`long-lived-artifacts.md`](../../../docs/engineering/long-lived-artifacts.md) and apply it — do not write from memory.
+**Apply the writing discipline.** Before writing or editing any long-lived artifact while recording a decision (doc, ADR, KDoc, `.claude/**`), re-read [`long-lived-artifacts.md`](../../../docs/engineering/long-lived-artifacts.md) (under `docCorpus.engineeringDir`) and apply it — do not write from memory.
 
 ---
 
@@ -157,7 +159,7 @@ Don't treat this as "a poor estimate" — scope often grows along the way due to
 
 Before merging — while the PR can still absorb a fix — surface every loose end. Sources: the issue's "Consequences" / "Out of scope", TODO/FIXME in the diff, anything deferred or scoped out during the work, and any cheap fix you spotted in a file you already touched.
 
-State **each** item as: **"\<known problem / unfinished item\>. Can do now because … / Can't do now because …"** — your honest read of whether it belongs in this PR, per [`scope-discipline.md`](../../../docs/engineering/scope-discipline.md). Then ask the user **"What do you disagree with?"** and **stop**.
+State **each** item as: **"\<known problem / unfinished item\>. Can do now because … / Can't do now because …"** — your honest read of whether it belongs in this PR, per the [scope-discipline canon](../../../docs/engineering/scope-discipline.md) (under `docCorpus.engineeringDir`). Then ask the user **"What do you disagree with?"** and **stop**.
 
 Hard stop-point: the user redirects do-now-vs-defer here, while the merge is still reversible — not after, when a cheap in-file fix can no longer ride along.
 

@@ -3,6 +3,8 @@ name: grooming
 description: Run a backlog grooming session — close the current sprint-NN.md by actuals (task statuses, extra results within the window), go through open issues, find unfiled tasks via gap-analysis (platform symmetry, TODOs in code, MVP blockers from the roadmap) and compose a compact candidate for the next sprint in a fixed format (directions tag / composition / what it unblocks / optional merge order). Use when the user says "groom", "grooming", "plan the sprint", "close the sprint".
 ---
 
+Repo-specific paths for this project live in `.claude/project.json` — consult it; references below name their config keys.
+
 Run a backlog grooming session and compose a candidate plan for the next sprint.
 
 ---
@@ -62,12 +64,12 @@ This rewrites [`.claude/sizing-bands.json`](../../sizing-bands.json); commit it 
 
 ## Step 1 — Product context
 
-Read in sequence:
+Read in sequence (under `docCorpus.productDir` unless noted):
 
-1. `docs/product/vision.md` — why the product exists
-2. `docs/product/README.md` — overview
-3. `docs/product/roadmap.md` — stages and priorities
-4. `docs/product/features/README.md` — list of features and their status
+1. `vision.md` — why the product exists
+2. `README.md` — overview
+3. `roadmap.md` — stages and priorities
+4. `features/README.md` (under `docCorpus.featuresDir`) — list of features and their status
 
 Goal: understand which roadmap stage we are at, what has already been implemented, what comes next.
 
@@ -104,11 +106,11 @@ For each open issue assess:
 |----------|----------|
 | No known blockers | — |
 | Clear DoD exists | — |
-| If a feature — spec exists in `docs/product/features/` | — |
+| If a feature — spec exists under the features dir (`docCorpus.featuresDir`) | — |
 | Spec referenced in the issue body | — |
 | Does not conflict with other candidates in the codebase | — |
 
-If there is no spec in `docs/product/features/` for new functionality — flag this explicitly as a risk.
+If there is no spec under the features dir (`docCorpus.featuresDir`) for new functionality — flag this explicitly as a risk.
 
 ---
 
@@ -144,7 +146,7 @@ Each such location is a potentially unfiled task. Don't file minor TODOs inside 
 
 ### 4.3 Roadmap blockers
 
-Re-read `docs/product/roadmap.md`. For each MVP item check: is there an issue moving it forward? If an MVP item has no issue at all — that's a gap.
+Re-read `roadmap.md` (under `docCorpus.productDir`). For each MVP item check: is there an issue moving it forward? If an MVP item has no issue at all — that's a gap.
 
 ### 4.4 What to do with found gaps
 

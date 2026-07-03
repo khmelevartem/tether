@@ -5,6 +5,8 @@ description: Multi-agent code review for a PR. Fans out to specialized sub-agent
 
 # /code-review — Multi-agent orchestrator
 
+Repo-specific paths for this project live in `.claude/project.json` — consult it; references below name their config keys.
+
 You are the orchestrator. You do NOT review code yourself. You collect context, fan out to specialized review agents, aggregate findings, and post one comment to GitHub.
 
 ## Input
@@ -26,13 +28,13 @@ Note the PR number `<PR>` and issue number `<N>` — pass both to every agent.
 Read PR body and diff. Classify once: `FEATURE | BUGFIX | REFACTOR | INFRA | DOCS | DEPENDENCY`. Some agents skip based on type (see their frontmatter). Note which agents to skip; do not launch skipped ones.
 
 Skip matrix:
-- `DOCS` → skip `review-correctness`, `review-platform`, `review-tests`, `review-ux-conformance`, `review-design-system`, `review-visual`, `review-architecture` (but a DOCS PR editing a `ux-brief.md` still runs `review-ux-brief` — see the next row)
+- `DOCS` → skip `review-correctness`, `review-platform`, `review-tests`, `review-ux-conformance`, `review-design-system`, `review-visual`, `review-architecture` (but a DOCS PR editing a UX brief still runs `review-ux-brief` — see the next row)
 - `INFRA` → skip `review-tests`
 - pure `REFACTOR` → skip `review-correctness` (only behavior-preserving)
 - trivial one-call-site `BUGFIX` or cosmetic refactor (rename / extract method) with no new types / modules / seams → skip `review-architecture`
 - diff doesn't touch any platform source set → skip `review-platform`
-- diff doesn't touch `composeApp/src/**` → skip `review-ux-conformance`, `review-design-system`, and `review-visual`. When Compose **is** touched: dispatch `review-design-system` and `review-visual` (the latter narrows its checklist without a brief). For `review-ux-conformance`, **first resolve the brief**: find the feature slug(s) — `gh pr view <PR> --json closingIssuesReferences,body`, else glob `docs/product/features/**/ux-brief.md` and topic-match the PR title / changed paths — and dispatch it only if at least one resolved feature has a `ux-brief.md`, passing the brief path(s) in the prompt. No brief → don't dispatch (a brief may legitimately be absent for cosmetic / refactor changes); this gate is the orchestrator's, so the agent is never launched only to self-skip.
-- diff doesn't touch any `docs/product/features/**/ux-brief.md` → skip `review-ux-brief` (runs regardless of PR type whenever a brief is edited; it judges the brief's UX-domain quality, independent of any Compose change)
+- diff doesn't touch `composeApp/src/**` → skip `review-ux-conformance`, `review-design-system`, and `review-visual`. When Compose **is** touched: dispatch `review-design-system` and `review-visual` (the latter narrows its checklist without a brief). For `review-ux-conformance`, **first resolve the brief**: find the feature slug(s) — `gh pr view <PR> --json closingIssuesReferences,body`, else glob the UX briefs under the features dir (`docCorpus.featuresDir`) and topic-match the PR title / changed paths — and dispatch it only if at least one resolved feature has a UX brief (`docCorpus.uxBrief`), passing the brief path(s) in the prompt. No brief → don't dispatch (a brief may legitimately be absent for cosmetic / refactor changes); this gate is the orchestrator's, so the agent is never launched only to self-skip.
+- diff doesn't touch any UX brief under the features dir (`docCorpus.uxBrief`) → skip `review-ux-brief` (runs regardless of PR type whenever a brief is edited; it judges the brief's UX-domain quality, independent of any Compose change)
 - diff touches no `docs/` or `.claude/**` → skip `review-consistency` (it checks doc cross-references, scope cohesion, indexes, and relocation completeness; runs whenever documentation is touched, regardless of PR type)
 
 ## Step 3 — Wave 1: launch all applicable reviewers in parallel
@@ -51,8 +53,8 @@ Agents to launch (subject to skip matrix):
 - `review-consistency` (if diff touches `docs/` or `.claude/**`)
 - `review-correctness`
 - `review-tests`
-- `review-ux-conformance` (only if `composeApp/src/**` touched AND a touched feature has a `ux-brief.md` — see skip matrix; pass the resolved brief path(s) in the prompt)
-- `review-ux-brief` (if diff touches `docs/product/features/**/ux-brief.md`)
+- `review-ux-conformance` (only if `composeApp/src/**` touched AND a touched feature has a UX brief — see skip matrix; pass the resolved brief path(s) in the prompt)
+- `review-ux-brief` (if diff touches a UX brief under the features dir, `docCorpus.uxBrief`)
 - `review-design-system` (if diff touches `composeApp/src/**`)
 - `review-visual` (renders PNGs itself when invoked; reads them against the brief)
 

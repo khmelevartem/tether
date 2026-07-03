@@ -1,13 +1,15 @@
 ---
 name: smoke-test
-description: Run a basic smoke test (happy-path) across Tether platforms — Desktop CLI (cli jar + /health + mDNS + stdin commands), Desktop↔Desktop send via CLI, Android (if an adb device is connected) with send-from-Desktop, iOS simulator (xcodebuild + simctl) with mDNS publish + cross-discovery. Use this skill when the user says "run smoke", "run smoke test", "basic smoke", "basic regression", "check the build across platforms before merge", "smoke test". Not to be confused with unit tests (`./gradlew allTests`) — smoke is a runtime check that everything starts and peers can discover each other, not logic correctness.
+description: Run a basic smoke test (happy-path) across Tether platforms — Desktop CLI (cli jar + /health + mDNS + stdin commands), Desktop↔Desktop send via CLI, Android (if an adb device is connected) with send-from-Desktop, iOS simulator (xcodebuild + simctl) with mDNS publish + cross-discovery. Use this skill when the user says "run smoke", "run smoke test", "basic smoke", "basic regression", "check the build across platforms before merge", "smoke test". Not to be confused with the project's test command — smoke is a runtime check that everything starts and peers can discover each other, not logic correctness.
 ---
 
 # Smoke-test skill
 
+Repo-specific commands for this project live in `.claude/project.json` — consult it; references below name their config keys.
+
 Runs basic smoke scenarios across Tether targets and produces a human-readable report.
 
-**This is smoke, not regression.** The goal — in 1–3 minutes — is to see that nothing is fundamentally broken (CLI starts, FileServer responds, mDNS is published, stdin commands work, send roundtrip OK, native targets compile). Business logic correctness is the job of `./gradlew allTests`.
+**This is smoke, not regression.** The goal — in 1–3 minutes — is to see that nothing is fundamentally broken (CLI starts, FileServer responds, mDNS is published, stdin commands work, send roundtrip OK, native targets compile). Business logic correctness is the job of the project's test command (`commands.allTests`).
 
 ## What the skill does NOT check (out of scope for automation)
 
@@ -328,8 +330,8 @@ Don't ask the user for clarification — the skill must be "zero-question": ever
 
 ## What NOT to do
 
-- **Don't use `./gradlew :composeApp:run`** — that is the Compose UI, not the CLI.
-- **Don't run `allTests`** — that is a different tool. Smoke ≤3 minutes.
+- **Don't use the project's run command (`commands.run`)** — that is the Compose UI, not the CLI.
+- **Don't run the project's test command (`commands.allTests`)** — that is a different tool. Smoke ≤3 minutes.
 - **Don't modify application code** even if you see a problem. Report it in the report, file a separate issue.
 - **Don't go into `~/Downloads`** beyond your own files — that is user content.
 - **Don't run `./gradlew clean`** — it will eat the cache and slow down the next run.

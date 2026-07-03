@@ -3,6 +3,8 @@ name: choose-issue
 description: Quick read-only look at the current `docs/sprints/sprint-NN.md` — pull issue numbers from the composition table + merge order, batch-check OPEN/PR status via `gh`, query `blocked_by` only for 🟢 items, and propose 1–3 candidates to start now with one-sentence justifications. No Gradle, no edits. Use when the user says "what to pick next", "next task from sprint", "что взять из спринта", "следующая задача", or invokes `/choose-issue`.
 ---
 
+Repo-specific values for this project live in `.claude/project.json` — consult it; references below name their config keys.
+
 Quick look: what to pick from the current sprint right now. Read-only and `gh` only, no Gradle.
 
 ## 1. Sprint
@@ -35,8 +37,10 @@ Marking:
 
 For each 🟢:
 ```bash
-gh api repos/khmelevartem/tether/issues/<N>/dependencies/blocked_by --jq '.[] | "\(.number) \(.state)"'
+gh api repos/<repo.slug>/issues/<N>/dependencies/blocked_by --jq '.[] | "\(.number) \(.state)"'
 ```
+
+`<repo.slug>` — `.claude/project.json` → `repo.slug`.
 
 If there is an open blocker → 🔴. Also account for the in-sprint chains from the `## Порядок мерджа` section.
 

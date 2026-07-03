@@ -5,6 +5,8 @@ description: Drive a GitHub issue to a review-ready PR end to end — implementa
 
 # /implement — Issue-to-PR orchestrator
 
+Repo-specific paths, conventions, and commands for this project live in `.claude/project.json` — consult it; references below name their config keys.
+
 You are the orchestrator for a single GitHub issue. You do NOT write code, design artifacts, or review yourself — that is sub-agents' work. You classify, route, aggregate, and gate.
 
 **Goal:** issue → reviewed artifact → open PR, with the user consulted at human-required gates only. Merge is always a manual user decision.
@@ -30,7 +32,7 @@ Hold only the plan, per-iteration finding summaries, and gate decisions. Do not 
 
 What matters is the intention and the benefit the issue can bring, note its verbatim scope boundaries. If the issue has a prebaked reason or solution - it's just a proposal, not a directive. You must come with your own reasoning, design or justification throughout the whole workflow - not directly you as an agent, but with dispatching of proper subagents.
 
-If touching adjacent classes or neighbouring platforms is needed for a quality solution — expand scope in this PR. Whether to fold a finding or defer it → [`docs/engineering/scope-discipline.md`](../../../docs/engineering/scope-discipline.md).
+If touching adjacent classes or neighbouring platforms is needed for a quality solution — expand scope in this PR. Whether to fold a finding or defer it → the [scope-discipline canon](../../../docs/engineering/scope-discipline.md) (rooted at `docCorpus.engineeringDir`).
 
 ## Re-entry contract
 

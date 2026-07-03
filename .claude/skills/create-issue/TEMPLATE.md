@@ -1,8 +1,10 @@
 # GitHub Issue Body Template
 
+Repo-specific paths and commands for this project live in `.claude/project.json` — consult it; references below name their config keys.
+
 Mandatory body sections in order: **Context → Goal → Entry point → Definition of Done → Out of scope**. Everything else is optional and dropped when there's nothing to say. Task type and size live on the issue as labels, not in the body.
 
-The body answers **what** and **why**, plus where to start looking. It does not pre-bake **how** — that is decided during implementation, against `docs/engineering/`.
+The body answers **what** and **why**, plus where to start looking. It does not pre-bake **how** — that is decided during implementation, against the engineering docs (`docCorpus.engineeringDir`).
 
 ## Template
 
@@ -47,7 +49,7 @@ Sections that **never** appear in the body:
 - Contract / API signatures / interface bodies — shape is decided during implementation.
 - Affected modules with package paths — landmarks go in Entry point as prose.
 - Code landmarks with `rg` / `grep` commands — Entry point line suffices.
-- Non-functional requirements — only if the user explicitly stated a threshold; otherwise the implementer consults `docs/engineering/`.
+- Non-functional requirements — only if the user explicitly stated a threshold; otherwise the implementer consults the engineering docs (`docCorpus.engineeringDir`).
 - Error handling — same; an architecture concern, not an issue-body concern.
 - `**Relationships:**` block — native GitHub fields only.
 - `**Open questions:**` block — a principal unresolved question means the task is not ready; file a preceding research task and link it as `blocked_by`. See SKILL.md §Unresolved blocking questions.
@@ -77,7 +79,7 @@ Both mandatory; pass via `--label "size:<…>,<type>"` on `gh issue create`.
 | `pnpm test src/cache.test.ts passes` | Returning from product page to search results shows the previous list instantly (no API call in first 100ms) |
 | `New endpoint `/v2/search` returns 200` | Search query returns matching results within 200ms p95 |
 
-Commands are fine where they're the cheapest evidence of behaviour (`./gradlew allTests -q passes` for a bugfix whose evidence is a failing-then-passing test). Avoid commands as a stand-in for the behaviour itself.
+Commands are fine where they're the cheapest evidence of behaviour (the project's test command, `commands.allTests`, passing for a bugfix whose evidence is a failing-then-passing test). Avoid commands as a stand-in for the behaviour itself.
 
 ## Paired sides of a contract — in one task
 

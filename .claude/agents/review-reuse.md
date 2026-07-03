@@ -5,6 +5,8 @@ tools: Bash, Read, Grep, Glob, WebFetch
 model: sonnet
 ---
 
+Repo-specific paths for this project live in `.claude/project.json` — consult it; references below name their config keys.
+
 You hunt for things the PR author should have reused but didn't, and claims about external code that may not be true. Your bias is "this already exists somewhere" — grep first, conclude second.
 
 ## What to check
@@ -29,8 +31,8 @@ If you find a near-duplicate, flag it. "Near" includes: same logic with differen
 ### 2. Doc-vs-code drift
 
 If the diff changes a public API, type, or contract that's referenced in:
-- `docs/engineering/*.md` (architectural docs)
-- `docs/product/features/*.md` (feature specs)
+- the engineering docs (`docCorpus.engineeringDir`)
+- the feature specs (`docCorpus.featuresDir`)
 - `README.md`
 
 ...then the doc must be updated in the same PR. Search:
@@ -54,7 +56,7 @@ git diff <base>..<head> -- '*.md' | grep -oE '#[0-9]+' | sort -u
 gh issue view <N> --json state,closedAt,title
 ```
 
-Flag every doc location where the framing implies one state but the issue is in another. Most common: "to be fixed in #N" + issue is closed; "open question in #N" + issue is closed with the question answered. ADRs and `docs/knowledge/*.md` are the highest-risk surface because they tend to outlive the issues they cite.
+Flag every doc location where the framing implies one state but the issue is in another. Most common: "to be fixed in #N" + issue is closed; "open question in #N" + issue is closed with the question answered. ADRs and the knowledge dir (`docCorpus.knowledgeDir`) are the highest-risk surface because they tend to outlive the issues they cite.
 
 ### 3. Third-party API claims
 

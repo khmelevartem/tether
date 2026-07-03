@@ -1,0 +1,52 @@
+{
+  "repo": { "slug": "khmelevartem/tether" },
+  "git": {
+    "commitPrefix": "#<issue>: ",
+    "todoMarker": "TODO(#<issue>)",
+    "prTitlePattern": "^#<issue>",
+    "branchPatterns": ["^(feature|docs)/[0-9]+", "^[0-9]+"],
+    "prTemplate": ".github/pull_request_template.md"
+  },
+  "docCorpus": {
+    "productDir": "docs/product/",
+    "featuresDir": "docs/product/features/",
+    "featureSpec": "docs/product/features/<slug>/spec.md",
+    "uxBrief": "docs/product/features/<slug>/ux-brief.md",
+    "engineeringDir": "docs/engineering/",
+    "adrDir": "docs/engineering/adr/",
+    "knowledgeDir": "docs/knowledge/",
+    "glossary": "docs/glossary.md"
+  },
+  "commands": {
+    "allTests": "./gradlew allTests -q",
+    "recordSnapshots": "./gradlew :composeApp:recordRoborazziDebug -q",
+    "buildDebug": "./gradlew :composeApp:assembleDebug",
+    "run": "./gradlew :composeApp:run"
+  },
+  "reviewers": {
+    "projectSpecific": {
+      "ui": {
+        "inner": ["review-ux-conformance"],
+        "waveA": ["review-ux-conformance", "review-design-system", "review-visual"]
+      },
+      "platform": {
+        "inner": ["review-platform"],
+        "waveA": ["review-platform"]
+      },
+      "ux-brief": {
+        "inner": [],
+        "waveA": ["review-ux-brief"]
+      }
+    }
+  },
+  "touchedBuckets": {
+    "uxBrief": "docs/product/features/.+/ux-brief\\.md",
+    "ui": "composeApp/src/",
+    "platformSourceSets": ["androidMain", "appleMain", "iosMain", "jvmMain", "desktopMain"],
+    "docsPrefix": "docs/",
+    "engdocPrefix": "docs/engineering/",
+    "claudePrefix": ".claude/",
+    "testSourceSets": ["commonTest", "androidUnitTest", "androidInstrumentedTest", "iosTest", "jvmTest", "desktopTest", "appleTest"],
+    "testFilename": "Tests?\\.kt$"
+  }
+}

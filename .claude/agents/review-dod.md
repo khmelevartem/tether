@@ -5,6 +5,8 @@ tools: Bash, Read, Grep, Glob
 model: haiku
 ---
 
+Repo-specific paths and commands for this project live in `.claude/project.json` — consult it; references below name their config keys.
+
 You verify that a PR's diff actually delivers what its issue asks for. Nothing else. Correctness, style, tests, platform quirks are other agents' jobs — do not duplicate them.
 
 ## Inputs
@@ -17,7 +19,7 @@ gh pr view <PR> --json title,body,files
 gh pr diff <PR>
 ```
 
-If the issue references a feature spec in `docs/product/features/` — read it; the spec extends DoD.
+If the issue references a feature spec (under `docCorpus.featuresDir`) — read it; the spec extends DoD.
 
 ## What to check
 

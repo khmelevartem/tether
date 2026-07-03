@@ -1,21 +1,23 @@
 Project progress snapshot: infra/features by PR + MVP readiness by roadmap.
 
+Repo-specific paths for this project live in `.claude/project.json` — consult it; references below name their config keys.
+
 ## What to collect
 
 1. **PR statistics via GraphQL.** One `gh api graphql` request with pagination over `repository.pullRequests` — fetching `number, title, state, createdAt, mergedAt, additions, deletions, changedFiles, commits.totalCount, comments.totalCount, reviews.totalCount, reviewThreads.totalCount` at once. The REST list endpoint `/pulls` does not return `commits`/`comments`/`review_comments` per PR — GraphQL or per-PR detail calls are needed.
 
-2. **MVP scope.** Read `docs/product/roadmap.md` (section `## MVP`) — list of MVP items. Read `docs/product/features/README.md` — feature statuses and linked issues. Read the latest `docs/sprints/sprint-*.md` (with the highest number) — what is in progress now.
+2. **MVP scope.** Read `roadmap.md` (section `## MVP`, under `docCorpus.productDir`) — list of MVP items. Read the features dir's `README.md` (`docCorpus.featuresDir`) — feature statuses and linked issues. Read the latest `docs/sprints/sprint-*.md` (with the highest number) — what is in progress now.
 
 ## PR categorization
 
 **Feature** — PR touches product code or fills in / edits a product spec:
 - `composeApp/src/**` (except `build.gradle.kts`-only), implementation of discovery / FileServer / pairing / UI;
-- `docs/product/features/**` — filling in feature specs;
-- `docs/product/vision.md`, `roadmap.md`, `security.md`, `monetization.md` — product content.
+- the features dir (`docCorpus.featuresDir`) — filling in feature specs;
+- the product docs root (`docCorpus.productDir`): `vision.md`, `roadmap.md`, `security.md`, `monetization.md` — product content.
 
 **Infra** — everything else:
 - `.claude/**` (skills, agents, hooks, commands);
-- `docs/engineering/**`, ADRs;
+- the engineering docs root (`docCorpus.engineeringDir`), ADRs;
 - retro PRs (title starts with `retro`);
 - sprint planning, `docs/sprints/**`;
 - Gradle build, CI, configs;
@@ -25,14 +27,14 @@ If a PR is mixed — categorize by the dominant part (>50% of the diff). If in d
 
 ## MVP readiness
 
-For each item from `roadmap.md ## MVP` assess readiness (0–100%) based on evidence:
+For each item from `roadmap.md ## MVP` (under `docCorpus.productDir`) assess readiness (0–100%) based on evidence:
 
-- 100% — feature has status `done` in `features/README.md` AND there are merged PRs covering all platforms.
+- 100% — feature has status `done` in the features dir's `README.md` (`docCorpus.featuresDir`) AND there are merged PRs covering all platforms.
 - 50–80% — partial: either protocol layer without UI, or platform parity incomplete (e.g., Android+iOS done, Desktop tbd).
 - 10–30% — only spec `scoped`, no code; or only one of several components.
 - 0% — neither code nor spec with status ≥`scoped`.
 
-Don't guess — justify each assessment with PR numbers and/or lines in `features/README.md`. If the evidence is unclear — mark `?` and ask.
+Don't guess — justify each assessment with PR numbers and/or lines in the features dir's `README.md` (`docCorpus.featuresDir`). If the evidence is unclear — mark `?` and ask.
 
 ## Velocity per day
 
