@@ -195,7 +195,7 @@ Trust is established exclusively at [pairing](../security/README.md#pairing-flow
 
 Discovery is a single component started and stopped with the app. Inside, every layer is a coroutine (or set of coroutines) owned by a discovery-scope `CoroutineScope` cancelled on `stop()`. Layer 3 fallbacks observe `DiscoveredDevicesStore` and start themselves; nothing in the UI orchestrates them.
 
-Discovery ingest — mDNS and rendezvous adding peers — keeps this app/service lifetime. Reachability probing does not: it is bound to a foreground signal, not to app lifetime, so it starts and stops as the app enters and leaves the foreground independently of the ingest scope (see [Liveness — reachability probing](#liveness--reachability-probing)).
+Discovery ingest — mDNS and rendezvous adding peers — keeps this app/service lifetime. Reachability probing does not: it is bound to a visibility signal, not to app lifetime, so it starts and stops as the app's UI becomes visible and stops being visible, independently of the ingest scope (see [Liveness — reachability probing](#liveness--reachability-probing)).
 
 ### Source-set placement
 
