@@ -49,16 +49,16 @@ Especially careful: when the reviewer themselves referenced a DoD item or edge c
 
 **ALWAYS** reply **in the thread of the original comment**, never as a separate top-level PR comment. The link "suggestion → reaction" must be visible in one place — otherwise the reviewer doesn't understand what exactly you replied to, and the thread remains "hanging".
 
-Any inline review comment (including one attached to a review submission) lives in `pulls/PR/comments` and is replied to via `in_reply_to`:
+Any inline review comment (including one attached to a review submission) lives in `pulls/PR/comments` and is replied to via `in_reply_to`. `<repo.slug>` in the calls below — `.claude/project.json` → `repo.slug`:
 
 ```bash
 # 1. Find the COMMENT_ID of the needed comment in the thread
-gh api repos/OWNER/REPO/pulls/PR/comments \
+gh api repos/<repo.slug>/pulls/PR/comments \
   --jq '.[] | {id, user: .user.login, path, line, in_reply_to_id, body}'
 
 # 2. Reply in the same thread (in_reply_to can point to any comment
 #    in the thread — GitHub will attach the reply to the root automatically)
-gh api repos/OWNER/REPO/pulls/PR/comments \
+gh api repos/<repo.slug>/pulls/PR/comments \
   -X POST \
   -F in_reply_to=COMMENT_ID \
   -F body="reply text"
@@ -70,10 +70,10 @@ A review body (general review text not attached to a line) has no separate threa
 
 ```bash
 # Get the current review body
-gh api repos/OWNER/REPO/pulls/PR/reviews/REVIEW_ID --jq '.body'
+gh api repos/<repo.slug>/pulls/PR/reviews/REVIEW_ID --jq '.body'
 
 # Update the body — original + separator + reaction
-gh api repos/OWNER/REPO/pulls/PR/reviews/REVIEW_ID \
+gh api repos/<repo.slug>/pulls/PR/reviews/REVIEW_ID \
   -X PUT \
   -F body="$(printf '%s\n\n---\n\n%s' "ORIGINAL_REVIEW_TEXT" "reaction text")"
 ```

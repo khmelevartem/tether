@@ -46,7 +46,7 @@ import json, sys, re
 try:
   with open('$CONFIG') as f:
     config = json.load(f)
-except FileNotFoundError:
+except (FileNotFoundError, json.JSONDecodeError):
   config = {}
 pattern_template = config.get('git', {}).get('prTitlePattern', '^#<issue>')
 pattern = pattern_template.replace('<issue>', '([0-9]+)')
@@ -63,7 +63,7 @@ import json, re, sys
 try:
   with open('$CONFIG') as f:
     data = json.load(f)
-except FileNotFoundError:
+except (FileNotFoundError, json.JSONDecodeError):
   data = {}
 patterns = data.get('git', {}).get('branchPatterns', [])
 branch = '$BRANCH'
@@ -115,7 +115,7 @@ import json, sys, re
 try:
   with open('$CONFIG') as f:
     config = json.load(f)
-except FileNotFoundError:
+except (FileNotFoundError, json.JSONDecodeError):
   config = {}
 pattern_template = config.get('git', {}).get('prTitlePattern', '^#<issue>')
 data = json.loads(sys.stdin.read())

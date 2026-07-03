@@ -45,7 +45,7 @@ import json, sys
 try:
   with open('$CONFIG') as f:
     data = json.load(f)
-except FileNotFoundError:
+except (FileNotFoundError, json.JSONDecodeError):
   data = {}
 names = data.get('reviewers', {}).get('projectSpecific', {}).get('$bucket', {}).get('$wave', [])
 print(' '.join(names))

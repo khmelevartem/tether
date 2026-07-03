@@ -52,7 +52,7 @@ if __name__ == "__main__":
     try:
         with open(config_path) as f:
             config = json.load(f)
-    except FileNotFoundError:
+    except (FileNotFoundError, json.JSONDecodeError):
         config = {}
 
     lines = [l.strip() for l in sys.stdin.read().splitlines() if l.strip()]
