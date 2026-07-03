@@ -21,7 +21,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import platform.Foundation.NSNotificationCenter
 import platform.UIKit.UIApplicationDidBecomeActiveNotification
-import platform.UIKit.UIApplicationWillResignActiveNotification
+import platform.UIKit.UIApplicationDidEnterBackgroundNotification
+import platform.UIKit.UIApplicationWillEnterForegroundNotification
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.error
 import ru.pocketbyte.kydra.log.wrapper.withTag
@@ -67,6 +68,7 @@ fun MainViewController() = run {
                 container.nameRepublisher.start(scope)
                 container.rendezvousAnnouncer.start(scope)
                 container.autoSendDispatcher.start()
+                container.healthMonitor.start(scope)
                 drainSharedFiles()
             }
 
@@ -74,13 +76,16 @@ fun MainViewController() = run {
                 name = UIApplicationDidBecomeActiveNotification,
                 `object` = null,
                 queue = null,
-            ) { _ ->
-                drainSharedFiles()
-                container.healthMonitor.start(scope)
-            }
+            ) { _ -> drainSharedFiles() }
 
-            val willResignActiveObserver = NSNotificationCenter.defaultCenter.addObserverForName(
-                name = UIApplicationWillResignActiveNotification,
+            val willEnterForegroundObserver = NSNotificationCenter.defaultCenter.addObserverForName(
+                name = UIApplicationWillEnterForegroundNotification,
+                `object` = null,
+                queue = null,
+            ) { _ -> container.healthMonitor.start(scope) }
+
+            val didEnterBackgroundObserver = NSNotificationCenter.defaultCenter.addObserverForName(
+                name = UIApplicationDidEnterBackgroundNotification,
                 `object` = null,
                 queue = null,
             ) { _ -> container.healthMonitor.stop() }
@@ -93,7 +98,8 @@ fun MainViewController() = run {
 
             onDispose {
                 NSNotificationCenter.defaultCenter.removeObserver(becomeActiveObserver)
-                NSNotificationCenter.defaultCenter.removeObserver(willResignActiveObserver)
+                NSNotificationCenter.defaultCenter.removeObserver(willEnterForegroundObserver)
+                NSNotificationCenter.defaultCenter.removeObserver(didEnterBackgroundObserver)
                 NSNotificationCenter.defaultCenter.removeObserver(sharedFilesObserver)
                 container.healthMonitor.stop()
                 container.nameRepublisher.stop()

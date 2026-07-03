@@ -3,7 +3,9 @@ package com.tubetoast.tether.discovery
 import com.tubetoast.tether.network.FileClient
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.util.ScopedJob
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -19,27 +21,31 @@ import kotlin.time.Duration.Companion.seconds
 private val log = KydraLog.withTag(default = "HealthMonitor")
 
 /**
- * Foreground-only reachability probe. While started, probes every peer in [store] on a fixed
- * period and removes a peer after [failureThreshold] consecutive failed `/health` checks. A peer
- * with a transfer in flight ([activeTransfers]) is excluded from probing and resumes with a
- * cleared failure count once the transfer ends.
+ * Foreground-only reachability probe. While started, probes every peer in [store] and removes a
+ * peer after [failureThreshold] consecutive failed `/health` checks. The cadence adapts: [period]
+ * between cycles while every peer is healthy, [fastPeriod] as soon as any peer is mid-failure-streak,
+ * reverting to [period] once all are healthy again. A peer with a transfer in flight
+ * ([activeTransfers]) is excluded from probing and resumes with a cleared failure count once the
+ * transfer ends.
  */
 class HealthMonitor(
     private val store: DiscoveredDevicesStore,
     private val fileClient: FileClient,
     private val activeTransfers: ActiveTransfers,
     private val period: Duration = DEFAULT_PERIOD,
+    private val fastPeriod: Duration = DEFAULT_FAST_PERIOD,
     private val failureThreshold: Int = DEFAULT_FAILURE_THRESHOLD,
+    private val probeDispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) {
     private val scopedJob = ScopedJob()
 
     fun start(scope: CoroutineScope) {
-        log.info { "started — period=$period, failureThreshold=$failureThreshold" }
+        log.info { "started — period=$period, fastPeriod=$fastPeriod, failureThreshold=$failureThreshold" }
         scopedJob.start(scope) {
             val failureCounts = mutableMapOf<String, Int>()
             probeOnce(failureCounts)
             while (isActive) {
-                delay(period)
+                delay(if (failureCounts.isEmpty()) period else fastPeriod)
                 probeOnce(failureCounts)
             }
         }
@@ -51,13 +57,13 @@ class HealthMonitor(
     }
 
     private suspend fun probeOnce(failureCounts: MutableMap<String, Int>) {
-        val excluded = activeTransfers.peers.value
-        val candidates = store.devices.value.filter { device -> device.fingerprint?.let { it !in excluded } == true }
+        val excludedIds = activeTransfers.peers.value.mapTo(mutableSetOf()) { it.id }
+        val candidates = store.devices.value.filter { device -> device.fingerprint?.let { it !in excludedIds } == true }
         pruneStaleCounters(candidates, failureCounts)
 
         val results = coroutineScope {
             val probes = candidates.map { device ->
-                async { device.fingerprint!! to fileClient.checkHealth(device) }
+                async(probeDispatcher) { device.fingerprint!! to fileClient.checkHealth(device) }
             }
             probes.awaitAll()
         }
@@ -87,4 +93,5 @@ class HealthMonitor(
 }
 
 private val DEFAULT_PERIOD: Duration = 7.seconds
+private val DEFAULT_FAST_PERIOD: Duration = 2.seconds
 private const val DEFAULT_FAILURE_THRESHOLD = 3

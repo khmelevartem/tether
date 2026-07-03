@@ -1,5 +1,6 @@
 package com.tubetoast.tether.transfer
-
+import com.tubetoast.tether.protocol.PeerIdentity
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -21,6 +22,7 @@ import kotlin.concurrent.atomics.ExperimentalAtomicApi
 class PeerTransferEngineRegistry(
     private val appScope: CoroutineScope,
     private val engineFactory: (PeerIdentity, CoroutineScope) -> PeerTransferEngine,
+    private val engineDispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) {
     private data class Entry(
         val engine: PeerTransferEngine,
@@ -37,7 +39,7 @@ class PeerTransferEngineRegistry(
             val current = entries.load()
             val existing = current[peer]
             if (existing != null) return existing.engine
-            val engineScope = CoroutineScope(SupervisorJob(appScope.coroutineContext[Job]) + Dispatchers.Default)
+            val engineScope = CoroutineScope(SupervisorJob(appScope.coroutineContext[Job]) + engineDispatcher)
             val newEntry = Entry(engineFactory(peer, engineScope), engineScope)
             val next = current + (peer to newEntry)
             if (entries.compareAndSet(current, next)) {

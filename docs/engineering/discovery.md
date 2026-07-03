@@ -169,13 +169,13 @@ Two removal paths keep the store honest, one per discovery channel.
 
 mDNS owns removal for the peers it added: `serviceLost` notifications (NSD, Bonjour; JmDNS surfaces equivalents) drop a peer from the store when its announce times out. This path is unchanged.
 
-Every other removal is reachability-driven. A peer is kept while the device can still reach it, and dropped once it cannot — no last-seen timestamp, no idle clock. Reachability is measured by active probing: a health monitor issues `GET /health` to each peer in the store on a fixed period, all peers concurrently, each probe under a short timeout. A peer that fails K consecutive probes is removed; any success resets its failure count. The probe targets the same `/health` endpoint the `FileServer` already exposes.
+Every other removal is reachability-driven. A peer is kept while the device can still reach it, and dropped once it cannot — no last-seen timestamp, no idle clock. Reachability is measured by active probing: a health monitor probes every peer in the store concurrently, each probe under a short timeout, with an adaptive cadence — a full period between cycles while every probed peer is healthy, switching to a short period as soon as any peer is mid-failure-streak so a dying peer is confirmed or evicted faster, and returning to the full period once all peers are healthy again. A peer that fails K consecutive probes is removed; any success resets its failure count. The probe targets the same `/health` endpoint the `FileServer` already exposes.
 
-The monitor runs only in the foreground and stops entirely in the background, because probing has no value while the user is not looking at the device list and would spend battery and radio on a screen nobody sees. Discovery *ingest* keeps running to app/service lifetime; only the probe loop is foreground-bound (see [Cancellation and lifecycle](#cancellation-and-lifecycle)). Returning to the foreground forces an immediate probe cycle, so the list is fresh by the time it is drawn rather than waiting up to a full period.
+The monitor runs only while the app can be on screen and stops entirely otherwise, because probing has no value while the user is not looking at the device list and would spend battery and radio on a screen nobody sees. Discovery *ingest* keeps running to app/service lifetime; only the probe loop is bound to this visibility signal (see [Cancellation and lifecycle](#cancellation-and-lifecycle)). Becoming visible again forces an immediate probe cycle, so the list is fresh by the time it is drawn rather than waiting up to a full period.
 
 A peer with a file transfer in flight, inbound or outbound, is excluded from probing until that transfer completes. An active transfer already proves the peer reachable, and a probe competing with a saturated transfer could time out and evict a peer that is demonstrably present. When the transfer ends, the peer rejoins the probed set with its failure count cleared.
 
-The foreground signal is platform-supplied: Android activity resume and pause, iOS `didBecomeActive` and `willResignActive`, Desktop window focus and blur. Each platform maps its lifecycle to a single foreground flag the monitor observes; the monitor itself is platform-agnostic.
+The signal is visibility, not focus: Android `ON_START`/`ON_STOP`, iOS `willEnterForeground`/`didEnterBackground`, Desktop window shown/iconified. The list is probed whenever it can be on screen — including split-screen and while a system overlay or file picker holds focus — not only while the app is focused. Each platform maps its lifecycle to a single visibility flag the monitor observes; the monitor itself is platform-agnostic.
 
 ## Trust
 
@@ -206,6 +206,6 @@ Per [modules.md](modules.md), discovery code lives in `commonMain` wherever poss
 
 ## What this doc does *not* commit to
 
-- **Exact timing constants.** Fallback-activation window, scan concurrency, and the reachability-probe tunables — probe period, per-probe timeout, consecutive-failure threshold before removal, and probe concurrency. These are implementation choices and live in the implementation issue and code, not here.
+- **Exact timing constants.** Fallback-activation window, scan concurrency, and the reachability-probe tunables — normal and fast probe periods, per-probe timeout, consecutive-failure threshold before removal, and probe concurrency. These are implementation choices and live in the implementation issue and code, not here.
 - **Exact port number for the rendezvous UDP/TCP fixed port.** A well-known port is chosen in the implementation issue; revisiting it is a small follow-up, not an ADR.
 - **Wire-protocol-level interop with LocalSend.** The `/hello` payload follows the LocalSend `/api/localsend/v2/register` shape, but is not declared compatible. Compatibility would warrant its own ADR.

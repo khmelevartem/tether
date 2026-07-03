@@ -9,9 +9,9 @@ import com.tubetoast.tether.peer.Peer
 import com.tubetoast.tether.peer.PeersRepository
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.protocol.Device
+import com.tubetoast.tether.protocol.PeerIdentity
 import com.tubetoast.tether.transfer.FakeFilePicker
 import com.tubetoast.tether.transfer.FakeFileSource
-import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.PickKind
 import com.tubetoast.tether.transfer.toPeerIdentity

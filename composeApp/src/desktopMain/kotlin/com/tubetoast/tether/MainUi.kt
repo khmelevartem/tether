@@ -25,7 +25,7 @@ import org.jetbrains.compose.resources.painterResource
 import tether.composeapp.generated.resources.Res
 import tether.composeapp.generated.resources.icon
 import java.awt.event.WindowEvent
-import java.awt.event.WindowFocusListener
+import java.awt.event.WindowListener
 
 fun main() = runBlocking {
     // see docs/knowledge/desktop-system-theme.md — must be set before any Swing/AWT class loads
@@ -60,18 +60,31 @@ fun main() = runBlocking {
                 }
 
                 DisposableEffect(window) {
-                    val listener = object : WindowFocusListener {
-                        override fun windowGainedFocus(e: WindowEvent) {
+                    val listener = object : WindowListener {
+                        override fun windowOpened(e: WindowEvent) = Unit
+
+                        override fun windowClosing(e: WindowEvent) = Unit
+
+                        override fun windowClosed(e: WindowEvent) = Unit
+
+                        override fun windowIconified(e: WindowEvent) {
+                            container.healthMonitor.stop()
+                        }
+
+                        override fun windowDeiconified(e: WindowEvent) {
                             container.healthMonitor.start(container.appScope)
                         }
 
-                        override fun windowLostFocus(e: WindowEvent) {
-                            container.healthMonitor.stop()
-                        }
+                        override fun windowActivated(e: WindowEvent) = Unit
+
+                        override fun windowDeactivated(e: WindowEvent) = Unit
                     }
-                    window.addWindowFocusListener(listener)
+                    window.addWindowListener(listener)
+                    if (window.isShowing) {
+                        container.healthMonitor.start(container.appScope)
+                    }
                     onDispose {
-                        window.removeWindowFocusListener(listener)
+                        window.removeWindowListener(listener)
                         container.healthMonitor.stop()
                     }
                 }

@@ -23,6 +23,7 @@ import com.tubetoast.tether.preferences.PeerPreferencesStore
 import com.tubetoast.tether.presentation.RootComponentFactory
 import com.tubetoast.tether.presentation.banners.PeerConflictRelay
 import com.tubetoast.tether.protocol.DeviceType
+import com.tubetoast.tether.protocol.PeerIdentity
 import com.tubetoast.tether.security.DefaultTrustedDeviceStore
 import com.tubetoast.tether.security.DeviceKeyPair
 import com.tubetoast.tether.security.TrustedDeviceStore
@@ -32,7 +33,6 @@ import com.tubetoast.tether.transfer.ConnectionMonitor
 import com.tubetoast.tether.transfer.DefaultTransferActivityTracker
 import com.tubetoast.tether.transfer.FilePicker
 import com.tubetoast.tether.transfer.NoOpConnectionMonitor
-import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PeerTransferEngine
 import com.tubetoast.tether.transfer.PeerTransferEngineRegistry
 import com.tubetoast.tether.transfer.PendingFilesRepository
@@ -113,10 +113,11 @@ abstract class AppContainer {
                     peerPreferencesStore = peerPreferencesStore,
                 )
             },
+            engineDispatcher = Dispatchers.Default,
         )
     }
 
-    open val activeTransfers: ActiveTransfers by lazy {
+    private val activeTransfers: ActiveTransfers by lazy {
         RegistryActiveTransfers(peerTransferEngineRegistry, appScope)
     }
 
@@ -125,6 +126,7 @@ abstract class AppContainer {
             store = discoveredDevicesStore,
             fileClient = fileClient,
             activeTransfers = activeTransfers,
+            probeDispatcher = Dispatchers.Default,
         )
     }
 

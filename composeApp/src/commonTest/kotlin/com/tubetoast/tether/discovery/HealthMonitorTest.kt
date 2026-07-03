@@ -2,29 +2,29 @@ package com.tubetoast.tether.discovery
 
 import com.tubetoast.tether.network.FileClient
 import com.tubetoast.tether.protocol.Device
+import com.tubetoast.tether.protocol.PeerIdentity
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.http.HttpStatusCode
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
-import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
-/**
- * [HealthMonitor.start] runs an infinite periodic loop, so it is launched on [backgroundScope] —
- * `advanceUntilIdle()` never returns once a foreground infinite loop is live. Each tick is flushed
- * with [runCurrent] instead, which runs only the work already due at the current virtual time.
- */
 @OptIn(ExperimentalCoroutinesApi::class)
 class HealthMonitorTest {
     private val period = 7.seconds
+    private val fastPeriod = 2.seconds
     private val threshold = 3
 
     private class ScriptedFileClient(
@@ -41,13 +41,13 @@ class HealthMonitorTest {
     }
 
     private class FakeActiveTransfers(
-        initial: Set<String> = emptySet(),
+        initial: Set<PeerIdentity> = emptySet(),
     ) : ActiveTransfers {
         private val _peers = MutableStateFlow(initial)
         override val peers = _peers
 
-        fun setActive(fingerprints: Set<String>) {
-            _peers.value = fingerprints
+        fun setActive(peers: Set<PeerIdentity>) {
+            _peers.value = peers
         }
     }
 
@@ -58,31 +58,36 @@ class HealthMonitorTest {
         store: DiscoveredDevicesStore,
         client: FileClient,
         activeTransfers: ActiveTransfers = FakeActiveTransfers(),
+        probeDispatcher: CoroutineDispatcher,
     ) = HealthMonitor(
         store = store,
         fileClient = client,
         activeTransfers = activeTransfers,
         period = period,
+        fastPeriod = fastPeriod,
         failureThreshold = threshold,
+        probeDispatcher = probeDispatcher,
     )
 
+    /** [advanceTimeBy] leaves a task scheduled exactly at the target instant unrun; overshoot by 1ms to flush it. */
+    private fun TestScope.tick(duration: Duration = 1.milliseconds) = advanceTimeBy(duration + 1.milliseconds)
+
     @Test
-    fun `peer removed after exactly K consecutive failures`() = runTest(UnconfinedTestDispatcher()) {
+    fun `peer removed after exactly K consecutive failures`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
         val store = DiscoveredDevicesStore()
         store.upsert(device("fp-1"))
         val client = ScriptedFileClient(mutableMapOf("fp-1" to mutableListOf(false)))
-        val m = monitor(store, client)
+        val m = monitor(store, client, probeDispatcher = dispatcher)
 
         m.start(backgroundScope)
-        runCurrent()
+        tick()
         assertTrue(store.devices.value.any { it.fingerprint == "fp-1" }, "must survive after 1 failure")
 
-        advanceTimeBy(period)
-        runCurrent()
+        tick(fastPeriod)
         assertTrue(store.devices.value.any { it.fingerprint == "fp-1" }, "must survive after 2 failures")
 
-        advanceTimeBy(period)
-        runCurrent()
+        tick(fastPeriod)
         assertTrue(
             store.devices.value.none { it.fingerprint == "fp-1" },
             "must be removed after 3rd consecutive failure",
@@ -92,43 +97,40 @@ class HealthMonitorTest {
     }
 
     @Test
-    fun `one success mid-streak resets the counter`() = runTest(UnconfinedTestDispatcher()) {
+    fun `one success mid-streak resets the counter`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
         val store = DiscoveredDevicesStore()
         store.upsert(device("fp-1"))
         val results = mutableMapOf("fp-1" to mutableListOf(false, false, true))
         val client = ScriptedFileClient(results)
-        val m = monitor(store, client)
+        val m = monitor(store, client, probeDispatcher = dispatcher)
 
         m.start(backgroundScope)
-        runCurrent()
-        advanceTimeBy(period)
-        runCurrent()
+        tick()
+        tick(fastPeriod)
         // Two failures recorded, then a success on the third tick resets the streak.
         results["fp-1"] = mutableListOf(true)
-        advanceTimeBy(period)
-        runCurrent()
+        tick(fastPeriod)
 
         results["fp-1"] = mutableListOf(false, false)
-        advanceTimeBy(period)
-        runCurrent()
-        advanceTimeBy(period)
-        runCurrent()
+        tick(period)
+        tick(fastPeriod)
         assertTrue(store.devices.value.any { it.fingerprint == "fp-1" }, "reset streak needs 3 fresh failures to evict")
 
         m.stop()
     }
 
     @Test
-    fun `healthy peers are never removed`() = runTest(UnconfinedTestDispatcher()) {
+    fun `healthy peers are never removed`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
         val store = DiscoveredDevicesStore()
         store.upsert(device("fp-1"))
         val client = ScriptedFileClient(mutableMapOf())
-        val m = monitor(store, client)
+        val m = monitor(store, client, probeDispatcher = dispatcher)
 
         m.start(backgroundScope)
         repeat(5) {
-            advanceTimeBy(period)
-            runCurrent()
+            tick(period)
         }
         assertTrue(store.devices.value.any { it.fingerprint == "fp-1" })
 
@@ -136,17 +138,17 @@ class HealthMonitorTest {
     }
 
     @Test
-    fun `peer with an active transfer is never probed or evicted`() = runTest(UnconfinedTestDispatcher()) {
+    fun `peer with an active transfer is never probed or evicted`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
         val store = DiscoveredDevicesStore()
         store.upsert(device("fp-1"))
         val client = ScriptedFileClient(mutableMapOf("fp-1" to mutableListOf(false)))
-        val activeTransfers = FakeActiveTransfers(setOf("fp-1"))
-        val m = monitor(store, client, activeTransfers)
+        val activeTransfers = FakeActiveTransfers(setOf(PeerIdentity("fp-1")))
+        val m = monitor(store, client, activeTransfers, probeDispatcher = dispatcher)
 
         m.start(backgroundScope)
         repeat(5) {
-            advanceTimeBy(period)
-            runCurrent()
+            tick(period)
         }
         assertTrue(client.probed.isEmpty(), "excluded peer must never be probed")
         assertTrue(store.devices.value.any { it.fingerprint == "fp-1" })
@@ -155,26 +157,23 @@ class HealthMonitorTest {
     }
 
     @Test
-    fun `peer resumes fresh probing once it leaves the active-transfer set`() = runTest(UnconfinedTestDispatcher()) {
+    fun `peer resumes fresh probing once it leaves the active-transfer set`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
         val store = DiscoveredDevicesStore()
         store.upsert(device("fp-1"))
         val client = ScriptedFileClient(mutableMapOf("fp-1" to mutableListOf(false)))
-        val activeTransfers = FakeActiveTransfers(setOf("fp-1"))
-        val m = monitor(store, client, activeTransfers)
+        val activeTransfers = FakeActiveTransfers(setOf(PeerIdentity("fp-1")))
+        val m = monitor(store, client, activeTransfers, probeDispatcher = dispatcher)
 
         m.start(backgroundScope)
-        advanceTimeBy(period)
-        runCurrent()
+        tick(period)
         activeTransfers.setActive(emptySet())
 
-        advanceTimeBy(period)
-        runCurrent()
+        tick(period)
         assertTrue(store.devices.value.any { it.fingerprint == "fp-1" }, "must survive after 1st failure post-resume")
 
-        advanceTimeBy(period)
-        runCurrent()
-        advanceTimeBy(period)
-        runCurrent()
+        tick(fastPeriod)
+        tick(fastPeriod)
         assertTrue(
             store.devices.value.none { it.fingerprint == "fp-1" },
             "must evict after 3 fresh failures post-resume",
@@ -184,40 +183,34 @@ class HealthMonitorTest {
     }
 
     @Test
-    fun `counter cleared on exclusion exit requires a full fresh streak to evict`() = runTest(
-        UnconfinedTestDispatcher(),
-    ) {
+    fun `counter cleared on exclusion exit requires a full fresh streak to evict`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
         val store = DiscoveredDevicesStore()
         store.upsert(device("fp-1"))
         val client = ScriptedFileClient(mutableMapOf("fp-1" to mutableListOf(false)))
         val activeTransfers = FakeActiveTransfers()
-        val m = monitor(store, client, activeTransfers)
+        val m = monitor(store, client, activeTransfers, probeDispatcher = dispatcher)
 
         m.start(backgroundScope)
-        runCurrent()
-        advanceTimeBy(period)
-        runCurrent()
+        tick()
+        tick(fastPeriod)
         // Two consecutive failures recorded (K-1 of 3) — one more would evict.
         assertTrue(store.devices.value.any { it.fingerprint == "fp-1" }, "must survive after 2 failures")
 
-        activeTransfers.setActive(setOf("fp-1"))
-        advanceTimeBy(period)
-        runCurrent()
-        advanceTimeBy(period)
-        runCurrent()
+        activeTransfers.setActive(setOf(PeerIdentity("fp-1")))
+        // First excluded tick observes the exclusion, prunes the counter, and reverts cadence to `period`.
+        tick(fastPeriod)
+        tick(period)
         activeTransfers.setActive(emptySet())
 
-        advanceTimeBy(period)
-        runCurrent()
+        tick(period)
         assertTrue(
             store.devices.value.any { it.fingerprint == "fp-1" },
             "counter must have been cleared on exclusion exit — 1 failure post-resume must not evict",
         )
 
-        advanceTimeBy(period)
-        runCurrent()
-        advanceTimeBy(period)
-        runCurrent()
+        tick(fastPeriod)
+        tick(fastPeriod)
         assertTrue(
             store.devices.value.none { it.fingerprint == "fp-1" },
             "must evict only after a full fresh streak of 3 failures post-resume",
@@ -227,19 +220,19 @@ class HealthMonitorTest {
     }
 
     @Test
-    fun `stop halts probing with no further removals`() = runTest(UnconfinedTestDispatcher()) {
+    fun `stop halts probing with no further removals`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
         val store = DiscoveredDevicesStore()
         store.upsert(device("fp-1"))
         val client = ScriptedFileClient(mutableMapOf("fp-1" to mutableListOf(false)))
-        val m = monitor(store, client)
+        val m = monitor(store, client, probeDispatcher = dispatcher)
 
         m.start(backgroundScope)
-        runCurrent()
+        tick()
         m.stop()
 
         repeat(5) {
-            advanceTimeBy(period)
-            runCurrent()
+            tick(period)
         }
         assertTrue(store.devices.value.any { it.fingerprint == "fp-1" }, "no probing after stop — peer must survive")
 
@@ -247,19 +240,18 @@ class HealthMonitorTest {
     }
 
     @Test
-    fun `removal calls store removeByFingerprint and the peer leaves the store`() = runTest(
-        UnconfinedTestDispatcher(),
-    ) {
+    fun `removal calls store removeByFingerprint and the peer leaves the store`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
         val store = DiscoveredDevicesStore()
         store.upsert(device("fp-1"))
         store.upsert(device("fp-2"))
         val client = ScriptedFileClient(mutableMapOf("fp-1" to mutableListOf(false)))
-        val m = monitor(store, client)
+        val m = monitor(store, client, probeDispatcher = dispatcher)
 
         m.start(backgroundScope)
-        repeat(threshold) {
-            advanceTimeBy(period)
-            runCurrent()
+        tick()
+        repeat(threshold - 1) {
+            tick(fastPeriod)
         }
 
         val remaining = store.devices.value.map { it.fingerprint }
@@ -269,7 +261,8 @@ class HealthMonitorTest {
     }
 
     @Test
-    fun `concurrent peers accumulate independent failure streaks`() = runTest(UnconfinedTestDispatcher()) {
+    fun `concurrent peers accumulate independent failure streaks`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
         val store = DiscoveredDevicesStore()
         store.upsert(device("fp-1"))
         store.upsert(device("fp-2"))
@@ -279,12 +272,12 @@ class HealthMonitorTest {
                 "fp-2" to mutableListOf(false, true, false, true, false, true),
             ),
         )
-        val m = monitor(store, client)
+        val m = monitor(store, client, probeDispatcher = dispatcher)
 
         m.start(backgroundScope)
-        repeat(threshold) {
-            advanceTimeBy(period)
-            runCurrent()
+        tick()
+        repeat(threshold - 1) {
+            tick(fastPeriod)
         }
 
         val remaining = store.devices.value.map { it.fingerprint }
@@ -293,6 +286,30 @@ class HealthMonitorTest {
             remaining,
             "fp-1 fails every probe and must be evicted after $threshold ticks; " +
                 "fp-2 alternates and must remain since its streak keeps resetting",
+        )
+
+        m.stop()
+    }
+
+    @Test
+    fun `peer that starts failing while others are healthy is evicted on the fast cadence`() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val store = DiscoveredDevicesStore()
+        store.upsert(device("fp-1"))
+        store.upsert(device("fp-2"))
+        val client = ScriptedFileClient(mutableMapOf("fp-1" to mutableListOf(false)))
+        val m = monitor(store, client, probeDispatcher = dispatcher)
+
+        m.start(backgroundScope)
+        tick()
+        tick(fastPeriod)
+        tick(fastPeriod)
+
+        val remaining = store.devices.value.map { it.fingerprint }
+        assertEquals(
+            listOf("fp-2"),
+            remaining,
+            "adaptive cadence must evict fp-1 within period + 2*fastPeriod, not wait 3 full periods",
         )
 
         m.stop()

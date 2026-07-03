@@ -14,9 +14,9 @@ import com.tubetoast.tether.presentation.banners.PeerConflictRelay
 import com.tubetoast.tether.presentation.devicename.DeviceNameComponent
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
 import com.tubetoast.tether.protocol.DeviceType
+import com.tubetoast.tether.protocol.PeerIdentity
 import com.tubetoast.tether.transfer.FakeFilePicker
 import com.tubetoast.tether.transfer.NoOpTransferActivityTracker
-import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PeerTransferEngine
 import com.tubetoast.tether.transfer.PendingFilesRepository
 import com.tubetoast.tether.transfer.fakeBatchSender

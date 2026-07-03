@@ -60,7 +60,7 @@ open class FileClient(
     }
 
     open suspend fun sendHello(target: Device, ownInfo: PeerAnnouncement): Boolean = try {
-        val response = client.post("http://${target.host}:${target.port}/hello") {
+        val response = client.post("${target.baseUrl()}/hello") {
             contentType(ContentType.Application.Json)
             setBody(ownInfo)
         }
@@ -73,7 +73,7 @@ open class FileClient(
     }
 
     open suspend fun checkHealth(device: Device): Boolean = try {
-        val response = client.get("http://${device.host}:${device.port}/health") {
+        val response = client.get("${device.baseUrl()}/health") {
             timeout { requestTimeoutMillis = healthTimeout.inWholeMilliseconds }
         }
         response.status == HttpStatusCode.OK
@@ -151,7 +151,7 @@ open class FileClient(
         fileName: String,
         totalBytes: Long?,
     ): SendResult = try {
-        val response = client.post("http://${device.host}:${device.port}/upload") {
+        val response = client.post("${device.baseUrl()}/upload") {
             url.encodedParameters.append("name", fileName.encodeURLQueryComponent(encodeFull = true))
             setBody(channel.asOctetStreamContent(totalBytes))
         }
@@ -181,6 +181,8 @@ private fun ByteReadChannel.asOctetStreamContent(totalBytes: Long?): OutgoingCon
 
         override fun readFrom(): ByteReadChannel = this@asOctetStreamContent
     }
+
+private fun Device.baseUrl(): String = "http://$host:$port"
 
 private const val COPY_BUFFER_SIZE = 8 * 1024
 

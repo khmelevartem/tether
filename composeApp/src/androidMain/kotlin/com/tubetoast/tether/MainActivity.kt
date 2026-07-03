@@ -55,11 +55,11 @@ class MainActivity : ComponentActivity() {
         val container = (application as AppContainerProvider).container
         lifecycle.addObserver(
             object : DefaultLifecycleObserver {
-                override fun onResume(owner: LifecycleOwner) {
+                override fun onStart(owner: LifecycleOwner) {
                     container.healthMonitor.start(container.appScope)
                 }
 
-                override fun onPause(owner: LifecycleOwner) {
+                override fun onStop(owner: LifecycleOwner) {
                     container.healthMonitor.stop()
                 }
             },
