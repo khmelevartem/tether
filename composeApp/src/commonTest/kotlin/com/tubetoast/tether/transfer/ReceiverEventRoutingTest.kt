@@ -386,6 +386,80 @@ class ReceiverEventRoutingTest {
     }
 
     @Test
+    fun `BatchEnd on a batch short of total emits partial BatchCompleted with FilesUnreadable`() = runTest {
+        val inbound = MutableSharedFlow<InboundEvent>(extraBufferCapacity = 16)
+        val router = buildRouter(inbound, backgroundScope)
+        val received = mutableListOf<ReceiveEvent>()
+        backgroundScope.launch { router.eventsFor(peerA).toList(received) }
+        runCurrent()
+
+        inbound.emit(InboundEvent.BatchStarted(peerA, batchId = "b1", totalFiles = 3, totalBytes = null))
+        inbound.emit(InboundEvent.FileCompleted(peerA, "a.txt", null))
+        inbound.emit(InboundEvent.FileCompleted(peerA, "b.txt", null))
+        // Sender skipped the third (unreadable) file and signalled the batch is done.
+        inbound.emit(InboundEvent.BatchEnd(peerA, batchId = "b1"))
+        runCurrent()
+
+        val batchCompleted = received.filterIsInstance<ReceiveEvent.BatchCompleted>()
+        assertEquals(1, batchCompleted.size, "short batch must finalize on /batch-end instead of hanging")
+        assertEquals(2, batchCompleted[0].received)
+        assertEquals(3, batchCompleted[0].total)
+        assertEquals(PartialOutcome.FilesUnreadable(1), batchCompleted[0].partialReason)
+    }
+
+    @Test
+    fun `BatchEnd after batch already completed at cap is a no-op`() = runTest {
+        val inbound = MutableSharedFlow<InboundEvent>(extraBufferCapacity = 16)
+        val router = buildRouter(inbound, backgroundScope)
+        val received = mutableListOf<ReceiveEvent>()
+        backgroundScope.launch { router.eventsFor(peerA).toList(received) }
+        runCurrent()
+
+        inbound.emit(InboundEvent.BatchStarted(peerA, batchId = "b1", totalFiles = 2, totalBytes = null))
+        inbound.emit(InboundEvent.FileCompleted(peerA, "a.txt", null))
+        inbound.emit(InboundEvent.FileCompleted(peerA, "b.txt", null))
+        // All files arrived — the redundant /batch-end that every normal completion posts must not double-fire.
+        inbound.emit(InboundEvent.BatchEnd(peerA, batchId = "b1"))
+        runCurrent()
+
+        val batchCompleted = received.filterIsInstance<ReceiveEvent.BatchCompleted>()
+        assertEquals(1, batchCompleted.size, "batch-end after a full completion must not emit a second BatchCompleted")
+        assertEquals(null, batchCompleted[0].partialReason)
+    }
+
+    @Test
+    fun `BatchEnd with stale batchId is silently ignored`() = runTest {
+        val inbound = MutableSharedFlow<InboundEvent>(extraBufferCapacity = 16)
+        val router = buildRouter(inbound, backgroundScope)
+        val received = mutableListOf<ReceiveEvent>()
+        backgroundScope.launch { router.eventsFor(peerA).toList(received) }
+        runCurrent()
+
+        inbound.emit(InboundEvent.BatchStarted(peerA, batchId = "b1", totalFiles = 2, totalBytes = null))
+        inbound.emit(InboundEvent.FileCompleted(peerA, "a.txt", null))
+        inbound.emit(InboundEvent.BatchEnd(peerA, batchId = "stale-id"))
+        runCurrent()
+
+        val batchCompleted = received.filterIsInstance<ReceiveEvent.BatchCompleted>()
+        assertEquals(0, batchCompleted.size, "stale batchId must not finalize the active batch")
+    }
+
+    @Test
+    fun `BatchEnd with no active batch is silently ignored`() = runTest {
+        val inbound = MutableSharedFlow<InboundEvent>(extraBufferCapacity = 16)
+        val router = buildRouter(inbound, backgroundScope)
+        val received = mutableListOf<ReceiveEvent>()
+        backgroundScope.launch { router.eventsFor(peerA).toList(received) }
+        runCurrent()
+
+        inbound.emit(InboundEvent.BatchEnd(peerA, batchId = "b1"))
+        runCurrent()
+
+        val batchCompleted = received.filterIsInstance<ReceiveEvent.BatchCompleted>()
+        assertEquals(0, batchCompleted.size, "batch-end with no active batch must not emit BatchCompleted")
+    }
+
+    @Test
     fun `aggregate receiveEvents flow carries all events tagged with peer`() = runTest {
         val inbound = MutableSharedFlow<InboundEvent>(extraBufferCapacity = 16)
         val router = buildRouter(inbound, backgroundScope)

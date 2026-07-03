@@ -782,6 +782,113 @@ class BatchSenderTest {
         assertIs<BatchOutcome.Failed>(completed.outcome)
     }
 
+    @Test
+    fun `endBatch called once after the whole list is walked`() = runTest {
+        val endIds = mutableListOf<String>()
+        val sender = BatchSender(
+            sendOne = instantSend(),
+            connectionMonitor = FakeConnectionMonitor(),
+            endBatch = { id -> endIds.add(id) },
+            batchId = "test-id",
+            progressThrottle = 100.milliseconds,
+            dispatcher = Dispatchers.Unconfined,
+        )
+
+        sender.run(sources("a.txt", "b.txt")) {}
+
+        assertEquals(listOf("test-id"), endIds, "endBatch signalled once on normal completion")
+    }
+
+    @Test
+    fun `endBatch called on partial completion so the receiver can finalize a short batch`() = runTest {
+        var endCount = 0
+        val sender = BatchSender(
+            sendOne = { src, onProgress ->
+                if (src.name == "b.txt") throw UnreadableSourceException("b.txt")
+                onProgress(src.sizeBytes ?: 0L, src.sizeBytes)
+            },
+            connectionMonitor = FakeConnectionMonitor(),
+            endBatch = { endCount++ },
+            batchId = "test-id",
+            progressThrottle = 100.milliseconds,
+            dispatcher = Dispatchers.Unconfined,
+        )
+
+        val outcome = sender.run(sources("a.txt", "b.txt", "c.txt")) {}
+
+        assertIs<BatchOutcome.PartialSent>(outcome)
+        assertEquals(1, endCount, "endBatch must fire on a partial send — the exact hang the receiver escapes")
+    }
+
+    @Test
+    fun `endBatch not called when the batch is cancelled`() = runTest {
+        var endCount = 0
+        val pauseChannel = Channel<Unit>(0)
+        val sender = BatchSender(
+            sendOne = { _, _ -> pauseChannel.receive() },
+            connectionMonitor = FakeConnectionMonitor(),
+            endBatch = { endCount++ },
+            batchId = "test-id",
+            progressThrottle = 100.milliseconds,
+            dispatcher = Dispatchers.Unconfined,
+        )
+
+        val job = launch { sender.run(sources("a.txt", "b.txt")) {} }
+        runCurrent()
+        job.cancel()
+        runCurrent()
+
+        assertEquals(0, endCount, "a cancelled batch posts /batch-cancel, not /batch-end")
+    }
+
+    @Test
+    fun `endBatch not called when the connection is lost unrecovered`() = runTest {
+        var endCount = 0
+        val pauseChannel = Channel<Unit>(0)
+        val monitor = FakeConnectionMonitor()
+        var sendCallCount = 0
+        val sender = BatchSender(
+            sendOne = { src, onProgress ->
+                sendCallCount++
+                if (sendCallCount == 2) pauseChannel.receive()
+                onProgress(src.sizeBytes ?: 0L, src.sizeBytes)
+            },
+            connectionMonitor = monitor,
+            endBatch = { endCount++ },
+            batchId = "test-id",
+            progressThrottle = 100.milliseconds,
+            dispatcher = Dispatchers.Unconfined,
+        )
+
+        val job = launch { sender.run(sources("a.txt", "b.txt", "c.txt")) {} }
+        runCurrent()
+        monitor.drop()
+        runCurrent()
+        monitor.reconnect(false)
+        runCurrent()
+        job.join()
+
+        assertEquals(0, endCount, "an unrecovered drop leaves the receiver to time out — no /batch-end sent")
+    }
+
+    @Test
+    fun `endBatch not called when beginBatch fails`() = runTest {
+        var endCount = 0
+        val sender = BatchSender(
+            sendOne = instantSend(),
+            connectionMonitor = FakeConnectionMonitor(),
+            beginBatch = { _, _, _ -> throw PeerUnreachableException() },
+            endBatch = { endCount++ },
+            batchId = "test-id",
+            progressThrottle = 100.milliseconds,
+            dispatcher = Dispatchers.Unconfined,
+        )
+
+        sender.run(sources("a.txt", "b.txt")) {}
+
+        assertEquals(0, endCount, "begin never reached the receiver — there is no batch to end")
+    }
+
     private class LateSizeSource(
         override val name: String,
         private val realSize: Long,

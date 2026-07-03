@@ -92,6 +92,7 @@ abstract class AppContainer {
                         totalBytes,
                     )
                 },
+                endBatch = { id -> peerFileSender.endBatch(peer, id) },
                 batchId = batchId,
                 connectionMonitor = connectionMonitor,
                 tracker = transferActivityTracker,

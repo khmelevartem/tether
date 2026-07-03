@@ -31,6 +31,14 @@ class PeerFileSender(
         fileClient.cancelBatch(device, batchId)
     }
 
+    /** Best-effort: if the peer is gone the receiver reaches a terminal state via its own reconnect timeout. */
+    suspend fun endBatch(peer: PeerIdentity, batchId: String) {
+        val device = discoveredDevicesStore.devices.value
+            .firstOrNull { it.toPeerIdentity() == peer }
+            ?: return
+        fileClient.endBatch(device, batchId)
+    }
+
     suspend fun send(
         peer: PeerIdentity,
         source: FileSource,

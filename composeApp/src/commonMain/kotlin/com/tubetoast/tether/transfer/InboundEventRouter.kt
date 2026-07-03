@@ -15,7 +15,8 @@ import kotlin.concurrent.atomics.AtomicReference
  *
  * Synthesizes [ReceiveEvent.Started] on [InboundEvent.BatchStarted] (or on the first file event
  * for senders that skip the batch-begin call), and [ReceiveEvent.BatchCompleted] when the
- * per-peer file completion count reaches the declared total.
+ * per-peer file completion count reaches the declared total — or, for a batch that delivered
+ * fewer files than declared, on [InboundEvent.BatchEnd].
  *
  * A sender that posts to /upload without a preceding /batch-begin is treated as an implicit
  * single-file batch: [ReceiveEvent.Started] is synthesized before the file's events and
@@ -124,6 +125,25 @@ class InboundEventRouter(
                         received = batch.receivedCount,
                         total = batch.totalFiles,
                         partialReason = PartialOutcome.SenderCancelled,
+                    ),
+                )
+            }
+            is InboundEvent.BatchEnd -> {
+                val batch = peerBatch[peer] ?: return
+                if (batch.batchId != event.batchId) return
+                peerBatch.remove(peer)
+                // A live batch at /batch-end means the count never reached the declared total:
+                // the sender skipped files it could not read. Attribute the shortfall as such —
+                // the receiver has no per-file signal for a source the sender never uploaded.
+                val shortfall = batch.totalFiles - batch.receivedCount
+                val partialReason = if (shortfall > 0) PartialOutcome.FilesUnreadable(shortfall) else null
+                emit(
+                    peer,
+                    flow,
+                    ReceiveEvent.BatchCompleted(
+                        received = batch.receivedCount,
+                        total = batch.totalFiles,
+                        partialReason = partialReason,
                     ),
                 )
             }

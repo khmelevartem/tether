@@ -4,6 +4,7 @@ import com.tubetoast.tether.discovery.DiscoveredDevicesStore
 import com.tubetoast.tether.identity.DeviceIdentityStore
 import com.tubetoast.tether.protocol.BatchBeginRequest
 import com.tubetoast.tether.protocol.BatchCancelRequest
+import com.tubetoast.tether.protocol.BatchEndRequest
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.protocol.PairRequest
 import com.tubetoast.tether.protocol.PairResponse
@@ -189,6 +190,20 @@ internal fun Application.installFileServerRoutes(
             if (peer != null && inboundEvents != null) {
                 inboundEvents.tryEmit(InboundEvent.BatchCancelled(peer = peer, batchId = body.batchId))
                 log.info { "batch-cancel from ${peer.id}: id=${body.batchId}" }
+            }
+            call.respond(HttpStatusCode.OK, emptyMap<String, String>())
+        }
+        post("/batch-end") {
+            val body = try {
+                call.receive<BatchEndRequest>()
+            } catch (_: Exception) {
+                call.respond(HttpStatusCode.BadRequest, mapOf("error" to "invalid_body"))
+                return@post
+            }
+            val peer = call.resolvePeer(discoveredDevicesStore)
+            if (peer != null && inboundEvents != null) {
+                inboundEvents.tryEmit(InboundEvent.BatchEnd(peer = peer, batchId = body.batchId))
+                log.info { "batch-end from ${peer.id}: id=${body.batchId}" }
             }
             call.respond(HttpStatusCode.OK, emptyMap<String, String>())
         }

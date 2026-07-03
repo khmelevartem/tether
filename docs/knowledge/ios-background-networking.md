@@ -8,7 +8,7 @@ The iOS background story is a hard architectural fork, not a tuning knob.
 
 ## What Tether's transport does today
 
-A Ktor CIO HTTP server bound to a raw listening TCP socket on every device, discovered via mDNS/Bonjour. The same stack runs on every platform — sender and receiver, Android, iOS, macOS, Desktop JVM. Each file moves as a raw-octet-stream `POST /upload?name=`; a multi-file or folder send opens with `POST /batch-begin` followed by one `POST /upload` per file.
+A Ktor CIO HTTP server bound to a raw listening TCP socket on every device, discovered via mDNS/Bonjour. The same stack runs on every platform — sender and receiver, Android, iOS, macOS, Desktop JVM. Each file moves as a raw-octet-stream `POST /upload?name=`; a multi-file or folder send opens with `POST /batch-begin`, sends one `POST /upload` per file, and closes with `POST /batch-end`.
 
 This works **only while the process owns its network resources**. On iOS, suspended apps don't.
 

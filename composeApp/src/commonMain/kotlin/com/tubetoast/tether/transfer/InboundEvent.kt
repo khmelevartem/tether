@@ -48,4 +48,14 @@ sealed interface InboundEvent {
         override val peer: PeerIdentity,
         val batchId: String,
     ) : InboundEvent
+
+    /**
+     * Emitted when the sender signals it has finished walking the batch via /batch-end. Finalizes
+     * a batch that delivered fewer files than declared (sender-side skips) so the receiver reaches
+     * a terminal state instead of waiting forever for the file-completion count to reach the total.
+     */
+    data class BatchEnd(
+        override val peer: PeerIdentity,
+        val batchId: String,
+    ) : InboundEvent
 }

@@ -7,6 +7,7 @@ import com.tubetoast.tether.discovery.DiscoveredDevicesStore
 import com.tubetoast.tether.preferences.TempDataStore
 import com.tubetoast.tether.protocol.BatchBeginRequest
 import com.tubetoast.tether.protocol.BatchCancelRequest
+import com.tubetoast.tether.protocol.BatchEndRequest
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.security.DefaultTrustedDeviceStore
 import com.tubetoast.tether.security.DeviceKeyPair
@@ -227,6 +228,54 @@ class FileServerEventsTest {
                 val event = collected.filterIsInstance<InboundEvent.BatchCancelled>().first()
                 assertEquals("batch-to-cancel", event.batchId)
                 assertEquals(peer, event.peer)
+            }
+        } finally {
+            client.close()
+        }
+    }
+
+    @Test
+    fun batch_end_with_valid_body_returns_200_and_emits_BatchEnd() {
+        val (server, port) = newServerWithPeer()
+        val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
+        try {
+            runBlocking {
+                val collected = mutableListOf<InboundEvent>()
+                val collectionJob = launch { server.events.collect { collected += it } }
+                val response: HttpResponse = withTimeout(5.seconds) {
+                    client.post("http://localhost:$port/batch-end") {
+                        contentType(ContentType.Application.Json)
+                        setBody(BatchEndRequest(batchId = "batch-to-end"))
+                    }
+                }
+                withTimeout(2.seconds) {
+                    while (collected.none { it is InboundEvent.BatchEnd }) delay(10.milliseconds)
+                }
+                collectionJob.cancel()
+
+                assertEquals(HttpStatusCode.OK, response.status)
+                val event = collected.filterIsInstance<InboundEvent.BatchEnd>().first()
+                assertEquals("batch-to-end", event.batchId)
+                assertEquals(peer, event.peer)
+            }
+        } finally {
+            client.close()
+        }
+    }
+
+    @Test
+    fun batch_end_with_malformed_body_returns_400() {
+        val (_, port) = newServerWithPeer()
+        val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
+        try {
+            runBlocking {
+                val response: HttpResponse = withTimeout(5.seconds) {
+                    client.post("http://localhost:$port/batch-end") {
+                        contentType(ContentType.Application.Json)
+                        setBody("not-valid-json")
+                    }
+                }
+                assertEquals(HttpStatusCode.BadRequest, response.status)
             }
         } finally {
             client.close()

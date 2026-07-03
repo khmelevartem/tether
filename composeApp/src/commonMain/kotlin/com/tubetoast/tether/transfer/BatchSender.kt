@@ -38,6 +38,7 @@ class BatchSender(
     private val sendOne: suspend (FileSource, onProgress: (Long, Long?) -> Unit) -> Unit,
     private val connectionMonitor: ConnectionMonitor,
     private val beginBatch: suspend (batchId: String, totalFiles: Int, totalBytes: Long?) -> Unit = { _, _, _ -> },
+    private val endBatch: suspend (batchId: String) -> Unit = {},
     val batchId: String = "",
     private val reconnectionTimeout: Duration = ReconnectionTimeout.DEFAULT,
     private val progressThrottle: Duration = 100.milliseconds,
@@ -273,6 +274,10 @@ class BatchSender(
         perFile: MutableList<PerFileStatus>,
         emit: suspend (BatchProgress) -> Unit,
     ): BatchOutcome {
+        // Reached only when the whole source list was walked (not on cancel — that posts /batch-cancel —
+        // nor on an unrecovered drop — that leaves the receiver to time out). Signal the receiver the batch
+        // is done so a delivery short of the declared total finalizes instead of waiting forever.
+        endBatch(batchId)
         val doneCount = perFile.count { it is PerFileStatus.Done }
         val failedEntries = perFile.filterIsInstance<PerFileStatus.Failed>()
         val failedNames = failedEntries.map { it.name }
