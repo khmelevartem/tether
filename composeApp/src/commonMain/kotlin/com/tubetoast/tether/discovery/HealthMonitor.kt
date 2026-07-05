@@ -69,15 +69,16 @@ class HealthMonitor(
 
         val results = coroutineScope {
             val probes = candidates.map { device ->
-                async(probeDispatcher) { device.fingerprint!! to fileClient.checkHealth(device) }
+                async(probeDispatcher) { device to fileClient.checkHealth(device) }
             }
             probes.awaitAll()
         }
 
-        results.forEach { (fingerprint, reachable) -> applyProbeResult(fingerprint, reachable, failureCounts) }
+        results.forEach { (device, reachable) -> applyProbeResult(device, reachable, failureCounts) }
     }
 
-    private fun applyProbeResult(fingerprint: String, reachable: Boolean, failureCounts: MutableMap<String, Int>) {
+    private fun applyProbeResult(device: Device, reachable: Boolean, failureCounts: MutableMap<String, Int>) {
+        val fingerprint = device.fingerprint!!
         if (reachable) {
             failureCounts.remove(fingerprint)
             return
@@ -86,7 +87,7 @@ class HealthMonitor(
         if (failures >= failureThreshold) {
             failureCounts.remove(fingerprint)
             store.removeByFingerprint(fingerprint)
-            log.warn { "peer unreachable after $failures probes → $fingerprint" }
+            log.warn { "peer unreachable after $failures probes → ${device.name}" }
         } else {
             failureCounts[fingerprint] = failures
         }
