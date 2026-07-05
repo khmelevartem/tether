@@ -62,7 +62,9 @@ class HealthMonitor(
     private suspend fun probeOnce(failureCounts: MutableMap<String, Int>) {
         val excludedIds = activeTransfers.peers.value.mapTo(mutableSetOf()) { it.id }
         val candidates = store.devices.value.filter { device -> device.fingerprint?.let { it !in excludedIds } == true }
-        log.debug { "probe cycle — candidates=${candidates.size}, excluded=${excludedIds.size}" }
+        if (candidates.isNotEmpty()) {
+            log.debug { "probe cycle — candidates=${candidates.size}, excluded=${excludedIds.size}" }
+        }
         pruneStaleCounters(candidates, failureCounts)
 
         val results = coroutineScope {
