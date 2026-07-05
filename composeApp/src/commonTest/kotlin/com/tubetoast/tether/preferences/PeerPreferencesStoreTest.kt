@@ -1,6 +1,6 @@
 package com.tubetoast.tether.preferences
 
-import com.tubetoast.tether.transfer.PeerIdentity
+import com.tubetoast.tether.protocol.PeerIdentity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlin.test.AfterTest

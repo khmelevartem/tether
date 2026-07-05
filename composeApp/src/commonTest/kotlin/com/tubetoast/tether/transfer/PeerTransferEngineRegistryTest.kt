@@ -1,7 +1,7 @@
 package com.tubetoast.tether.transfer
-
 import com.tubetoast.tether.preferences.FakePeerPreferencesStore
 import com.tubetoast.tether.protocol.Device
+import com.tubetoast.tether.protocol.PeerIdentity
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

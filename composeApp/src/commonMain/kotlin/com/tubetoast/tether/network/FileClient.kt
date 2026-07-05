@@ -9,6 +9,8 @@ import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.HttpTimeoutConfig
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.timeout
+import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
@@ -43,6 +45,7 @@ private val log = KydraLog.withTag(default = "FileClient")
 open class FileClient(
     private val client: HttpClient,
     private val noProgressTimeout: Duration = DEFAULT_NO_PROGRESS_TIMEOUT,
+    private val healthTimeout: Duration = DEFAULT_HEALTH_TIMEOUT,
 ) : Closeable {
     companion object {
         fun default(): FileClient = FileClient(
@@ -57,7 +60,7 @@ open class FileClient(
     }
 
     open suspend fun sendHello(target: Device, ownInfo: PeerAnnouncement): Boolean = try {
-        val response = client.post("http://${target.host}:${target.port}/hello") {
+        val response = client.post("${target.baseUrl()}/hello") {
             contentType(ContentType.Application.Json)
             setBody(ownInfo)
         }
@@ -66,6 +69,19 @@ open class FileClient(
         ok
     } catch (e: Exception) {
         log.warn { "hello failed → ${target.host}:${target.port} — ${e.message}" }
+        false
+    }
+
+    open suspend fun checkHealth(device: Device): Boolean = try {
+        log.debug { "health probe → ${device.host}:${device.port}" }
+        val response = client.get("${device.baseUrl()}/health") {
+            timeout { requestTimeoutMillis = healthTimeout.inWholeMilliseconds }
+        }
+        val ok = response.status == HttpStatusCode.OK
+        log.debug { "health probe ${if (ok) "OK" else "status ${response.status}"} → ${device.host}:${device.port}" }
+        ok
+    } catch (e: Exception) {
+        log.warn { "health probe failed → ${device.host}:${device.port} — ${e.message}" }
         false
     }
 
@@ -138,7 +154,7 @@ open class FileClient(
         fileName: String,
         totalBytes: Long?,
     ): SendResult = try {
-        val response = client.post("http://${device.host}:${device.port}/upload") {
+        val response = client.post("${device.baseUrl()}/upload") {
             url.encodedParameters.append("name", fileName.encodeURLQueryComponent(encodeFull = true))
             setBody(channel.asOctetStreamContent(totalBytes))
         }
@@ -159,6 +175,7 @@ open class FileClient(
 }
 
 private val DEFAULT_NO_PROGRESS_TIMEOUT: Duration = 60.seconds
+private val DEFAULT_HEALTH_TIMEOUT: Duration = 2.seconds
 
 private fun ByteReadChannel.asOctetStreamContent(totalBytes: Long?): OutgoingContent =
     object : OutgoingContent.ReadChannelContent() {
@@ -167,6 +184,8 @@ private fun ByteReadChannel.asOctetStreamContent(totalBytes: Long?): OutgoingCon
 
         override fun readFrom(): ByteReadChannel = this@asOctetStreamContent
     }
+
+private fun Device.baseUrl(): String = "http://$host:$port"
 
 private const val COPY_BUFFER_SIZE = 8 * 1024
 

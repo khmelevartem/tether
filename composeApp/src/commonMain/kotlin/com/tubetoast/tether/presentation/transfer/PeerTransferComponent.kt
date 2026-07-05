@@ -10,9 +10,9 @@ import com.tubetoast.tether.peer.Peer
 import com.tubetoast.tether.preferences.FileTransferPreferences
 import com.tubetoast.tether.presentation.banners.PeerConflictRelay
 import com.tubetoast.tether.protocol.DeviceType
+import com.tubetoast.tether.protocol.PeerIdentity
 import com.tubetoast.tether.transfer.FilePicker
 import com.tubetoast.tether.transfer.FileSource
-import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PeerTransferEngine
 import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.Pending

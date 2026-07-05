@@ -15,7 +15,7 @@ import com.tubetoast.tether.peer.PeersRepository
 import com.tubetoast.tether.presentation.banners.BannersComponent
 import com.tubetoast.tether.presentation.devicename.DeviceNameComponent
 import com.tubetoast.tether.presentation.transfer.PeerTransferComponent
-import com.tubetoast.tether.transfer.PeerIdentity
+import com.tubetoast.tether.protocol.PeerIdentity
 import com.tubetoast.tether.transfer.PickKind
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.launchIn

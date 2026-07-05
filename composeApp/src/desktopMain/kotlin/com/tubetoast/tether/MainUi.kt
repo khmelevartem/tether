@@ -3,6 +3,7 @@
 package com.tubetoast.tether
 
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -23,6 +24,8 @@ import kotlinx.coroutines.runBlocking
 import org.jetbrains.compose.resources.painterResource
 import tether.composeapp.generated.resources.Res
 import tether.composeapp.generated.resources.icon
+import java.awt.event.WindowEvent
+import java.awt.event.WindowListener
 
 fun main() = runBlocking {
     // see docs/knowledge/desktop-system-theme.md — must be set before any Swing/AWT class loads
@@ -54,6 +57,39 @@ fun main() = runBlocking {
 
                 LaunchedEffect(window) {
                     container.windowHolder.window = window
+                }
+
+                DisposableEffect(window) {
+                    val listener = object : WindowListener {
+                        override fun windowOpened(e: WindowEvent) = Unit
+
+                        override fun windowClosing(e: WindowEvent) = Unit
+
+                        override fun windowClosed(e: WindowEvent) = Unit
+
+                        override fun windowIconified(e: WindowEvent) {
+                            container.healthMonitor.stop()
+                        }
+
+                        override fun windowDeiconified(e: WindowEvent) {
+                            container.healthMonitor.start(container.appScope)
+                        }
+
+                        override fun windowActivated(e: WindowEvent) = Unit
+
+                        override fun windowDeactivated(e: WindowEvent) = Unit
+                    }
+                    window.addWindowListener(listener)
+                    // Cold launch: the window's content effects compose before the frame is
+                    // realized, so window.isShowing is still false here — start unconditionally
+                    // (deiconify handles restore-from-minimize). See
+                    // docs/knowledge/compose-desktop-window-visibility.md
+
+                    container.healthMonitor.start(container.appScope)
+                    onDispose {
+                        window.removeWindowListener(listener)
+                        container.healthMonitor.stop()
+                    }
                 }
 
                 val dropHandler = remember(component) { WindowDropHandler(component, scope) }
