@@ -82,7 +82,9 @@ fun main() = runBlocking {
                     window.addWindowListener(listener)
                     // Cold launch: the window's content effects compose before the frame is
                     // realized, so window.isShowing is still false here — start unconditionally
-                    // (deiconify handles restore-from-minimize).
+                    // (deiconify handles restore-from-minimize). See
+                    // docs/knowledge/compose-desktop-window-visibility.md
+
                     container.healthMonitor.start(container.appScope)
                     onDispose {
                         window.removeWindowListener(listener)
