@@ -135,9 +135,15 @@ class TetherCommand :
             echo("FileServer started  →  http://localhost:${handle.port}/health")
             echo("mDNS started → advertising '$deviceName' on port ${handle.port}\n")
 
+            container.healthMonitor.start(container.appScope)
+            echo("health monitor started → probing discovered peers for reachability\n")
+
             registerShutdownHook(
                 handle = handle,
-                onCancel = { activeEngineRef.get()?.onCancel() },
+                onCancel = {
+                    container.healthMonitor.stop()
+                    activeEngineRef.get()?.onCancel()
+                },
                 afterClose = { ephemeralTempDir?.deleteRecursively() },
             )
         } catch (e: Throwable) {

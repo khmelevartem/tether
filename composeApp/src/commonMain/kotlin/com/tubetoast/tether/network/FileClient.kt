@@ -73,10 +73,13 @@ open class FileClient(
     }
 
     open suspend fun checkHealth(device: Device): Boolean = try {
+        log.debug { "health probe → ${device.host}:${device.port}" }
         val response = client.get("${device.baseUrl()}/health") {
             timeout { requestTimeoutMillis = healthTimeout.inWholeMilliseconds }
         }
-        response.status == HttpStatusCode.OK
+        val ok = response.status == HttpStatusCode.OK
+        log.debug { "health probe ${if (ok) "OK" else "status ${response.status}"} → ${device.host}:${device.port}" }
+        ok
     } catch (e: Exception) {
         log.warn { "health probe failed → ${device.host}:${device.port} — ${e.message}" }
         false

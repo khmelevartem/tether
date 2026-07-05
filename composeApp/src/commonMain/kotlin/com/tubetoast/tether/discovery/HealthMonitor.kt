@@ -12,6 +12,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import ru.pocketbyte.kydra.log.KydraLog
+import ru.pocketbyte.kydra.log.debug
 import ru.pocketbyte.kydra.log.info
 import ru.pocketbyte.kydra.log.warn
 import ru.pocketbyte.kydra.log.wrapper.withTag
@@ -21,8 +22,10 @@ import kotlin.time.Duration.Companion.seconds
 private val log = KydraLog.withTag(default = "HealthMonitor")
 
 /**
- * Foreground-only reachability probe. While started, probes every peer in [store] and removes a
- * peer after [failureThreshold] consecutive failed `/health` checks. The cadence adapts: [period]
+ * Reachability probe. While started, probes every peer in [store] and removes a peer after
+ * [failureThreshold] consecutive failed `/health` checks. Callers gate `start`/`stop` by their own
+ * lifecycle — UI visibility on app targets, always-on for the process's lifetime in the headless
+ * CLI. The cadence adapts: [period]
  * between cycles while every peer is healthy, [fastPeriod] as soon as any peer is mid-failure-streak,
  * reverting to [period] once all are healthy again. A peer with a transfer in flight
  * ([activeTransfers]) is excluded from probing and resumes with a cleared failure count once the
@@ -59,6 +62,7 @@ class HealthMonitor(
     private suspend fun probeOnce(failureCounts: MutableMap<String, Int>) {
         val excludedIds = activeTransfers.peers.value.mapTo(mutableSetOf()) { it.id }
         val candidates = store.devices.value.filter { device -> device.fingerprint?.let { it !in excludedIds } == true }
+        log.debug { "probe cycle — candidates=${candidates.size}, excluded=${excludedIds.size}" }
         pruneStaleCounters(candidates, failureCounts)
 
         val results = coroutineScope {

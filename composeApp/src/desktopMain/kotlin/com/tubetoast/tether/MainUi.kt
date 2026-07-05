@@ -80,9 +80,10 @@ fun main() = runBlocking {
                         override fun windowDeactivated(e: WindowEvent) = Unit
                     }
                     window.addWindowListener(listener)
-                    if (window.isShowing) {
-                        container.healthMonitor.start(container.appScope)
-                    }
+                    // Cold launch: the window's content effects compose before the frame is
+                    // realized, so window.isShowing is still false here — start unconditionally
+                    // (deiconify handles restore-from-minimize).
+                    container.healthMonitor.start(container.appScope)
                     onDispose {
                         window.removeWindowListener(listener)
                         container.healthMonitor.stop()
