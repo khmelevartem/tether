@@ -15,16 +15,9 @@ The goal is not a report for its own sake and not a catalog of pointwise mistake
 
 ## Read the transcript, not the summary
 
-**The session transcript is the primary source. Never run the retro off a compaction summary.** A summary is lossy and self-serving: it drops the decision-path — approaches built then abandoned, corrections made mid-flight — and it reframes process failures as settled background. Those dropped turns are the highest-value retro signal.
+**The session transcript is the primary source — never run the retro off a compaction summary.** A summary drops the decision-path (approaches abandoned, corrections made mid-flight) and reframes process failures as settled background; those dropped turns are the highest-value signal.
 
-**User turns carry the most signal.** Every human reply — a correction, a redirect, a "why did you do X", a repeated request — marks a point where the system leaned on the user instead of carrying the work itself. Read the user's turns first and in full; the assistant's turns are context for them.
-
-The transcript lives at `~/.claude/projects/<project-slug>/<session-id>.jsonl`:
-
-- `<project-slug>` — the working-directory path with every `/` and `.` replaced by `-`. When the work ran in a git worktree that was later removed, the transcript persists under the **origin** repo's slug, not the worktree's.
-- `<session-id>` — the current session UUID; it is the transcript filename and also appears in the scratchpad path. When unsure, take the most recently modified file: `ls -t ~/.claude/projects/*<repo>*/*.jsonl | head`.
-
-Extract the human-typed turns — JSONL entries with `type: "user"` whose content is text, excluding tool results, system reminders, and task notifications — and read those before anything else.
+Locate the transcript with `/find-transcript`. Read the human-typed turns first and in full — every correction, redirect, or repeated request marks where the system leaned on the user instead of carrying the work itself; the assistant's turns are context for them.
 
 ---
 
