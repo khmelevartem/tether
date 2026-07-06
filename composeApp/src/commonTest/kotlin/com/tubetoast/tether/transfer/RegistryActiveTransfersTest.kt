@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -114,7 +115,10 @@ class RegistryActiveTransfersTest {
         inboundEvents.emit(ReceiveEvent.Started("file.txt", 1))
         advanceUntilIdle()
         inboundEvents.emit(ReceiveEvent.ConnectionLost(receivedSoFar = 0))
-        advanceUntilIdle()
+        // Not advanceUntilIdle: the inbound reconnect countdown would elapse the full
+        // reconnection timeout and drive the engine to Error. runCurrent propagates the
+        // Reconnecting state without advancing virtual time into the countdown.
+        runCurrent()
 
         assertIs<PeerTransferState.Reconnecting>(engine.state.value)
         assertEquals(setOf(peerA), activeTransfers.peers.value)
