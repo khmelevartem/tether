@@ -13,6 +13,21 @@ The goal is not a report for its own sake and not a catalog of pointwise mistake
 
 ---
 
+## Read the transcript, not the summary
+
+**The session transcript is the primary source. Never run the retro off a compaction summary.** A summary is lossy and self-serving: it drops the decision-path — approaches built then abandoned, corrections made mid-flight — and it reframes process failures as settled background. Those dropped turns are the highest-value retro signal.
+
+**User turns carry the most signal.** Every human reply — a correction, a redirect, a "why did you do X", a repeated request — marks a point where the system leaned on the user instead of carrying the work itself. Read the user's turns first and in full; the assistant's turns are context for them.
+
+The transcript lives at `~/.claude/projects/<project-slug>/<session-id>.jsonl`:
+
+- `<project-slug>` — the working-directory path with every `/` and `.` replaced by `-`. When the work ran in a git worktree that was later removed, the transcript persists under the **origin** repo's slug, not the worktree's.
+- `<session-id>` — the current session UUID; it is the transcript filename and also appears in the scratchpad path. When unsure, take the most recently modified file: `ls -t ~/.claude/projects/*<repo>*/*.jsonl | head`.
+
+Extract the human-typed turns — JSONL entries with `type: "user"` whose content is text, excluding tool results, system reminders, and task notifications — and read those before anything else.
+
+---
+
 ## Before you start — context-bias gate
 
 A retro run in the same context that produced the work inherits that work's framing: the agent just argued for these decisions and will rationalise them, and the signals it is least able to see from inside — an option pruned, an approach abandoned — are the most valuable ones. Reset before analysing.
@@ -43,7 +58,7 @@ git log --oneline <merge-commit> -1  # if already merged
 
 Read the full history: issue, comments, review, conversation in the PR.
 
-Reconstruct the **path**, not only the end-state: walk the PR's commit sequence and the session transcript for an approach that was built then replaced, or an option declared off-limits. The costliest signals — a wrong-axis decision, redone — leave no trace in the final diff; they live only in the order of the work. If the session was compacted, its summary is a lossy secondary source that drops the decision-path and can reframe a process failure as a success — read the actual transcript (or, if it is gone, the surviving sub-agent logs plus the commit sequence), never run the retro off the summary alone.
+Reconstruct the **path**, not only the end-state: walk the PR's commit sequence and the session transcript (located above) for an approach that was built then replaced, or an option declared off-limits. The costliest signals — a wrong-axis decision, redone — leave no trace in the final diff; they live only in the order of the work. If the transcript is gone, fall back to the surviving sub-agent logs plus the commit sequence.
 
 ---
 
