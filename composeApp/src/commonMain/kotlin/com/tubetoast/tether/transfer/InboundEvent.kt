@@ -1,5 +1,7 @@
 package com.tubetoast.tether.transfer
 
+import com.tubetoast.tether.protocol.PeerIdentity
+
 sealed interface InboundEvent {
     val peer: PeerIdentity
 

@@ -4,9 +4,11 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import com.tubetoast.tether.config.DeviceNamePersistence
 import com.tubetoast.tether.config.DeviceNameStore
+import com.tubetoast.tether.discovery.ActiveTransfers
 import com.tubetoast.tether.discovery.DefaultSelfAnnouncementProvider
 import com.tubetoast.tether.discovery.DeviceNameRepublisher
 import com.tubetoast.tether.discovery.DiscoveredDevicesStore
+import com.tubetoast.tether.discovery.HealthMonitor
 import com.tubetoast.tether.discovery.MdnsDiscovery
 import com.tubetoast.tether.discovery.RendezvousAnnouncer
 import com.tubetoast.tether.discovery.SelfAnnouncementProvider
@@ -21,6 +23,7 @@ import com.tubetoast.tether.preferences.PeerPreferencesStore
 import com.tubetoast.tether.presentation.RootComponentFactory
 import com.tubetoast.tether.presentation.banners.PeerConflictRelay
 import com.tubetoast.tether.protocol.DeviceType
+import com.tubetoast.tether.protocol.PeerIdentity
 import com.tubetoast.tether.security.DefaultTrustedDeviceStore
 import com.tubetoast.tether.security.DeviceKeyPair
 import com.tubetoast.tether.security.TrustedDeviceStore
@@ -31,11 +34,11 @@ import com.tubetoast.tether.transfer.DefaultTransferActivityTracker
 import com.tubetoast.tether.transfer.FilePicker
 import com.tubetoast.tether.transfer.InboundEventRouter
 import com.tubetoast.tether.transfer.NoOpConnectionMonitor
-import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PeerTransferEngine
 import com.tubetoast.tether.transfer.PeerTransferEngineRegistry
 import com.tubetoast.tether.transfer.PendingFilesRepository
 import com.tubetoast.tether.transfer.ReconnectionTimeout
+import com.tubetoast.tether.transfer.RegistryActiveTransfers
 import com.tubetoast.tether.transfer.TransferActivityTracker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -130,6 +133,20 @@ abstract class AppContainer {
                     cancelBatch = { batchId -> peerFileSender.cancelBatch(peer, batchId) },
                 )
             },
+            engineDispatcher = Dispatchers.Default,
+        )
+    }
+
+    private val activeTransfers: ActiveTransfers by lazy {
+        RegistryActiveTransfers(peerTransferEngineRegistry, appScope)
+    }
+
+    open val healthMonitor: HealthMonitor by lazy {
+        HealthMonitor(
+            store = discoveredDevicesStore,
+            fileClient = fileClient,
+            activeTransfers = activeTransfers,
+            probeDispatcher = Dispatchers.Default,
         )
     }
 

@@ -34,3 +34,5 @@ Both create the same `/slash-command`. The criteria are about what the artifact 
 ## Tone for prompt prose
 
 [CLAUDE.md §Code style](../CLAUDE.md#code-style) and [`docs/engineering/long-lived-artifacts.md`](../docs/engineering/long-lived-artifacts.md) apply. Match siblings in the same folder.
+
+Keep step prose a minimal directive checklist, not a tutorial. When a step always reduces to running a script, the whole step is one imperative line invoking it (marked mandatory where needed) — no inline bash block, no rationale narration, no walk-through of what the script does. Push the mechanics into the script and let hooks carry the invariants; a following agent has limited attention and does not need to think about plumbing the script already gets right. Reserve prose for *when* to run and *sequencing*, not *how* it works.

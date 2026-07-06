@@ -42,6 +42,14 @@ When reading: verify against the code before acting on the claim.
 
 When writing: prefer the product invariant («pairing keyed by stable device identity») over the description of the current implementation. If a runtime detail is unavoidable, keep the minimum needed for comprehension.
 
+## A comment earns its place or it goes
+
+Default to no comment. Before writing one, try extracting the block into a named private method — the name usually carries the intent the comment would have stated, and an explanatory comment rots as the code beneath it changes. Keep a comment only where the code genuinely cannot express the intent: a deliberately swallowed exception, a non-obvious external-library invariant, a hidden constraint.
+
+KDoc holds a higher bar — contracts only: nullable semantics, non-obvious pre-/postconditions, a non-obvious *why*. Restating the method name or signature is noise; if the KDoc says nothing the signature does not, remove it.
+
+When editing a file that already carries comments, hold what is there to the same bar — remove the ones that no longer earn their place rather than preserving them by default.
+
 ## Deferred work carries a tracker
 
 A `TODO` (or `FIXME`) in code is a deferred-work marker. It must point to a tracked issue — the form does not matter (`TODO(#123)`, `todo #123`, `TODO[123]`, `// TODO - 123: ...`), only that the digits identify a GitHub issue a reader can open.

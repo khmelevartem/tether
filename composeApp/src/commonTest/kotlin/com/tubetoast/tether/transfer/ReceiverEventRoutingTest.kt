@@ -1,5 +1,6 @@
 package com.tubetoast.tether.transfer
 
+import com.tubetoast.tether.protocol.PeerIdentity
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.toList

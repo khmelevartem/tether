@@ -9,11 +9,11 @@ import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.protocol.PairRequest
 import com.tubetoast.tether.protocol.PairResponse
 import com.tubetoast.tether.protocol.PeerAnnouncement
+import com.tubetoast.tether.protocol.PeerIdentity
 import com.tubetoast.tether.security.TrustedDeviceStore
 import com.tubetoast.tether.security.deviceIdFromPublicKey
 import com.tubetoast.tether.transfer.InboundEvent
 import com.tubetoast.tether.transfer.NoOpTransferActivityTracker
-import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.TransferActivityTracker
 import com.tubetoast.tether.transfer.toPeerIdentity
 import io.ktor.http.HttpStatusCode

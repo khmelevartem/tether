@@ -1,7 +1,7 @@
 package com.tubetoast.tether.network
 
+import com.tubetoast.tether.protocol.PeerIdentity
 import com.tubetoast.tether.transfer.InboundEvent
-import com.tubetoast.tether.transfer.PeerIdentity
 import kotlinx.coroutines.flow.SharedFlow
 
 expect class FileServer {

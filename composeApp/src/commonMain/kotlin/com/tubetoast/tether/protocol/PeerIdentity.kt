@@ -1,4 +1,4 @@
-package com.tubetoast.tether.transfer
+package com.tubetoast.tether.protocol
 
 import kotlinx.serialization.Serializable
 

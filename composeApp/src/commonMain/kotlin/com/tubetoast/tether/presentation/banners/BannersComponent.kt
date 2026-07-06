@@ -4,7 +4,7 @@ import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.essenty.lifecycle.coroutines.coroutineScope
 import com.tubetoast.tether.peer.PeersRepository
 import com.tubetoast.tether.protocol.DeviceType
-import com.tubetoast.tether.transfer.PeerIdentity
+import com.tubetoast.tether.protocol.PeerIdentity
 import com.tubetoast.tether.transfer.PeerTransferEngineRegistry
 import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.PendingFilesRepository

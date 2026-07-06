@@ -1,6 +1,6 @@
 package com.tubetoast.tether
 
-import com.tubetoast.tether.transfer.PeerIdentity
+import com.tubetoast.tether.protocol.PeerIdentity
 import com.tubetoast.tether.transfer.ReceiveEvent
 import com.tubetoast.tether.transfer.WindowHolder
 import kotlinx.coroutines.ExperimentalCoroutinesApi

@@ -17,9 +17,7 @@ Only if the diff touches: `androidMain/`, `iosMain/`, `jvmMain/`, `desktopMain/`
 
 - `docs/engineering/architecture-principles.md` — common-first rule
 - `docs/engineering/modules.md` — module / source-set boundaries
-- `docs/knowledge/apple-platform.md` — full file (delegate GC, Local Network Privacy, NSRunLoop in tests, Keychain query dicts)
-- `docs/knowledge/android-fgs.md` if the diff touches a foreground service
-- `docs/knowledge/ios-background-networking.md` if the diff touches iOS listening sockets or background URL sessions
+- `docs/knowledge/` — scan for entries whose subject is a platform surface the diff touches (Android, iOS, Desktop, headless/JVM runtime) and read those - first the problem to see if it matches, then the solution if does.
 - `docs/engineering/platform-concerns.md` — concrete checklist for Phase 2
 
 ## Phase 1 — Holistic platform-assumption audit

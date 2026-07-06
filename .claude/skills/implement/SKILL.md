@@ -26,6 +26,8 @@ Every actionable value the classify scripts emit is consumed mechanically, never
 
 Hold only the plan, per-iteration finding summaries, and gate decisions. Do not Read doc or source files into the orchestrator thread to understand them — route through a sub-agent that returns a digest. Read a file verbatim only when a gate decision needs the exact text.
 
+A sub-agent that appears to stall or die is usually a network/watchdog artifact, not incomplete work — verify the worktree and commit log before concluding failure, and re-dispatch rather than taking the edit into this thread.
+
 ## Issue scope is a starting point, not a cage.
 
 What matters is the intention and the benefit the issue can bring, note its verbatim scope boundaries. If the issue has a prebaked reason or solution - it's just a proposal, not a directive. You must come with your own reasoning, design or justification throughout the whole workflow - not directly you as an agent, but with dispatching of proper subagents.

@@ -2,8 +2,8 @@
 
 package com.tubetoast.tether.network
 
+import com.tubetoast.tether.protocol.PeerIdentity
 import com.tubetoast.tether.transfer.InboundEvent
-import com.tubetoast.tether.transfer.PeerIdentity
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow

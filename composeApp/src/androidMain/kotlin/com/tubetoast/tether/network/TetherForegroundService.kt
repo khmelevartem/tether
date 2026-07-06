@@ -17,7 +17,7 @@ import androidx.lifecycle.lifecycleScope
 import com.tubetoast.tether.R
 import com.tubetoast.tether.di.AppContainerProvider
 import com.tubetoast.tether.discovery.MdnsDiscovery
-import com.tubetoast.tether.transfer.PeerIdentity
+import com.tubetoast.tether.protocol.PeerIdentity
 import com.tubetoast.tether.transfer.ReceiveEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers

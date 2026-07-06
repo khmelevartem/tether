@@ -29,7 +29,7 @@
 - [ ] `--profile`, Build Scan (`--scan`) — где смотреть, что тормозит сборку
 
 ### Управление зависимостями
-- [ ] `api` vs `implementation` — что протекает в транзитивный classpath потребителя, влияние на incremental compilation и build time
+- [x] `api` vs `implementation` — что протекает в транзитивный classpath потребителя, влияние на incremental compilation и build time
 - [ ] `compileOnly` / `runtimeOnly` / `testImplementation` — когда что
 - [ ] Configurations как граф — resolvable vs consumable vs dependency-scope
 - [ ] **Version Catalogs** (`libs.versions.toml`) — зачем, type-safe accessors, `bundles`, `plugins`
@@ -154,7 +154,7 @@
 - [x] Activity / Fragment lifecycle — rotation, process death, multi-window
 - [ ] `onSaveInstanceState` vs `ViewModel` — что переживает что
 - [ ] `savedStateHandle` в ViewModel — как работает при process death
-- [ ] Разница `onStop` vs `onPause` в multi-window
+- [x] Разница `onStop` vs `onPause` в multi-window
 
 ### Process death & State
 - [x] Что такое process death — когда, что теряется, что остаётся

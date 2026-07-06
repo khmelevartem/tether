@@ -12,8 +12,8 @@ import com.arkivanov.decompose.value.Value
 import com.arkivanov.decompose.value.update
 import com.tubetoast.tether.presentation.settings.SettingsComponent
 import com.tubetoast.tether.presentation.transfer.TransferDetailsComponent
+import com.tubetoast.tether.protocol.PeerIdentity
 import com.tubetoast.tether.transfer.FileSource
-import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PendingFilesRepository
 
 class RootComponent(

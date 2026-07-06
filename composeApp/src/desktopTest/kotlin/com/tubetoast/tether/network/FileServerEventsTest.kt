@@ -6,10 +6,10 @@ import com.tubetoast.tether.protocol.BatchBeginRequest
 import com.tubetoast.tether.protocol.BatchCancelRequest
 import com.tubetoast.tether.protocol.BatchEndRequest
 import com.tubetoast.tether.protocol.Device
+import com.tubetoast.tether.protocol.PeerIdentity
 import com.tubetoast.tether.security.DefaultTrustedDeviceStore
 import com.tubetoast.tether.security.DeviceKeyPair
 import com.tubetoast.tether.transfer.InboundEvent
-import com.tubetoast.tether.transfer.PeerIdentity
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation

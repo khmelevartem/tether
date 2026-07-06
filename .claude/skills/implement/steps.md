@@ -234,7 +234,7 @@ Use the produced action list to form prompts for sub-agents in the next step.
 
 Dispatch every corresponding writing agent with a proper prompt:
 
-- non-trivial mechanism / library / structural choice → `architect` first
+- non-trivial mechanism / library / structural choice → `architect` first. When the issue prescribes a solution shape, brief the architect to treat it as one option to weigh, not the anchor.
 - UI work (Compose, screens, components, theming, navigation) → `ui-expert`
 - Everything else → `coder`
 
@@ -271,13 +271,13 @@ Order matters — lower layers depend on upper ones for vocabulary and scope.
 
 **Applies to:** `track=code`.
 
-Probe the implemented happy-path scenario with minimal efforts. 
+Probe the behaviour this PR adds — not the app's pre-existing happy path — with minimal effort per target. When the change wires behaviour at a platform entry point, exercise it on every runtime the diff touches (Android, iOS, Desktop UI, headless CLI), not one representative. If the issue limits the target set, probe only those.
 
 Come with your own algorithm for it or check, if it is already covered in `.claude/skills/smoke-test/SKILL.md`.
 
-Ask the user to check only as last resort, if you cannot invoke the scenario with the tools available for you.
+Ask the user to check only as last resort, if you cannot invoke the scenario with the tools available for you — minimal effort scopes each probe, it does not license skipping a touched runtime.
 
-If it passes successfully → move forward.
+If it passes on every touched target → move forward.
 If it fails → go back to `transform input to actions` step with a clear problem description, logs if any and a reason, if it is obvious from the observed behaviour or logs.
 
 ---

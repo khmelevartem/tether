@@ -2,11 +2,11 @@ package com.tubetoast.tether.network
 
 import com.tubetoast.tether.discovery.DiscoveredDevicesStore
 import com.tubetoast.tether.identity.DeviceIdentityStore
+import com.tubetoast.tether.protocol.PeerIdentity
 import com.tubetoast.tether.security.DeviceKeyPair
 import com.tubetoast.tether.security.TrustedDeviceStore
 import com.tubetoast.tether.transfer.InboundEvent
 import com.tubetoast.tether.transfer.NoOpTransferActivityTracker
-import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.TransferActivityTracker
 import io.ktor.server.cio.CIO
 import io.ktor.server.cio.CIOApplicationEngine

@@ -21,6 +21,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import platform.Foundation.NSNotificationCenter
 import platform.UIKit.UIApplicationDidBecomeActiveNotification
+import platform.UIKit.UIApplicationDidEnterBackgroundNotification
+import platform.UIKit.UIApplicationWillEnterForegroundNotification
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.error
 import ru.pocketbyte.kydra.log.wrapper.withTag
@@ -67,6 +69,7 @@ fun MainViewController() = run {
                 container.rendezvousAnnouncer.start(scope)
                 container.autoSendDispatcher.start()
                 IosInboundNotifier(container.inboundEventRouter.receiveEvents, scope).start()
+                container.healthMonitor.start(scope)
                 drainSharedFiles()
             }
 
@@ -76,6 +79,18 @@ fun MainViewController() = run {
                 queue = null,
             ) { _ -> drainSharedFiles() }
 
+            val willEnterForegroundObserver = NSNotificationCenter.defaultCenter.addObserverForName(
+                name = UIApplicationWillEnterForegroundNotification,
+                `object` = null,
+                queue = null,
+            ) { _ -> container.healthMonitor.start(scope) }
+
+            val didEnterBackgroundObserver = NSNotificationCenter.defaultCenter.addObserverForName(
+                name = UIApplicationDidEnterBackgroundNotification,
+                `object` = null,
+                queue = null,
+            ) { _ -> container.healthMonitor.stop() }
+
             val sharedFilesObserver = NSNotificationCenter.defaultCenter.addObserverForName(
                 name = SHARED_FILES_AVAILABLE_NOTIFICATION,
                 `object` = null,
@@ -84,7 +99,10 @@ fun MainViewController() = run {
 
             onDispose {
                 NSNotificationCenter.defaultCenter.removeObserver(becomeActiveObserver)
+                NSNotificationCenter.defaultCenter.removeObserver(willEnterForegroundObserver)
+                NSNotificationCenter.defaultCenter.removeObserver(didEnterBackgroundObserver)
                 NSNotificationCenter.defaultCenter.removeObserver(sharedFilesObserver)
+                container.healthMonitor.stop()
                 container.nameRepublisher.stop()
                 container.rendezvousAnnouncer.stop()
                 scope.cancel()
