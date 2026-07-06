@@ -39,7 +39,7 @@ Assemble the dossier — issue, session transcript, PR, and commit log in one br
 .claude/skills/retro/task-dossier.sh <N>
 ```
 
-It derives the PR and merge-commit from the issue; pass them as second and third arguments to override.
+It gathers every PR for the issue — superseded and closed attempts included, since a replaced first approach is the task history — and the merge-commit; pass a PR and merge-commit as the second and third arguments to override.
 
 **The transcript is the primary source.** Read its human-typed user turns first and in full — every correction, redirect, or repeated request marks where the system leaned on the user instead of carrying the work. Never run the retro off a compaction summary: it drops the decision-path and reframes process failures as settled background.
 
