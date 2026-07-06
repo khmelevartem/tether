@@ -5,6 +5,8 @@ import com.tubetoast.tether.TetherApp
 import com.tubetoast.tether.protocol.PairRequest
 import com.tubetoast.tether.security.DeviceKeyPair
 import com.tubetoast.tether.security.TrustedDeviceStore
+import com.tubetoast.tether.transfer.InboundCancelRegistry
+import com.tubetoast.tether.transfer.InboundEventBus
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -61,6 +63,8 @@ class FileServerAndroidPairTest {
             ),
             trustedDeviceStore = throwingStore,
             deviceKeyPair = DeviceKeyPair(keyPairDir),
+            inboundEventBus = InboundEventBus(),
+            cancelRegistry = InboundCancelRegistry(),
         )
         server = srv
         val port = srv.start()

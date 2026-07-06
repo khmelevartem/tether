@@ -11,21 +11,15 @@ import kotlinx.coroutines.launch
 import kotlin.concurrent.atomics.AtomicReference
 
 /**
- * Fans out [InboundEvent]s from the FileServer to per-peer [ReceiveEvent] flows consumed by
- * [PeerTransferEngine], and to the aggregate [receiveEvents] flow consumed by platform notifiers.
+ * Fans wire-level [InboundEvent]s out to per-peer [ReceiveEvent] flows, synthesizing the
+ * batch-shaped events ([ReceiveEvent.Started], [ReceiveEvent.BatchCompleted]) the wire protocol
+ * does not send explicitly: a sender that skips /batch-begin gets an implicit single-file batch,
+ * and a batch completes either when the per-file count reaches the declared total or when the
+ * sender signals it is done sending fewer files than declared.
  *
- * Synthesizes [ReceiveEvent.Started] on [InboundEvent.BatchStarted] (or on the first file event
- * for senders that skip the batch-begin call), and [ReceiveEvent.BatchCompleted] when the
- * per-peer file completion count reaches the declared total — or, for a batch that delivered
- * fewer files than declared, on [InboundEvent.BatchEnd].
- *
- * A sender that posts to /upload without a preceding /batch-begin is treated as an implicit
- * single-file batch: [ReceiveEvent.Started] is synthesized before the file's events and
- * [ReceiveEvent.BatchCompleted] fires after the single file completes.
- *
- * All mutations to the per-peer batch state run on the single collector coroutine; the
- * per-peer flow map is an immutable snapshot updated via CAS so engines can register from
- * any thread without coordination with the collector.
+ * All batch-state mutation runs on the single collector coroutine; the per-peer flow map is an
+ * immutable snapshot updated via CAS so engines can register from any thread without
+ * coordinating with the collector.
  */
 class InboundEventRouter(
     scope: CoroutineScope,
@@ -107,13 +101,20 @@ class InboundEventRouter(
                 emit(peer, flow, ReceiveEvent.Failed(file = event.name, reason = event.reason))
             }
             is InboundEvent.ConnectionLost -> {
-                val batch = if (event.cancelled) peerBatch.remove(peer) else peerBatch[peer]
-                val received = batch?.receivedCount ?: 0
-                val total = (batch?.totalFiles ?: 0).coerceAtLeast(received)
-                if (event.cancelled && batch != null) {
-                    emit(peer, flow, ReceiveEvent.BatchCompleted(received = received, total = total))
-                }
+                val received = peerBatch[peer]?.receivedCount ?: 0
                 emit(peer, flow, ReceiveEvent.ConnectionLost(receivedSoFar = received))
+            }
+            is InboundEvent.CancelledByReceiver -> {
+                val batch = peerBatch.remove(peer) ?: return
+                emit(
+                    peer,
+                    flow,
+                    ReceiveEvent.BatchCompleted(
+                        received = batch.receivedCount,
+                        total = batch.totalFiles,
+                        partialReason = PartialOutcome.ReceiverCancelled,
+                    ),
+                )
             }
             is InboundEvent.BatchCancelled -> {
                 val batch = peerBatch[peer]

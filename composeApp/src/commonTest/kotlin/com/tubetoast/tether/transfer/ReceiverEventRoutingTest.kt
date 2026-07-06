@@ -182,7 +182,7 @@ class ReceiverEventRoutingTest {
     }
 
     @Test
-    fun `receiver-cancel on in-flight batch synthesizes partial BatchCompleted then ConnectionLost`() = runTest {
+    fun `CancelledByReceiver synthesizes terminal BatchCompleted, no ConnectionLost`() = runTest {
         val inbound = MutableSharedFlow<InboundEvent>(extraBufferCapacity = 16)
         val router = buildRouter(inbound, backgroundScope)
         val received = mutableListOf<ReceiveEvent>()
@@ -191,17 +191,33 @@ class ReceiverEventRoutingTest {
 
         inbound.emit(InboundEvent.BatchStarted(peerA, batchId = "b1", totalFiles = 3, totalBytes = null))
         inbound.emit(InboundEvent.FileCompleted(peerA, "a.txt", null))
-        inbound.emit(InboundEvent.ConnectionLost(peerA, cancelled = true))
+        inbound.emit(InboundEvent.CancelledByReceiver(peerA))
         runCurrent()
 
         val batchCompleted = received.filterIsInstance<ReceiveEvent.BatchCompleted>()
         assertEquals(1, batchCompleted.size)
         assertEquals(1, batchCompleted[0].received)
         assertEquals(3, batchCompleted[0].total)
+        assertEquals(PartialOutcome.ReceiverCancelled, batchCompleted[0].partialReason)
 
-        val connLost = received.filterIsInstance<ReceiveEvent.ConnectionLost>()
-        assertEquals(1, connLost.size)
-        assertEquals(1, connLost[0].receivedSoFar)
+        assertTrue(
+            received.none { it is ReceiveEvent.ConnectionLost },
+            "a deliberate receiver cancel must not also emit ConnectionLost",
+        )
+    }
+
+    @Test
+    fun `CancelledByReceiver with no active batch is silently ignored`() = runTest {
+        val inbound = MutableSharedFlow<InboundEvent>(extraBufferCapacity = 16)
+        val router = buildRouter(inbound, backgroundScope)
+        val received = mutableListOf<ReceiveEvent>()
+        backgroundScope.launch { router.eventsFor(peerA).toList(received) }
+        runCurrent()
+
+        inbound.emit(InboundEvent.CancelledByReceiver(peerA))
+        runCurrent()
+
+        assertTrue(received.isEmpty(), "CancelledByReceiver with no active batch must emit nothing")
     }
 
     @Test
@@ -214,7 +230,7 @@ class ReceiverEventRoutingTest {
 
         inbound.emit(InboundEvent.BatchStarted(peerA, batchId = "b1", totalFiles = 3, totalBytes = null))
         inbound.emit(InboundEvent.FileCompleted(peerA, "a.txt", null))
-        inbound.emit(InboundEvent.ConnectionLost(peerA, cancelled = false))
+        inbound.emit(InboundEvent.ConnectionLost(peerA))
         runCurrent()
 
         val batchCompleted = received.filterIsInstance<ReceiveEvent.BatchCompleted>()
@@ -354,7 +370,7 @@ class ReceiverEventRoutingTest {
 
         inbound.emit(InboundEvent.BatchStarted(peerA, batchId = "b1", totalFiles = 3, totalBytes = null))
         inbound.emit(InboundEvent.FileCompleted(peerA, "a.txt", null))
-        inbound.emit(InboundEvent.ConnectionLost(peerA, cancelled = false))
+        inbound.emit(InboundEvent.ConnectionLost(peerA))
         inbound.emit(InboundEvent.BatchCancelled(peerA, batchId = "b1"))
         runCurrent()
 
@@ -375,7 +391,7 @@ class ReceiverEventRoutingTest {
 
         inbound.emit(InboundEvent.BatchStarted(peerA, batchId = "b1", totalFiles = 2, totalBytes = null))
         inbound.emit(InboundEvent.FileCompleted(peerA, "a.txt", null))
-        inbound.emit(InboundEvent.ConnectionLost(peerA, cancelled = false))
+        inbound.emit(InboundEvent.ConnectionLost(peerA))
         inbound.emit(InboundEvent.FileCompleted(peerA, "b.txt", null))
         runCurrent()
 

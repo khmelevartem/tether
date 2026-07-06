@@ -10,9 +10,12 @@ import com.tubetoast.tether.protocol.PairRequest
 import com.tubetoast.tether.protocol.PairResponse
 import com.tubetoast.tether.protocol.PeerAnnouncement
 import com.tubetoast.tether.protocol.PeerIdentity
+import com.tubetoast.tether.protocol.TetherRoutes
 import com.tubetoast.tether.security.TrustedDeviceStore
 import com.tubetoast.tether.security.deviceIdFromPublicKey
+import com.tubetoast.tether.transfer.InboundCancelRegistry
 import com.tubetoast.tether.transfer.InboundEvent
+import com.tubetoast.tether.transfer.InboundEventBus
 import com.tubetoast.tether.transfer.NoOpTransferActivityTracker
 import com.tubetoast.tether.transfer.TransferActivityTracker
 import com.tubetoast.tether.transfer.toPeerIdentity
@@ -33,8 +36,8 @@ import io.ktor.server.routing.routing
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.readAvailable
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.selects.select
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.debug
 import ru.pocketbyte.kydra.log.error
@@ -98,15 +101,13 @@ internal fun Application.installFileServerRoutes(
     tracker: TransferActivityTracker = NoOpTransferActivityTracker,
     deviceIdentityStore: DeviceIdentityStore? = null,
     discoveredDevicesStore: DiscoveredDevicesStore? = null,
-    inboundEvents: MutableSharedFlow<InboundEvent>? = null,
-    isCancelRequested: ((PeerIdentity) -> Boolean)? = null,
-    onCancelConsumed: ((PeerIdentity) -> Unit)? = null,
-    clearStaleCancel: ((PeerIdentity) -> Unit)? = null,
+    inboundEventBus: InboundEventBus? = null,
+    cancelRegistry: InboundCancelRegistry? = null,
 ) {
     install(ContentNegotiation) { json() }
     routing {
-        get("/health") { call.respond(HttpStatusCode.OK, "Tether OK") }
-        post("/hello") {
+        get(TetherRoutes.HEALTH) { call.respond(HttpStatusCode.OK, "Tether OK") }
+        post(TetherRoutes.HELLO) {
             val body = try {
                 call.receive<PeerAnnouncement>()
             } catch (_: Exception) {
@@ -137,7 +138,7 @@ internal fun Application.installFileServerRoutes(
             log.info { "hello from ${body.alias}@$remoteAddress:${body.port}" }
             call.respond(HttpStatusCode.OK, emptyMap<String, String>())
         }
-        post("/pair") {
+        post(TetherRoutes.PAIR) {
             val request = call.receive<PairRequest>()
             val deviceId = deviceIdFromPublicKey(request.publicKey)
             try {
@@ -153,7 +154,7 @@ internal fun Application.installFileServerRoutes(
             }
             call.respond(HttpStatusCode.OK, PairResponse(publicKey = serverPublicKey))
         }
-        post("/batch-begin") {
+        post(TetherRoutes.BATCH_BEGIN) {
             val body = try {
                 call.receive<BatchBeginRequest>()
             } catch (_: Exception) {
@@ -165,9 +166,8 @@ internal fun Application.installFileServerRoutes(
                 return@post
             }
             val peer = call.resolvePeer(discoveredDevicesStore)
-            if (peer != null && inboundEvents != null) {
-                clearStaleCancel?.invoke(peer)
-                inboundEvents.tryEmit(
+            if (peer != null && inboundEventBus != null) {
+                inboundEventBus.emit(
                     InboundEvent.BatchStarted(
                         peer = peer,
                         batchId = body.batchId,
@@ -179,7 +179,7 @@ internal fun Application.installFileServerRoutes(
             }
             call.respond(HttpStatusCode.OK, emptyMap<String, String>())
         }
-        post("/batch-cancel") {
+        post(TetherRoutes.BATCH_CANCEL) {
             val body = try {
                 call.receive<BatchCancelRequest>()
             } catch (_: Exception) {
@@ -187,13 +187,13 @@ internal fun Application.installFileServerRoutes(
                 return@post
             }
             val peer = call.resolvePeer(discoveredDevicesStore)
-            if (peer != null && inboundEvents != null) {
-                inboundEvents.tryEmit(InboundEvent.BatchCancelled(peer = peer, batchId = body.batchId))
+            if (peer != null && inboundEventBus != null) {
+                inboundEventBus.emit(InboundEvent.BatchCancelled(peer = peer, batchId = body.batchId))
                 log.info { "batch-cancel from ${peer.id}: id=${body.batchId}" }
             }
             call.respond(HttpStatusCode.OK, emptyMap<String, String>())
         }
-        post("/batch-end") {
+        post(TetherRoutes.BATCH_END) {
             val body = try {
                 call.receive<BatchEndRequest>()
             } catch (_: Exception) {
@@ -201,13 +201,13 @@ internal fun Application.installFileServerRoutes(
                 return@post
             }
             val peer = call.resolvePeer(discoveredDevicesStore)
-            if (peer != null && inboundEvents != null) {
-                inboundEvents.tryEmit(InboundEvent.BatchEnd(peer = peer, batchId = body.batchId))
+            if (peer != null && inboundEventBus != null) {
+                inboundEventBus.emit(InboundEvent.BatchEnd(peer = peer, batchId = body.batchId))
                 log.info { "batch-end from ${peer.id}: id=${body.batchId}" }
             }
             call.respond(HttpStatusCode.OK, emptyMap<String, String>())
         }
-        post("/upload") {
+        post(TetherRoutes.UPLOAD) {
             val rawName = call.request.rawQueryParameters["name"]
             val relativePath = rawName?.let { PathSanitization.sanitizeRelativePath(it) }
             if (relativePath == null) {
@@ -220,15 +220,13 @@ internal fun Application.installFileServerRoutes(
             }
             val peer = call.resolvePeer(discoveredDevicesStore)
             val contentLength = call.request.contentLength()
-            // Clear any stale cancel flag from a previous transfer so it cannot abort this one.
-            if (peer != null) clearStaleCancel?.invoke(peer)
             var uploadComplete = false
             var cancelledByReceiver = false
             var handle: UploadHandle? = null
             try {
                 val resolved = storage.resolveDestination(relativePath)
                 handle = resolved
-                if (peer != null) inboundEvents?.tryEmit(InboundEvent.FileStarted(peer, relativePath))
+                if (peer != null) inboundEventBus?.emit(InboundEvent.FileStarted(peer, relativePath))
                 tracker.withActiveTransfer {
                     val body = call.receiveChannel()
                     var bytesWritten = 0L
@@ -236,15 +234,13 @@ internal fun Application.installFileServerRoutes(
                         val writeJob = launch {
                             bytesWritten = storage.writeBody(body, resolved)
                         }
-                        if (peer != null && isCancelRequested != null) {
-                            launch {
-                                while (writeJob.isActive) {
-                                    if (isCancelRequested(peer)) {
-                                        cancelledByReceiver = true
-                                        writeJob.cancel()
-                                        break
-                                    }
-                                    kotlinx.coroutines.delay(50)
+                        if (peer != null && cancelRegistry != null) {
+                            val cancelSignal = cancelRegistry.signalFor(peer)
+                            select {
+                                writeJob.onJoin { }
+                                cancelSignal.onAwait {
+                                    cancelledByReceiver = true
+                                    writeJob.cancel()
                                 }
                             }
                         }
@@ -263,10 +259,10 @@ internal fun Application.installFileServerRoutes(
                     uploadComplete = true
                     log.info { "received '$relativePath' — $bytesWritten bytes → ${resolved.destination}" }
                     if (peer != null) {
-                        inboundEvents?.tryEmit(
+                        inboundEventBus?.emit(
                             InboundEvent.Progress(peer, relativePath, bytesWritten, contentLength),
                         )
-                        inboundEvents?.tryEmit(
+                        inboundEventBus?.emit(
                             InboundEvent.FileCompleted(peer, relativePath, resolved.destination),
                         )
                     }
@@ -275,10 +271,12 @@ internal fun Application.installFileServerRoutes(
             } catch (e: Exception) {
                 log.error { "upload failed for '$relativePath' — ${e.message ?: "unknown error"}" }
                 if (peer != null && !uploadComplete) {
-                    if (cancelledByReceiver) onCancelConsumed?.invoke(peer)
-                    inboundEvents?.tryEmit(
-                        InboundEvent.ConnectionLost(peer, cancelled = cancelledByReceiver),
-                    )
+                    val event = if (cancelledByReceiver) {
+                        InboundEvent.CancelledByReceiver(peer)
+                    } else {
+                        InboundEvent.ConnectionLost(peer)
+                    }
+                    inboundEventBus?.emit(event)
                 }
                 try {
                     call.respond(

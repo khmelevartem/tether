@@ -2,17 +2,16 @@ package com.tubetoast.tether.network
 
 import com.tubetoast.tether.discovery.DiscoveredDevicesStore
 import com.tubetoast.tether.identity.DeviceIdentityStore
-import com.tubetoast.tether.protocol.PeerIdentity
 import com.tubetoast.tether.security.DeviceKeyPair
 import com.tubetoast.tether.security.TrustedDeviceStore
-import com.tubetoast.tether.transfer.InboundEvent
+import com.tubetoast.tether.transfer.InboundCancelRegistry
+import com.tubetoast.tether.transfer.InboundEventBus
 import com.tubetoast.tether.transfer.NoOpTransferActivityTracker
 import com.tubetoast.tether.transfer.TransferActivityTracker
 import io.ktor.server.cio.CIO
 import io.ktor.server.cio.CIOApplicationEngine
 import io.ktor.server.engine.EmbeddedServer
 import io.ktor.server.engine.embeddedServer
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.runBlocking
 import ru.pocketbyte.kydra.log.KydraLog
 import ru.pocketbyte.kydra.log.error
@@ -27,13 +26,13 @@ actual class FileServer internal constructor(
     private val uploadStorage: UploadStorage,
     private val trustedDeviceStore: TrustedDeviceStore,
     private val deviceKeyPair: DeviceKeyPair,
+    private val inboundEventBus: InboundEventBus,
+    private val cancelRegistry: InboundCancelRegistry,
     private val tracker: TransferActivityTracker = NoOpTransferActivityTracker,
     private val deviceIdentityStore: DeviceIdentityStore? = null,
     private val discoveredDevicesStore: DiscoveredDevicesStore? = null,
-) : FileServerBase() {
+) {
     private var server: EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration>? = null
-
-    actual val events: SharedFlow<InboundEvent> get() = eventsSharedFlow
 
     private var _port: Int = -1
     actual val port: Int get() = _port
@@ -50,10 +49,8 @@ actual class FileServer internal constructor(
                     tracker,
                     deviceIdentityStore,
                     discoveredDevicesStore,
-                    mutableEvents,
-                    isCancelRequested = isCancelRequested,
-                    onCancelConsumed = ::clearCancelFlag,
-                    clearStaleCancel = ::clearCancelFlag,
+                    inboundEventBus = inboundEventBus,
+                    cancelRegistry = cancelRegistry,
                 )
             }.start(wait = false)
         } catch (e: Exception) {
@@ -61,6 +58,8 @@ actual class FileServer internal constructor(
             throw e
         }
         server = srv
+        // resolvedConnectors() returns the actual OS-assigned port when port=0 was specified,
+        // eliminating the TOCTOU race that would exist if we probed with ServerSocket(0) first.
         val resolvedPort = runBlocking { srv.engine.resolvedConnectors() }.first().port
         _port = resolvedPort
         log.info { "started on port $resolvedPort" }
@@ -73,6 +72,4 @@ actual class FileServer internal constructor(
         _port = -1
         log.info { "stopped" }
     }
-
-    actual suspend fun cancelInbound(peer: PeerIdentity) = doCancelInbound(peer)
 }

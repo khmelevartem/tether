@@ -15,7 +15,7 @@ class ReconnectCountdown(
     private val timeout: Duration,
     private val scope: CoroutineScope,
     private val onTick: suspend (remainingSeconds: Int) -> Unit,
-    private val onExpired: suspend () -> Unit,
+    private val onExpired: suspend () -> Unit = {},
 ) {
     private var job: Job? = null
 

@@ -36,13 +36,14 @@ sealed interface InboundEvent {
         val reason: FailureReason,
     ) : InboundEvent
 
-    /**
-     * Emitted when the upload connection for this peer is gone — either a genuine network drop
-     * ([cancelled] = false) or a deliberate receiver-side cancel ([cancelled] = true).
-     */
+    /** Emitted when the upload connection for this peer is gone because the network dropped. */
     data class ConnectionLost(
         override val peer: PeerIdentity,
-        val cancelled: Boolean = false,
+    ) : InboundEvent
+
+    /** Emitted when the receiver deliberately cancels an in-flight upload. */
+    data class CancelledByReceiver(
+        override val peer: PeerIdentity,
     ) : InboundEvent
 
     /** Emitted when the sender signals a deliberate batch cancel via /batch-cancel. */

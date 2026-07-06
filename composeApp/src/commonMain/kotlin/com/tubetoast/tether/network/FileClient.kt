@@ -6,6 +6,7 @@ import com.tubetoast.tether.protocol.BatchEndRequest
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.protocol.PeerAnnouncement
 import com.tubetoast.tether.protocol.SendResult
+import com.tubetoast.tether.protocol.TetherRoutes
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
@@ -68,7 +69,7 @@ open class FileClient(
         totalFiles: Int,
         totalBytes: Long?,
     ): Boolean = try {
-        val response = client.post("http://${target.host}:${target.port}/batch-begin") {
+        val response = client.post("${target.baseUrl()}${TetherRoutes.BATCH_BEGIN}") {
             contentType(ContentType.Application.Json)
             setBody(BatchBeginRequest(batchId = batchId, totalFiles = totalFiles, totalBytes = totalBytes))
         }
@@ -85,7 +86,7 @@ open class FileClient(
     }
 
     open suspend fun cancelBatch(target: Device, batchId: String): Boolean = try {
-        val response = client.post("http://${target.host}:${target.port}/batch-cancel") {
+        val response = client.post("${target.baseUrl()}${TetherRoutes.BATCH_CANCEL}") {
             contentType(ContentType.Application.Json)
             setBody(BatchCancelRequest(batchId = batchId))
         }
@@ -102,7 +103,7 @@ open class FileClient(
     }
 
     open suspend fun endBatch(target: Device, batchId: String): Boolean = try {
-        val response = client.post("http://${target.host}:${target.port}/batch-end") {
+        val response = client.post("${target.baseUrl()}${TetherRoutes.BATCH_END}") {
             contentType(ContentType.Application.Json)
             setBody(BatchEndRequest(batchId = batchId))
         }
@@ -119,7 +120,7 @@ open class FileClient(
     }
 
     open suspend fun sendHello(target: Device, ownInfo: PeerAnnouncement): Boolean = try {
-        val response = client.post("${target.baseUrl()}/hello") {
+        val response = client.post("${target.baseUrl()}${TetherRoutes.HELLO}") {
             contentType(ContentType.Application.Json)
             setBody(ownInfo)
         }
@@ -133,7 +134,7 @@ open class FileClient(
 
     open suspend fun checkHealth(device: Device): Boolean = try {
         log.debug { "health probe → ${device.host}:${device.port}" }
-        val response = client.get("${device.baseUrl()}/health") {
+        val response = client.get("${device.baseUrl()}${TetherRoutes.HEALTH}") {
             timeout { requestTimeoutMillis = healthTimeout.inWholeMilliseconds }
         }
         val ok = response.status == HttpStatusCode.OK
@@ -213,7 +214,7 @@ open class FileClient(
         fileName: String,
         totalBytes: Long?,
     ): SendResult = try {
-        val response = client.post("${device.baseUrl()}/upload") {
+        val response = client.post("${device.baseUrl()}${TetherRoutes.UPLOAD}") {
             url.encodedParameters.append("name", fileName.encodeURLQueryComponent(encodeFull = true))
             setBody(channel.asOctetStreamContent(totalBytes))
         }

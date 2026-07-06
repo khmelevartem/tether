@@ -7,6 +7,8 @@ import com.tubetoast.tether.security.DefaultTrustedDeviceStore
 import com.tubetoast.tether.security.DeviceKeyPair
 import com.tubetoast.tether.security.TrustedDeviceStore
 import com.tubetoast.tether.security.deviceIdFromPublicKey
+import com.tubetoast.tether.transfer.InboundCancelRegistry
+import com.tubetoast.tether.transfer.InboundEventBus
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
@@ -65,6 +67,8 @@ class FileServerPairTest {
             ),
             trustedDeviceStore = store,
             deviceKeyPair = keyPair,
+            inboundEventBus = InboundEventBus(),
+            cancelRegistry = InboundCancelRegistry(),
         )
         startedServer = server
         return server to server.start()

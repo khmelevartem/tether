@@ -59,6 +59,8 @@ open class AppleAppContainer(
             uploadStorage = uploadStorage,
             trustedDeviceStore = trustedDeviceStore,
             deviceKeyPair = deviceKeyPair,
+            inboundEventBus = inboundEventBus,
+            cancelRegistry = inboundCancelRegistry,
             tracker = transferActivityTracker,
             deviceIdentityStore = deviceIdentityStore,
             discoveredDevicesStore = discoveredDevicesStore,

@@ -32,6 +32,8 @@ import com.tubetoast.tether.transfer.BatchSender
 import com.tubetoast.tether.transfer.ConnectionMonitor
 import com.tubetoast.tether.transfer.DefaultTransferActivityTracker
 import com.tubetoast.tether.transfer.FilePicker
+import com.tubetoast.tether.transfer.InboundCancelRegistry
+import com.tubetoast.tether.transfer.InboundEventBus
 import com.tubetoast.tether.transfer.InboundEventRouter
 import com.tubetoast.tether.transfer.NoOpConnectionMonitor
 import com.tubetoast.tether.transfer.PeerTransferEngine
@@ -115,8 +117,11 @@ abstract class AppContainer {
         )
     }
 
+    protected open val inboundEventBus: InboundEventBus by lazy { InboundEventBus() }
+    protected open val inboundCancelRegistry: InboundCancelRegistry by lazy { InboundCancelRegistry() }
+
     open val inboundEventRouter: InboundEventRouter by lazy {
-        InboundEventRouter(scope = appScope, inboundEvents = fileServer.events)
+        InboundEventRouter(scope = appScope, inboundEvents = inboundEventBus.events)
     }
 
     open val peerTransferEngineRegistry: PeerTransferEngineRegistry by lazy {

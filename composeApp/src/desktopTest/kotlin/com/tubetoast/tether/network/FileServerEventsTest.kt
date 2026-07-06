@@ -9,7 +9,9 @@ import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.protocol.PeerIdentity
 import com.tubetoast.tether.security.DefaultTrustedDeviceStore
 import com.tubetoast.tether.security.DeviceKeyPair
+import com.tubetoast.tether.transfer.InboundCancelRegistry
 import com.tubetoast.tether.transfer.InboundEvent
+import com.tubetoast.tether.transfer.InboundEventBus
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -58,12 +60,20 @@ class FileServerEventsTest {
     private val peerHost = "127.0.0.1"
     private val peer = PeerIdentity("peer-fp")
 
-    private fun newServerWithPeer(): Pair<FileServer, Int> {
+    private class TestServer(
+        val port: Int,
+        val inboundEventBus: InboundEventBus,
+        val cancelRegistry: InboundCancelRegistry,
+    )
+
+    private fun newServerWithPeer(): TestServer {
         val configDir = Files.createTempDirectory("tether-fs-events-keys").toFile().also(cleanupPaths::add)
         val temp = TempDataStore().also { cleanupTempStores += it }
         val downloadsDir = Files.createTempDirectory("tether-fs-events-dl").toFile().also(cleanupPaths::add)
         val store = DiscoveredDevicesStore()
         store.upsert(Device(name = "TestPeer", host = peerHost, port = 9999, fingerprint = "peer-fp"))
+        val inboundEventBus = InboundEventBus()
+        val cancelRegistry = InboundCancelRegistry()
         val server = FileServer(
             configuredPort = 0,
             uploadStorage = FileUploadStorage(
@@ -72,27 +82,29 @@ class FileServerEventsTest {
             ),
             trustedDeviceStore = DefaultTrustedDeviceStore(temp.dataStore),
             deviceKeyPair = DeviceKeyPair(configDir),
+            inboundEventBus = inboundEventBus,
+            cancelRegistry = cancelRegistry,
             discoveredDevicesStore = store,
         )
         startedServer = server
-        return server to server.start()
+        return TestServer(server.start(), inboundEventBus, cancelRegistry)
     }
 
     @Test
     fun `successful upload emits FileStarted, Progress, and FileCompleted`() {
-        val (server, port) = newServerWithPeer()
+        val testServer = newServerWithPeer()
         val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
         try {
             runBlocking {
                 val collected = mutableListOf<InboundEvent>()
                 val collectionJob = launch {
-                    server.events.collect { event ->
+                    testServer.inboundEventBus.events.collect { event ->
                         collected += event
                         if (event is InboundEvent.FileCompleted) return@collect
                     }
                 }
                 withTimeout(5.seconds) {
-                    client.post("http://localhost:$port/upload?name=hello.txt") {
+                    client.post("http://localhost:${testServer.port}/upload?name=hello.txt") {
                         contentType(ContentType.Application.OctetStream)
                         setBody("hello events".toByteArray())
                     }
@@ -120,17 +132,17 @@ class FileServerEventsTest {
 
     @Test
     fun `mid-stream client disconnect emits ConnectionLost`() {
-        val (server, port) = newServerWithPeer()
+        val testServer = newServerWithPeer()
         val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
         try {
             runBlocking {
                 val collected = mutableListOf<InboundEvent>()
                 val collectionJob = launch {
-                    server.events.collect { collected += it }
+                    testServer.inboundEventBus.events.collect { collected += it }
                 }
                 try {
                     withTimeout(150.milliseconds) {
-                        client.post("http://localhost:$port/upload?name=trunc.bin") {
+                        client.post("http://localhost:${testServer.port}/upload?name=trunc.bin") {
                             setBody(SlowEventsContent(totalBytes = 8L * 1024 * 1024))
                         }
                     }
@@ -156,18 +168,18 @@ class FileServerEventsTest {
     }
 
     @Test
-    fun `cancelInbound during upload emits ConnectionLost with cancelled=true`() {
-        val (server, port) = newServerWithPeer()
+    fun `InboundCancelRegistry request during upload emits CancelledByReceiver`() {
+        val testServer = newServerWithPeer()
         val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
         try {
             runBlocking {
                 val collected = mutableListOf<InboundEvent>()
                 val collectionJob = launch {
-                    server.events.collect { collected += it }
+                    testServer.inboundEventBus.events.collect { collected += it }
                 }
                 val uploadJob = launch {
                     try {
-                        client.post("http://localhost:$port/upload?name=cancel.bin") {
+                        client.post("http://localhost:${testServer.port}/upload?name=cancel.bin") {
                             setBody(SlowEventsContent(totalBytes = 8L * 1024 * 1024))
                         }
                     } catch (_: Exception) {
@@ -177,17 +189,19 @@ class FileServerEventsTest {
                 withTimeout(5.seconds) {
                     while (collected.none { it is InboundEvent.FileStarted }) delay(10.milliseconds)
                 }
-                server.cancelInbound(peer)
-                // Wait for ConnectionLost
+                testServer.cancelRegistry.request(peer)
                 withTimeout(5.seconds) {
-                    while (collected.none { it is InboundEvent.ConnectionLost }) delay(10.milliseconds)
+                    while (collected.none { it is InboundEvent.CancelledByReceiver }) delay(10.milliseconds)
                 }
                 uploadJob.cancel()
                 collectionJob.cancel()
 
-                val lostEvent = collected.filterIsInstance<InboundEvent.ConnectionLost>().first()
-                assertEquals(peer, lostEvent.peer)
-                assertTrue(lostEvent.cancelled, "ConnectionLost.cancelled must be true on explicit cancel")
+                val cancelledEvent = collected.filterIsInstance<InboundEvent.CancelledByReceiver>().first()
+                assertEquals(peer, cancelledEvent.peer)
+                assertTrue(
+                    collected.none { it is InboundEvent.ConnectionLost },
+                    "an explicit receiver cancel must not also emit ConnectionLost",
+                )
             }
         } finally {
             client.close()
@@ -196,14 +210,14 @@ class FileServerEventsTest {
 
     @Test
     fun `batch-begin with valid body emits BatchStarted with correct batchId and totalFiles`() {
-        val (server, port) = newServerWithPeer()
+        val testServer = newServerWithPeer()
         val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
         try {
             runBlocking {
                 val collected = mutableListOf<InboundEvent>()
-                val collectionJob = launch { server.events.collect { collected += it } }
+                val collectionJob = launch { testServer.inboundEventBus.events.collect { collected += it } }
                 val response: HttpResponse = withTimeout(5.seconds) {
-                    client.post("http://localhost:$port/batch-begin") {
+                    client.post("http://localhost:${testServer.port}/batch-begin") {
                         contentType(ContentType.Application.Json)
                         setBody(BatchBeginRequest(batchId = "test-batch-1", totalFiles = 3, totalBytes = null))
                     }
@@ -226,12 +240,12 @@ class FileServerEventsTest {
 
     @Test
     fun `batch-begin with totalFiles less than 1 returns 400`() {
-        val (_, port) = newServerWithPeer()
+        val testServer = newServerWithPeer()
         val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
         try {
             runBlocking {
                 val response: HttpResponse = withTimeout(5.seconds) {
-                    client.post("http://localhost:$port/batch-begin") {
+                    client.post("http://localhost:${testServer.port}/batch-begin") {
                         contentType(ContentType.Application.Json)
                         setBody(BatchBeginRequest(batchId = "bad-batch", totalFiles = 0))
                     }
@@ -245,14 +259,14 @@ class FileServerEventsTest {
 
     @Test
     fun `batch-cancel with valid body returns 200 and emits BatchCancelled`() {
-        val (server, port) = newServerWithPeer()
+        val testServer = newServerWithPeer()
         val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
         try {
             runBlocking {
                 val collected = mutableListOf<InboundEvent>()
-                val collectionJob = launch { server.events.collect { collected += it } }
+                val collectionJob = launch { testServer.inboundEventBus.events.collect { collected += it } }
                 val response: HttpResponse = withTimeout(5.seconds) {
-                    client.post("http://localhost:$port/batch-cancel") {
+                    client.post("http://localhost:${testServer.port}/batch-cancel") {
                         contentType(ContentType.Application.Json)
                         setBody(BatchCancelRequest(batchId = "batch-to-cancel"))
                     }
@@ -274,14 +288,14 @@ class FileServerEventsTest {
 
     @Test
     fun `batch-end with valid body returns 200 and emits BatchEnd`() {
-        val (server, port) = newServerWithPeer()
+        val testServer = newServerWithPeer()
         val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
         try {
             runBlocking {
                 val collected = mutableListOf<InboundEvent>()
-                val collectionJob = launch { server.events.collect { collected += it } }
+                val collectionJob = launch { testServer.inboundEventBus.events.collect { collected += it } }
                 val response: HttpResponse = withTimeout(5.seconds) {
-                    client.post("http://localhost:$port/batch-end") {
+                    client.post("http://localhost:${testServer.port}/batch-end") {
                         contentType(ContentType.Application.Json)
                         setBody(BatchEndRequest(batchId = "batch-to-end"))
                     }
@@ -303,12 +317,12 @@ class FileServerEventsTest {
 
     @Test
     fun `batch-end with malformed body returns 400`() {
-        val (_, port) = newServerWithPeer()
+        val testServer = newServerWithPeer()
         val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
         try {
             runBlocking {
                 val response: HttpResponse = withTimeout(5.seconds) {
-                    client.post("http://localhost:$port/batch-end") {
+                    client.post("http://localhost:${testServer.port}/batch-end") {
                         contentType(ContentType.Application.Json)
                         setBody("not-valid-json")
                     }
@@ -322,12 +336,12 @@ class FileServerEventsTest {
 
     @Test
     fun `batch-cancel with malformed body returns 400`() {
-        val (_, port) = newServerWithPeer()
+        val testServer = newServerWithPeer()
         val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
         try {
             runBlocking {
                 val response: HttpResponse = withTimeout(5.seconds) {
-                    client.post("http://localhost:$port/batch-cancel") {
+                    client.post("http://localhost:${testServer.port}/batch-cancel") {
                         contentType(ContentType.Application.Json)
                         setBody("not-valid-json")
                     }
@@ -345,6 +359,7 @@ class FileServerEventsTest {
         val configDir = Files.createTempDirectory("tether-fs-events-keys2").toFile().also(cleanupPaths::add)
         val temp = TempDataStore().also { cleanupTempStores += it }
         val downloadsDir = Files.createTempDirectory("tether-fs-events-dl2").toFile().also(cleanupPaths::add)
+        val inboundEventBus = InboundEventBus()
         val server = FileServer(
             configuredPort = 0,
             uploadStorage = FileUploadStorage(
@@ -353,6 +368,8 @@ class FileServerEventsTest {
             ),
             trustedDeviceStore = DefaultTrustedDeviceStore(temp.dataStore),
             deviceKeyPair = DeviceKeyPair(configDir),
+            inboundEventBus = inboundEventBus,
+            cancelRegistry = InboundCancelRegistry(),
         )
         startedServer = server
         val port = server.start()
@@ -360,7 +377,7 @@ class FileServerEventsTest {
         try {
             runBlocking {
                 val collected = mutableListOf<InboundEvent>()
-                val collectionJob = launch { server.events.collect { collected += it } }
+                val collectionJob = launch { inboundEventBus.events.collect { collected += it } }
                 client.post("http://localhost:$port/upload?name=x.txt") {
                     contentType(ContentType.Application.OctetStream)
                     setBody("data".toByteArray())

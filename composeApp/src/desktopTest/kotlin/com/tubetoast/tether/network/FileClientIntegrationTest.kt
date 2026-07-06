@@ -5,6 +5,8 @@ import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.protocol.SendResult
 import com.tubetoast.tether.security.DefaultTrustedDeviceStore
 import com.tubetoast.tether.security.DeviceKeyPair
+import com.tubetoast.tether.transfer.InboundCancelRegistry
+import com.tubetoast.tether.transfer.InboundEventBus
 import kotlinx.coroutines.runBlocking
 import java.io.File
 import java.net.ServerSocket
@@ -40,6 +42,8 @@ class FileClientIntegrationTest {
             ),
             trustedDeviceStore = DefaultTrustedDeviceStore(tempStore.dataStore),
             deviceKeyPair = DeviceKeyPair(configDir),
+            inboundEventBus = InboundEventBus(),
+            cancelRegistry = InboundCancelRegistry(),
         )
         val port = server.start()
         client = FileClient.default()

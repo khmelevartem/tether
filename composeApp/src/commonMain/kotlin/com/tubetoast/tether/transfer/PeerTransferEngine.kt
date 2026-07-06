@@ -8,7 +8,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.launch
 import kotlin.time.Duration
 
@@ -79,6 +78,8 @@ class PeerTransferEngine(
         return true
     }
 
+    // TODO(#513): wire receiver-cancel button → InboundCancelRegistry.request(peer) for the
+    // ActiveInbound branch of this method.
     fun onCancel() {
         val sender = currentSender
         activeJob?.cancel()
@@ -349,20 +350,14 @@ class PeerTransferEngine(
                 }
             }
             is ReceiveEvent.ConnectionLost -> {
-                // When a deliberate cancel already transitioned us to Received, the ConnectionLost
-                // that follows is the socket teardown confirming the cancel — do not override.
-                val after = _state.updateAndGet { snapshot ->
-                    if (snapshot is PeerTransferState.Received) {
-                        snapshot
-                    } else {
-                        PeerTransferState.Reconnecting(
-                            direction = Direction.Inbound,
-                            remainingSeconds = reconnectionTimeout.inWholeSeconds.toInt(),
-                            snapshotBeforeDrop = snapshot,
-                        )
-                    }
+                _state.update { snapshot ->
+                    PeerTransferState.Reconnecting(
+                        direction = Direction.Inbound,
+                        remainingSeconds = reconnectionTimeout.inWholeSeconds.toInt(),
+                        snapshotBeforeDrop = snapshot,
+                    )
                 }
-                if (after is PeerTransferState.Reconnecting) inboundReconnectCountdown.start()
+                inboundReconnectCountdown.start()
             }
             ReceiveEvent.ReceiverSuspended -> {
                 inboundReconnectCountdown.cancel()

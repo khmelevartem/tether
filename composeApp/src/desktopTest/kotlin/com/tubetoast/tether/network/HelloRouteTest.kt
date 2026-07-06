@@ -8,6 +8,8 @@ import com.tubetoast.tether.protocol.DeviceType
 import com.tubetoast.tether.protocol.PeerAnnouncement
 import com.tubetoast.tether.security.DefaultTrustedDeviceStore
 import com.tubetoast.tether.security.DeviceKeyPair
+import com.tubetoast.tether.transfer.InboundCancelRegistry
+import com.tubetoast.tether.transfer.InboundEventBus
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -58,6 +60,8 @@ class HelloRouteTest {
             ),
             trustedDeviceStore = DefaultTrustedDeviceStore(keyTemp.dataStore),
             deviceKeyPair = DeviceKeyPair(configDir),
+            inboundEventBus = InboundEventBus(),
+            cancelRegistry = InboundCancelRegistry(),
             deviceIdentityStore = identityStore,
             discoveredDevicesStore = store,
         )

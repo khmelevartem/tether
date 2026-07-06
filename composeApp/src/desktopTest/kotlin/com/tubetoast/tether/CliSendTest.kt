@@ -14,6 +14,8 @@ import com.tubetoast.tether.security.DeviceKeyPair
 import com.tubetoast.tether.transfer.BatchSender
 import com.tubetoast.tether.transfer.ConnectionDrop
 import com.tubetoast.tether.transfer.ConnectionMonitor
+import com.tubetoast.tether.transfer.InboundCancelRegistry
+import com.tubetoast.tether.transfer.InboundEventBus
 import com.tubetoast.tether.transfer.NoOpConnectionMonitor
 import com.tubetoast.tether.transfer.PeerTransferEngine
 import com.tubetoast.tether.transfer.PeerTransferEngineRegistry
@@ -74,6 +76,8 @@ class CliSendTest {
             ),
             trustedDeviceStore = DefaultTrustedDeviceStore(tempStore.dataStore),
             deviceKeyPair = DeviceKeyPair(configDir),
+            inboundEventBus = InboundEventBus(),
+            cancelRegistry = InboundCancelRegistry(),
         )
         val port = server.start()
         device = Device(name = "cli-test", host = "127.0.0.1", port = port)

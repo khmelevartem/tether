@@ -11,6 +11,8 @@ import com.tubetoast.tether.security.DeviceKeyPair
 import com.tubetoast.tether.security.InMemoryKeychainStore
 import com.tubetoast.tether.security.TrustedDeviceStore
 import com.tubetoast.tether.security.deviceIdFromPublicKey
+import com.tubetoast.tether.transfer.InboundCancelRegistry
+import com.tubetoast.tether.transfer.InboundEventBus
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
@@ -55,6 +57,8 @@ class FileServerPairTest {
             ),
             trustedDeviceStore = store,
             deviceKeyPair = keyPair,
+            inboundEventBus = InboundEventBus(),
+            cancelRegistry = InboundCancelRegistry(),
         )
         port = server.start()
         client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
@@ -113,6 +117,8 @@ class FileServerPairTest {
             ),
             trustedDeviceStore = throwingStore,
             deviceKeyPair = keyPair,
+            inboundEventBus = InboundEventBus(),
+            cancelRegistry = InboundCancelRegistry(),
         )
         val failPort = failServer.start()
         try {

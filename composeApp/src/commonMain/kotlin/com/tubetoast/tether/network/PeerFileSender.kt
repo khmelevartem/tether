@@ -17,25 +17,19 @@ class PeerFileSender(
     private val discoveredDevicesStore: DiscoveredDevicesStore,
 ) {
     suspend fun beginBatch(peer: PeerIdentity, batchId: String, totalFiles: Int, totalBytes: Long?) {
-        val device = discoveredDevicesStore.devices.value
-            .firstOrNull { it.toPeerIdentity() == peer }
-            ?: throw PeerUnreachableException()
+        val device = resolveDevice(peer) ?: throw PeerUnreachableException()
         if (!fileClient.beginBatch(device, batchId, totalFiles, totalBytes)) throw PeerUnreachableException()
     }
 
     /** Best-effort: swallows [PeerUnreachableException] — if the peer is gone the receiver times out on its own. */
     suspend fun cancelBatch(peer: PeerIdentity, batchId: String) {
-        val device = discoveredDevicesStore.devices.value
-            .firstOrNull { it.toPeerIdentity() == peer }
-            ?: return
+        val device = resolveDevice(peer) ?: return
         fileClient.cancelBatch(device, batchId)
     }
 
     /** Best-effort: if the peer is gone the receiver reaches a terminal state via its own reconnect timeout. */
     suspend fun endBatch(peer: PeerIdentity, batchId: String) {
-        val device = discoveredDevicesStore.devices.value
-            .firstOrNull { it.toPeerIdentity() == peer }
-            ?: return
+        val device = resolveDevice(peer) ?: return
         fileClient.endBatch(device, batchId)
     }
 
@@ -44,9 +38,7 @@ class PeerFileSender(
         source: FileSource,
         onProgress: (bytesTransferred: Long, totalBytes: Long?) -> Unit,
     ) {
-        val device = discoveredDevicesStore.devices.value
-            .firstOrNull { it.toPeerIdentity() == peer }
-            ?: throw PeerUnreachableException()
+        val device = resolveDevice(peer) ?: throw PeerUnreachableException()
         try {
             when (
                 val result = fileClient.send(
@@ -66,4 +58,7 @@ class PeerFileSender(
             source.close()
         }
     }
+
+    private fun resolveDevice(peer: PeerIdentity) =
+        discoveredDevicesStore.devices.value.firstOrNull { it.toPeerIdentity() == peer }
 }

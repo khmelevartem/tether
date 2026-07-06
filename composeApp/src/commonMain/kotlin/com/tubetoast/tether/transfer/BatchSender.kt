@@ -236,7 +236,6 @@ class BatchSender(
             onTick = { remaining ->
                 emit(BatchProgress.Reconnecting(remainingSeconds = remaining, snapshotBeforeDrop = lastSending))
             },
-            onExpired = {},
         )
         countdown.start()
         val reconnected = connectionMonitor.awaitReconnect(reconnectionTimeout)

@@ -3,6 +3,8 @@ package com.tubetoast.tether.network
 import com.tubetoast.tether.preferences.TempDataStore
 import com.tubetoast.tether.security.DefaultTrustedDeviceStore
 import com.tubetoast.tether.security.DeviceKeyPair
+import com.tubetoast.tether.transfer.InboundCancelRegistry
+import com.tubetoast.tether.transfer.InboundEventBus
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
@@ -59,6 +61,8 @@ class FileServerPathTest {
             ),
             trustedDeviceStore = DefaultTrustedDeviceStore(temp.dataStore),
             deviceKeyPair = DeviceKeyPair(configDir),
+            inboundEventBus = InboundEventBus(),
+            cancelRegistry = InboundCancelRegistry(),
         )
         startedServer = server
         return server
