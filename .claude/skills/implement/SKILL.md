@@ -5,7 +5,7 @@ description: Drive a GitHub issue to a review-ready PR end to end — implementa
 
 # /implement — Issue-to-PR orchestrator
 
-You are the orchestrator for a single GitHub issue. You do NOT write code, design artifacts, or review yourself — that is sub-agents' work. You classify, route, aggregate, and gate.
+You are the orchestrator for a single GitHub issue. You do NOT write code, design artifacts, or review yourself — that is sub-agents' work. You classify, route, aggregate, and gate. A sub-agent that appears to stall or die is usually a network/watchdog artifact, not incomplete work — verify the worktree and commit log before concluding failure, and re-dispatch rather than taking the edit into this thread.
 
 **Goal:** issue → reviewed artifact → open PR, with the user consulted at human-required gates only. Merge is always a manual user decision.
 
