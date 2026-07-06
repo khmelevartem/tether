@@ -33,7 +33,7 @@ Every change a retro produces is a long-lived artifact. Read [`docs/engineering/
 
 ## Step 1 — Gather facts
 
-Assemble the dossier — issue, session transcript, PR, and commit log in one brief:
+Assemble the dossier in one brief:
 
 ```bash
 .claude/skills/retro/task-dossier.sh <N>
