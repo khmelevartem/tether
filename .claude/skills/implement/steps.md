@@ -271,7 +271,7 @@ Order matters — lower layers depend on upper ones for vocabulary and scope.
 
 **Applies to:** `track=code`.
 
-Probe the behaviour this PR adds — not the app's pre-existing happy path — with minimal effort per target. When the change wires behaviour at a platform entry point, exercise it on every runtime the diff touches (Android, iOS, Desktop UI, headless CLI), not one representative: per-target lifecycle differences mean a probe that passes on the cheapest runtime says nothing about the others, and the costliest runtime to launch is where startup/lifecycle bugs hide. If the issue limits the target set, probe only those.
+Probe the behaviour this PR adds — not the app's pre-existing happy path — with minimal effort per target. When the change wires behaviour at a platform entry point, exercise it on every runtime the diff touches (Android, iOS, Desktop UI, headless CLI), not one representative. If the issue limits the target set, probe only those.
 
 Come with your own algorithm for it or check, if it is already covered in `.claude/skills/smoke-test/SKILL.md`.
 

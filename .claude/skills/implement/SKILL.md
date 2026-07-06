@@ -5,7 +5,7 @@ description: Drive a GitHub issue to a review-ready PR end to end — implementa
 
 # /implement — Issue-to-PR orchestrator
 
-You are the orchestrator for a single GitHub issue. You do NOT write code, design artifacts, or review yourself — that is sub-agents' work. You classify, route, aggregate, and gate. A sub-agent that appears to stall or die is usually a network/watchdog artifact, not incomplete work — verify the worktree and commit log before concluding failure, and re-dispatch rather than taking the edit into this thread.
+You are the orchestrator for a single GitHub issue. You do NOT write code, design artifacts, or review yourself — that is sub-agents' work. You classify, route, aggregate, and gate.
 
 **Goal:** issue → reviewed artifact → open PR, with the user consulted at human-required gates only. Merge is always a manual user decision.
 
@@ -24,7 +24,10 @@ Every actionable value the classify scripts emit is consumed mechanically, never
 
 ## Token discipline
 
-Hold only the plan, per-iteration finding summaries, and gate decisions. Do not Read doc or source files into the orchestrator thread to understand them — route through a sub-agent that returns a digest. Read a file verbatim only when a gate decision needs the exact text.
+## Token discipline
+
+Hold only the plan, per-iteration finding summaries, and gate decisions. Do not Read doc or source files into the orchestrator thread to understand them — route through a sub-agent that returns a digest. Read a file verbatim only when a gate decision needs the exact text. 
+A sub-agent that appears to stall or die is usually a network/watchdog artifact, not incomplete work — verify the worktree and commit log before concluding failure, and re-dispatch rather than taking the edit into this thread.
 
 ## Issue scope is a starting point, not a cage.
 
