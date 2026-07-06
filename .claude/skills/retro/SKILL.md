@@ -13,14 +13,6 @@ The goal is not a report for its own sake and not a catalog of pointwise mistake
 
 ---
 
-## Read the transcript, not the summary
-
-**The session transcript is the primary source — never run the retro off a compaction summary.** A summary drops the decision-path (approaches abandoned, corrections made mid-flight) and reframes process failures as settled background; those dropped turns are the highest-value signal.
-
-Locate the transcript with `/find-transcript`. Read the human-typed turns first and in full — every correction, redirect, or repeated request marks where the system leaned on the user instead of carrying the work itself; the assistant's turns are context for them.
-
----
-
 ## Before you start — context-bias gate
 
 A retro run in the same context that produced the work inherits that work's framing: the agent just argued for these decisions and will rationalise them, and the signals it is least able to see from inside — an option pruned, an approach abandoned — are the most valuable ones. Reset before analysing.
@@ -41,17 +33,15 @@ Every change a retro produces is a long-lived artifact. Read [`docs/engineering/
 
 ## Step 1 — Gather facts
 
-Collect context:
+Assemble the dossier — issue, session transcript, PR, and commit log in one brief:
 
 ```bash
-gh issue view <N> --json title,body,comments
-gh pr view <PR> --json title,body,commits,comments,reviews  # if known
-git log --oneline <merge-commit> -1  # if already merged
+.claude/skills/retro/task-dossier.sh <N> [<PR>] [<merge-commit>]
 ```
 
-Read the full history: issue, comments, review, conversation in the PR.
+**The transcript is the primary source.** Read its human-typed user turns first and in full — every correction, redirect, or repeated request marks where the system leaned on the user instead of carrying the work. Never run the retro off a compaction summary: it drops the decision-path and reframes process failures as settled background.
 
-Reconstruct the **path**, not only the end-state: walk the PR's commit sequence and the session transcript (located above) for an approach that was built then replaced, or an option declared off-limits. The costliest signals — a wrong-axis decision, redone — leave no trace in the final diff; they live only in the order of the work. If the transcript is gone, fall back to the surviving sub-agent logs plus the commit sequence.
+Reconstruct the **path**, not the end-state. The costliest signals — a wrong-axis decision, redone — leave no trace in the final diff; they live only in the order of the work. If the transcript is gone, fall back to the surviving sub-agent logs plus the commit sequence.
 
 ---
 
