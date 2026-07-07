@@ -601,7 +601,7 @@ class PeerTransferEngineTest {
     @Test
     fun `onCancel of active outbound batch fires cancelBatch`() = runTest {
         val cancelledBatchIds = mutableListOf<String>()
-        val pauseChannel = kotlinx.coroutines.channels.Channel<Unit>(0)
+        val pauseChannel = Channel<Unit>(0)
         val engine = PeerTransferEngine(
             peer = peer,
             batchSenderFactory = fakeBatchSender(pauseChannel = pauseChannel),

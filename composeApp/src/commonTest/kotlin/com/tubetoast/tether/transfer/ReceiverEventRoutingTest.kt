@@ -1,6 +1,7 @@
 package com.tubetoast.tether.transfer
 
 import com.tubetoast.tether.protocol.PeerIdentity
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.toList
@@ -19,7 +20,7 @@ class ReceiverEventRoutingTest {
 
     private fun buildRouter(
         inbound: MutableSharedFlow<InboundEvent>,
-        scope: kotlinx.coroutines.CoroutineScope,
+        scope: CoroutineScope,
     ): InboundEventRouter = InboundEventRouter(scope = scope, inboundEvents = inbound)
 
     @Test

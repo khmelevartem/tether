@@ -2,14 +2,17 @@ package com.tubetoast.tether.transfer
 
 import com.tubetoast.tether.preferences.FakePeerPreferencesStore
 import com.tubetoast.tether.protocol.PeerIdentity
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -18,8 +21,8 @@ class PeerTransferEngineInboundTest {
 
     private fun buildEngine(
         events: MutableSharedFlow<ReceiveEvent>,
-        scope: kotlinx.coroutines.CoroutineScope,
-        timeout: kotlin.time.Duration = ReconnectionTimeout.DEFAULT,
+        scope: CoroutineScope,
+        timeout: Duration = ReconnectionTimeout.DEFAULT,
     ): PeerTransferEngine = PeerTransferEngine(
         peer = peer,
         batchSenderFactory = fakeBatchSender(),
@@ -29,9 +32,9 @@ class PeerTransferEngineInboundTest {
         peerPreferencesStore = FakePeerPreferencesStore(),
     )
 
-    private suspend fun kotlinx.coroutines.test.TestScope.engineInReconnecting(
+    private suspend fun TestScope.engineInReconnecting(
         events: MutableSharedFlow<ReceiveEvent>,
-        timeout: kotlin.time.Duration,
+        timeout: Duration,
     ): PeerTransferEngine {
         val engine = buildEngine(events, backgroundScope, timeout)
         runCurrent()
