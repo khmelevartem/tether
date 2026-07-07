@@ -57,5 +57,5 @@ fun cancelledCardCopy(state: PeerTransferState.Cancelled): String {
     }
 }
 
-fun reconnectingCardCopy(state: PeerTransferState.Reconnecting, device: Device): String =
-    "Reconnecting to ${device.name}… (${state.remainingSeconds}s)"
+fun reconnectingCardCopy(remainingSeconds: Int, device: Device): String =
+    "Reconnecting to ${device.name}… (${remainingSeconds}s)"

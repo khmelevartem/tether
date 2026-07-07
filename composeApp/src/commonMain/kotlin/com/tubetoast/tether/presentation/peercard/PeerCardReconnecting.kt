@@ -27,6 +27,21 @@ internal fun PeerCardReconnecting(
     modifier: Modifier = Modifier,
     isPaired: Boolean = false,
 ) {
+    PeerCardReconnecting(
+        remainingSeconds = state.remainingSeconds,
+        device = device,
+        modifier = modifier,
+        isPaired = isPaired,
+    )
+}
+
+@Composable
+internal fun PeerCardReconnecting(
+    remainingSeconds: Int,
+    device: Device,
+    modifier: Modifier = Modifier,
+    isPaired: Boolean = false,
+) {
     val spacing = TetherTheme.spacing
     val peerName = device.name
     val announcement = "Connection lost. Reconnecting to $peerName…"
@@ -41,7 +56,7 @@ internal fun PeerCardReconnecting(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         TitleText(text = peerName, modifier = Modifier.fillMaxWidth())
-        BodyText(text = reconnectingCardCopy(state, device), color = TetherTheme.colors.textMuted)
+        BodyText(text = reconnectingCardCopy(remainingSeconds, device), color = TetherTheme.colors.textMuted)
     }
 }
 

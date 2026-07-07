@@ -37,6 +37,7 @@ fun main() = runBlocking {
     container.nameStore.init()
     val handle = container.startBackendOrFail()
     container.autoSendDispatcher.start()
+    container.engineWarmer.start()
     DesktopInboundNotifier(
         windowHolder = container.windowHolder,
         receiveEvents = container.inboundEventRouter.receiveEvents,

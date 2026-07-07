@@ -68,6 +68,7 @@ fun MainViewController() = run {
                 container.nameRepublisher.start(scope)
                 container.rendezvousAnnouncer.start(scope)
                 container.autoSendDispatcher.start()
+                container.engineWarmer.start()
                 IosInboundNotifier(container.inboundEventRouter.receiveEvents, scope).start()
                 container.healthMonitor.start(scope)
                 drainSharedFiles()

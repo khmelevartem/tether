@@ -36,27 +36,53 @@ class PeerTransferEngine(
     private val originalSources = MutableStateFlow<List<FileSource>>(emptyList())
     private val confirmedReceived = MutableStateFlow<Set<String>>(emptySet())
     private val cancelledFileNames = MutableStateFlow<Set<String>>(emptySet())
-    private val inboundReconnectCountdown = ReconnectCountdown(
+
+    /**
+     * Rearmed on every non-terminal inbound event, not just [PeerTransferState.ActiveInbound.link]
+     * transitions — a sender silent between two `/upload` requests (no [ReceiveEvent.Progress],
+     * no [ReceiveEvent.ConnectionLost]) would otherwise never reach a terminal state. Duration and
+     * expiry action are selected by the current link: [INBOUND_IDLE_GRACE] finalizes a silently
+     * abandoned transfer as [PeerTransferState.Received]; [ReconnectionTimeout] on a confirmed drop
+     * finalizes as [PeerTransferState.Error].
+     */
+    private val inboundInactivityTimer = ReconnectCountdown(
         timeout = reconnectionTimeout,
         scope = scope,
         onTick = { remaining ->
             _state.update { s ->
-                (s as? PeerTransferState.Reconnecting)?.copy(remainingSeconds = remaining) ?: s
+                val active = s as? PeerTransferState.ActiveInbound ?: return@update s
+                val link = active.link as? PeerTransferState.InboundLink.Reconnecting ?: return@update s
+                active.copy(link = link.copy(remainingSeconds = remaining))
             }
         },
         onExpired = {
             _state.update { s ->
-                val perFile = (s as? PeerTransferState.Reconnecting)
-                    ?.let { (it.snapshotBeforeDrop as? PeerTransferState.ActiveInbound)?.perFile }
-                    ?: emptyList()
-                PeerTransferState.Error(
-                    reason = TransferErrorReason.NetworkLost,
-                    sent = perFile.count { it is PerFileStatus.Done },
-                    perFile = perFile,
-                )
+                val active = s as? PeerTransferState.ActiveInbound ?: return@update s
+                val doneCount = active.perFile.count { it is PerFileStatus.Done }
+                when (active.link) {
+                    is PeerTransferState.InboundLink.Connected -> PeerTransferState.Received(
+                        received = doneCount,
+                        total = active.totalFiles,
+                        perFile = active.perFile,
+                        partialReason = if (doneCount >= active.totalFiles) null else PartialOutcome.ConnectionLost,
+                    )
+                    is PeerTransferState.InboundLink.Reconnecting -> PeerTransferState.Error(
+                        reason = TransferErrorReason.NetworkLost,
+                        sent = doneCount,
+                        perFile = active.perFile,
+                    )
+                }
             }
         },
     )
+
+    private fun armInboundTimer(link: PeerTransferState.InboundLink) {
+        val timeout = when (link) {
+            is PeerTransferState.InboundLink.Connected -> INBOUND_IDLE_GRACE
+            is PeerTransferState.InboundLink.Reconnecting -> reconnectionTimeout
+        }
+        inboundInactivityTimer.start(timeout)
+    }
 
     init {
         scope.launch {
@@ -276,7 +302,6 @@ class PeerTransferEngine(
     private fun handleInbound(event: ReceiveEvent) {
         when (event) {
             is ReceiveEvent.Started -> {
-                inboundReconnectCountdown.cancel()
                 val perFile: List<PerFileStatus> = List(event.totalFiles) { i ->
                     if (i == 0) PerFileStatus.Queued(event.currentFile, null) else PerFileStatus.Queued("", null)
                 }
@@ -291,11 +316,11 @@ class PeerTransferEngine(
                         perFile = perFile,
                     )
                 }
+                armInboundTimer(PeerTransferState.InboundLink.Connected)
             }
             is ReceiveEvent.Progress -> {
-                inboundReconnectCountdown.cancel()
                 _state.update { s ->
-                    val active = s.activeInboundOrRestore() ?: return@update s
+                    val active = s as? PeerTransferState.ActiveInbound ?: return@update s
                     val index = active.perFile.indexOfFirst { it.name == event.name }.takeIf { it >= 0 }
                         ?: active.perFile.indexOfFirst { it.name.isEmpty() }.takeIf { it >= 0 }
                         ?: active.currentIndex
@@ -306,14 +331,15 @@ class PeerTransferEngine(
                         receivedBytes = event.receivedBytes,
                         totalBytes = event.totalBytes,
                         perFile = updated,
+                        link = PeerTransferState.InboundLink.Connected,
                     )
                 }
+                armInboundTimer(PeerTransferState.InboundLink.Connected)
             }
             is ReceiveEvent.FileCompleted -> {
-                inboundReconnectCountdown.cancel()
                 confirmedReceived.update { it + event.name }
                 _state.update { s ->
-                    val active = s.activeInboundOrRestore() ?: return@update s
+                    val active = s as? PeerTransferState.ActiveInbound ?: return@update s
                     val index = active.perFile.indexOfFirst { it.name == event.name }.takeIf { it >= 0 }
                         ?: active.currentIndex
                     val updated = active.perFile.toMutableList()
@@ -321,16 +347,15 @@ class PeerTransferEngine(
                     active.copy(
                         currentIndex = (index + 1).coerceAtMost(active.totalFiles - 1),
                         perFile = updated,
+                        link = PeerTransferState.InboundLink.Connected,
                     )
                 }
+                armInboundTimer(PeerTransferState.InboundLink.Connected)
             }
             is ReceiveEvent.BatchCompleted -> {
-                inboundReconnectCountdown.cancel()
+                inboundInactivityTimer.cancel()
                 _state.update { s ->
-                    val active = s as? PeerTransferState.ActiveInbound
-                        ?: (s as? PeerTransferState.Reconnecting)
-                            ?.snapshotBeforeDrop as? PeerTransferState.ActiveInbound
-                    val perFile = active?.perFile ?: emptyList()
+                    val perFile = (s as? PeerTransferState.ActiveInbound)?.perFile ?: emptyList()
                     val partialReason = event.partialReason ?: derivePartialReason(event, perFile)
                     PeerTransferState.Received(
                         received = event.received,
@@ -341,34 +366,26 @@ class PeerTransferEngine(
                 }
             }
             is ReceiveEvent.Failed -> {
-                inboundReconnectCountdown.cancel()
                 _state.update { s ->
-                    val active = s.activeInboundOrRestore() ?: return@update s
+                    val active = s as? PeerTransferState.ActiveInbound ?: return@update s
                     val index = active.perFile.indexOfFirst { it.name == event.file }.takeIf { it >= 0 }
                         ?: active.currentIndex
                     val updated = active.perFile.toMutableList()
                     updated[index] = PerFileStatus.Failed(event.file, active.perFile[index].size, event.reason)
-                    active.copy(perFile = updated)
+                    active.copy(perFile = updated, link = PeerTransferState.InboundLink.Connected)
                 }
+                armInboundTimer(PeerTransferState.InboundLink.Connected)
             }
             is ReceiveEvent.ConnectionLost -> {
-                val result = _state.updateAndGet { snapshot ->
-                    when (snapshot) {
-                        is PeerTransferState.ActiveInbound -> PeerTransferState.Reconnecting(
-                            direction = Direction.Inbound,
-                            remainingSeconds = reconnectionTimeout.inWholeSeconds.toInt(),
-                            snapshotBeforeDrop = snapshot,
-                        )
-                        is PeerTransferState.Reconnecting -> snapshot.copy(
-                            remainingSeconds = reconnectionTimeout.inWholeSeconds.toInt(),
-                        )
-                        else -> snapshot
-                    }
+                val link = PeerTransferState.InboundLink.Reconnecting(reconnectionTimeout.inWholeSeconds.toInt())
+                val result = _state.updateAndGet { s ->
+                    val active = s as? PeerTransferState.ActiveInbound ?: return@updateAndGet s
+                    active.copy(link = link)
                 }
-                if (result is PeerTransferState.Reconnecting) inboundReconnectCountdown.start()
+                if (result is PeerTransferState.ActiveInbound) armInboundTimer(link)
             }
             ReceiveEvent.ReceiverSuspended -> {
-                inboundReconnectCountdown.cancel()
+                inboundInactivityTimer.cancel()
                 _state.update { s ->
                     val perFile = (s as? PeerTransferState.ActiveInbound)?.perFile ?: emptyList()
                     val doneCount = perFile.count { it is PerFileStatus.Done }
@@ -381,13 +398,6 @@ class PeerTransferEngine(
             }
         }
     }
-
-    private fun PeerTransferState.activeInboundOrRestore(): PeerTransferState.ActiveInbound? =
-        when (this) {
-            is PeerTransferState.ActiveInbound -> this
-            is PeerTransferState.Reconnecting -> snapshotBeforeDrop as? PeerTransferState.ActiveInbound
-            else -> null
-        }
 
     private fun derivePartialReason(event: ReceiveEvent.BatchCompleted, perFile: List<PerFileStatus>): PartialOutcome? {
         if (event.received >= event.total) return null

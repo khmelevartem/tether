@@ -100,14 +100,23 @@ internal fun PeerCardContent(
             isPaired = isPaired,
             modifier = modifier,
         )
-        is PeerTransferState.ActiveInbound -> PeerCardActiveInbound(
-            state = transfer,
-            device = state.device,
-            callbacks = callbacks,
-            // TODO(#10): wire isPaired from PeerTransferComponent once observeIsPaired() is available
-            isPaired = isPaired,
-            modifier = modifier,
-        )
+        is PeerTransferState.ActiveInbound -> when (val link = transfer.link) {
+            is PeerTransferState.InboundLink.Connected -> PeerCardActiveInbound(
+                state = transfer,
+                device = state.device,
+                callbacks = callbacks,
+                // TODO(#10): wire isPaired from PeerTransferComponent once observeIsPaired() is available
+                isPaired = isPaired,
+                modifier = modifier,
+            )
+            is PeerTransferState.InboundLink.Reconnecting -> PeerCardReconnecting(
+                remainingSeconds = link.remainingSeconds,
+                device = state.device,
+                // TODO(#10): wire isPaired from PeerTransferComponent once observeIsPaired() is available
+                isPaired = isPaired,
+                modifier = modifier,
+            )
+        }
         is PeerTransferState.Reconnecting -> PeerCardReconnecting(
             state = transfer,
             device = state.device,

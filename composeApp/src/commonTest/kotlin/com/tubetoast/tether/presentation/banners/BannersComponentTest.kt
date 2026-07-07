@@ -273,7 +273,7 @@ class BannersComponentTest {
     }
 
     @Test
-    fun `BusyPeer shown when engine is Reconnecting via ReceiveEvent ConnectionLost`() = runTest {
+    fun `BusyPeer shown when inbound engine is Reconnecting via ReceiveEvent ConnectionLost`() = runTest {
         val repo = PendingFilesRepository()
         val relay = PeerConflictRelay()
         val inboundEvents = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 8)
@@ -292,7 +292,8 @@ class BannersComponentTest {
         inboundEvents.emit(ReceiveEvent.Started(currentFile = "remote.txt", totalFiles = 1))
         inboundEvents.emit(ReceiveEvent.ConnectionLost(receivedSoFar = 0))
         runCurrent()
-        assertIs<PeerTransferState.Reconnecting>(registry.engineFor(peerId).state.value)
+        val state = assertIs<PeerTransferState.ActiveInbound>(registry.engineFor(peerId).state.value)
+        assertIs<PeerTransferState.InboundLink.Reconnecting>(state.link)
 
         relay.reportBusyTap(peerId)
         runCurrent()

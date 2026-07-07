@@ -44,9 +44,13 @@ class PeerTransferEngineInboundTest {
         assertIs<PeerTransferState.ActiveInbound>(engine.state.value)
         events.emit(ReceiveEvent.ConnectionLost(receivedSoFar = 0))
         runCurrent()
-        assertIs<PeerTransferState.Reconnecting>(engine.state.value)
+        val state = assertIs<PeerTransferState.ActiveInbound>(engine.state.value)
+        assertIs<PeerTransferState.InboundLink.Reconnecting>(state.link)
         return engine
     }
+
+    private fun PeerTransferState.linkOrNull(): PeerTransferState.InboundLink? =
+        (this as? PeerTransferState.ActiveInbound)?.link
 
     @Test
     fun `ConnectionLost starts countdown and Error NetworkLost fires on expiry`() = runTest {
@@ -66,32 +70,32 @@ class PeerTransferEngineInboundTest {
         val events = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
         val engine = engineInReconnecting(events, timeout = 3.seconds)
 
-        val initialState = assertIs<PeerTransferState.Reconnecting>(engine.state.value)
-        assertEquals(3, initialState.remainingSeconds)
+        val initialLink = assertIs<PeerTransferState.InboundLink.Reconnecting>(engine.state.value.linkOrNull())
+        assertEquals(3, initialLink.remainingSeconds)
 
         advanceTimeBy(1_001)
         runCurrent()
-        val afterOne = assertIs<PeerTransferState.Reconnecting>(engine.state.value)
+        val afterOne = assertIs<PeerTransferState.InboundLink.Reconnecting>(engine.state.value.linkOrNull())
         assertEquals(2, afterOne.remainingSeconds)
 
         advanceTimeBy(1_000)
         runCurrent()
-        val afterTwo = assertIs<PeerTransferState.Reconnecting>(engine.state.value)
+        val afterTwo = assertIs<PeerTransferState.InboundLink.Reconnecting>(engine.state.value.linkOrNull())
         assertEquals(1, afterTwo.remainingSeconds)
     }
 
     @Test
-    fun `new Started event cancels countdown and transitions to ActiveInbound`() = runTest {
+    fun `new Started event cancels countdown and transitions to ActiveInbound Connected`() = runTest {
         val events = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
         val engine = engineInReconnecting(events, timeout = 5.seconds)
 
         advanceTimeBy(2_000)
         runCurrent()
-        assertIs<PeerTransferState.Reconnecting>(engine.state.value)
+        assertIs<PeerTransferState.InboundLink.Reconnecting>(engine.state.value.linkOrNull())
 
         events.emit(ReceiveEvent.Started("file.txt", 1))
         runCurrent()
-        assertIs<PeerTransferState.ActiveInbound>(engine.state.value)
+        assertEquals(PeerTransferState.InboundLink.Connected, engine.state.value.linkOrNull())
 
         advanceTimeBy(10_000)
         runCurrent()
@@ -156,7 +160,7 @@ class PeerTransferEngineInboundTest {
     }
 
     @Test
-    fun `reconnect then FileCompleted restores ActiveInbound and marks the file done`() = runTest {
+    fun `reconnect then FileCompleted restores ActiveInbound Connected and marks the file done`() = runTest {
         val events = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
         val engine = engineInReconnecting(events, timeout = 5.seconds)
 
@@ -164,6 +168,7 @@ class PeerTransferEngineInboundTest {
         runCurrent()
 
         val state = assertIs<PeerTransferState.ActiveInbound>(engine.state.value)
+        assertEquals(PeerTransferState.InboundLink.Connected, state.link)
         val fileStatus = state.perFile.first { it.name == "file.txt" }
         assertIs<PerFileStatus.Done>(fileStatus)
     }
@@ -179,10 +184,10 @@ class PeerTransferEngineInboundTest {
         events.emit(ReceiveEvent.ConnectionLost(receivedSoFar = 0))
         runCurrent()
 
-        val state = assertIs<PeerTransferState.Reconnecting>(engine.state.value)
-        assertEquals(5, state.remainingSeconds)
-        val snapshot = assertIs<PeerTransferState.ActiveInbound>(state.snapshotBeforeDrop)
-        assertEquals("file.txt", snapshot.currentFile)
+        val state = assertIs<PeerTransferState.ActiveInbound>(engine.state.value)
+        val link = assertIs<PeerTransferState.InboundLink.Reconnecting>(state.link)
+        assertEquals(5, link.remainingSeconds)
+        assertEquals("file.txt", state.currentFile)
     }
 
     @Test
@@ -208,19 +213,138 @@ class PeerTransferEngineInboundTest {
 
         advanceTimeBy(3_000)
         runCurrent()
-        assertIs<PeerTransferState.Reconnecting>(engine.state.value)
+        assertIs<PeerTransferState.InboundLink.Reconnecting>(engine.state.value.linkOrNull())
 
         events.emit(ReceiveEvent.Started("file.txt", 1))
         runCurrent()
         events.emit(ReceiveEvent.ConnectionLost(receivedSoFar = 0))
         runCurrent()
 
-        val state = assertIs<PeerTransferState.Reconnecting>(engine.state.value)
-        assertEquals(5, state.remainingSeconds)
+        val link = assertIs<PeerTransferState.InboundLink.Reconnecting>(engine.state.value.linkOrNull())
+        assertEquals(5, link.remainingSeconds)
 
         advanceTimeBy(6_000)
         runCurrent()
 
         assertIs<PeerTransferState.Error>(engine.state.value)
+    }
+
+    @Test
+    fun `silent sender after last file finalizes to partial Received`() = runTest {
+        val events = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
+        val engine = buildEngine(events, backgroundScope, timeout = 5.seconds)
+        runCurrent()
+
+        events.emit(ReceiveEvent.Started("file1.txt", 3))
+        runCurrent()
+        events.emit(ReceiveEvent.FileCompleted("file1.txt"))
+        runCurrent()
+        events.emit(ReceiveEvent.FileCompleted("file2.txt"))
+        runCurrent()
+
+        advanceTimeBy(INBOUND_IDLE_GRACE.inWholeMilliseconds + 1_000)
+        runCurrent()
+
+        val state = assertIs<PeerTransferState.Received>(engine.state.value)
+        assertEquals(2, state.received)
+        assertEquals(3, state.total)
+        assertEquals(PartialOutcome.ConnectionLost, state.partialReason)
+    }
+
+    @Test
+    fun `fully delivered but batch-end lost finalizes to complete Received`() = runTest {
+        val events = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
+        val engine = buildEngine(events, backgroundScope, timeout = 5.seconds)
+        runCurrent()
+
+        events.emit(ReceiveEvent.Started("file1.txt", 2))
+        runCurrent()
+        events.emit(ReceiveEvent.FileCompleted("file1.txt"))
+        runCurrent()
+        events.emit(ReceiveEvent.FileCompleted("file2.txt"))
+        runCurrent()
+
+        advanceTimeBy(INBOUND_IDLE_GRACE.inWholeMilliseconds + 1_000)
+        runCurrent()
+
+        val state = assertIs<PeerTransferState.Received>(engine.state.value)
+        assertEquals(2, state.received)
+        assertEquals(2, state.total)
+        assertEquals(null, state.partialReason)
+    }
+
+    @Test
+    fun `restore then silence still terminates`() = runTest {
+        val events = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
+        val engine = engineInReconnecting(events, timeout = 5.seconds)
+
+        events.emit(ReceiveEvent.Progress(name = "file.txt", receivedBytes = 10L, totalBytes = 100L))
+        runCurrent()
+        assertEquals(PeerTransferState.InboundLink.Connected, engine.state.value.linkOrNull())
+
+        advanceTimeBy(INBOUND_IDLE_GRACE.inWholeMilliseconds + 1_000)
+        runCurrent()
+
+        assertIs<PeerTransferState.Received>(engine.state.value)
+    }
+
+    @Test
+    fun `Progress rearms inactivity timer`() = runTest {
+        val events = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
+        val engine = buildEngine(events, backgroundScope, timeout = 5.seconds)
+        runCurrent()
+
+        events.emit(ReceiveEvent.Started("file.txt", 1))
+        runCurrent()
+
+        advanceTimeBy(INBOUND_IDLE_GRACE.inWholeMilliseconds - 1_000)
+        runCurrent()
+        events.emit(ReceiveEvent.Progress(name = "file.txt", receivedBytes = 10L, totalBytes = 100L))
+        runCurrent()
+
+        advanceTimeBy(INBOUND_IDLE_GRACE.inWholeMilliseconds - 1_000)
+        runCurrent()
+        assertIs<PeerTransferState.ActiveInbound>(engine.state.value)
+
+        advanceTimeBy(2_000)
+        runCurrent()
+        assertIs<PeerTransferState.Received>(engine.state.value)
+    }
+
+    @Test
+    fun `ConnectionLost expiry is Error while silent-sender expiry is Received`() = runTest {
+        val lostEvents = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
+        val lostEngine = engineInReconnecting(lostEvents, timeout = 5.seconds)
+        advanceTimeBy(6_000)
+        runCurrent()
+        assertIs<PeerTransferState.Error>(lostEngine.state.value)
+
+        val silentEvents = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
+        val silentEngine = buildEngine(silentEvents, backgroundScope, timeout = 5.seconds)
+        runCurrent()
+        silentEvents.emit(ReceiveEvent.Started("file.txt", 1))
+        runCurrent()
+
+        advanceTimeBy(INBOUND_IDLE_GRACE.inWholeMilliseconds + 1_000)
+        runCurrent()
+        assertIs<PeerTransferState.Received>(silentEngine.state.value)
+    }
+
+    @Test
+    fun `inactivity expiry after terminal state is a no-op`() = runTest {
+        val events = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
+        val engine = buildEngine(events, backgroundScope, timeout = 5.seconds)
+        runCurrent()
+
+        events.emit(ReceiveEvent.Started("file.txt", 1))
+        runCurrent()
+        events.emit(ReceiveEvent.BatchCompleted(received = 1, total = 1))
+        runCurrent()
+        val state = assertIs<PeerTransferState.Received>(engine.state.value)
+
+        advanceTimeBy(INBOUND_IDLE_GRACE.inWholeMilliseconds + 1_000)
+        runCurrent()
+
+        assertEquals(state, engine.state.value)
     }
 }

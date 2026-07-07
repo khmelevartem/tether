@@ -1,7 +1,6 @@
 package com.tubetoast.tether.presentation.peercard
 
 import com.tubetoast.tether.protocol.Device
-import com.tubetoast.tether.transfer.Direction
 import com.tubetoast.tether.transfer.PartialOutcome
 import com.tubetoast.tether.transfer.PeerTransferState
 import com.tubetoast.tether.transfer.TransferErrorReason
@@ -193,11 +192,6 @@ class PeerCardCopyTest {
 
     @Test
     fun reconnectingCopy() {
-        val state = PeerTransferState.Reconnecting(
-            direction = Direction.Outbound,
-            remainingSeconds = 12,
-            snapshotBeforeDrop = PeerTransferState.Idle,
-        )
-        assertEquals("Reconnecting to Alice… (12s)", reconnectingCardCopy(state, device))
+        assertEquals("Reconnecting to Alice… (12s)", reconnectingCardCopy(12, device))
     }
 }

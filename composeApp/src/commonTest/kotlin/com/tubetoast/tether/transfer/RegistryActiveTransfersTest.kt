@@ -99,14 +99,17 @@ class RegistryActiveTransfersTest {
         advanceUntilIdle()
 
         inboundEvents.emit(ReceiveEvent.Started("file.txt", 1))
-        advanceUntilIdle()
+        // Not advanceUntilIdle: the inbound inactivity timer would elapse the full idle grace
+        // and finalize the transfer. runCurrent propagates ActiveInbound without advancing
+        // virtual time into that timer.
+        runCurrent()
 
         assertIs<PeerTransferState.ActiveInbound>(engine.state.value)
         assertEquals(setOf(peerA), activeTransfers.peers.value)
     }
 
     @Test
-    fun `peer stays active while its engine is Reconnecting`() = runTest {
+    fun `peer stays active while its inbound engine is Reconnecting`() = runTest {
         val inboundEvents = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
         val registry = buildRegistry(inboundEventsFor = { inboundEvents })
         val activeTransfers = RegistryActiveTransfers(registry, foregroundScope())
@@ -114,14 +117,15 @@ class RegistryActiveTransfersTest {
         advanceUntilIdle()
 
         inboundEvents.emit(ReceiveEvent.Started("file.txt", 1))
-        advanceUntilIdle()
+        runCurrent()
         inboundEvents.emit(ReceiveEvent.ConnectionLost(receivedSoFar = 0))
-        // Not advanceUntilIdle: the inbound reconnect countdown would elapse the full
-        // reconnection timeout and drive the engine to Error. runCurrent propagates the
-        // Reconnecting state without advancing virtual time into the countdown.
+        // Not advanceUntilIdle: the inbound inactivity timer would elapse the full reconnection
+        // timeout and drive the engine to Error. runCurrent propagates the Reconnecting link
+        // without advancing virtual time into the countdown.
         runCurrent()
 
-        assertIs<PeerTransferState.Reconnecting>(engine.state.value)
+        val state = assertIs<PeerTransferState.ActiveInbound>(engine.state.value)
+        assertIs<PeerTransferState.InboundLink.Reconnecting>(state.link)
         assertEquals(setOf(peerA), activeTransfers.peers.value)
     }
 

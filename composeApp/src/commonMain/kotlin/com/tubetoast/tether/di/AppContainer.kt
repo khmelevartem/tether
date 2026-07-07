@@ -16,7 +16,6 @@ import com.tubetoast.tether.identity.DeviceIdentityStore
 import com.tubetoast.tether.network.FileClient
 import com.tubetoast.tether.network.FileServer
 import com.tubetoast.tether.network.PeerFileSender
-import com.tubetoast.tether.peer.Peer
 import com.tubetoast.tether.peer.PeersRepository
 import com.tubetoast.tether.preferences.DefaultPeerPreferencesStore
 import com.tubetoast.tether.preferences.FileTransferPreferences
@@ -32,6 +31,7 @@ import com.tubetoast.tether.transfer.AutoSendDispatcher
 import com.tubetoast.tether.transfer.BatchSender
 import com.tubetoast.tether.transfer.ConnectionMonitor
 import com.tubetoast.tether.transfer.DefaultTransferActivityTracker
+import com.tubetoast.tether.transfer.EngineWarmer
 import com.tubetoast.tether.transfer.FilePicker
 import com.tubetoast.tether.transfer.InboundCancelRegistry
 import com.tubetoast.tether.transfer.InboundEventBus
@@ -46,9 +46,6 @@ import com.tubetoast.tether.transfer.TransferActivityTracker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 
 abstract class AppContainer {
     protected abstract val dataStore: DataStore<Preferences>
@@ -142,14 +139,12 @@ abstract class AppContainer {
                     cancelBatch = { batchId -> peerFileSender.cancelBatch(peer, batchId) },
                 )
             },
-            peers = peersRepository.peers
-                .map {
-                    it.map(
-                        Peer::id,
-                    )
-                }.stateIn(appScope, SharingStarted.Eagerly, emptyList()),
             engineDispatcher = Dispatchers.Default,
         )
+    }
+
+    open val engineWarmer: EngineWarmer by lazy {
+        EngineWarmer(peersRepository, peerTransferEngineRegistry, appScope)
     }
 
     private val activeTransfers: ActiveTransfers by lazy {

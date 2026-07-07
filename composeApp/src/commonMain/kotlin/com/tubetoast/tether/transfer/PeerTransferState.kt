@@ -46,8 +46,18 @@ sealed interface PeerTransferState {
         val totalBytes: Long?,
         val bytesPerSec: Long?,
         val perFile: List<PerFileStatus>,
+        val link: InboundLink = InboundLink.Connected,
     ) : PeerTransferState
 
+    sealed interface InboundLink {
+        data object Connected : InboundLink
+
+        data class Reconnecting(
+            val remainingSeconds: Int,
+        ) : InboundLink
+    }
+
+    /** Outbound-only: driven by [BatchSender] on [Direction.Outbound]. Inbound reconnect state lives in [ActiveInbound.link]. */
     data class Reconnecting(
         val direction: Direction,
         val remainingSeconds: Int,

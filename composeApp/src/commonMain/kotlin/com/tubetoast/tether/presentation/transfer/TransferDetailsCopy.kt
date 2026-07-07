@@ -13,8 +13,10 @@ fun detailsSubtitleCopy(state: PeerTransferState, peerName: String): String = wh
         is PeerTransferState.ActiveOutbound.Sending -> "Sending ${state.currentIndex + 1} of ${state.totalFiles}…"
         is PeerTransferState.ActiveOutbound.Claimed -> "Sending 1 of ${state.totalFiles}…"
     }
-    is PeerTransferState.ActiveInbound ->
-        "Receiving ${state.currentIndex + 1} of ${state.totalFiles}…"
+    is PeerTransferState.ActiveInbound -> when (state.link) {
+        is PeerTransferState.InboundLink.Connected -> "Receiving ${state.currentIndex + 1} of ${state.totalFiles}…"
+        is PeerTransferState.InboundLink.Reconnecting -> "Reconnecting…"
+    }
     is PeerTransferState.Sent ->
         "Sent ${state.sent} of ${state.total} files"
     is PeerTransferState.Received ->

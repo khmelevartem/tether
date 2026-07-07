@@ -49,7 +49,8 @@ class PeerTransferEngineTest {
         val engine = engineInActiveInbound(events)
         events.emit(ReceiveEvent.ConnectionLost(receivedSoFar = 0))
         runCurrent()
-        assertIs<PeerTransferState.Reconnecting>(engine.state.value)
+        val state = assertIs<PeerTransferState.ActiveInbound>(engine.state.value)
+        assertIs<PeerTransferState.InboundLink.Reconnecting>(state.link)
         return engine
     }
 
@@ -337,7 +338,7 @@ class PeerTransferEngineTest {
     }
 
     @Test
-    fun `inbound ConnectionLost transitions to Reconnecting Inbound`() = runTest {
+    fun `inbound ConnectionLost sets ActiveInbound link to Reconnecting`() = runTest {
         val events = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
         val engine = engineInActiveInbound(events)
 
@@ -346,9 +347,8 @@ class PeerTransferEngineTest {
         events.emit(ReceiveEvent.ConnectionLost(receivedSoFar = 0))
         runCurrent()
 
-        val state = engine.state.value
-        assertIs<PeerTransferState.Reconnecting>(state)
-        assertEquals(Direction.Inbound, state.direction)
+        val state = assertIs<PeerTransferState.ActiveInbound>(engine.state.value)
+        assertIs<PeerTransferState.InboundLink.Reconnecting>(state.link)
     }
 
     @Test
@@ -522,7 +522,7 @@ class PeerTransferEngineTest {
     }
 
     @Test
-    fun `startOutbound returns false when Reconnecting`() = runTest {
+    fun `startOutbound returns false when ActiveInbound is Reconnecting`() = runTest {
         val events = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
         val engine = engineInReconnecting(events)
 
@@ -530,7 +530,8 @@ class PeerTransferEngineTest {
         runCurrent()
 
         assertFalse(result)
-        assertIs<PeerTransferState.Reconnecting>(engine.state.value)
+        val state = assertIs<PeerTransferState.ActiveInbound>(engine.state.value)
+        assertIs<PeerTransferState.InboundLink.Reconnecting>(state.link)
     }
 
     @Test

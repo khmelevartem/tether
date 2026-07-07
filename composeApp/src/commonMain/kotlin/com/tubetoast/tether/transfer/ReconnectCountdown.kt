@@ -7,7 +7,7 @@ import kotlinx.coroutines.launch
 import kotlin.time.Duration
 
 /**
- * Ticks down from [timeout] in one-second steps, invoking [onTick] each second with the
+ * Ticks down from a timeout in one-second steps, invoking [onTick] each second with the
  * remaining seconds, then [onExpired] when the countdown reaches zero. The countdown can be
  * cancelled via [cancel] — for example, when a reconnection event arrives before expiry.
  */
@@ -19,7 +19,8 @@ class ReconnectCountdown(
 ) {
     private var job: Job? = null
 
-    fun start() {
+    /** Restarts the countdown, overriding the constructor [timeout] for this run only. */
+    fun start(timeout: Duration = this.timeout) {
         job?.cancel()
         job = scope.launch {
             val totalSeconds = timeout.inWholeSeconds.toInt()
