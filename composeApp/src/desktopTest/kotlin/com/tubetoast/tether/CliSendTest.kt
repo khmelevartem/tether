@@ -114,6 +114,7 @@ class CliSendTest {
                     scope = engineScope,
                     peerPreferencesStore = FakePeerPreferencesStore(),
                     inboundEvents = MutableSharedFlow(),
+                    cancelBatch = { },
                 )
             },
         )
@@ -367,6 +368,7 @@ class CliSendTest {
                     scope = engineScope,
                     peerPreferencesStore = FakePeerPreferencesStore(),
                     inboundEvents = MutableSharedFlow(),
+                    cancelBatch = { },
                 )
             },
         )
@@ -441,6 +443,7 @@ class CliSendTest {
                     scope = engineScope,
                     peerPreferencesStore = FakePeerPreferencesStore(),
                     inboundEvents = MutableSharedFlow(),
+                    cancelBatch = { },
                 )
             },
         )
@@ -774,6 +777,7 @@ class CliSendTest {
                     scope = engineScope,
                     peerPreferencesStore = FakePeerPreferencesStore(),
                     inboundEvents = MutableSharedFlow(),
+                    cancelBatch = { },
                 )
             },
         )

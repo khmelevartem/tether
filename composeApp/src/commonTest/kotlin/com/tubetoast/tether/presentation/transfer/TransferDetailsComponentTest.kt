@@ -66,6 +66,7 @@ class TransferDetailsComponentTest {
             inboundEvents = MutableSharedFlow(),
             scope = scope,
             peerPreferencesStore = FakePeerPreferencesStore(),
+            cancelBatch = { },
         )
         return PeerTransferComponent(
             componentContext = context,

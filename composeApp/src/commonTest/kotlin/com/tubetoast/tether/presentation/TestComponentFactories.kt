@@ -44,6 +44,7 @@ internal fun fakePeerTransferComponentFactory(
             inboundEvents = MutableSharedFlow(),
             scope = coroutineScope,
             peerPreferencesStore = FakePeerPreferencesStore(),
+            cancelBatch = { },
         )
         PeerTransferComponent(
             componentContext = childCtx,

@@ -33,6 +33,7 @@ class RegistryActiveTransfersTest {
                 inboundEvents = inboundEventsFor(peer),
                 scope = engineScope,
                 peerPreferencesStore = FakePeerPreferencesStore(),
+                cancelBatch = { },
             )
         },
         engineDispatcher = StandardTestDispatcher(testScheduler),

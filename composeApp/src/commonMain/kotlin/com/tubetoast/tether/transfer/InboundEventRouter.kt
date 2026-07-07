@@ -4,6 +4,7 @@ package com.tubetoast.tether.transfer
 
 import com.tubetoast.tether.protocol.PeerIdentity
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -31,6 +32,7 @@ class InboundEventRouter(
     private val _receiveEvents = MutableSharedFlow<Pair<PeerIdentity, ReceiveEvent>>(
         replay = 0,
         extraBufferCapacity = 64,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
     )
     val receiveEvents: SharedFlow<Pair<PeerIdentity, ReceiveEvent>> = _receiveEvents.asSharedFlow()
 
@@ -47,7 +49,11 @@ class InboundEventRouter(
             val current = peerFlows.load()
             val existing = current[peer]
             if (existing != null) return existing
-            val newFlow = MutableSharedFlow<ReceiveEvent>(replay = 0, extraBufferCapacity = 64)
+            val newFlow = MutableSharedFlow<ReceiveEvent>(
+                replay = 0,
+                extraBufferCapacity = 64,
+                onBufferOverflow = BufferOverflow.DROP_OLDEST,
+            )
             val next = current + (peer to newFlow)
             if (peerFlows.compareAndSet(current, next)) return newFlow
         }

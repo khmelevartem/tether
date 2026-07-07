@@ -17,6 +17,7 @@ fun fakePeerTransferEngineRegistry(
             inboundEvents = inboundEvents,
             scope = appScope,
             peerPreferencesStore = FakePeerPreferencesStore(),
+            cancelBatch = { },
         )
     },
 )

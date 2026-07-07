@@ -44,6 +44,7 @@ class AutoSendDispatcherTest {
                     inboundEvents = MutableSharedFlow(),
                     scope = engineScope,
                     peerPreferencesStore = store,
+                    cancelBatch = { },
                 )
             },
             engineDispatcher = StandardTestDispatcher(testScheduler),
@@ -129,6 +130,7 @@ class AutoSendDispatcherTest {
                     inboundEvents = MutableSharedFlow(),
                     scope = scope,
                     peerPreferencesStore = store,
+                    cancelBatch = { },
                 )
             },
             engineDispatcher = StandardTestDispatcher(testScheduler),

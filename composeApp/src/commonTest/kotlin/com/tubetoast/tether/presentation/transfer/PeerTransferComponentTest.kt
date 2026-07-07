@@ -74,6 +74,7 @@ class PeerTransferComponentTest {
             inboundEvents = MutableSharedFlow(),
             scope = scope,
             peerPreferencesStore = FakePeerPreferencesStore(),
+            cancelBatch = { },
         )
         val component = PeerTransferComponent(
             componentContext = context,
@@ -264,6 +265,7 @@ class PeerTransferComponentTest {
             inboundEvents = MutableSharedFlow(),
             scope = backgroundScope,
             peerPreferencesStore = FakePeerPreferencesStore(),
+            cancelBatch = { },
         )
         val repo = PendingFilesRepository()
         val sources = listOf(FakeFileSource("picked.txt", 100L))
@@ -339,6 +341,7 @@ class PeerTransferComponentTest {
             inboundEvents = MutableSharedFlow(),
             scope = backgroundScope,
             peerPreferencesStore = FakePeerPreferencesStore(),
+            cancelBatch = { },
         )
         val component = PeerTransferComponent(
             componentContext = DefaultComponentContext(lifecycle),
@@ -492,6 +495,7 @@ class PeerTransferComponentTest {
                     inboundEvents = MutableSharedFlow(),
                     scope = engineScope,
                     peerPreferencesStore = FakePeerPreferencesStore(),
+                    cancelBatch = { },
                 )
             },
         )

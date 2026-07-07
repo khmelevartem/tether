@@ -35,6 +35,7 @@ class PeerTransferEngineRegistryTest {
                     inboundEvents = MutableSharedFlow(),
                     scope = engineScope,
                     peerPreferencesStore = FakePeerPreferencesStore(),
+                    cancelBatch = { },
                 )
             },
         )
@@ -83,6 +84,7 @@ class PeerTransferEngineRegistryTest {
                     inboundEvents = MutableSharedFlow(),
                     scope = engineScope,
                     peerPreferencesStore = FakePeerPreferencesStore(),
+                    cancelBatch = { },
                 )
             },
         )

@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
@@ -17,11 +18,17 @@ import kotlin.concurrent.atomics.ExperimentalAtomicApi
  * Engines survive Component destruction (mDNS drops, screen navigation). The only triggers
  * for engine death are an explicit eviction call by the caller and process death; an engine
  * for a permanently gone peer that nobody evicts lives until process death.
+ *
+ * Warms an engine for every discovered peer as soon as it appears in [peers], rather than
+ * waiting for the first [engineFor] call from the UI — the per-peer inbound event flow has no
+ * replay, so an engine that subscribes only on first render misses any inbound event that
+ * arrives before the peer's PeerCard is composed.
  */
 @OptIn(ExperimentalAtomicApi::class)
 class PeerTransferEngineRegistry(
     private val appScope: CoroutineScope,
     private val engineFactory: (PeerIdentity, CoroutineScope) -> PeerTransferEngine,
+    peers: StateFlow<List<PeerIdentity>> = MutableStateFlow(emptyList()),
     private val engineDispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) {
     private data class Entry(
@@ -33,6 +40,12 @@ class PeerTransferEngineRegistry(
 
     private val _engines = MutableStateFlow<Map<PeerIdentity, PeerTransferEngine>>(emptyMap())
     val engines: StateFlow<Map<PeerIdentity, PeerTransferEngine>> = _engines.asStateFlow()
+
+    init {
+        appScope.launch {
+            peers.collect { discovered -> discovered.forEach { peer -> engineFor(peer) } }
+        }
+    }
 
     fun engineFor(peer: PeerIdentity): PeerTransferEngine {
         while (true) {

@@ -30,6 +30,7 @@ class PeerTransferEngineInboundTest {
         reconnectionTimeout = timeout,
         scope = scope,
         peerPreferencesStore = FakePeerPreferencesStore(),
+        cancelBatch = { },
     )
 
     private suspend fun TestScope.engineInReconnecting(
@@ -151,6 +152,52 @@ class PeerTransferEngineInboundTest {
         advanceTimeBy(10_000)
         runCurrent()
 
+        assertIs<PeerTransferState.Received>(engine.state.value)
+    }
+
+    @Test
+    fun `reconnect then FileCompleted restores ActiveInbound and marks the file done`() = runTest {
+        val events = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
+        val engine = engineInReconnecting(events, timeout = 5.seconds)
+
+        events.emit(ReceiveEvent.FileCompleted("file.txt"))
+        runCurrent()
+
+        val state = assertIs<PeerTransferState.ActiveInbound>(engine.state.value)
+        val fileStatus = state.perFile.first { it.name == "file.txt" }
+        assertIs<PerFileStatus.Done>(fileStatus)
+    }
+
+    @Test
+    fun `double ConnectionLost keeps the received count and does not nest Reconnecting`() = runTest {
+        val events = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
+        val engine = engineInReconnecting(events, timeout = 5.seconds)
+
+        advanceTimeBy(3_000)
+        runCurrent()
+
+        events.emit(ReceiveEvent.ConnectionLost(receivedSoFar = 0))
+        runCurrent()
+
+        val state = assertIs<PeerTransferState.Reconnecting>(engine.state.value)
+        assertEquals(5, state.remainingSeconds)
+        val snapshot = assertIs<PeerTransferState.ActiveInbound>(state.snapshotBeforeDrop)
+        assertEquals("file.txt", snapshot.currentFile)
+    }
+
+    @Test
+    fun `BatchCompleted after reconnect terminates in Received not stuck Reconnecting`() = runTest {
+        val events = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
+        val engine = engineInReconnecting(events, timeout = 5.seconds)
+
+        events.emit(ReceiveEvent.BatchCompleted(received = 1, total = 1))
+        runCurrent()
+
+        val state = assertIs<PeerTransferState.Received>(engine.state.value)
+        assertEquals(1, state.received)
+
+        advanceTimeBy(10_000)
+        runCurrent()
         assertIs<PeerTransferState.Received>(engine.state.value)
     }
 

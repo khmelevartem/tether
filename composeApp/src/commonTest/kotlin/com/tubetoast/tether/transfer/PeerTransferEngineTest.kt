@@ -29,6 +29,7 @@ class PeerTransferEngineTest {
         inboundEvents = events,
         scope = scope,
         peerPreferencesStore = FakePeerPreferencesStore(),
+        cancelBatch = { },
     )
 
     private suspend fun TestScope.engineInActiveInbound(
@@ -149,6 +150,7 @@ class PeerTransferEngineTest {
             inboundEvents = MutableSharedFlow(),
             scope = backgroundScope,
             peerPreferencesStore = FakePeerPreferencesStore(),
+            cancelBatch = { },
         )
 
         engine.startOutbound(listOf(FakeFileSource("a.txt", 100L), FakeFileSource("b.txt", 100L)))
@@ -466,6 +468,7 @@ class PeerTransferEngineTest {
             inboundEvents = MutableSharedFlow(),
             scope = backgroundScope,
             peerPreferencesStore = FakePeerPreferencesStore(),
+            cancelBatch = { },
         )
 
         val sourcesA = listOf(FakeFileSource("a.txt", 100L))

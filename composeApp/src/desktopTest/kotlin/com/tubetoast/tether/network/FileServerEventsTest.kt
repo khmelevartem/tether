@@ -23,6 +23,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.OutgoingContent
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
+import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.ByteWriteChannel
 import io.ktor.utils.io.writeFully
 import kotlinx.coroutines.TimeoutCancellationException
@@ -347,6 +348,70 @@ class FileServerEventsTest {
                     }
                 }
                 assertEquals(HttpStatusCode.BadRequest, response.status)
+            }
+        } finally {
+            client.close()
+        }
+    }
+
+    @Test
+    fun `cancel arriving exactly at write-start aborts the upload deterministically`() {
+        val configDir = Files.createTempDirectory("tether-fs-events-keys3").toFile().also(cleanupPaths::add)
+        val temp = TempDataStore().also { cleanupTempStores += it }
+        val downloadsDir = Files.createTempDirectory("tether-fs-events-dl3").toFile().also(cleanupPaths::add)
+        val store = DiscoveredDevicesStore()
+        store.upsert(Device(name = "TestPeer", host = peerHost, port = 9999, fingerprint = "peer-fp"))
+        val inboundEventBus = InboundEventBus()
+        val cancelRegistry = InboundCancelRegistry()
+        val realBackend = JvmUploadStorageBackend(downloadsDir.absolutePath)
+        val realStorage = FileUploadStorage(root = downloadsDir.absolutePath, backend = realBackend)
+        val cancelOnWriteStorage = object : UploadStorage {
+            override fun ensureRoot() = realStorage.ensureRoot()
+
+            override fun resolveDestination(relativePath: String): UploadHandle =
+                realStorage.resolveDestination(relativePath)
+
+            override suspend fun writeBody(body: ByteReadChannel, handle: UploadHandle): Long {
+                cancelRegistry.request(peer)
+                return realStorage.writeBody(body, handle)
+            }
+
+            override fun abort(handle: UploadHandle) = realStorage.abort(handle)
+        }
+        val server = FileServer(
+            configuredPort = 0,
+            uploadStorage = cancelOnWriteStorage,
+            trustedDeviceStore = DefaultTrustedDeviceStore(temp.dataStore),
+            deviceKeyPair = DeviceKeyPair(configDir),
+            inboundEventBus = inboundEventBus,
+            cancelRegistry = cancelRegistry,
+            discoveredDevicesStore = store,
+        )
+        startedServer = server
+        val port = server.start()
+        val client = HttpClient(CIO) { install(ContentNegotiation) { json() } }
+        try {
+            runBlocking {
+                val collected = mutableListOf<InboundEvent>()
+                val collectionJob = launch { inboundEventBus.events.collect { collected += it } }
+                withTimeout(5.seconds) {
+                    client.post("http://localhost:$port/upload?name=cancel-at-start.bin") {
+                        setBody(SlowEventsContent(totalBytes = 8L * 1024 * 1024))
+                    }
+                }
+                withTimeout(2.seconds) {
+                    while (collected.none { it is InboundEvent.CancelledByReceiver }) delay(10.milliseconds)
+                }
+                collectionJob.cancel()
+
+                assertTrue(
+                    collected.any { it is InboundEvent.CancelledByReceiver },
+                    "a cancel requested at write-start must abort the upload",
+                )
+                assertTrue(
+                    collected.none { it is InboundEvent.FileCompleted },
+                    "an aborted upload must not also report completion",
+                )
             }
         } finally {
             client.close()

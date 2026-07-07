@@ -78,6 +78,7 @@ class BannersComponentTest {
                     inboundEvents = MutableSharedFlow(),
                     scope = engineScope,
                     peerPreferencesStore = FakePeerPreferencesStore(),
+                    cancelBatch = { },
                 )
             },
         )

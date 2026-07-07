@@ -26,7 +26,7 @@ class PeerTransferEngine(
     private val reconnectionTimeout: Duration = ReconnectionTimeout.DEFAULT,
     private val scope: CoroutineScope,
     private val peerPreferencesStore: PeerPreferencesStore,
-    private val cancelBatch: (suspend (batchId: String) -> Unit)? = null,
+    private val cancelBatch: suspend (batchId: String) -> Unit,
 ) {
     private val _state = MutableStateFlow<PeerTransferState>(PeerTransferState.Idle)
     val state: StateFlow<PeerTransferState> = _state.asStateFlow()
@@ -79,7 +79,7 @@ class PeerTransferEngine(
         return true
     }
 
-    // TODO(#513): wire receiver-cancel button → InboundCancelRegistry.request(peer) for the
+    // TODO(#225): wire receiver-cancel button → InboundCancelRegistry.request(peer) for the
     // ActiveInbound branch of this method.
     fun onCancel() {
         val sender = currentSender
@@ -88,8 +88,8 @@ class PeerTransferEngine(
         _state.update { current ->
             if (current is PeerTransferState.ActiveOutbound) cancelledFromActive(current) else current
         }
-        if (sender != null && cancelBatch != null) {
-            scope.launch { cancelBatch.invoke(sender.batchId) }
+        if (sender != null) {
+            scope.launch { cancelBatch(sender.batchId) }
         }
     }
 
@@ -295,7 +295,7 @@ class PeerTransferEngine(
             is ReceiveEvent.Progress -> {
                 inboundReconnectCountdown.cancel()
                 _state.update { s ->
-                    val active = s as? PeerTransferState.ActiveInbound ?: return@update s
+                    val active = s.activeInboundOrRestore() ?: return@update s
                     val index = active.perFile.indexOfFirst { it.name == event.name }.takeIf { it >= 0 }
                         ?: active.perFile.indexOfFirst { it.name.isEmpty() }.takeIf { it >= 0 }
                         ?: active.currentIndex
@@ -313,7 +313,7 @@ class PeerTransferEngine(
                 inboundReconnectCountdown.cancel()
                 confirmedReceived.update { it + event.name }
                 _state.update { s ->
-                    val active = s as? PeerTransferState.ActiveInbound ?: return@update s
+                    val active = s.activeInboundOrRestore() ?: return@update s
                     val index = active.perFile.indexOfFirst { it.name == event.name }.takeIf { it >= 0 }
                         ?: active.currentIndex
                     val updated = active.perFile.toMutableList()
@@ -341,8 +341,9 @@ class PeerTransferEngine(
                 }
             }
             is ReceiveEvent.Failed -> {
+                inboundReconnectCountdown.cancel()
                 _state.update { s ->
-                    val active = s as? PeerTransferState.ActiveInbound ?: return@update s
+                    val active = s.activeInboundOrRestore() ?: return@update s
                     val index = active.perFile.indexOfFirst { it.name == event.file }.takeIf { it >= 0 }
                         ?: active.currentIndex
                     val updated = active.perFile.toMutableList()
@@ -353,12 +354,14 @@ class PeerTransferEngine(
             is ReceiveEvent.ConnectionLost -> {
                 val result = _state.updateAndGet { snapshot ->
                     when (snapshot) {
-                        is PeerTransferState.ActiveInbound, is PeerTransferState.Reconnecting ->
-                            PeerTransferState.Reconnecting(
-                                direction = Direction.Inbound,
-                                remainingSeconds = reconnectionTimeout.inWholeSeconds.toInt(),
-                                snapshotBeforeDrop = snapshot,
-                            )
+                        is PeerTransferState.ActiveInbound -> PeerTransferState.Reconnecting(
+                            direction = Direction.Inbound,
+                            remainingSeconds = reconnectionTimeout.inWholeSeconds.toInt(),
+                            snapshotBeforeDrop = snapshot,
+                        )
+                        is PeerTransferState.Reconnecting -> snapshot.copy(
+                            remainingSeconds = reconnectionTimeout.inWholeSeconds.toInt(),
+                        )
                         else -> snapshot
                     }
                 }
@@ -378,6 +381,13 @@ class PeerTransferEngine(
             }
         }
     }
+
+    private fun PeerTransferState.activeInboundOrRestore(): PeerTransferState.ActiveInbound? =
+        when (this) {
+            is PeerTransferState.ActiveInbound -> this
+            is PeerTransferState.Reconnecting -> snapshotBeforeDrop as? PeerTransferState.ActiveInbound
+            else -> null
+        }
 
     private fun derivePartialReason(event: ReceiveEvent.BatchCompleted, perFile: List<PerFileStatus>): PartialOutcome? {
         if (event.received >= event.total) return null

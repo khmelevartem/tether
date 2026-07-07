@@ -14,6 +14,12 @@ import kotlin.concurrent.atomics.AtomicReference
  * [signalFor] belongs only to the upload that requested it — the fresh-deferred-per-upload
  * structure means a cancel that arrives after that upload has already ended has no later
  * transfer to abort, so no explicit staleness cleanup is needed.
+ *
+ * The signal map is keyed by peer, one entry per peer, replaced on every [signalFor] call — two
+ * concurrent uploads from the same peer would let a cancel reach only the most recently
+ * registered one. Not reachable today since uploads from one peer are sequential; revisit for
+ * #225. The map itself grows unbounded with the number of distinct peers seen this process
+ * lifetime, never shrinking.
  */
 class InboundCancelRegistry {
     private val log = KydraLog.withTag(default = "InboundCancelRegistry")
