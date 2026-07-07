@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.launch
 import kotlin.time.Duration
 
@@ -350,14 +351,18 @@ class PeerTransferEngine(
                 }
             }
             is ReceiveEvent.ConnectionLost -> {
-                _state.update { snapshot ->
-                    PeerTransferState.Reconnecting(
-                        direction = Direction.Inbound,
-                        remainingSeconds = reconnectionTimeout.inWholeSeconds.toInt(),
-                        snapshotBeforeDrop = snapshot,
-                    )
+                val result = _state.updateAndGet { snapshot ->
+                    when (snapshot) {
+                        is PeerTransferState.ActiveInbound, is PeerTransferState.Reconnecting ->
+                            PeerTransferState.Reconnecting(
+                                direction = Direction.Inbound,
+                                remainingSeconds = reconnectionTimeout.inWholeSeconds.toInt(),
+                                snapshotBeforeDrop = snapshot,
+                            )
+                        else -> snapshot
+                    }
                 }
-                inboundReconnectCountdown.start()
+                if (result is PeerTransferState.Reconnecting) inboundReconnectCountdown.start()
             }
             ReceiveEvent.ReceiverSuspended -> {
                 inboundReconnectCountdown.cancel()

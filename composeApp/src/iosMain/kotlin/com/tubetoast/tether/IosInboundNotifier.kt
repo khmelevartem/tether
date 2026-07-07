@@ -15,7 +15,7 @@ internal class IosInboundNotifier(
     private val receiveEvents: SharedFlow<Pair<PeerIdentity, ReceiveEvent>>,
     private val scope: CoroutineScope,
 ) {
-    init {
+    fun start() {
         scope.launch {
             receiveEvents.collect { (_, event) ->
                 if (event is ReceiveEvent.BatchCompleted) {

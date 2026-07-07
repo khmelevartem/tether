@@ -226,6 +226,11 @@ internal fun Application.installFileServerRoutes(
             try {
                 val resolved = storage.resolveDestination(relativePath)
                 handle = resolved
+                val cancelSignal = if (peer != null && cancelRegistry != null) {
+                    cancelRegistry.signalFor(peer)
+                } else {
+                    null
+                }
                 if (peer != null) inboundEventBus?.emit(InboundEvent.FileStarted(peer, relativePath))
                 tracker.withActiveTransfer {
                     val body = call.receiveChannel()
@@ -234,8 +239,7 @@ internal fun Application.installFileServerRoutes(
                         val writeJob = launch {
                             bytesWritten = storage.writeBody(body, resolved)
                         }
-                        if (peer != null && cancelRegistry != null) {
-                            val cancelSignal = cancelRegistry.signalFor(peer)
+                        if (cancelSignal != null) {
                             select {
                                 writeJob.onJoin { }
                                 cancelSignal.onAwait {

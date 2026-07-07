@@ -130,6 +130,28 @@ class PeerTransferEngineInboundTest {
     }
 
     @Test
+    fun `ConnectionLost after terminal Received is a no-op`() = runTest {
+        val events = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
+        val engine = buildEngine(events, backgroundScope, timeout = 5.seconds)
+        runCurrent()
+
+        events.emit(ReceiveEvent.Started("file.txt", 3))
+        runCurrent()
+        events.emit(
+            ReceiveEvent.BatchCompleted(received = 1, total = 3, partialReason = PartialOutcome.ReceiverCancelled),
+        )
+        runCurrent()
+        assertIs<PeerTransferState.Received>(engine.state.value)
+
+        events.emit(ReceiveEvent.ConnectionLost(receivedSoFar = 1))
+        runCurrent()
+        advanceTimeBy(10_000)
+        runCurrent()
+
+        assertIs<PeerTransferState.Received>(engine.state.value)
+    }
+
+    @Test
     fun `second ConnectionLost restarts countdown from full timeout`() = runTest {
         val events = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
         val engine = engineInReconnecting(events, timeout = 5.seconds)

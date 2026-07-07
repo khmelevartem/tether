@@ -182,7 +182,7 @@ class ReceiverEventRoutingTest {
     }
 
     @Test
-    fun `CancelledByReceiver synthesizes terminal BatchCompleted, no ConnectionLost`() = runTest {
+    fun `CancelledByReceiver synthesizes terminal BatchCompleted without ConnectionLost`() = runTest {
         val inbound = MutableSharedFlow<InboundEvent>(extraBufferCapacity = 16)
         val router = buildRouter(inbound, backgroundScope)
         val received = mutableListOf<ReceiveEvent>()
