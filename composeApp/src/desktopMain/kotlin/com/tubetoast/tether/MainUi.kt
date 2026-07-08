@@ -19,6 +19,7 @@ import com.tubetoast.tether.di.DesktopAppContainer
 import com.tubetoast.tether.draganddrop.WindowDropHandler
 import com.tubetoast.tether.logging.initTetherLogging
 import com.tubetoast.tether.logging.isDebugEnabled
+import com.tubetoast.tether.presentation.RootComponent
 import com.tubetoast.tether.presentation.RootScreen
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.compose.resources.painterResource
@@ -26,6 +27,7 @@ import tether.composeapp.generated.resources.Res
 import tether.composeapp.generated.resources.icon
 import java.awt.event.WindowEvent
 import java.awt.event.WindowListener
+import javax.swing.SwingUtilities
 
 fun main() = runBlocking {
     // see docs/knowledge/desktop-system-theme.md — must be set before any Swing/AWT class loads
@@ -40,8 +42,14 @@ fun main() = runBlocking {
     registerShutdownHook(handle)
 
     val lifecycle = LifecycleRegistry()
-    val component = container.rootComponentFactory.create(DefaultComponentContext(lifecycle))
-    lifecycle.resume()
+    // Decompose's childStack (inside RootComponent) asserts it runs on the Swing EDT.
+    // application {} hasn't started the EDT yet at this point in main(), so construct
+    // on the EDT explicitly rather than on the raw JVM main thread.
+    lateinit var component: RootComponent
+    SwingUtilities.invokeAndWait {
+        component = container.rootComponentFactory.create(DefaultComponentContext(lifecycle))
+        lifecycle.resume()
+    }
 
     application {
         ObservedSystemTheme {

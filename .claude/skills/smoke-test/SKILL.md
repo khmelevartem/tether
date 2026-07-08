@@ -57,6 +57,7 @@ To re-run or debug part of the suite, run the `block-*.sh` scripts directly — 
 
 | Target block | Needs alive first | Minimal prefix |
 |---|---|---|
+| 0.5 (Desktop UI startup) | none beyond block-0 | `0 → 0.5` |
 | 1 (CLI A) | jar built | `0 → 1` |
 | 2.1, 4 (Android), 5.1 (iOS), 6 (quit) | CLI A | `0 → 1 → <target>` |
 | 2.2, 2.3, 3.5 | CLI A + B | `0 → 1 → 2.1 → <target>` |
@@ -78,6 +79,21 @@ Run: `./block-0-preparation.sh`
 Kills lingering CLI instances (scoped to this worktree) and builds the CLI jar; subsequent blocks derive `$JAR` via smoke-env.sh.
 
 FAIL → all remaining blocks SKIP with reason "cli jar build failed".
+
+### Block 0.5: Desktop UI startup (main-thread violation guard)
+
+Run: `./block-0.5-desktop-ui-startup.sh`
+
+Regression guard for #421. Launches `./gradlew :composeApp:run` (the Compose UI, not the CLI
+fat-jar), waits for the startup log, and asserts it does not contain `NotOnMainThreadException`
+— Decompose's `childStack` construction must happen on the Swing EDT, not the raw JVM main
+thread. This is startup-log verification only, not a CLI substitute: it does not open a FIFO,
+does not exercise send/discovery, and is unrelated to the "don't use `:composeApp:run`" rule
+under "What NOT to do" below (that rule is scoped to CLI-functional testing). Independent of
+the CLI jar and any CLI instance — needs only Block 0.
+
+Kills the launched UI process (matched by its main class, no CLI quit/FIFO exists for it) after
+the assertion.
 
 ### Block 1: Desktop CLI (instance A)
 
@@ -241,6 +257,7 @@ At the end of the run print a markdown report:
 | Block | Scenario | Result | Details |
 |---|---|---|---|
 | Build | cli jar | ✓ PASS | <Ns>, jar=<name> |
+| Desktop UI | startup — no main-thread violation (#421) | ✓ PASS | no NotOnMainThreadException in log |
 | Desktop CLI A | startup + port | ✓ PASS | port=49507, pid=83952 |
 | Desktop CLI A | /health | ✓ PASS | "Tether OK" |
 | Desktop CLI A | /pair X.509 EC P-256 | ✓ PASS | 91 bytes, DER prefix OK |
@@ -328,7 +345,7 @@ Don't ask the user for clarification — the skill must be "zero-question": ever
 
 ## What NOT to do
 
-- **Don't use `./gradlew :composeApp:run`** — that is the Compose UI, not the CLI.
+- **Don't use `./gradlew :composeApp:run` for CLI-functional coverage** (send, discovery, stdin commands) — that is the Compose UI, not the CLI; use the cli jar blocks instead. Block 0.5 is the sole, narrow exception — it launches the UI only to assert its startup log has no main-thread violation, nothing else.
 - **Don't run `allTests`** — that is a different tool. Smoke ≤3 minutes.
 - **Don't modify application code** even if you see a problem. Report it in the report, file a separate issue.
 - **Don't go into `~/Downloads`** beyond your own files — that is user content.

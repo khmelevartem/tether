@@ -46,6 +46,8 @@ trap finish EXIT INT TERM
 run BLOCK0 ./block-0-preparation.sh
 grep -q '^JAR=' "$RESULTS" || { log "SKIP: remaining blocks — cli jar build failed"; exit 1; }
 
+run BLOCK0.5-Desktop-UI-Startup ./block-0.5-desktop-ui-startup.sh
+
 run BLOCK1   ./block-1-desktop-cli-a.sh
 run BLOCK2.1 ./block-2.1-single-file-send.sh
 run BLOCK2.2 ./block-2.2-multi-file-send.sh
