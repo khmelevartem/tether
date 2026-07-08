@@ -259,6 +259,77 @@ class PeerTransferEngineInboundTest {
         assertIs<PeerTransferState.ActiveInbound>(engine.state.value)
     }
 
+    private suspend fun TestScope.engineInNetworkLostError(
+        events: MutableSharedFlow<ReceiveEvent>,
+        timeout: Duration,
+    ): PeerTransferEngine {
+        val engine = engineInReconnecting(events, timeout)
+        advanceTimeBy(timeout.inWholeMilliseconds + 1_000)
+        runCurrent()
+        val state = assertIs<PeerTransferState.Error>(engine.state.value)
+        assertEquals(TransferErrorReason.NetworkLost, state.reason)
+        return engine
+    }
+
+    @Test
+    fun `Progress after NetworkLost error recovers to ActiveInbound`() = runTest {
+        val events = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
+        val engine = engineInNetworkLostError(events, timeout = 5.seconds)
+
+        events.emit(ReceiveEvent.Progress(name = "file.txt", receivedBytes = 10L, totalBytes = 100L))
+        runCurrent()
+
+        val state = assertIs<PeerTransferState.ActiveInbound>(engine.state.value)
+        assertEquals(PeerTransferState.InboundLink.Connected, state.link)
+        val fileStatus = state.perFile.first { it.name == "file.txt" }
+        assertIs<PerFileStatus.InProgress>(fileStatus)
+        assertEquals(10L, fileStatus.bytesDone)
+    }
+
+    @Test
+    fun `FileCompleted after NetworkLost error recovers and marks the file done`() = runTest {
+        val events = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
+        val engine = engineInNetworkLostError(events, timeout = 5.seconds)
+
+        events.emit(ReceiveEvent.FileCompleted("file.txt"))
+        runCurrent()
+
+        val state = assertIs<PeerTransferState.ActiveInbound>(engine.state.value)
+        assertEquals(PeerTransferState.InboundLink.Connected, state.link)
+        val fileStatus = state.perFile.first { it.name == "file.txt" }
+        assertIs<PerFileStatus.Done>(fileStatus)
+    }
+
+    @Test
+    fun `BatchCompleted after NetworkLost error reaches Received not stuck Error`() = runTest {
+        val events = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
+        val engine = engineInNetworkLostError(events, timeout = 5.seconds)
+
+        events.emit(ReceiveEvent.BatchCompleted(received = 1, total = 1))
+        runCurrent()
+
+        assertIs<PeerTransferState.Received>(engine.state.value)
+    }
+
+    @Test
+    fun `non NetworkLost error does not recover on inbound event`() = runTest {
+        val events = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
+        val engine = buildEngine(events, backgroundScope, timeout = 5.seconds)
+        runCurrent()
+
+        events.emit(ReceiveEvent.Started("file.txt", 1))
+        runCurrent()
+        events.emit(ReceiveEvent.ReceiverSuspended)
+        runCurrent()
+        val errorState = assertIs<PeerTransferState.Error>(engine.state.value)
+        assertEquals(TransferErrorReason.ReceiverSuspended, errorState.reason)
+
+        events.emit(ReceiveEvent.Progress(name = "file.txt", receivedBytes = 10L, totalBytes = 100L))
+        runCurrent()
+
+        assertEquals(errorState, engine.state.value)
+    }
+
     @Test
     fun `inactivity expiry after terminal state is a no-op`() = runTest {
         val events = MutableSharedFlow<ReceiveEvent>(extraBufferCapacity = 16)
