@@ -99,10 +99,7 @@ class RegistryActiveTransfersTest {
         advanceUntilIdle()
 
         inboundEvents.emit(ReceiveEvent.Started("file.txt", 1))
-        // Not advanceUntilIdle: the inbound inactivity timer would elapse the full idle grace
-        // and finalize the transfer. runCurrent propagates ActiveInbound without advancing
-        // virtual time into that timer.
-        runCurrent()
+        advanceUntilIdle()
 
         assertIs<PeerTransferState.ActiveInbound>(engine.state.value)
         assertEquals(setOf(peerA), activeTransfers.peers.value)
@@ -119,9 +116,9 @@ class RegistryActiveTransfersTest {
         inboundEvents.emit(ReceiveEvent.Started("file.txt", 1))
         runCurrent()
         inboundEvents.emit(ReceiveEvent.ConnectionLost(receivedSoFar = 0))
-        // Not advanceUntilIdle: the inbound inactivity timer would elapse the full reconnection
-        // timeout and drive the engine to Error. runCurrent propagates the Reconnecting link
-        // without advancing virtual time into the countdown.
+        // Not advanceUntilIdle: the reconnect countdown would elapse its full timeout and drive
+        // the engine to Error. runCurrent propagates the Reconnecting link without advancing
+        // virtual time into the countdown.
         runCurrent()
 
         val state = assertIs<PeerTransferState.ActiveInbound>(engine.state.value)

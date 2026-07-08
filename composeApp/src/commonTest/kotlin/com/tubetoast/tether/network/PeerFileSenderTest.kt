@@ -23,6 +23,18 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
+private class ScriptedEndBatchFileClient(
+    private val results: MutableList<Boolean>,
+) : FileClient(HttpClient(MockEngine { respond("", HttpStatusCode.OK) })) {
+    var callCount = 0
+        private set
+
+    override suspend fun endBatch(target: Device, batchId: String): Boolean {
+        callCount++
+        return if (results.size > 1) results.removeAt(0) else results.first()
+    }
+}
+
 class PeerFileSenderTest {
     private val device = Device(name = "test-peer", host = "127.0.0.1", port = 9090, fingerprint = "fp-test")
 
@@ -146,5 +158,25 @@ class PeerFileSenderTest {
         PeerFileSender(client, store).send(oldDevice.toPeerIdentity(), source) { _, _ -> }
 
         assertEquals(9091, capturedPort, "sender must use the new port from the store, not the old one")
+    }
+
+    @Test
+    fun `endBatch retries until the receiver accepts`() = runTest {
+        val store = DiscoveredDevicesStore().also { it.upsert(device) }
+        val client = ScriptedEndBatchFileClient(mutableListOf(false, false, true))
+
+        PeerFileSender(client, store).endBatch(device.toPeerIdentity(), "batch-1")
+
+        assertEquals(3, client.callCount, "endBatch must retry until the receiver accepts")
+    }
+
+    @Test
+    fun `endBatch gives up after exhausting retries without throwing`() = runTest {
+        val store = DiscoveredDevicesStore().also { it.upsert(device) }
+        val client = ScriptedEndBatchFileClient(mutableListOf(false))
+
+        PeerFileSender(client, store).endBatch(device.toPeerIdentity(), "batch-1")
+
+        assertEquals(5, client.callCount, "endBatch must exhaust its retry budget (1 initial + 4 retries)")
     }
 }

@@ -19,8 +19,7 @@ class ReconnectCountdown(
 ) {
     private var job: Job? = null
 
-    /** Restarts the countdown, overriding the constructor [timeout] for this run only. */
-    fun start(timeout: Duration = this.timeout) {
+    fun start() {
         job?.cancel()
         job = scope.launch {
             val totalSeconds = timeout.inWholeSeconds.toInt()
