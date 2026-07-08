@@ -17,15 +17,13 @@ import kotlin.concurrent.atomics.AtomicReference
  * does not send explicitly: a sender that skips /batch-begin gets an implicit single-file batch,
  * and a batch completes either when the per-file count reaches the declared total or when the
  * sender signals it is done sending fewer files than declared.
- *
- * All batch-state mutation runs on the single collector coroutine; the per-peer flow map is an
- * immutable snapshot updated via CAS so engines can register from any thread without
- * coordinating with the collector.
  */
 class InboundEventRouter(
     scope: CoroutineScope,
     inboundEvents: SharedFlow<InboundEvent>,
 ) {
+    // Immutable snapshot updated via CAS so engines can register from any thread without
+    // coordinating with the single collector coroutine that owns all batch-state mutation.
     private val peerFlows = AtomicReference(emptyMap<PeerIdentity, MutableSharedFlow<ReceiveEvent>>())
     private val peerBatch = mutableMapOf<PeerIdentity, PeerBatch>()
 
