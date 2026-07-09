@@ -87,12 +87,12 @@ Run: `./block-1-desktop-ui-startup.sh`
 Launches `./gradlew :composeApp:run` (the Compose UI, not the CLI fat-jar), polls the startup
 log for the FileServer/HealthMonitor startup markers, then asserts the log carries no
 stack-trace-shaped output. This is a secondary, coarse, end-to-end guard through the real launch
-path — it does not open a FIFO, does not exercise send/discovery, and it complements
-`RootComponentMainThreadTest` (desktopTest), which is the primary, fast regression guard for
-main-thread construction violations (#421). This block catches that whole class of startup
-exception, not only #421's specific one. Unrelated to the "don't use `:composeApp:run`" rule
-under "What NOT to do" below (that rule is scoped to CLI-functional testing). Independent of the
-CLI jar and any CLI instance — needs only Block 0.
+path — it does not open a FIFO, does not exercise send/discovery, and it complements the
+desktopTest regression test for main-thread construction violations (#421), which is the primary,
+fast guard. This block catches that whole class of startup exception, not only #421's specific
+one. Unrelated to the "don't use `:composeApp:run`" rule under "What NOT to do" below (that rule
+is scoped to CLI-functional testing). Independent of the CLI jar and any CLI instance — needs
+only Block 0.
 
 Kills the launched process tree by PID after the assertion.
 
