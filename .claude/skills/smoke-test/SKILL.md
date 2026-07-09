@@ -293,7 +293,7 @@ At the end of the run print a markdown report:
 | iOS receive | .txt lands in Files | ✓ PASS | byte-identical in Documents/ |
 | iOS receive | .jpg moved to Photos | ✓ PASS | absent from Documents/; Tether.PhotosSave log confirmed / inferred |
 | iOS receive | .mp4 moved to Photos | ✓ PASS | absent from Documents/; Tether.PhotosSave log confirmed / inferred |
-| Cleanup | teardown self-check | ✓ PASS | no CLI processes or `$SMOKE_DIR` left after block-7 |
+| Cleanup | teardown self-check | ✓ PASS | no CLI processes or `$SMOKE_DIR` left after block-8 |
 
 ## Failures
 

@@ -1,15 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Requires: nothing beyond a clean worktree — `./gradlew :composeApp:run` builds and launches
-# the Compose UI itself. Independent of the CLI jar block-0 builds and of any CLI instance.
-#
-# This launches the Compose UI (not the CLI) — narrow exception to the skill's general
-# "don't use :composeApp:run" rule (see SKILL.md "What NOT to do"), scoped to asserting the
-# startup log shows a successful launch with no stack trace. It is not a substitute for
-# CLI-functional coverage (send, discovery, etc.), which stays on the cli jar blocks. It
-# complements the desktopTest regression test (RootComponentMainThreadTest), which is the
-# primary, fast guard — this is a coarse, end-to-end check through the real launch path.
+# Requires: nothing beyond a clean worktree — see SKILL.md § Block 1: Desktop UI startup.
 
 . "$(dirname "${BASH_SOURCE[0]}")/smoke-env.sh"
 
