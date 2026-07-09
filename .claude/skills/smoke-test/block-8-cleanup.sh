@@ -7,9 +7,11 @@ set -euo pipefail
 
 set +e
 
-# Capture UDID before smoke_reset removes the scratch dir. Kept under `set +e` because a
-# missing ios.udid (any run without the iOS block) must not abort cleanup.
+# Capture UDID and the Desktop UI pid before smoke_reset removes the scratch dir. Kept under
+# `set +e` because a missing ios.udid / desktop-ui.pid (any run without that block) must not
+# abort cleanup.
 UDID="${UDID:-$(cat "$IOS_UDID_FILE" 2>/dev/null)}"
+UI_PID="$(cat "$PID_UI" 2>/dev/null)"
 
 # Graceful quit to live CLIs. Each write runs in an fd-detached subshell so a writer blocked
 # on a reader-less FIFO (already-dead CLI) cannot hold an inherited pipe open and wedge a
@@ -22,6 +24,10 @@ for f in "$FIFO_A" "$FIFO_B" "$FIFO_C"; do
 done
 sleep 2
 kill $qpids 2>/dev/null
+
+# Redundant guard for a Desktop UI process left behind by an interrupted block-1 hand-run —
+# block-1 already kills its own tree on the normal path.
+[ -n "$UI_PID" ] && smoke_kill_tree "$UI_PID"
 
 smoke_reset
 

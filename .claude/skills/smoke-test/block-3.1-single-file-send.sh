@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Requires: block-1 already executed (CLI A alive at $LOG_A / fifo $FIFO_A).
+# Requires: block-2 already executed (CLI A alive at $LOG_A / fifo $FIFO_A).
 # This script starts CLI B and waits for mutual discovery before the send scenario.
-# block-2.2 and block-2.3 assume CLI B is still alive after this script.
+# block-3.2 and block-3.3 assume CLI B is still alive after this script.
 
 . "$(dirname "${BASH_SOURCE[0]}")/smoke-env.sh"
 
@@ -13,7 +13,7 @@ sleep 600 > "$FIFO_B" 2>/dev/null &
 KEEPER_PID=$!; disown $KEEPER_PID
 echo $KEEPER_PID > "$KEEPER_B"
 
-# Persisted identity so the block-2.3 restart keeps the same fingerprint; fresh per run.
+# Persisted identity so the block-3.3 restart keeps the same fingerprint; fresh per run.
 rm -rf "$CONFIG_DIR_B"
 TETHER_LOG_DEBUG=true nohup java -jar "$JAR" --name SmokeMacB --port 0 --config-dir "$CONFIG_DIR_B" < "$FIFO_B" > "$LOG_B" 2>&1 &
 JPID_B=$!; disown $JPID_B

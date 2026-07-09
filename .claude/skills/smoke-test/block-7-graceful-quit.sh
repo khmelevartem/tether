@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Requires: block-1 already executed (CLI A alive, pid in $PID_A).
-# After block-2 retry scenario the last result was AllSent → expected exit code 0.
+# Requires: block-2 already executed (CLI A alive, pid in $PID_A).
+# After block-3.3 retry scenario the last result was AllSent → expected exit code 0.
 
 . "$(dirname "${BASH_SOURCE[0]}")/smoke-env.sh"
 
@@ -27,7 +27,7 @@ if [ $EXITED -eq 0 ]; then
   echo "SKIP: exit-code check (process had to be force-killed)"
 else
   echo "PASS: graceful quit — exited"
-  # Exit code is written by the launch wrapper in block-1; wait on a detached PID returns 127.
+  # Exit code is written by the launch wrapper in block-2; wait on a detached PID returns 127.
   EXIT_FILE_READY=0
   for i in $(seq 1 5); do
     [ -f "$EXIT_A" ] && { EXIT_FILE_READY=1; break; }

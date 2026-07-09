@@ -190,4 +190,4 @@ when {
 
 **Not unit-testable:** in the bare K/N test runner (`iosSimulatorArm64Test`) `typeWithIdentifier("public.image")` resolves, but `typeWithFilenameExtension(ext)` returns null for *every* extension — extension→type resolution has no app-bundle type database behind it there. So the real `classifyByUTType` returns null for all input in tests and the bug cannot even reproduce; the regression guard is the iOS-receive smoke block (booted app, real DB), not an `appleTest`. The decorator's injectable `mediaClassifier` seam exists to test the orchestration (auth gate, de-dup, delete-on-success) with a fake — it does not cover `classifyByUTType` itself, which has no unit coverage by design.
 
-**Reference:** `classifyByUTType` in `network/PhotosUploadStorageDecorator.kt`; smoke block `block-5.2-ios-receive.sh`.
+**Reference:** `classifyByUTType` in `network/PhotosUploadStorageDecorator.kt`; smoke block `block-6.2-ios-receive.sh`.

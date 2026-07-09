@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Requires: block-3 already executed — three CLIs (SmokeMacA, SmokeMacB, third reusing "SmokeMacA")
+# Requires: block-4 already executed — three CLIs (SmokeMacA, SmokeMacB, third reusing "SmokeMacA")
 # are alive. macOS mDNSResponder canonicalises the duplicate as `SmokeMacA (2)`.
 #
 # Regression guard for #368: same-base-name instances must stay distinguishable BY NAME. The
@@ -9,7 +9,7 @@ set -euo pipefail
 # (which carries each sender's raw configured name) — it must not collapse two peers to one name.
 #
 # Assertion: in each CLI's last [peers] line, no two peers share the same display name.
-# (block-3.1 already guarantees no two share host:port, so a duplicate name here = the #368 collapse.)
+# (block-4.1 already guarantees no two share host:port, so a duplicate name here = the #368 collapse.)
 
 . "$(dirname "${BASH_SOURCE[0]}")/smoke-env.sh"
 

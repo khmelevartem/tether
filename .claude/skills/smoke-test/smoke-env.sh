@@ -17,13 +17,14 @@ SMOKE_JAR="${JAR:-$(ls "$TETHER_ROOT"/composeApp/build/libs/tether-cli-*.jar \
   "$TETHER_ROOT"/composeApp/build/libs/tether-cli.jar 2>/dev/null | head -1 || true)}"
 JAR="$SMOKE_JAR"
 
+UI_LOG="$SMOKE_DIR/desktop-ui.log"; PID_UI="$SMOKE_DIR/desktop-ui.pid"
 FIFO_A="$SMOKE_DIR/cliA-in"; LOG_A="$SMOKE_DIR/cliA.log"; PID_A="$SMOKE_DIR/cliA.pid"; KEEPER_A="$SMOKE_DIR/cliA-keeper.pid"
 FIFO_B="$SMOKE_DIR/cliB-in"; LOG_B="$SMOKE_DIR/cliB.log"; PID_B="$SMOKE_DIR/cliB.pid"; KEEPER_B="$SMOKE_DIR/cliB-keeper.pid"
 FIFO_C="$SMOKE_DIR/cliC-in"; LOG_C="$SMOKE_DIR/cliC.log"; PID_C="$SMOKE_DIR/cliC.pid"; KEEPER_C="$SMOKE_DIR/cliC-keeper.pid"
-# CLI A's real exit code, written by its launch wrapper (block-1); block-6 reads this instead of
+# CLI A's real exit code, written by its launch wrapper (block-2); block-7 reads this instead of
 # `wait` on a disowned PID, which returns 127 from another shell.
 EXIT_A="$SMOKE_DIR/cliA.exit"
-# Persisted-identity config dir for CLI B — restart-stable fingerprint so block-2.3 retry resumes.
+# Persisted-identity config dir for CLI B — restart-stable fingerprint so block-3.3 retry resumes.
 CONFIG_DIR_B="$SMOKE_DIR/cliB-config"
 IOS_BUILD_LOG="$SMOKE_DIR/ios-build.log"
 IOS_LAUNCH_LOG="$SMOKE_DIR/ios-launch.log"
@@ -45,6 +46,15 @@ smoke_kill_instances() {
 
 smoke_instances_alive() {
   [ -n "$SMOKE_JAR" ] && pgrep -f "$SMOKE_JAR" >/dev/null 2>&1
+}
+
+# Kills a process and every descendant, leaves first — for a process with a live child tree
+# where killing only the top PID would orphan its children.
+smoke_kill_tree() {
+  local pid="$1" children
+  children=$(pgrep -P "$pid" 2>/dev/null || true)
+  for c in $children; do smoke_kill_tree "$c"; done
+  kill -9 "$pid" 2>/dev/null || true
 }
 
 # Guarantees $SMOKE_DIR and all processes holding files under it are gone, scoped to this worktree.

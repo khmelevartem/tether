@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Requires: block-1 (CLI A alive at $LOG_A / fifo $FIFO_A) and block-5.1 (iOS app launched + discovered).
+# Requires: block-2 (CLI A alive at $LOG_A / fifo $FIFO_A) and block-6.1 (iOS app launched + discovered).
 # Sends .txt (stays in Files), .jpg (moved to Photos), and .mp4 (moved to Photos) to the iOS peer.
 
 . "$(dirname "${BASH_SOURCE[0]}")/smoke-env.sh"
@@ -15,7 +15,7 @@ if ! command -v xcodebuild >/dev/null 2>&1 \
 fi
 
 [ -z "$JAR" ] && { echo "FAIL: cli jar not found — run block-0 first"; exit 1; }
-[ -f "$LOG_A" ] || { echo "FAIL: CLI A log not found — run block-1 first"; exit 1; }
+[ -f "$LOG_A" ] || { echo "FAIL: CLI A log not found — run block-2 first"; exit 1; }
 
 IOS_DEVICE="${IOS_DEVICE:-iPhone 17}"
 UDID=$(cat "$IOS_UDID_FILE" 2>/dev/null || \
@@ -31,12 +31,12 @@ set +e; xcrun simctl privacy "$UDID" grant photos-add "$IOS_BUNDLE_ID" 2>/dev/nu
   && echo "PASS: photos-add pre-granted" \
   || echo "SKIP: photos-add grant returned non-zero (will proceed; Photos framework may still work)"
 
-# Resolve the iOS peer name — block-5.1 writes it to $SMOKE_DIR/ios-name.txt after dns-sd discovery.
+# Resolve the iOS peer name — block-6.1 writes it to $SMOKE_DIR/ios-name.txt after dns-sd discovery.
 IOS_NAME=$(cat "$SMOKE_DIR/ios-name.txt" 2>/dev/null | tr -d '\n' || true)
-[ -n "$IOS_NAME" ] || { echo "FAIL: iOS peer name not found ($SMOKE_DIR/ios-name.txt missing) — run block-5.1 first"; exit 1; }
+[ -n "$IOS_NAME" ] || { echo "FAIL: iOS peer name not found ($SMOKE_DIR/ios-name.txt missing) — run block-6.1 first"; exit 1; }
 echo "iOS peer: $IOS_NAME"
 
-# block-5.1's Keychain test leaves the app in a state where CLI A tracks it via the IPv6 loopback
+# block-6.1's Keychain test leaves the app in a state where CLI A tracks it via the IPv6 loopback
 # address (0:0:0:0:0:0:0:1), which Ktor rejects as an unparseable URL. Terminate and cold-start
 # the app so mDNS runs a clean browse cycle that resolves to a routable address.
 xcrun simctl terminate "$UDID" "$IOS_BUNDLE_ID" 2>/dev/null || true
