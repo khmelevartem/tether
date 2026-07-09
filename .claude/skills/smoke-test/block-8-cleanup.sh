@@ -29,6 +29,11 @@ kill $qpids 2>/dev/null
 # block-1 already kills its own tree on the normal path.
 [ -n "$UI_PID" ] && smoke_kill_tree "$UI_PID"
 
+# Backstop for a UI JVM that appears after block-1's readiness poll times out (e.g. a cold
+# compile exceeding 60s), which leaves $UI_PID uncaptured — scoped by jar path like
+# smoke_kill_instances scopes $SMOKE_JAR, so a concurrent run in another worktree is untouched.
+pkill -9 -f "$UI_JAR" 2>/dev/null || true
+
 smoke_reset
 
 # Received files in the shared downloads dir are named with this run's prefix, so the glob

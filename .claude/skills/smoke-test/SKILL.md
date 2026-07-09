@@ -231,7 +231,7 @@ Checks exit code = 0 (last send was AllSent after the retry scenario). The exit 
 
 Run: `./block-8-cleanup.sh` — **always**.
 
-Kills this worktree's CLI instances and keepers (via `smoke_kill_instances`), removes the per-run `$SMOKE_DIR` (fifos, logs, PIDs, sent source files, iOS build/launch logs), this run's received files in `$HOME/Downloads/Tether/` (matched by `$SMOKE_SEND_PREFIX`), Android device files, and terminates the iOS simulator app. Scoped to this worktree, so a concurrent smoke run in another worktree is left untouched.
+Kills this worktree's CLI instances and keepers (via `smoke_kill_instances`), the Desktop UI JVM (by captured PID, plus a jar-path-scoped backstop for the case where block-1's readiness poll timed out before capturing it), removes the per-run `$SMOKE_DIR` (fifos, logs, PIDs, sent source files, iOS build/launch logs), this run's received files in `$HOME/Downloads/Tether/` (matched by `$SMOKE_SEND_PREFIX`), Android device files, and terminates the iOS simulator app. Scoped to this worktree, so a concurrent smoke run in another worktree is left untouched.
 
 ## Report format
 

@@ -74,7 +74,7 @@ class RootComponentMainThreadTest {
     }
 
     @Test
-    fun `constructing via SwingUtilities-invokeAndWait raises no main-thread violation`() {
+    fun `constructing on the Swing EDT raises no main-thread violation`() {
         val captured = AtomicReference<Exception?>(null)
         onDecomposeError = { captured.set(it) }
 

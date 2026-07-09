@@ -14,8 +14,6 @@ cd "$TETHER_ROOT"
 ( ./gradlew :composeApp:run -q > "$UI_LOG" 2>&1 ) >/dev/null 2>&1 &
 disown $! 2>/dev/null
 
-UI_JAR="$TETHER_ROOT/composeApp/build/libs/composeApp-desktop.jar"
-
 echo "Waiting for Desktop UI to start..."
 for i in $(seq 1 60); do
   set +e; grep -q 'HealthMonitor: started' "$UI_LOG" 2>/dev/null; RC=$?; set -e

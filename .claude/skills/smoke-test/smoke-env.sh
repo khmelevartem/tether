@@ -17,6 +17,10 @@ SMOKE_JAR="${JAR:-$(ls "$TETHER_ROOT"/composeApp/build/libs/tether-cli-*.jar \
   "$TETHER_ROOT"/composeApp/build/libs/tether-cli.jar 2>/dev/null | head -1 || true)}"
 JAR="$SMOKE_JAR"
 
+# Desktop UI JVM's worktree-unique classpath entry — not tracked by PID lineage (see block-1),
+# so both its startup poll and block-8's backstop kill scope by this jar path instead.
+UI_JAR="$TETHER_ROOT/composeApp/build/libs/composeApp-desktop.jar"
+
 UI_LOG="$SMOKE_DIR/desktop-ui.log"; PID_UI="$SMOKE_DIR/desktop-ui.pid"
 FIFO_A="$SMOKE_DIR/cliA-in"; LOG_A="$SMOKE_DIR/cliA.log"; PID_A="$SMOKE_DIR/cliA.pid"; KEEPER_A="$SMOKE_DIR/cliA-keeper.pid"
 FIFO_B="$SMOKE_DIR/cliB-in"; LOG_B="$SMOKE_DIR/cliB.log"; PID_B="$SMOKE_DIR/cliB.pid"; KEEPER_B="$SMOKE_DIR/cliB-keeper.pid"
