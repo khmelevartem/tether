@@ -252,6 +252,8 @@ The platform entry point builds the **root Component** (Decompose), passing `App
 
 Per-layer ownership and import rules (which layer may accept which dependencies): [layering.md](layering.md).
 
+A showcase write-up of this manual-DI approach is published and recorded in [docs/articles/README.md](../articles/README.md#published).
+
 ## Open questions
 
 - iOS receive-side: when a non-Ktor `FileServer` implementation lands, the container branches per-platform more aggressively. May be the moment to flip to Metro.
