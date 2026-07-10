@@ -27,15 +27,15 @@ finish() {
   trap - EXIT INT TERM
   if [ "$cleaned" = 0 ]; then
     cleaned=1
-    local ui_pid
-    ui_pid="$(cat "$PID_UI" 2>/dev/null || true)"
     kill "$WATCHDOG" 2>/dev/null; pkill -P "$WATCHDOG" 2>/dev/null
     run BLOCK8 ./block-8-cleanup.sh
     # Teardown self-check — the harness must leave no instances or scratch behind for this
     # worktree; without this assertion a silently-broken cleanup leaks every run unseen.
+    # Both process checks match by worktree-scoped jar path at teardown time, so a UI JVM that
+    # came up after block-1's readiness poll (and was never PID-captured) is still caught.
     local leak=0
     { [ -n "$SMOKE_JAR" ] && pgrep -f "$SMOKE_JAR" >/dev/null 2>&1; } && leak=1
-    { [ -n "$ui_pid" ] && ps -p "$ui_pid" >/dev/null 2>&1; } && leak=1
+    { [ -n "$UI_JAR" ] && pgrep -f "$UI_JAR" >/dev/null 2>&1; } && leak=1
     [ -d "$SMOKE_DIR" ] && leak=1
     [ "$leak" = 0 ] && log "PASS: teardown — no instances or scratch left" \
       || log "FAIL: teardown — LEAK (CLI/UI processes or $SMOKE_DIR remain after cleanup)"
