@@ -16,6 +16,7 @@ P2P file transfer between devices on different OSes — over a local Wi-Fi netwo
 - [Tech stack](docs/product/tech-stack.md) — stack choices.
 - [Security](docs/security/README.md) — threat model, pairing, encryption.
 - [Engineering docs](docs/engineering/README.md) — architecture, modules, DI, testing.
+- [Articles](docs/articles/README.md) — long-form write-ups drawn from the codebase.
 
 ## Quick start
 
