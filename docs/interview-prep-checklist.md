@@ -199,7 +199,7 @@
 
 ### Side-effects
 - [x] `LaunchedEffect` / `SideEffect` / `DisposableEffect` — когда что
-- [ ] `rememberCoroutineScope` — зачем, когда vs `LaunchedEffect`
+- [x] `rememberCoroutineScope` — зачем, когда vs `LaunchedEffect`
 - [ ] `produceState` — bridge от non-Compose к State
 
 ### Архитектура
