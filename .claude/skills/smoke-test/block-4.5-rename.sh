@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Requires: block-1 already executed (CLI A alive / fifo $FIFO_A).
+# Requires: block-2 already executed (CLI A alive / fifo $FIFO_A).
 # Requires: CLI B alive at $LOG_B (needs to see the rename propagated via mDNS).
 
 . "$(dirname "${BASH_SOURCE[0]}")/smoke-env.sh"

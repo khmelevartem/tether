@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Requires: block-3 already executed — three CLIs (SmokeMacA, SmokeMacB, third "SmokeMacA")
+# Requires: block-4 already executed — three CLIs (SmokeMacA, SmokeMacB, third "SmokeMacA")
 # are alive. macOS mDNSResponder will canonicalise the duplicate as `SmokeMacA (2)`.
 #
 # Regression guard for #346: the same physical peer must collapse to a single entry in every

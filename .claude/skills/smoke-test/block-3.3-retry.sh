@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# CLI B runs with a persisted identity (--config-dir, set in block-2.1 and on the restart below),
+# CLI B runs with a persisted identity (--config-dir, set in block-3.1 and on the restart below),
 # so its fingerprint is stable across the stop→restart and the failed transfer's terminal state
 # is still keyed to the same peer for `retry` to resume from.
 
-# Requires: block-1 already executed (CLI A alive at $LOG_A / fifo $FIFO_A).
+# Requires: block-2 already executed (CLI A alive at $LOG_A / fifo $FIFO_A).
 # Requires: CLI B was alive (this script stops and restarts it).
 
 . "$(dirname "${BASH_SOURCE[0]}")/smoke-env.sh"
