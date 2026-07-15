@@ -11,6 +11,8 @@ Runs basic smoke scenarios across Tether targets and produces a human-readable r
 
 **This is smoke, not regression.** The goal — in 1–3 minutes — is to see that nothing is fundamentally broken (CLI starts, FileServer responds, mDNS is published, stdin commands work, send roundtrip OK, native targets compile). Business logic correctness is the job of the project's test command (`commands.allTests`).
 
+**A block asserts a general observable capability, not one incident's signature.** Frame the check as the capability a user relies on — a target starts, a roundtrip completes. A check keyed to a single past bug's fingerprint (a specific exception name, a one-off log string) over-fits that incident and taxes every future run without widening coverage.
+
 ## What the skill does NOT check (out of scope for automation)
 
 At the start of the run **tell the user** — coverage boundaries:
@@ -33,7 +35,7 @@ Kill is matched by the worktree's **jar path**, not by a package-name substring 
 
 ## Starting the CLI
 
-The FIFO (`$FIFO_A` etc.) keeps stdin open for `list`, `send`, `quit` commands. All blocks that launch a CLI instance follow this pattern — see `block-1-desktop-cli-a.sh` for the canonical form.
+The FIFO (`$FIFO_A` etc.) keeps stdin open for `list`, `send`, `quit` commands. All blocks that launch a CLI instance follow this pattern — see `block-2-desktop-cli-a.sh` for the canonical form.
 
 Desktop CLI instances are launched with `TETHER_LOG_DEBUG=true` so subsystem logger lines are captured in the log and available for assertions and diagnostics. Product output (the bracketed `[…]` status lines and the startup banner) is echoed regardless of this flag.
 
@@ -49,7 +51,7 @@ Blocks run under `set -euo pipefail`. Commands that exit nonzero as a *normal* r
 
 **Primary invocation — `./run-all.sh`.** It drives every block back-to-back in one pass, tees a greppable consolidated log (`===== BLOCK<n> =====` headers) to stdout and `/tmp/smoke-results-<id>.log`, guards the iOS block when Xcode/simulator is absent, and runs cleanup via an `EXIT` trap. Launch it as **one** task and read the result log to synthesise the report — do not invoke blocks one-by-one with waits in between: each CLI's FIFO keeper is `sleep 600`, so a CLI dies ~10 min after its block started, and a spread-out run kills CLI A mid-flight (later blocks then FAIL against a dead instance). A watchdog aborts the run (and still cleans up) after `SMOKE_DEADLINE` seconds — default 540, override via the env var for a slower machine.
 
-The individual `block-*.sh` scripts below remain runnable on their own for targeted re-runs and debugging. A block failure does not prevent subsequent blocks from running. Cleanup (`block-7-cleanup.sh`) runs **always** — `run-all.sh` triggers it on `EXIT`; if you run blocks by hand, invoke it yourself even after earlier FAILs.
+The individual `block-*.sh` scripts below remain runnable on their own for targeted re-runs and debugging. A block failure does not prevent subsequent blocks from running. Cleanup (`block-8-cleanup.sh`) runs **always** — `run-all.sh` triggers it on `EXIT`; if you run blocks by hand, invoke it yourself even after earlier FAILs.
 
 All scripts live in `.claude/skills/smoke-test/` and are self-contained — run them from that directory or the repo root.
 
@@ -59,17 +61,18 @@ To re-run or debug part of the suite, run the `block-*.sh` scripts directly — 
 
 | Target block | Needs alive first | Minimal prefix |
 |---|---|---|
-| 1 (CLI A) | jar built | `0 → 1` |
-| 2.1, 4 (Android), 5.1 (iOS), 6 (quit) | CLI A | `0 → 1 → <target>` |
-| 2.2, 2.3, 3.5 | CLI A + B | `0 → 1 → 2.1 → <target>` |
-| 3 (same-name) | CLI A + B | `0 → 1 → 2.1 → 3` |
-| 3.1, 3.2 | CLI A + B + C | `0 → 1 → 2.1 → 3 → <target>` |
-| 5.2 (iOS receive) | CLI A + iOS app | `0 → 1 → 5.1 → 5.2` |
+| 1 (Desktop UI startup) | none beyond block-0 | `0 → 1` |
+| 2 (CLI A) | jar built | `0 → 2` |
+| 3.1, 5 (Android), 6.1 (iOS), 7 (quit) | CLI A | `0 → 2 → <target>` |
+| 3.2, 3.3, 4.5 | CLI A + B | `0 → 2 → 3.1 → <target>` |
+| 4 (same-name) | CLI A + B | `0 → 2 → 3.1 → 4` |
+| 4.1, 4.2 | CLI A + B + C | `0 → 2 → 3.1 → 4 → <target>` |
+| 6.2 (iOS receive) | CLI A + iOS app | `0 → 2 → 6.1 → 6.2` |
 
 Two constraints when running by hand:
 
 - **Keeper window.** Each CLI's FIFO keeper is `sleep 600`, so an instance self-exits ~10 min after its block started. Finish the selective sequence well inside that window, or a later block FAILs against a dead instance.
-- **Cleanup is yours.** The `EXIT`-trap cleanup and the watchdog live only in `run-all.sh`. When running blocks by hand, end with `./block-7-cleanup.sh` (it kills this worktree's instances and removes the scratch dir) even after a FAIL, or instances and `$SMOKE_DIR` leak until the next `block-0`.
+- **Cleanup is yours.** The `EXIT`-trap cleanup and the watchdog live only in `run-all.sh`. When running blocks by hand, end with `./block-8-cleanup.sh` (it kills this worktree's instances and removes the scratch dir) even after a FAIL, or instances and `$SMOKE_DIR` leak until the next `block-0`.
 
 Leaving the instances up between hand-run blocks is the point of this mode — keep CLI A (and B/C) alive and poke at successive scenario blocks, then clean up once.
 
@@ -81,9 +84,21 @@ Kills lingering CLI instances (scoped to this worktree) and builds the CLI jar; 
 
 FAIL → all remaining blocks SKIP with reason "cli jar build failed".
 
-### Block 1: Desktop CLI (instance A)
+### Block 1: Desktop UI startup
 
-Run: `./block-1-desktop-cli-a.sh`
+Run: `./block-1-desktop-ui-startup.sh`
+
+Launches `./gradlew :composeApp:run` (the Compose UI, not the CLI fat-jar), polls the startup
+log for the FileServer/HealthMonitor startup markers, then asserts the log carries no
+stack-trace-shaped output. Unrelated to the "don't use `:composeApp:run`" rule under "What NOT to do" below (that rule
+is scoped to CLI-functional testing). Independent of the CLI jar and any CLI instance — needs
+only Block 0.
+
+Kills the launched process tree by PID after the assertion.
+
+### Block 2: Desktop CLI (instance A)
+
+Run: `./block-2-desktop-cli-a.sh`
 
 Launches CLI A (`SmokeMacA`, random port), then checks:
 
@@ -95,71 +110,71 @@ Launches CLI A (`SmokeMacA`, random port), then checks:
 6. **mDNS publish (dns-sd, optional)** — `dns-sd -B` browse. SKIP if `dns-sd` unavailable (Linux).
 7. **stdin `list`** — must produce a `[list]` or `[peers]` line.
 
-CLI A stays alive through the Android and iOS blocks (they need it for cross-discovery). Graceful quit — Block 6, deferred to just before cleanup.
+CLI A stays alive through the Android and iOS blocks (they need it for cross-discovery). Graceful quit — Block 7, deferred to just before cleanup.
 
-### Block 2: Desktop ↔ Desktop send (via CLI)
+### Block 3: Desktop ↔ Desktop send (via CLI)
 
 **Important:** send must go via the CLI `send` command, not via `curl POST /upload`.
 
-Scenario 2.1 starts CLI B (`SmokeMacB`) and waits for mutual mDNS discovery; 2.2 and 2.3 assume B is still alive. Each scenario is independently re-runnable (re-running 2.2 or 2.3 alone requires B to already be running).
+Scenario 3.1 starts CLI B (`SmokeMacB`) and waits for mutual mDNS discovery; 3.2 and 3.3 assume B is still alive. Each scenario is independently re-runnable (re-running 3.2 or 3.3 alone requires B to already be running).
 
-#### Scenario 2.1 — single-file send
+#### Scenario 3.1 — single-file send
 
-Run: `./block-2.1-single-file-send.sh`
+Run: `./block-3.1-single-file-send.sh`
 
 Sends one file from A to B. PASS if `[send] done` appears in A's log AND the file lands at `$HOME/Downloads/Tether/` byte-identical to the source.
 
-#### Scenario 2.2 — multi-file send (3 files in one `send` command)
+#### Scenario 3.2 — multi-file send (3 files in one `send` command)
 
-Run: `./block-2.2-multi-file-send.sh`
+Run: `./block-3.2-multi-file-send.sh`
 
 Sends 3 files in one command. PASS if `[send] done — 3/3 sent` appears AND all 3 files land byte-identical.
 
-#### Scenario 2.3 — `retry` happy path
+#### Scenario 3.3 — `retry` happy path
 
-Run: `./block-2.3-retry.sh`
+Run: `./block-3.3-retry.sh`
 
-Stops B to provoke `[send] error`, restarts B with the same `--config-dir` it started with in 2.1, then issues `retry SmokeMacB`. B's `--config-dir` identity (name + fingerprint) survives the stop→restart, so A's transfer engine tracks it as the same peer and the failed transfer retains its terminal state for `retry` to resume from. PASS if the file lands byte-identical after retry.
+Stops B to provoke `[send] error`, restarts B with the same `--config-dir` it started with in 3.1, then issues `retry SmokeMacB`. B's `--config-dir` identity (name + fingerprint) survives the stop→restart, so A's transfer engine tracks it as the same peer and the failed transfer retains its terminal state for `retry` to resume from. PASS if the file lands byte-identical after retry.
 
-#### Scenario 2.4 — exit code on `quit`
+#### Scenario 3.4 — exit code on `quit`
 
-Verified in Block 6 — `lastExit` accumulates per `send`/`retry`; the last successful send was AllSent → expected exit code 0.
+Verified in Block 7 — `lastExit` accumulates per `send`/`retry`; the last successful send was AllSent → expected exit code 0.
 
-### Block 3: Same-name discovery
+### Block 4: Same-name discovery
 
-Run: `./block-3-same-name-discovery.sh`
+Run: `./block-4-same-name-discovery.sh`
 
 Launches a third instance (`SmokeMacA` — same name as A) to verify mDNS conflict-rename: each of A/B/C must see ≥ 2 unique SmokeMac peers within 20 s.
 
 FAIL → attach the last `[peers]` lines from all three logs in Details.
 
-Cleanup of instance C — in Block 7.
+Cleanup of instance C — in Block 8.
 
-### Block 3.1: Peer dedup (same instance under multiple aliases)
+### Block 4.1: Peer dedup (same instance under multiple aliases)
 
-Run: `./block-3.1-peer-dedup.sh`
+Run: `./block-4.1-peer-dedup.sh`
 
 Regression guard for #346. macOS `mDNSResponder` canonicalises duplicate service names by appending a numeric suffix to the conflicting name. A peer receiving both the pre-rename and post-rename announces for the same instance must collapse them into one entry — assertion: in each CLI's last `[peers]` line, no two peers share the same `host:port`.
 
-Prerequisite: Block 3 (three CLIs alive — A, B, and C reusing A's name). FAIL → attach the last `[peers]` lines from all three logs in Details.
+Prerequisite: Block 4 (three CLIs alive — A, B, and C reusing A's name). FAIL → attach the last `[peers]` lines from all three logs in Details.
 
-### Block 3.2: Same-name distinguishability
+### Block 4.2: Same-name distinguishability
 
-Run: `./block-3.2-same-name-distinct.sh`
+Run: `./block-4.2-same-name-distinct.sh`
 
-The mDNS-canonical `(N)` suffix recorded on discovery must survive the subsequent `/hello` exchange — assertion: in each CLI's last `[peers]` line, no two peers share the same display name. Complements Block 3.1.
+The mDNS-canonical `(N)` suffix recorded on discovery must survive the subsequent `/hello` exchange — assertion: in each CLI's last `[peers]` line, no two peers share the same display name. Complements Block 4.1.
 
-Prerequisite: Block 3 (three CLIs alive — A, B, and C reusing A's name). FAIL → attach the last `[peers]` lines from all three logs in Details.
+Prerequisite: Block 4 (three CLIs alive — A, B, and C reusing A's name). FAIL → attach the last `[peers]` lines from all three logs in Details.
 
-### Block 3.5: Device name rename
+### Block 4.5: Device name rename
 
-Run: `./block-3.5-rename.sh`
+Run: `./block-4.5-rename.sh`
 
 Sends `name RenamedA` to A via stdin; B must see the new name via mDNS republish within 15 s.
 
-### Block 4: Android (conditional)
+### Block 5: Android (conditional)
 
-Run: `./block-4-android.sh`
+Run: `./block-5-android.sh`
 
 SKIP if no adb device connected. If present:
 
@@ -171,9 +186,9 @@ SKIP if no adb device connected. If present:
 6. Send Desktop → Android via CLI `send`. SKIP if emulator with QEMU NAT (`10.0.2.x`) or Android peer not discovered.
 7. `force-stop`.
 
-### Block 5.1: iOS simulator runtime
+### Block 6.1: iOS simulator runtime
 
-Run: `./block-5.1-ios.sh`
+Run: `./block-6.1-ios.sh`
 
 1. Resolve + boot simulator (default `iPhone 17`; override via `IOS_DEVICE` env var).
 2. `xcodebuild`, install, launch.
@@ -184,17 +199,17 @@ Run: `./block-5.1-ios.sh`
 7. `/pair` X.509 EC P-256 SPKI shape (91 bytes, `[0]=0x30`, `[26]=0x04`). Load-bearing gate for the class of Apple-Keychain regression that unit tests cannot reach — `simctl spawn` binaries have no app identity, so `SecItem*` returns "unavailable" regardless of correctness. See `docs/knowledge/apple-platform.md`.
 8. Keychain persistence across cold launches — restart the app, fetch `/pair` again, compare the public key byte-for-byte.
 
-iOS cleanup — in Block 7.
+iOS cleanup — in Block 8.
 
-### Block 5.2: iOS receive (Files + move-to-Photos)
+### Block 6.2: iOS receive (Files + move-to-Photos)
 
-Run: `./block-5.2-ios-receive.sh`
+Run: `./block-6.2-ios-receive.sh`
 
-Prerequisite chain: `0 → 1 → 5.1 → 5.2` (CLI A alive, iOS app launched and discovered).
+Prerequisite chain: `0 → 2 → 6.1 → 6.2` (CLI A alive, iOS app launched and discovered).
 
 1. Pre-grants `photos-add` via `xcrun simctl privacy … grant photos-add` so the OS Photos save is not prompt-blocked.
 2. Sends three files from CLI A to the iOS peer:
-   - A `.txt` (non-media) — reads the iOS peer name from `$SMOKE_DIR/ios-name.txt` (written by block-5.1), sends via FIFO.
+   - A `.txt` (non-media) — reads the iOS peer name from `$SMOKE_DIR/ios-name.txt` (written by block-6.1), sends via FIFO.
    - A `.jpg` (1×1 real JPEG generated via Python + sips) — UTType classifies it as `public.image`.
    - A `.mp4` (1-second H.264 test clip generated via `ffmpeg`) — UTType classifies it as `public.movie`. SKIP if `ffmpeg` is absent.
 3. Assertions:
@@ -202,21 +217,21 @@ Prerequisite chain: `0 → 1 → 5.1 → 5.2` (CLI A alive, iOS app launched and
    - **`.jpg` PASS** — file is **absent** from `<container>/Documents/` after a settle period (moved to Photos), and the iOS app log shows `Tether.PhotosSave … saved` for it. If `Tether.PhotosSave` does not surface via `simctl spawn log show` (KydraLog may not route to os_log on simulator), the block falls back to asserting absence alone and notes the log-line is inferred.
    - **`.mp4` PASS / SKIP** — file is **absent** from `<container>/Documents/` (moved to Photos), same log/inferred fallback as `.jpg`. SKIP if `ffmpeg` was unavailable.
 
-### Block 6: Graceful quit of instance A — and `lastExit` propagation
+### Block 7: Graceful quit of instance A — and `lastExit` propagation
 
-Run: `./block-6-graceful-quit.sh`
+Run: `./block-7-graceful-quit.sh`
 
 Runs after the Android and iOS blocks — both need instance A alive for cross-discovery, so A's graceful quit is deferred to just before cleanup.
 
 Sends `quit` to A, waits up to 8 s, checks exit. PASS if the process exited.
 
-Checks exit code = 0 (last send was AllSent after the retry scenario). The exit code is read from the per-run exit file (`$EXIT_A`) written by block-1's launch-wrapper subshell — `wait` on a detached PID returns 127 and cannot be used. If the exit file never appears — FAIL. If the process had to be force-killed — exit-code check SKIP.
+Checks exit code = 0 (last send was AllSent after the retry scenario). The exit code is read from the per-run exit file (`$EXIT_A`) written by block-2's launch-wrapper subshell — `wait` on a detached PID returns 127 and cannot be used. If the exit file never appears — FAIL. If the process had to be force-killed — exit-code check SKIP.
 
-### Block 7: Cleanup
+### Block 8: Cleanup
 
-Run: `./block-7-cleanup.sh` — **always**.
+Run: `./block-8-cleanup.sh` — **always**.
 
-Kills this worktree's CLI instances and keepers (via `smoke_kill_instances`), removes the per-run `$SMOKE_DIR` (fifos, logs, PIDs, sent source files, iOS build/launch logs), this run's received files in `$HOME/Downloads/Tether/` (matched by `$SMOKE_SEND_PREFIX`), Android device files, and terminates the iOS simulator app. Scoped to this worktree, so a concurrent smoke run in another worktree is left untouched.
+Kills this worktree's CLI instances and keepers (via `smoke_kill_instances`), the Desktop UI JVM (by captured PID, plus a jar-path-scoped backstop for the case where block-1's readiness poll timed out before capturing it), removes the per-run `$SMOKE_DIR` (fifos, logs, PIDs, sent source files, iOS build/launch logs), this run's received files in `$HOME/Downloads/Tether/` (matched by `$SMOKE_SEND_PREFIX`), Android device files, and terminates the iOS simulator app. Scoped to this worktree, so a concurrent smoke run in another worktree is left untouched.
 
 ## Report format
 
@@ -243,6 +258,7 @@ At the end of the run print a markdown report:
 | Block | Scenario | Result | Details |
 |---|---|---|---|
 | Build | cli jar | ✓ PASS | <Ns>, jar=<name> |
+| Desktop UI | starts successfully (no startup exception) | ✓ PASS | FileServer + HealthMonitor started, no stack trace in log |
 | Desktop CLI A | startup + port | ✓ PASS | port=49507, pid=83952 |
 | Desktop CLI A | /health | ✓ PASS | "Tether OK" |
 | Desktop CLI A | /pair X.509 EC P-256 | ✓ PASS | 91 bytes, DER prefix OK |
@@ -277,7 +293,7 @@ At the end of the run print a markdown report:
 | iOS receive | .txt lands in Files | ✓ PASS | byte-identical in Documents/ |
 | iOS receive | .jpg moved to Photos | ✓ PASS | absent from Documents/; Tether.PhotosSave log confirmed / inferred |
 | iOS receive | .mp4 moved to Photos | ✓ PASS | absent from Documents/; Tether.PhotosSave log confirmed / inferred |
-| Cleanup | teardown self-check | ✓ PASS | no CLI processes or `$SMOKE_DIR` left after block-7 |
+| Cleanup | teardown self-check | ✓ PASS | no CLI processes or `$SMOKE_DIR` left after block-8 |
 
 ## Failures
 
@@ -330,7 +346,7 @@ Don't ask the user for clarification — the skill must be "zero-question": ever
 
 ## What NOT to do
 
-- **Don't use the project's run command (`commands.run`)** — that is the Compose UI, not the CLI.
+- **Don't use the project's run command (`commands.run`) for CLI-functional coverage** (send, discovery, stdin commands) — that is the Compose UI, not the CLI; use the cli jar blocks instead. Block 1 is the sole, narrow exception — it launches the UI only to assert successful startup with no stack trace, nothing else.
 - **Don't run the project's test command (`commands.allTests`)** — that is a different tool. Smoke ≤3 minutes.
 - **Don't modify application code** even if you see a problem. Report it in the report, file a separate issue.
 - **Don't go into `~/Downloads`** beyond your own files — that is user content.

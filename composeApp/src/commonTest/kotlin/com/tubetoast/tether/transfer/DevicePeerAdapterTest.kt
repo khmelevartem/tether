@@ -1,6 +1,6 @@
 package com.tubetoast.tether.transfer
-
 import com.tubetoast.tether.protocol.Device
+import com.tubetoast.tether.protocol.PeerIdentity
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals

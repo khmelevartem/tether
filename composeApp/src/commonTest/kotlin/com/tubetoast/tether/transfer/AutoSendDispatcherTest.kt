@@ -1,10 +1,10 @@
 package com.tubetoast.tether.transfer
-
 import com.tubetoast.tether.peer.FakePeersRepository
 import com.tubetoast.tether.peer.Peer
 import com.tubetoast.tether.preferences.FakePeerPreferencesStore
 import com.tubetoast.tether.preferences.PeerPreferencesStore
 import com.tubetoast.tether.protocol.Device
+import com.tubetoast.tether.protocol.PeerIdentity
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.io.IOException
@@ -29,22 +31,22 @@ class AutoSendDispatcherTest {
     private val peerA = Peer(id = PeerIdentity("peer-a"), device = deviceA, isOnline = true)
     private val peerB = Peer(id = PeerIdentity("peer-b"), device = deviceB, isOnline = true)
 
-    /**
-     * Builds a registry whose engine factory uses the given [scope] (test scheduler),
-     * bypassing the [PeerTransferEngineRegistry]'s own Dispatchers.Default engine scope.
-     */
-    private fun buildRegistry(scope: CoroutineScope, store: PeerPreferencesStore): PeerTransferEngineRegistry =
+    private fun TestScope.buildRegistry(
+        scope: CoroutineScope,
+        store: PeerPreferencesStore,
+    ): PeerTransferEngineRegistry =
         PeerTransferEngineRegistry(
             appScope = scope,
-            engineFactory = { peer, _ ->
+            engineFactory = { peer, engineScope ->
                 PeerTransferEngine(
                     peer = peer,
                     batchSenderFactory = fakeBatchSender(),
                     inboundEvents = MutableSharedFlow(),
-                    scope = scope,
+                    scope = engineScope,
                     peerPreferencesStore = store,
                 )
             },
+            engineDispatcher = StandardTestDispatcher(testScheduler),
         )
 
     private fun buildDispatcher(
@@ -129,6 +131,7 @@ class AutoSendDispatcherTest {
                     peerPreferencesStore = store,
                 )
             },
+            engineDispatcher = StandardTestDispatcher(testScheduler),
         )
         buildDispatcher(peersRepo, pendingRepo, store, registry, backgroundScope).start()
         runCurrent()

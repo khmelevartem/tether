@@ -31,6 +31,7 @@ If the issue references a feature spec (under `docCorpus.featuresDir`) — read 
 3. **Enumerated-class criteria — check each class, not a representative.** When a criterion names several input classes (media types, file kinds, peer states) routed through separate branches, check each one. Proving a single case is not `DONE` for its siblings — a class whose outcome the diff cannot show, because it rests on runtime platform behaviour, is `UNVERIFIABLE` with an explicit question, never `DONE` by association.
 4. **Scope creep:** flag files in the diff that don't map to any criterion. Out-of-scope changes are findings, not virtues.
 5. **PR body — dependency disclosure:** if the diff adds production dependencies, the PR body must call them out (any phrasing). Missing disclosure → REQUIRED finding. Smoke verdict in the body is optional — orchestrators gate on green smoke pre-push, so absence is not a finding.
+6. **Target coverage.** A criterion that delivers behaviour wired at a platform entry point must reach every runtime the app ships — Android, iOS, Desktop UI, headless CLI — unless the issue explicitly limits the target set. A runtime left unwired without that limitation is `MISSING`, not out of scope. This is scope coverage against the runtime set, not platform-quirk parity (that stays `review-platform`).
 
 ## What you do NOT check
 

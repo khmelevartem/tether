@@ -4,9 +4,8 @@ Article-specific publishing record, decisions, and remaining steps. Generic plat
 
 ## Status
 
-- **Habr (RU, `ru.md`)** — submitted to the Песочница (sandbox); awaiting moderation.
-- **Medium (EN, `en.md`)** — draft submitted to **Kt. Academy** (primary); fallback **ProAndroidDev**, then personal profile. Awaiting editor review.
-  Draft: <https://medium.com/@khmelyovartyom/hand-wired-di-in-kotlin-multiplatform-a-composition-root-instead-of-a-framework-ed995fb21b19>
+- **Habr (RU, `ru.md`)** — published: <https://habr.com/p/1051804/>.
+- **Medium (EN, `en.md`)** — published on **ProAndroidDev**: <https://medium.com/proandroiddev/hand-wired-di-in-kotlin-multiplatform-a-composition-root-instead-of-a-framework-ed995fb21b19>.
 
 ## Habr specifics
 
@@ -17,7 +16,7 @@ Article-specific publishing record, decisions, and remaining steps. Generic plat
 
 ## Medium specifics
 
-- **Publication path:** Kt. Academy (`contact@kt.academy`, cc `marcinmoskala@gmail.com`) → ProAndroidDev (`editors@proandroiddev.com`) → personal profile. First submission is by emailing the draft link; the in-editor *Submit to publication* only lists publications you are already a writer of. ([Write for Kt. Academy](https://blog.kotlin-academy.com/write-for-kotlin-academy-abebd70937ce), [ProAndroidDev guidelines](https://proandroiddev.com/submission-guidelines-b2efa7f46272))
+- **Publication path:** Kt. Academy (`contact@kt.academy`, cc `marcinmoskala@gmail.com`) → ProAndroidDev (`editors@proandroiddev.com`) → personal profile. First submission is by emailing the draft link; the in-editor *Submit to publication* only lists publications you are already a writer of. ([Write for Kt. Academy](https://blog.kotlin-academy.com/write-for-kotlin-academy-abebd70937ce), [ProAndroidDev guidelines](https://proandroiddev.com/submission-guidelines-b2efa7f46272)) ProAndroidDev accepts the piece; the Kt. Academy path is not taken.
 - **Tags (5):** `Kotlin`, `Kotlin Multiplatform`, `Dependency Injection`, `Android`, `Software Architecture`.
 - **Cover:** `hand-wired-cover.jpg` — set as the **feature image**; add an *AI-generated* credit caption.
 - **Free, no paywall.**
@@ -28,7 +27,9 @@ Article-specific publishing record, decisions, and remaining steps. Generic plat
 
 RU (Habr) and EN (Medium) are different-language audiences — running both is fine. If the EN piece is later mirrored (personal blog, dev.to), set the **canonical URL** to the primary copy so search ranking is not split.
 
-## Where to promote (once live)
+## Where to promote
+
+The six external channels below are author-owned — the author actions them manually.
 
 - **Kotlin Slack** (`kotlinlang.slack.com`) — `#multiplatform`, `#dependency-injection`, `#feed`.
 - **Reddit** — r/Kotlin, r/androiddev (substantive post, not a thin promo).
@@ -36,16 +37,10 @@ RU (Habr) and EN (Medium) are different-language audiences — running both is f
 - **Telegram** — RU Kotlin/Android channels for the Habr piece.
 - **LinkedIn** — repost with two lines of reflection (serves the hiring-signal goal).
 - **Hacker News** — possible for the EN piece; submit, don't over-invest.
-- **The Tether repo** — link both articles from the README and `docs/engineering/dependency-injection.md` once live.
+- **The Tether repo** — both articles linked from the README and `docs/engineering/dependency-injection.md`.
 
 Timing: mid-week, morning in the audience timezone (Habr — MSK; Medium/HN — US business hours); seed channels within the first hours of going live.
 
-## After publishing — close #479
+## Closing #479
 
-The DoD requires both published URLs recorded in the issue:
-
-```bash
-gh issue comment 479 --body "Published:
-- Habr (RU): <url>
-- Medium (EN): <url>"
-```
+#479 is closed with both published URLs recorded on it (see the `## Status` links above).

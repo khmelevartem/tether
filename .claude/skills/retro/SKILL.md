@@ -35,17 +35,17 @@ Every change a retro produces is a long-lived artifact. Read [`docs/engineering/
 
 ## Step 1 — Gather facts
 
-Collect context:
+Assemble the dossier in one brief:
 
 ```bash
-gh issue view <N> --json title,body,comments
-gh pr view <PR> --json title,body,commits,comments,reviews  # if known
-git log --oneline <merge-commit> -1  # if already merged
+.claude/skills/retro/task-dossier.sh <N>
 ```
 
-Read the full history: issue, comments, review, conversation in the PR.
+It gathers every PR for the issue — superseded and closed attempts included, since a replaced first approach is the task history — and the merge-commit; pass a PR and merge-commit as the second and third arguments to override.
 
-Reconstruct the **path**, not only the end-state: walk the PR's commit sequence and the session transcript for an approach that was built then replaced, or an option declared off-limits. The costliest signals — a wrong-axis decision, redone — leave no trace in the final diff; they live only in the order of the work. If the session was compacted, its summary is a lossy secondary source that drops the decision-path and can reframe a process failure as a success — read the actual transcript (or, if it is gone, the surviving sub-agent logs plus the commit sequence), never run the retro off the summary alone.
+**The transcript is the primary source.** Read its human-typed user turns first and in full — every correction, redirect, or repeated request marks where the system leaned on the user instead of carrying the work. Never run the retro off a compaction summary: it drops the decision-path and reframes process failures as settled background.
+
+Reconstruct the **path**, not the end-state. The costliest signals — a wrong-axis decision, redone — leave no trace in the final diff; they live only in the order of the work. If the transcript is gone, fall back to the surviving sub-agent logs plus the commit sequence.
 
 ---
 

@@ -8,10 +8,10 @@ import com.tubetoast.tether.peer.Peer
 import com.tubetoast.tether.preferences.FakePeerPreferencesStore
 import com.tubetoast.tether.protocol.Device
 import com.tubetoast.tether.protocol.DeviceType
+import com.tubetoast.tether.protocol.PeerIdentity
 import com.tubetoast.tether.transfer.DefaultTransferActivityTracker
 import com.tubetoast.tether.transfer.FakeFileSource
 import com.tubetoast.tether.transfer.NoOpTransferActivityTracker
-import com.tubetoast.tether.transfer.PeerIdentity
 import com.tubetoast.tether.transfer.PeerTransferEngine
 import com.tubetoast.tether.transfer.PeerTransferEngineRegistry
 import com.tubetoast.tether.transfer.PeerTransferState

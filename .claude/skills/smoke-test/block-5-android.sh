@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Requires: block-1 already executed (CLI A alive, log at $LOG_A).
+# Requires: block-2 already executed (CLI A alive, log at $LOG_A).
 
 . "$(dirname "${BASH_SOURCE[0]}")/smoke-env.sh"
 
@@ -80,14 +80,21 @@ else
     [ "$NOW_DONE" -gt "$PREV_DONE" ] && break
     sleep 1
   done
+  # Received files land in MediaStore Downloads (published to Download/Tether/); the
+  # app-private paths are legacy fallbacks for older builds.
   set +e
-  ANDROID_DEST=$(adb shell run-as com.tubetoast.tether ls -1 \
-    "/data/data/com.tubetoast.tether/files/Tether/$ANDROID_NAME_FILE" 2>/dev/null \
+  ANDROID_DEST=$(adb shell ls -1 "/sdcard/Download/Tether/$ANDROID_NAME_FILE" 2>/dev/null \
+    || adb shell run-as com.tubetoast.tether ls -1 "/data/data/com.tubetoast.tether/files/Tether/$ANDROID_NAME_FILE" 2>/dev/null \
     || adb shell ls -1 "/sdcard/Android/data/com.tubetoast.tether/files/Tether/$ANDROID_NAME_FILE" 2>/dev/null)
   ANDROID_DEST=$(echo "$ANDROID_DEST" | tr -d '\r' | head -1)
   set -e
   if [ -n "$ANDROID_DEST" ]; then
-    set +e; adb shell cat "$ANDROID_DEST" 2>/dev/null | diff - "$ANDROID_SRC"; RC=$?; set -e
+    set +e
+    case "$ANDROID_DEST" in
+      /data/data/*) adb shell run-as com.tubetoast.tether cat "$ANDROID_DEST" 2>/dev/null | diff - "$ANDROID_SRC" ;;
+      *)            adb shell cat "$ANDROID_DEST" 2>/dev/null | diff - "$ANDROID_SRC" ;;
+    esac
+    RC=$?; set -e
     [ $RC -eq 0 ] && echo "PASS: send Desktop→Android" || echo "FAIL: send Desktop→Android — diff mismatch"
   else
     echo "FAIL: send Desktop→Android — file not found on device"

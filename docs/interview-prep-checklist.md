@@ -154,7 +154,7 @@
 - [x] Activity / Fragment lifecycle — rotation, process death, multi-window
 - [ ] `onSaveInstanceState` vs `ViewModel` — что переживает что
 - [ ] `savedStateHandle` в ViewModel — как работает при process death
-- [ ] Разница `onStop` vs `onPause` в multi-window
+- [x] Разница `onStop` vs `onPause` в multi-window
 
 ### Process death & State
 - [x] Что такое process death — когда, что теряется, что остаётся
@@ -199,7 +199,7 @@
 
 ### Side-effects
 - [x] `LaunchedEffect` / `SideEffect` / `DisposableEffect` — когда что
-- [ ] `rememberCoroutineScope` — зачем, когда vs `LaunchedEffect`
+- [x] `rememberCoroutineScope` — зачем, когда vs `LaunchedEffect`
 - [ ] `produceState` — bridge от non-Compose к State
 
 ### Архитектура

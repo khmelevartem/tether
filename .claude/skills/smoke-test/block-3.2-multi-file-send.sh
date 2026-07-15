@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Requires: block-1 already executed (CLI A alive at $LOG_A / fifo $FIFO_A).
+# Requires: block-2 already executed (CLI A alive at $LOG_A / fifo $FIFO_A).
 # Requires: CLI B alive with name SmokeMacB.
 
 . "$(dirname "${BASH_SOURCE[0]}")/smoke-env.sh"

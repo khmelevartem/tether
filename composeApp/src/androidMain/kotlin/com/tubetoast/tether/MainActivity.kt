@@ -11,6 +11,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
 import com.arkivanov.decompose.retainedComponent
 import com.tubetoast.tether.di.AndroidAppContainer
 import com.tubetoast.tether.di.AppContainerProvider
@@ -51,6 +53,17 @@ class MainActivity : ComponentActivity() {
         startService()
 
         val container = (application as AppContainerProvider).container
+        lifecycle.addObserver(
+            object : DefaultLifecycleObserver {
+                override fun onStart(owner: LifecycleOwner) {
+                    container.healthMonitor.start(container.appScope)
+                }
+
+                override fun onStop(owner: LifecycleOwner) {
+                    container.healthMonitor.stop()
+                }
+            },
+        )
 
         val filesLauncher = activityResultRegistry.register(
             "tether.pick.files",

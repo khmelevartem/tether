@@ -142,6 +142,8 @@ On Android, the root Component is created via Decompose's `retainedComponent { .
 
 `retainedComponent` is an Android-only extension because retention is an Android-only concern. On Desktop and iOS the root Component is constructed once in the platform entry point against a `LifecycleRegistry` driven directly by that entry point (`main()` for Desktop, `MainViewController()` for iOS). Process lifetime equals lifecycle; there is nothing to retain across. Do not introduce a multiplatform indirection to "unify" this — it would solve no problem.
 
+Component construction must run on the platform's UI thread — Decompose asserts it. On Desktop `main()` starts on a non-UI thread, so construction is dispatched onto the Swing event-dispatch thread; iOS constructs on the main thread its entry point already runs on.
+
 ### State restoration
 
 Process-death state restoration is **not a goal** for the navigation stack. The root `ChildStack` uses `serializer = null` (see the Navigation section). Session-local view state that lives inside a single Component can still go through `stateKeeper.consume(...)` / `register(...)`; the rule is that domain state belongs in `AppContainer` repositories, not in the Component or in the saved-state bundle.

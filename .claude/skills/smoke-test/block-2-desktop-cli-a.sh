@@ -15,7 +15,7 @@ sleep 600 > "$FIFO_A" 2>/dev/null &
 KEEPER_PID=$!; disown $KEEPER_PID
 echo $KEEPER_PID > "$KEEPER_A"
 
-# Wrap the JVM in a subshell that records its real exit code — block-6 reads $EXIT_A rather than
+# Wrap the JVM in a subshell that records its real exit code — block-7 reads $EXIT_A rather than
 # `wait` on this disowned PID, which returns 127 from another shell. The subshell's own std fds are
 # detached (</dev/null >/dev/null 2>&1) so this long-lived background process cannot hold an
 # inherited pipe open and wedge a caller that reads this block through a pipe; the JVM keeps its

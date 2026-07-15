@@ -3,6 +3,10 @@
 Long-form technical articles published from the Tether codebase, plus the reusable
 playbook for preparing the next one.
 
+## Published
+
+- `manual-di-kmp` — RU: <https://habr.com/p/1051804/>, EN: <https://medium.com/proandroiddev/hand-wired-di-in-kotlin-multiplatform-a-composition-root-instead-of-a-framework-ed995fb21b19>.
+
 ## Folder convention
 
 One folder per article: `docs/articles/<slug>/`.
