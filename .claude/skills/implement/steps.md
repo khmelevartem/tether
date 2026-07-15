@@ -26,7 +26,7 @@ A non-zero exit means blocked state — read the emitted keys anyway and continu
 
 **Applies to:** `reentry=unknown` OR `reentry=stray-worktree`.
 
-`classify-state.sh` cannot start the walk and exits non-zero with `status=blocked` — either no issue resolved from the arg, the branch, or an open PR (`reentry=unknown`), or the checkout is a stray worktree whose git ops would fall through to the main checkout and corrupt it (`reentry=stray-worktree`). STOP immediately and surface the specific blocking reason and its remedy from the script's stderr — do not continue the walk. This step sits ahead of every every-run step so the walk cannot fall through to them with empty or main-bound context.
+`classify-state.sh` cannot start the walk (`status=blocked`) — either no issue resolved from the arg, branch, or open PR (`reentry=unknown`), or the checkout is a stray worktree whose git ops would fall through to main (`reentry=stray-worktree`). STOP and surface the specific reason and remedy from the script's stderr; do not continue. This step sits ahead of every every-run step so the walk cannot fall through with empty or main-bound context.
 
 ---
 ## Step 2 — sync-main
@@ -72,7 +72,7 @@ Then decide the one judgment neither script can resolve mechanically:
 
 `track` is the one judgment the scripts cannot resolve. After deciding it, announce the resolved profile — `track=<…> type=<…>` — so every later `**Applies to:**` match reads against an on-screen value, not a re-derived one.
 
-`track` and `type` are stable for the whole issue and almost every later step gates on them, so persist them physically — a `pr-feedback` re-entry skips this step, and LLM session memory does not survive into a new session. Write them to the per-worktree git dir, keyed by issue number so a marker left by another issue in the same git dir is never mistaken for this one, from where `classify-state` re-surfaces them on every run:
+`track` and `type` are stable for the whole issue and almost every later step gates on them, so persist them physically — a `pr-feedback` re-entry skips this step, and LLM session memory does not survive into a new session. Write them to the per-worktree git dir, keyed by issue so another issue's leftover marker is never mistaken for this one, from where `classify-state` re-surfaces them on every run:
 
 ```bash
 printf 'track=%s\ntype=%s\n' "<track>" "<type>" > "$(git rev-parse --git-dir)/implement-profile-<N>"

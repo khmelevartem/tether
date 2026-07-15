@@ -16,10 +16,9 @@
 #            (reentry=unknown/stray-worktree vs drift=behind), not the exit code.
 #
 # track+type are the STABLE axes: classify-task.sh computes them once per issue
-# and the fresh walk persists them to the profile; this script only re-surfaces
-# the persisted values so they outlive the session that computed them. The
-# profile is keyed by issue number, so a marker left by a different issue in the
-# same git dir is never re-surfaced as this issue's.
+# and the fresh walk persists them to the profile (keyed by issue, so a marker
+# from another issue in the same git dir is never re-surfaced); this script only
+# re-surfaces the persisted values so they outlive the session that computed them.
 
 set -euo pipefail
 
@@ -29,13 +28,9 @@ BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
 [ -z "$BRANCH" ] && BRANCH="HEAD"
 
 # ── Preflight: reject a stray (unregistered) worktree ────────────────────────
-# A dir under .claude/worktrees/ that was never `git worktree add`-ed is not a
-# linked worktree: git walks up and resolves the git dir to the MAIN checkout,
-# so every op silently targets main — the branch rename renames main's branch,
-# the profile marker reads/writes main's git dir, cross-contaminating every run
-# that lands there. Halt before any mutation instead of corrupting main. A real
-# linked worktree resolves its git dir under .git/worktrees/; the main checkout
-# itself (PWD not under .claude/worktrees/) is legitimate and passes.
+# A dir under .claude/worktrees/ never `git worktree add`-ed resolves its git dir
+# to the MAIN checkout, so branch/profile ops silently mutate main. A registered
+# worktree resolves under .git/worktrees/; halt before any mutation otherwise.
 case "$PWD" in
   */.claude/worktrees/*)
     GIT_DIR_ABS="$(git rev-parse --absolute-git-dir 2>/dev/null || echo "")"
@@ -45,7 +40,7 @@ case "$PWD" in
         echo "issue=unknown"
         echo "reentry=stray-worktree"
         echo "status=blocked"
-        echo "classify-state.sh: stray worktree — '$PWD' sits under .claude/worktrees/ but git resolves to the main checkout ('${GIT_DIR_ABS:-unresolved}'), so branch and profile ops would corrupt main. Rebuild the worktree with 'git worktree add' before proceeding." >&2
+        echo "classify-state.sh: stray worktree — '$PWD' is under .claude/worktrees/ but git resolves to the main checkout ('${GIT_DIR_ABS:-unresolved}'); git ops would corrupt main. Rebuild it with 'git worktree add' first." >&2
         exit 2
         ;;
     esac
@@ -198,12 +193,9 @@ print(','.join(sorted(result)))
 echo "touched=$TOUCHED"
 
 # ── Surface the persisted profile (track, type) ──────────────────────────────
-# classify-task computes track+type once on a fresh walk and persists them to the
-# per-worktree git dir (survives re-entry, never appears in `git status`), keyed
-# by issue number. Re-emit them here so every walk — including a pr-feedback
-# re-entry that skips the fresh-only classify-task step — reads them mechanically
-# instead of from memory. Keying by issue means a leftover marker from another
-# issue in the same git dir is not addressed, so it can never be surfaced here.
+# Re-emit the persisted track+type (keyed by issue) so every walk — including a
+# pr-feedback re-entry that skips the fresh-only classify-task step — reads them
+# mechanically instead of from memory.
 PROFILE="$(git rev-parse --git-dir 2>/dev/null)/implement-profile-$ISSUE"
 if [ -f "$PROFILE" ]; then
   cat "$PROFILE"

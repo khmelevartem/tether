@@ -36,7 +36,7 @@ If touching adjacent classes or neighbouring platforms is needed for a quality s
 
 ## Re-entry contract
 
-The skill is idempotent per issue: `classify-state.sh` detects PR state (`reentry=fresh` / `pr-feedback`) and the `**Applies to:**` tags gate the rest. `track` and `type` are computed once on the fresh walk and persisted to the worktree git dir under a per-issue marker, so a re-entry reads them back through `classify-state.sh` rather than recomputing or relying on session memory. A marker left by a different issue in the same git dir is never re-surfaced — the read is keyed by issue — and a stray worktree, whose git ops would fall through to the main checkout, halts the walk before any mutation.
+The skill is idempotent per issue: `classify-state.sh` detects PR state (`reentry=fresh` / `pr-feedback`) and the `**Applies to:**` tags gate the rest. `track` and `type` are computed once on the fresh walk and persisted to the worktree git dir under a per-issue marker, so a re-entry reads them back through `classify-state.sh` rather than recomputing or relying on session memory. The read is keyed by issue, so another issue's marker in the same git dir is never re-surfaced; a stray worktree halts the walk before any mutation.
 
 ## No-deflection principle
 
