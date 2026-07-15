@@ -17,6 +17,10 @@
         "hooks": [
           {
             "type": "command",
+            "command": "bash .claude/hooks/block-stray-worktree.sh"
+          },
+          {
+            "type": "command",
             "command": "bash .claude/hooks/pre-git-checklist.sh"
           }
         ]
