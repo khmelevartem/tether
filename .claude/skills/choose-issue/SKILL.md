@@ -30,7 +30,7 @@ For each `<N>` still heading to 🟢 (open, no PR), also check for an active loc
 git worktree list --porcelain | grep '^branch ' | sed 's|^branch refs/heads/||' | while read -r b; do
   n="$(printf '%s' "$b" | grep -oE '^[0-9]+')"
   if   [ "$n" = "<N>" ]; then echo "🟡 $b"                                                   # primary: branch renamed to <N>-slug
-  elif [ -z "$n" ] && git log "$b" --oneline | grep -qE "^[a-f0-9]+ #<N>:"; then echo "🟡 $b" # fallback: pre-rename branch, #<N>: commit prefix
+  elif [ -z "$n" ] && git log "main..$b" --oneline | grep -qE "^[a-f0-9]+ #<N>:"; then echo "🟡 $b" # fallback: pre-rename branch, #<N>: commit prefix among commits unique to it
   fi
 done
 ```
