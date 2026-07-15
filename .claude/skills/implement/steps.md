@@ -19,14 +19,14 @@ Each `##` section is one step.
 
 Run `classify-state.sh [<N>]` and read its key=value output — the volatile state (`issue`, `reentry`, `pr`, `drift`, `touched`), plus the persisted `track`/`type` once a fresh walk has recorded them. With no argument it resolves which issue you are on from the current branch / open PR. Re-run it whenever current state matters.
 
-A non-zero exit means blocked state — read the emitted keys anyway and continue; the next matching gate handles it (`reentry=unknown` → `halt-unresolved` stops; `drift=behind` → `sync-main` syncs and retries). The non-zero exit is not itself the stop.
+A non-zero exit means blocked state — read the emitted keys anyway and continue; the next matching gate handles it (`reentry=unknown` or `reentry=stray-worktree` → `halt-unresolved` stops; `drift=behind` → `sync-main` syncs and retries). The non-zero exit is not itself the stop.
 
 ---
 ## Step 1 — halt-unresolved
 
-**Applies to:** `reentry=unknown`.
+**Applies to:** `reentry=unknown` OR `reentry=stray-worktree`.
 
-`classify-state.sh` resolved no issue from the arg, the branch, or an open PR — it exits non-zero with `status=blocked`. STOP immediately and tell the user to run `/implement <N>` or check out the issue branch. Do not continue the walk. This step sits ahead of every every-run step so the walk cannot fall through to them with empty context.
+`classify-state.sh` cannot start the walk (`status=blocked`) — either no issue resolved from the arg, branch, or open PR (`reentry=unknown`), or the checkout is a stray worktree whose git ops would fall through to main (`reentry=stray-worktree`). STOP and surface the specific reason and remedy from the script's stderr; do not continue. This step sits ahead of every every-run step so the walk cannot fall through with empty or main-bound context.
 
 ---
 ## Step 2 — sync-main
@@ -72,13 +72,13 @@ Then decide the one judgment neither script can resolve mechanically:
 
 `track` is the one judgment the scripts cannot resolve. After deciding it, announce the resolved profile — `track=<…> type=<…>` — so every later `**Applies to:**` match reads against an on-screen value, not a re-derived one.
 
-`track` and `type` are stable for the whole issue and almost every later step gates on them, so persist them physically — a `pr-feedback` re-entry skips this step, and LLM session memory does not survive into a new session. Write them to the per-worktree git dir, from where `classify-state` re-surfaces them on every run:
+`track` and `type` are stable for the whole issue and almost every later step gates on them, so persist them physically — a `pr-feedback` re-entry skips this step, and LLM session memory does not survive into a new session. Write them to the per-worktree git dir, keyed by issue so another issue's leftover marker is never mistaken for this one, from where `classify-state` re-surfaces them on every run:
 
 ```bash
-printf 'track=%s\ntype=%s\n' "<track>" "<type>" > "$(git rev-parse --git-dir)/implement-profile"
+printf 'track=%s\ntype=%s\n' "<track>" "<type>" > "$(git rev-parse --git-dir)/implement-profile-<N>"
 ```
 
-The label is read once, here. Re-classifying mid-PR (a label change) requires deleting `$(git rev-parse --git-dir)/implement-profile` so the next fresh walk recomputes — `classify-state` only re-surfaces the cached values, it never re-derives them.
+The label is read once, here. Re-classifying mid-PR (a label change) requires deleting `$(git rev-parse --git-dir)/implement-profile-<N>` so the next fresh walk recomputes — `classify-state` only re-surfaces the cached values, it never re-derives them.
 
 ---
 ## Step 6 — recon
