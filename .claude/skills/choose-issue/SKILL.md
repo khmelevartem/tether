@@ -1,6 +1,6 @@
 ---
 name: choose-issue
-description: Quick read-only look at the current `docs/sprints/sprint-NN.md` — pull issue numbers from the composition table + merge order, batch-check OPEN/PR status via `gh`, query `blocked_by` only for 🟢 items, and propose 1–3 candidates to start now with one-sentence justifications. No Gradle, no edits. Use when the user says "what to pick next", "next task from sprint", "что взять из спринта", "следующая задача", or invokes `/choose-issue`.
+description: Quick read-only look at the current `docs/sprints/sprint-NN.md` — pull issue numbers from the composition table + merge order, batch-check OPEN/PR status via `gh`, flag candidates already claimed by a local worktree/branch, query `blocked_by` only for 🟢 items, and propose 1–3 candidates to start now with one-sentence justifications. No Gradle, no edits. Use when the user says "what to pick next", "next task from sprint", "что взять из спринта", "следующая задача", or invokes `/choose-issue`.
 ---
 
 Quick look: what to pick from the current sprint right now. Read-only and `gh` only, no Gradle.
@@ -25,21 +25,13 @@ gh pr list --search "<N> in:title" --state open --json number,isDraft,mergeable
 
 Group into one tool-call with `;` between commands. Do not call `dependencies/blocked_by` for all at once — only for those that are `OPEN` without an active PR (candidates for starting).
 
-For each `<N>` still heading to 🟢 (open, no PR), also check for an active local worktree — either signal marks it 🟡 (another session already holds the issue):
-```bash
-git worktree list --porcelain | grep '^branch ' | sed 's|^branch refs/heads/||' | while read -r b; do
-  n="$(printf '%s' "$b" | grep -oE '^[0-9]+')"
-  if   [ "$n" = "<N>" ]; then echo "🟡 $b"                                                   # primary: branch renamed to <N>-slug
-  elif [ -z "$n" ] && git log "main..$b" --oneline | grep -qE "^[a-f0-9]+ #<N>:"; then echo "🟡 $b" # fallback: pre-rename branch, #<N>: commit prefix among commits unique to it
-  fi
-done
-```
+For each `<N>` still heading to 🟢 (open, no PR), run `.claude/skills/choose-issue/scripts/worktree-signal.sh <N>` — any output → 🟡 (active local worktree/branch, another session already holds the issue).
 
 Blind spots — the worktree signal cannot see: uncommitted/unpushed work (invisible to both signals); other-machine sessions (not in local `git worktree list`); a stray worktree under `.claude/worktrees/` whose git-dir is not under `.git/worktrees/` (not real in-progress evidence — ignore it).
 
 Marking:
 - ✅ closed
-- 🟡 open + open PR, or active local worktree/branch (see the worktree signal above)
+- 🟡 open + open PR, or active local worktree/branch (see step 2)
 - 🟢 open, no PR, no active worktree
 - 🔴 blocked (if step 3 found an open blocker)
 
