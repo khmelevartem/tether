@@ -25,10 +25,22 @@ gh pr list --search "<N> in:title" --state open --json number,isDraft,mergeable
 
 Group into one tool-call with `;` between commands. Do not call `dependencies/blocked_by` for all at once — only for those that are `OPEN` without an active PR (candidates for starting).
 
+For each `<N>` still heading to 🟢 (open, no PR), also check for an active local worktree — either signal marks it 🟡 (another session already holds the issue):
+```bash
+git worktree list --porcelain | grep '^branch ' | sed 's|^branch refs/heads/||' | while read -r b; do
+  n="$(printf '%s' "$b" | grep -oE '^[0-9]+')"
+  if   [ "$n" = "<N>" ]; then echo "🟡 $b"                                                   # primary: branch renamed to <N>-slug
+  elif [ -z "$n" ] && git log "$b" --oneline | grep -qE "^[a-f0-9]+ #<N>:"; then echo "🟡 $b" # fallback: pre-rename branch, #<N>: commit prefix
+  fi
+done
+```
+
+Blind spots — the worktree signal cannot see: uncommitted/unpushed work (invisible to both signals); other-machine sessions (not in local `git worktree list`); a stray worktree under `.claude/worktrees/` whose git-dir is not under `.git/worktrees/` (not real in-progress evidence — ignore it).
+
 Marking:
 - ✅ closed
-- 🟡 open + open PR
-- 🟢 open, no PR
+- 🟡 open + open PR, or active local worktree/branch (see the worktree signal above)
+- 🟢 open, no PR, no active worktree
 - 🔴 blocked (if step 3 found an open blocker)
 
 ## 3. Blockers — only for 🟢
