@@ -9,6 +9,8 @@ Runs basic smoke scenarios across Tether targets and produces a human-readable r
 
 **This is smoke, not regression.** The goal — in 1–3 minutes — is to see that nothing is fundamentally broken (CLI starts, FileServer responds, mDNS is published, stdin commands work, send roundtrip OK, native targets compile). Business logic correctness is the job of `./gradlew allTests`.
 
+**A block asserts a general observable capability, not one incident's signature.** Frame the check as the capability a user relies on — a target starts, a roundtrip completes. A check keyed to a single past bug's fingerprint (a specific exception name, a one-off log string) over-fits that incident and taxes every future run without widening coverage.
+
 ## What the skill does NOT check (out of scope for automation)
 
 At the start of the run **tell the user** — coverage boundaries:
