@@ -25,7 +25,7 @@
 - [ ] `@Input` / `@InputFiles` / `@OutputFiles` / `@OutputDirectory` — аннотации кастомной таски, как влияют на incremental
 - [x] **Build Cache** (local + remote) — переиспользование outputs между сборками/машинами/CI; чем отличается от up-to-date
 - [x] Что делает таску `cacheable` и почему не все таски кэшируемы (non-deterministic outputs, absolute paths)
-- [ ] **Configuration Cache** — что кэширует (результат configuration-фазы), какие ограничения накладывает на скрипты (нельзя `Project` в execution, нельзя `Task.project`)
+- [x] **Configuration Cache** — что кэширует (результат configuration-фазы), какие ограничения накладывает на скрипты (нельзя `Project` в execution, нельзя `Task.project`)
 - [ ] `--profile`, Build Scan (`--scan`) — где смотреть, что тормозит сборку
 
 ### Управление зависимостями
