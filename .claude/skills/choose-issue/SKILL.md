@@ -1,6 +1,6 @@
 ---
 name: choose-issue
-description: Quick read-only look at the current `docs/sprints/sprint-NN.md` — pull issue numbers from the composition table + merge order, batch-check OPEN/PR status via `gh`, query `blocked_by` only for 🟢 items, and propose 1–3 candidates to start now with one-sentence justifications. No Gradle, no edits. Use when the user says "what to pick next", "next task from sprint", "что взять из спринта", "следующая задача", or invokes `/choose-issue`.
+description: Propose 1–3 issues to start next from the current sprint, with status flags and one-sentence justifications. Read-only, no edits, no Gradle. Use when the user says "what to pick next", "next task from sprint", "что взять из спринта", "следующая задача", or invokes `/choose-issue`.
 ---
 
 Quick look: what to pick from the current sprint right now. Read-only and `gh` only, no Gradle.
@@ -25,10 +25,14 @@ gh pr list --search "<N> in:title" --state open --json number,isDraft,mergeable
 
 Group into one tool-call with `;` between commands. Do not call `dependencies/blocked_by` for all at once — only for those that are `OPEN` without an active PR (candidates for starting).
 
+For each `<N>` still heading to 🟢 (open, no PR), run `.claude/skills/choose-issue/scripts/branch-signal.sh <N>` — any output → 🟡 (active local branch, another session already holds the issue). The match key is the branch name, not the worktree directory name — worktree directory names are harness-assigned and not customizable (`docs/knowledge/claude-code-worktrees.md`).
+
+Blind spots — the branch signal cannot see: uncommitted/unpushed work (invisible to both signals); other-machine sessions (not in local `git worktree list`); a stray worktree under `.claude/worktrees/` whose git-dir is not under `.git/worktrees/` (not real in-progress evidence — ignore it).
+
 Marking:
 - ✅ closed
-- 🟡 open + open PR
-- 🟢 open, no PR
+- 🟡 open + open PR, or active local branch (see step 2)
+- 🟢 open, no PR, no active branch
 - 🔴 blocked (if step 3 found an open blocker)
 
 ## 3. Blockers — only for 🟢

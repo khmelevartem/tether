@@ -21,3 +21,4 @@ The transcript lives in a directory derived from the worktree's absolute path, u
 
 - [`.claude/skills/implement/scripts/ensure-branch.sh`](../../.claude/skills/implement/scripts/ensure-branch.sh) — the after-the-fact branch rename
 - [`.claude/scripts/cleanup-worktrees.sh`](../../.claude/scripts/cleanup-worktrees.sh)
+- [`.claude/skills/choose-issue/scripts/branch-signal.sh`](../../.claude/skills/choose-issue/scripts/branch-signal.sh) — matches on branch name because the worktree directory name can't be set
