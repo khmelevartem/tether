@@ -3,6 +3,8 @@ name: progress
 description: Project progress snapshot as an RPG character sheet from Skyrim — hero class, level+XP from PR statistics, MVP chapters with progress bars, legendary artifacts (top PRs), quest map (dependency graph clustered by schools), Seal of Debt (planned vs improvised). Numbers wrapped in RPG language; bare percentages only in purely statistical tables. Use when the user asks for "progress", "project status", "snapshot", "how things are going" — or explicitly calls `/progress`. For dry numbers without RPG framing — separate command `/progress-boring`.
 ---
 
+Repo-specific values for this project live in `.claude/project.json` — consult it; references below name their config keys.
+
 Project progress snapshot as an RPG character sheet. Tether is not a project — it's a saga. The user is the Dragonborn developer. The roadmap is the main story line, infra is side quests and crafting, MVP is the final dungeon.
 
 Tone: seriously epic with light self-irony. Translating numbers into RPG language is mandatory in narrative blocks; pure statistical tables (Hot Battles, Heavy Marches) — bare numbers are acceptable.
@@ -29,7 +31,7 @@ Outputs into `--raw-data`: `prs.json`, `issues.json`, `blocked_by.json`, `loc.js
 
 ## MVP chapters — compose in chat
 
-Read `docs/product/roadmap.md` §MVP and `docs/product/features/README.md`. **One chapter per MVP product feature** (the feature index is the unit, *not* the roadmap bullet): merge roadmap bullets that belong to the same feature — multi-file transfer + live progress + cancel + receiver are all one *File transfer* chapter, backed by its epic(s). A feature may legitimately span more than one epic (File transfer = `#8` UI + `#119` reliability); that's fine, list both. Aim for ≤ 8 chapters. Completed (100 %) chapters are hidden behind a "показать завершённые" toggle by default, so keep them in the list — don't drop them. Chapters cover MVP *product* features only; infra, Post-MVP, and system-integration epics stay out. The coverage caption under the table is **computed** — it lists every open `EPIC:`-titled hub no chapter references, so it never goes stale when new epics appear (you don't hand-maintain that list). For each chapter name the backing epic where the feature has one. Write the result to `/tmp/tether-progress-mvp.json`:
+Read `roadmap.md` §MVP and `features/README.md` (both under `docCorpus.productDir` / `docCorpus.featuresDir`). **One chapter per MVP product feature** (the feature index is the unit, *not* the roadmap bullet): merge roadmap bullets that belong to the same feature — multi-file transfer + live progress + cancel + receiver are all one *File transfer* chapter, backed by its epic(s). A feature may legitimately span more than one epic (File transfer = `#8` UI + `#119` reliability); that's fine, list both. Aim for ≤ 8 chapters. Completed (100 %) chapters are hidden behind a "показать завершённые" toggle by default, so keep them in the list — don't drop them. Chapters cover MVP *product* features only; infra, Post-MVP, and system-integration epics stay out. The coverage caption under the table is **computed** — it lists every open `EPIC:`-titled hub no chapter references, so it never goes stale when new epics appear (you don't hand-maintain that list). For each chapter name the backing epic where the feature has one. Write the result to `/tmp/tether-progress-mvp.json`:
 
 ```json
 [
@@ -41,7 +43,7 @@ Read `docs/product/roadmap.md` §MVP and `docs/product/features/README.md`. **On
 
 Text is in Russian (the whole report is). `title` — just the evocative chapter name (the seal column already renders the Roman numeral, so no `Глава N:` prefix). `subtitle` — a one-line flavour caption.
 
-- `epic` (optional) — list of backing issue numbers from `docs/product/features/README.md`, e.g. `[457]` or `[8, 119]`. Each renders as the issue's **full title**, clickable, linking to GitHub. The chapters table has no free-text evidence column — put the backing issues here, not prose.
+- `epic` (optional) — list of backing issue numbers from the features dir's `README.md` (`docCorpus.featuresDir`), e.g. `[457]` or `[8, 119]`. Each renders as the issue's **full title**, clickable, linking to GitHub. The chapters table has no free-text evidence column — put the backing issues here, not prose.
 - `percent` — **auto-computed when omitted**: `build.py` takes the size-weighted completion of the epics' direct sub-issues (`Σ weight(closed) ÷ Σ weight(all)`, weights from `.claude/sizing-bands.json`, `unlabeled`→`valor_size.unlabeled`). Prefer this — it's the answer to "progress by tasks, not by eye". Supply an explicit `percent` only to **override**: chapters with no epic (shipped mDNS / device-name → manual), a subset of a shared epic (live-progress draws on #8 but isn't all of it), or a decision-plus-impl pair (#123/#140) where the weighted child count misreads. When you do override, that's a judgement call — keep it honest.
 
 ## Build the snapshot

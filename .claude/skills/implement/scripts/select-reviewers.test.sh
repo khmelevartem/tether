@@ -229,6 +229,46 @@ for reviewer in $INNER_LIST; do
   fi
 done
 
+# ── Config-driven path: project.json controls the project-specific rosters ──
+#
+# The reviewer names above (review-ux-conformance, review-platform, ...) are not
+# hardcoded in the script — they come from project.json's reviewers.projectSpecific.
+# Prove it by pointing the script at a config with an empty `ui` bucket and
+# checking the ui-touched roster loses exactly its project-specific reviewers.
+
+CONFIG_REAL="$SCRIPT_DIR/../../../project.json"
+CONFIG_BACKUP="$(mktemp)"
+cp "$CONFIG_REAL" "$CONFIG_BACKUP"
+trap 'cp "$CONFIG_BACKUP" "$CONFIG_REAL"; rm -f "$CONFIG_BACKUP"' EXIT
+
+python3 -c "
+import json
+with open('$CONFIG_REAL') as f:
+    data = json.load(f)
+data['reviewers']['projectSpecific']['ui'] = {'inner': [], 'waveA': []}
+with open('$CONFIG_REAL', 'w') as f:
+    json.dump(data, f)
+"
+
+OUT=$(run code feature "ui,code,platform")
+assert_eq "empty config ui bucket drops ui reviewers from inner" \
+  "inner-loop-reviewers: review-correctness review-architecture review-guides review-platform" \
+  "$(inner_line "$OUT")"
+assert_eq "empty config ui bucket drops ui reviewers from wave-a" \
+  "wave-a-reviewers: review-dod review-glossary review-reuse review-tests" \
+  "$(wave_a_line "$OUT")"
+
+cp "$CONFIG_BACKUP" "$CONFIG_REAL"
+
+# Restored config reproduces the filled rosters (case 2) byte-identical.
+OUT=$(run code feature "ui,code,platform")
+assert_eq "restored config reproduces c2 inner" \
+  "inner-loop-reviewers: review-correctness review-architecture review-guides review-platform review-ux-conformance" \
+  "$(inner_line "$OUT")"
+assert_eq "restored config reproduces c2 wave-a" \
+  "wave-a-reviewers: review-dod review-glossary review-reuse review-tests review-design-system review-visual" \
+  "$(wave_a_line "$OUT")"
+
 # ── Summary ───────────────────────────────────────────────────────────────────
 
 TOTAL=$((PASS + FAIL))

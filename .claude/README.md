@@ -8,6 +8,24 @@ How Tether extends Claude Code. Two artifact homes, both creating a `/slash-comm
 
 Skill, command, and agent inventories are surfaced automatically to every agent invocation — no manual index is maintained here.
 
+## Project-context adapter
+
+Every repo-specific value the framework needs lives in one adapter, so the prompts, agents, and roster scripts carry no hardcoded project specifics. Two files, one schema:
+
+- `.claude/project.json` — this repo's filled instance.
+- `.claude/project.json.template` — the empty template a consumer repo copies and fills.
+
+Key groups:
+
+- `repo.slug` — `owner/repo` for `gh api` calls that cannot infer it from context.
+- `git` — commit-message prefix, deferred-work marker, branch / PR-title patterns, PR-template path.
+- `docCorpus` — the doc-corpus roots and templated slots (feature spec, UX brief, engineering doc, ADR, knowledge, glossary). Prompts name these keys functionally instead of embedding paths.
+- `commands` — the runtime commands (tests, snapshot record, build, run).
+- `reviewers.projectSpecific` — the project-specific reviewers keyed by the `touched` bucket that triggers them (`ui`, `platform`, `ux-brief`), each split into `inner` / `waveA` rosters. Domain-agnostic core reviewers are not listed here; they are the framework baseline. A bucket absent from this map contributes no reviewers, so a repo without that surface degrades cleanly.
+- `touchedBuckets` — the path patterns mapping changed files to the `touched` buckets.
+
+Scripts (`select-reviewers.sh`, `classify-state.sh`, `derive-touched.py`) read the JSON directly; prompts reference its keys by name.
+
 ## Skill or command — checkable criteria
 
 Prefer a **skill** if any of these holds:
@@ -33,6 +51,6 @@ Both create the same `/slash-command`. The criteria are about what the artifact 
 
 ## Tone for prompt prose
 
-[CLAUDE.md §Code style](../CLAUDE.md#code-style) and [`docs/engineering/long-lived-artifacts.md`](../docs/engineering/long-lived-artifacts.md) apply. Match siblings in the same folder.
+[CLAUDE.md §Code style](../CLAUDE.md#code-style) and the [long-lived-artifacts canon](../docs/engineering/long-lived-artifacts.md) (rooted at `docCorpus.engineeringDir` in `.claude/project.json`) apply. Match siblings in the same folder.
 
 Keep step prose a minimal directive checklist, not a tutorial. When a step always reduces to running a script, the whole step is one imperative line invoking it (marked mandatory where needed) — no inline bash block, no rationale narration, no walk-through of what the script does. Push the mechanics into the script and let hooks carry the invariants; a following agent has limited attention and does not need to think about plumbing the script already gets right. Reserve prose for *when* to run and *sequencing*, not *how* it works.

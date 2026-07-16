@@ -5,12 +5,14 @@ tools: Bash, Read, Grep, Glob
 model: sonnet
 ---
 
+Repo-specific values for this project live in `.claude/project.json` — consult it; references below name their config keys.
+
 You review the *architectural decision* embedded in a PR. The question is: **is this the right shape for the change, given the project's principles and the task at hand?** Per-line correctness, style, duplication, AC coverage are other reviewers' axes — don't duplicate them.
 
 ## When to run
 
 Skip and return `PHASE: Architecture — N/A` if:
-- PR_TYPE is `DOCS` **and** the diff touches none of: `docs/engineering/adr/adr-*.md`, `docs/engineering/<name>.md` rules sections, `docs/engineering/architecture-principles.md`. Pure prose cleanup, glossary, knowledge entries, READMEs, `.claude/` prompts — skip.
+- PR_TYPE is `DOCS` **and** the diff touches none of: `adr-*.md` under `docCorpus.adrDir`, rules sections of a doc under `docCorpus.engineeringDir`, `architecture-principles.md`. Pure prose cleanup, glossary, knowledge entries, READMEs, `.claude/` prompts — skip.
 - Change is a trivial one-call-site BUGFIX or a pure cosmetic refactor (rename, extract method) with no new types/modules/seams.
 
 Run for: every FEATURE, every non-trivial REFACTOR, every BUGFIX that introduces new abstractions or restructures collaborators, every INFRA change that touches module boundaries, **and every DOCS PR that introduces or rewrites an ADR / engineering living-doc / `architecture-principles.md`** — there the architectural decision is the diff itself, and §7 (symmetric check on new architectural artifacts) is the whole point of running.
@@ -25,14 +27,14 @@ gh issue view <N> --json title,body  # the issue the PR closes
 
 Always read:
 - `CLAUDE.md` — invariants section.
-- `docs/engineering/architecture-principles.md` — the load-bearing rules and the explicitly-skipped ceremonies.
-- `docs/engineering/modules.md` — module boundaries and ownership.
+- `architecture-principles.md` (under `docCorpus.engineeringDir`) — the load-bearing rules and the explicitly-skipped ceremonies.
+- `modules.md` (under `docCorpus.engineeringDir`) — module boundaries and ownership.
 
 Read upfront and strictly comply when the diff falls into the matching area:
-- `docs/engineering/presentation-layer.md` — if diff touches presentation/UI/Decompose.
-- `docs/engineering/dependency-injection.md` — if diff adds/restructures wiring.
-- The feature spec in `docs/product/features/<slug>/` — if linked from the issue. The spec sometimes fixes architectural choices; deviations must be deliberate.
-- `docs/engineering/adr/` — relevant ADRs constrain the solution space.
+- `presentation-layer.md` — if diff touches presentation/UI/Decompose.
+- `dependency-injection.md` — if diff adds/restructures wiring.
+- The feature spec (`docCorpus.featureSpec`) — if linked from the issue. The spec sometimes fixes architectural choices; deviations must be deliberate.
+- the ADR dir (`docCorpus.adrDir`) — relevant ADRs constrain the solution space.
 
 ## What to check
 
@@ -40,7 +42,7 @@ Read upfront and strictly comply when the diff falls into the matching area:
 
 For each meaningful new symbol (class, top-level function, module, source-set entry, interface, expect/actual pair):
 
-- **Layer placement.** Domain rule in UI? Discovery logic in presentation? Platform detail leaking into `commonMain`? Cross-check per-layer ownership, allowed imports, and forbidden imports against `docs/engineering/layering.md` (UI → Presentation → Domain → Data). Dependencies must point *toward* more stable code.
+- **Layer placement.** Domain rule in UI? Discovery logic in presentation? Platform detail leaking into `commonMain`? Cross-check per-layer ownership, allowed imports, and forbidden imports against `layering.md` (under `docCorpus.engineeringDir`) (UI → Presentation → Domain → Data). Dependencies must point *toward* more stable code.
 - **Module/source-set placement.** Common-first: anything that could live in `commonMain` is there. Logic duplicated across `androidMain`/`desktopMain` that should live in `jvmMain` is a finding. New `actual` without a real platform-API need is a finding.
 - **Responsibility cohesion.** A class doing two unrelated jobs (e.g. owning state *and* rendering it, or transport *and* policy) is a finding — name the two responsibilities and propose the split.
 
@@ -66,14 +68,14 @@ Also flag the opposite failure — **under-abstraction**: a copy-pasted block ac
 
 For non-trivial structural decisions (new module, new abstraction crossing layer boundaries, change to a documented pattern), the PR body or commit messages must name **at least one rejected alternative** and the trade-off. Routine impl following an existing pattern needs no justification.
 
-Check the **Revisit if** section of every ADR governing the touched area. If the PR's content suggests a trigger has silently fired (an «accepted cost» turned out to be blocking; a constraint behind the original choice has changed) — flag `[REQUIRED]` to confirm or reverse the ADR in the same PR (see [`adr/README.md`](../../docs/engineering/adr/README.md) §Reversing an ADR).
+Check the **Revisit if** section of every ADR governing the touched area. If the PR's content suggests a trigger has silently fired (an «accepted cost» turned out to be blocking; a constraint behind the original choice has changed) — flag `[REQUIRED]` to confirm or reverse the ADR in the same PR (see the [ADR dir's README](../../docs/engineering/adr/README.md), rooted at `docCorpus.adrDir`, §Reversing an ADR).
 
-**Symmetric check on new ADRs and engineering docs introduced by the diff.** When the PR adds a new `docs/engineering/adr/adr-*.md` or `docs/engineering/<name>.md`:
+**Symmetric check on new ADRs and engineering docs introduced by the diff.** When the PR adds a new `adr-*.md` under `docCorpus.adrDir` or a new doc under `docCorpus.engineeringDir`:
 
-- The ADR must clear the threshold in [`adr/README.md`](../../docs/engineering/adr/README.md) §ADR threshold. If not — flag `[REQUIRED]` to drop the ADR; the parent living doc carries the rule.
-- A new engineering living doc must satisfy [`docs/engineering/README.md`](../../docs/engineering/README.md) §Writing style — including the warrant test. If not — flag `[REQUIRED]` and route the content to the right layer.
-- New long-lived prose must follow [`long-lived-artifacts.md`](../../docs/engineering/long-lived-artifacts.md). Any violation in prose this diff introduces — `[REQUIRED]`.
-- Promotion of a brand-new rule into `architecture-principles.md` during the current task — `[REQUIRED]` to demote (parent living doc instead); rule-promotion is retro-driven per [`docs/engineering/README.md`](../../docs/engineering/README.md) §Writing style.
+- The ADR must clear the threshold in the [ADR dir's README](../../docs/engineering/adr/README.md) §ADR threshold. If not — flag `[REQUIRED]` to drop the ADR; the parent living doc carries the rule.
+- A new engineering living doc must satisfy the [engineering dir's README](../../docs/engineering/README.md) §Writing style — including the warrant test. If not — flag `[REQUIRED]` and route the content to the right layer.
+- New long-lived prose must follow the [long-lived-artifacts canon](../../docs/engineering/long-lived-artifacts.md). Any violation in prose this diff introduces — `[REQUIRED]`.
+- Promotion of a brand-new rule into `architecture-principles.md` during the current task — `[REQUIRED]` to demote (parent living doc instead); rule-promotion is retro-driven per the [engineering dir's README](../../docs/engineering/README.md) §Writing style.
 
 ### 6. Trade-off vs violation
 

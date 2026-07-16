@@ -22,6 +22,9 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG="$SCRIPT_DIR/../../../project.json"
+
 # ── Resolve current branch ────────────────────────────────────────────────────
 
 BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
@@ -62,18 +65,38 @@ print(data[0]['number'] if data else '')
 if [ -n "$HEAD_PR" ]; then
   CURRENT_ISSUE=$(echo "$HEAD_PR_JSON" | python3 -c "
 import json, sys, re
+try:
+  with open('$CONFIG') as f:
+    config = json.load(f)
+except (FileNotFoundError, json.JSONDecodeError):
+  config = {}
+pattern_template = config.get('git', {}).get('prTitlePattern', '^#<issue>')
+pattern = pattern_template.replace('<issue>', '([0-9]+)')
 data = json.loads(sys.stdin.read())
 title = data[0]['title'] if data else ''
-m = re.match(r'^#([0-9]+)', title)
+m = re.match(pattern, title)
 print(m.group(1) if m else '')
 " 2>/dev/null || echo "")
 fi
 
 if [ -z "$CURRENT_ISSUE" ]; then
-  CURRENT_ISSUE=$(printf '%s' "$BRANCH" | grep -oE '^(feature|docs)/[0-9]+' | grep -oE '[0-9]+' || true)
-fi
-if [ -z "$CURRENT_ISSUE" ]; then
-  CURRENT_ISSUE=$(printf '%s' "$BRANCH" | grep -oE '^[0-9]+' || true)
+  CURRENT_ISSUE=$(python3 -c "
+import json, re, sys
+try:
+  with open('$CONFIG') as f:
+    data = json.load(f)
+except (FileNotFoundError, json.JSONDecodeError):
+  data = {}
+patterns = data.get('git', {}).get('branchPatterns', [])
+branch = '$BRANCH'
+for p in patterns:
+  m = re.match(p, branch)
+  if m:
+    digits = re.search(r'[0-9]+', m.group(0))
+    if digits:
+      print(digits.group(0))
+      sys.exit(0)
+" 2>/dev/null || true)
 fi
 
 # ── Resolve target issue number ───────────────────────────────────────────────
@@ -111,10 +134,17 @@ if [ -n "$HEAD_PR" ] && [ -n "$CURRENT_ISSUE" ] && [ "$CURRENT_ISSUE" = "$ISSUE"
 else
   PR_NUMBER=$(gh pr list --state open --limit 500 --json number,title 2>/dev/null | python3 -c "
 import json, sys, re
+try:
+  with open('$CONFIG') as f:
+    config = json.load(f)
+except (FileNotFoundError, json.JSONDecodeError):
+  config = {}
+pattern_template = config.get('git', {}).get('prTitlePattern', '^#<issue>')
 data = json.loads(sys.stdin.read())
 issue = '$ISSUE'
+pattern = pattern_template.replace('<issue>', re.escape(issue)) + r'([: ]|\$)'
 for pr in data:
-  if re.match(r'^#' + re.escape(issue) + r'([: ]|\$)', pr['title']):
+  if re.match(pattern, pr['title']):
     print(pr['number'])
     sys.exit(0)
 print('-')
@@ -157,38 +187,7 @@ else
   DIFF_FILES=""
 fi
 
-TOUCHED=$(echo "$DIFF_FILES" | python3 -c "
-import sys, re
-
-lines = [l.strip() for l in sys.stdin.read().splitlines() if l.strip()]
-result = set()
-
-TEST_SOURCESET_RE = re.compile(r'/(commonTest|androidUnitTest|androidInstrumentedTest|iosTest|jvmTest|desktopTest|appleTest)/')
-TEST_FILENAME_RE = re.compile(r'Tests?\.kt$')
-
-for f in lines:
-  # ux-brief must be tested before docs (more specific)
-  if re.match(r'docs/product/features/.+/ux-brief\.md', f):
-    result.add('ux-brief')
-  # compose UI
-  if re.match(r'composeApp/src/', f):
-    result.add('ui')
-    result.add('code')
-  # platform source sets
-  if re.search(r'/(androidMain|appleMain|iosMain|jvmMain|desktopMain)/', f):
-    result.add('platform')
-  # general source (exclude test source sets and test filenames)
-  if re.match(r'.+/src/', f) and not TEST_SOURCESET_RE.search(f) and not TEST_FILENAME_RE.search(f):
-    result.add('code')
-  if f.startswith('docs/'):
-    result.add('docs')
-    if f.startswith('docs/engineering/'):
-      result.add('engdoc')
-  if f.startswith('.claude/'):
-    result.add('claude')
-
-print(','.join(sorted(result)))
-" 2>/dev/null || true)
+TOUCHED=$(echo "$DIFF_FILES" | python3 "$SCRIPT_DIR/derive-touched.py" "$CONFIG" 2>/dev/null || true)
 
 echo "touched=$TOUCHED"
 

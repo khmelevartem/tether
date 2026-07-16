@@ -5,9 +5,11 @@ description: Create a GitHub issue via `gh` CLI — single issue or epic + sub-i
 
 # Create Issue
 
+Repo-specific values for this project live in `.claude/project.json` — consult it; references below name their config keys.
+
 ## Body responsibility
 
-The body answers **what** and **why**, plus where to start looking. **How** is decided later, during implementation, against `docs/engineering/`. Pre-baked APIs, exhaustive Affected modules, file-by-file DoD, Error handling, Non-functional requirements become hard constraints on the implementer and pollute their context with details that drift from reality the moment design diverges — keep them out. If the user dictates a specific approach in chat, capture it as one Entry-point line, not as a contract.
+The body answers **what** and **why**, plus where to start looking. **How** is decided later, during implementation, against the engineering docs (`docCorpus.engineeringDir`). Pre-baked APIs, exhaustive Affected modules, file-by-file DoD, Error handling, Non-functional requirements become hard constraints on the implementer and pollute their context with details that drift from reality the moment design diverges — keep them out. If the user dictates a specific approach in chat, capture it as one Entry-point line, not as a contract.
 
 ## Issue language
 
@@ -44,7 +46,7 @@ Two cheap reads before the interview. They cut the interview in half.
 
 ### Project conventions
 
-If unread in this session: `CLAUDE.md`, and the topical [`docs/engineering/`](../../../docs/engineering/) doc matching the task area. These set test commands, conventions, and existing rules — the DoD inherits from them.
+If unread in this session: `CLAUDE.md`, and the topical doc under the engineering dir (`docCorpus.engineeringDir`, [relative path](../../../docs/engineering/)) matching the task area. These set test commands, conventions, and existing rules — the DoD inherits from them.
 
 ### Similar closed issues
 
@@ -56,7 +58,7 @@ Worth 1–2 hits — link them in the body as references so the implementer has 
 
 ### Feature spec
 
-For FEATURE tasks: `ls docs/product/features/`. If a spec exists for this feature, **read it** — Acceptance Criteria and Out of scope come directly into the issue. Spec wins over user description on conflict; clarify before drafting.
+For FEATURE tasks: list the features dir (`docCorpus.featuresDir`). If a spec exists for this feature, **read it** — Acceptance Criteria and Out of scope come directly into the issue. Spec wins over user description on conflict; clarify before drafting.
 
 ## Interview
 
@@ -98,7 +100,7 @@ Show the draft in chat as markdown. Do not write to disk before approval.
 
 ## Glossary review
 
-After drafting, dispatch the `review-glossary` sub-agent on the draft body (pass the prose string in the prompt — there's no diff yet). Turn drift flags into edits. If a term is missing from `docs/glossary.md`, ask the user whether to add an entry now or treat it as task-local.
+After drafting, dispatch the `review-glossary` sub-agent on the draft body (pass the prose string in the prompt — there's no diff yet). Turn drift flags into edits. If a term is missing from the glossary (`docCorpus.glossary`), ask the user whether to add an entry now or treat it as task-local.
 
 ## Create
 
@@ -146,7 +148,7 @@ Size is human review effort, not diff size. At filing, predict it as **how many 
 
 ## What to avoid
 
-- **Pre-baking design** — file paths as commitments, signatures dictating contracts, package placement for new top-level types. Those are `/implement` + architect decisions against `docs/engineering/architecture-principles.md`. Issue body: "touches the file-server boundary", not "lives in `com.example.network.foo`".
+- **Pre-baking design** — file paths as commitments, signatures dictating contracts, package placement for new top-level types. Those are `/implement` + architect decisions against `architecture-principles.md` (under `docCorpus.engineeringDir`). Issue body: "touches the file-server boundary", not "lives in `com.example.network.foo`".
 - **Code-term DoD** — "test passes", "class exists" alone. State what a user / observer sees.
 - **Padding** — filling sections to fill them. Drop optional sections that have nothing to say.
 - **Skipping Out of scope** on non-trivial tasks — even one bullet narrows the agent's path.

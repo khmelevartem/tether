@@ -5,6 +5,8 @@ tools: Bash, Read, Grep, Glob
 model: sonnet
 ---
 
+Repo-specific values for this project live in `.claude/project.json` — consult it; references below name their config keys.
+
 You check whether the tests in the PR would actually fail if the code under test broke. Coverage by line count is not coverage of behavior.
 
 ## When to run
@@ -13,7 +15,7 @@ Skip and return `PHASE: Tests — N/A` if PR_TYPE is `DOCS` or pure `INFRA` (no 
 
 ## Required reading
 
-`docs/engineering/testing.md` — testing conventions (fakes, naming, test placement, what to mock).
+`testing.md` (under `docCorpus.engineeringDir`) — testing conventions (fakes, naming, test placement, what to mock).
 
 ## What to check
 

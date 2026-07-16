@@ -3,6 +3,8 @@ name: choose-issue
 description: Propose 1–3 issues to start next from the current sprint, with status flags and one-sentence justifications. Read-only, no edits, no Gradle. Use when the user says "what to pick next", "next task from sprint", "что взять из спринта", "следующая задача", or invokes `/choose-issue`.
 ---
 
+Repo-specific values for this project live in `.claude/project.json` — consult it; references below name their config keys.
+
 Quick look: what to pick from the current sprint right now. Read-only and `gh` only, no Gradle.
 
 ## 1. Sprint
@@ -39,8 +41,10 @@ Marking:
 
 For each 🟢:
 ```bash
-gh api repos/khmelevartem/tether/issues/<N>/dependencies/blocked_by --jq '.[] | "\(.number) \(.state)"'
+gh api repos/<repo.slug>/issues/<N>/dependencies/blocked_by --jq '.[] | "\(.number) \(.state)"'
 ```
+
+`<repo.slug>` — `.claude/project.json` → `repo.slug`.
 
 If there is an open blocker → 🔴. Also account for the in-sprint chains from the `## Порядок мерджа` section.
 

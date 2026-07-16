@@ -30,6 +30,28 @@ if [ "$TRACK" != "code" ] && [ "$TRACK" != "docs" ]; then
   exit 1
 fi
 
+# ── Project-specific reviewer config ─────────────────────────────────────────
+# Core reviewers stay hardcoded below — they are the framework baseline. Only
+# the per-bucket rosters come from the adapter config, so a consumer repo with
+# an empty or absent bucket degrades to no reviewers for that bucket.
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG="$SCRIPT_DIR/../../../project.json"
+
+project_reviewers() {
+  local bucket="$1" wave="$2"
+  python3 -c "
+import json, sys
+try:
+  with open('$CONFIG') as f:
+    data = json.load(f)
+except (FileNotFoundError, json.JSONDecodeError):
+  data = {}
+names = data.get('reviewers', {}).get('projectSpecific', {}).get('$bucket', {}).get('$wave', [])
+print(' '.join(names))
+" 2>/dev/null || true
+}
+
 # ── Helpers ─────────────────────────────────────────────────────────────────
 
 has_touched() {
@@ -65,13 +87,13 @@ if [ "$TRACK" = "code" ]; then
   add_inner "review-architecture"
   add_inner "review-guides"
   if has_touched "platform"; then
-    add_inner "review-platform"
+    for r in $(project_reviewers "platform" "inner"); do add_inner "$r"; done
   fi
   if has_touched "ui"; then
     # review-ux-conformance requires a ux-brief for the touched feature; the
     # orchestrator resolves this at dispatch time — we include it here when ui
     # is touched; the orchestrator suppresses dispatch when no brief exists.
-    add_inner "review-ux-conformance"
+    for r in $(project_reviewers "ui" "inner"); do add_inner "$r"; done
   fi
 else
   # docs track — foundation gate before dependent layers are written on top.
@@ -108,15 +130,13 @@ if [ "$TRACK" = "code" ]; then
     add_a "review-tests"
   fi
   if has_touched "platform"; then
-    add_a "review-platform"
+    for r in $(project_reviewers "platform" "waveA"); do add_a "$r"; done
   fi
   if has_touched "ui"; then
-    add_a "review-ux-conformance"
-    add_a "review-design-system"
-    add_a "review-visual"
+    for r in $(project_reviewers "ui" "waveA"); do add_a "$r"; done
   fi
   if has_touched "ux-brief"; then
-    add_a "review-ux-brief"
+    for r in $(project_reviewers "ux-brief" "waveA"); do add_a "$r"; done
   fi
 else
   add_a "review-dod"
@@ -131,7 +151,7 @@ else
     add_a "review-architecture"
   fi
   if has_touched "ux-brief"; then
-    add_a "review-ux-brief"
+    for r in $(project_reviewers "ux-brief" "waveA"); do add_a "$r"; done
   fi
 fi
 

@@ -3,6 +3,8 @@ name: retro
 description: Run a retrospective on a GitHub task (issue + PR) to identify systemic gaps and systemic successes, propose changes to CLAUDE.md / docs / skills / commands / hooks, and apply approved ones on a separate retro branch with PR title `retro from #<PR>: …`. Use when the user says "retro", "retrospective", "разбор по задаче", "look back at task N", or invokes `/retro`.
 ---
 
+Repo-specific values for this project live in `.claude/project.json` — consult it; references below name their config keys.
+
 Run a retrospective on task <issue number> (and the associated PR, if any).
 
 The goal is not a report for its own sake and not a catalog of pointwise mistakes, but **systemic improvements**: what in the prompts, commands, skills, documentation, or project structure needs to change so that future assignees can do quality work more easily. Every conclusion must end with an action.
@@ -27,7 +29,7 @@ It measures the **current** main-thread context (not peak, which stays high afte
 
 ## Step 0 — Load the writing discipline
 
-Every change a retro produces is a long-lived artifact. Read [`docs/engineering/long-lived-artifacts.md`](../../../docs/engineering/long-lived-artifacts.md) before drafting any wording and apply it through the analysis and proposed edits, not only at the Step 6 commit gate.
+Every change a retro produces is a long-lived artifact. Read [`docs/engineering/long-lived-artifacts.md`](../../../docs/engineering/long-lived-artifacts.md) (under `docCorpus.engineeringDir`) before drafting any wording and apply it through the analysis and proposed edits, not only at the Step 6 commit gate.
 
 ---
 
@@ -59,14 +61,14 @@ Focus: **system → action**, not "agent → attentiveness".
 - **No trace in the end-state.** A signal that left nothing in the final diff (an option pruned, an approach abandoned, a premise that removed work before it was written) is invisible to a review of the merged artifacts and is exactly where the heaviest cost hides. Reconstruct it from the sequence, not the result.
 
 **Systemic gaps:**
-- A gap in `CLAUDE.md` / `docs/engineering/` / a skill / a template that made the mistake *programmatic*?
+- A gap in `CLAUDE.md` / the engineering docs (`docCorpus.engineeringDir`) / a skill / a template that made the mistake *programmatic*?
 - Did the assignee / reviewer rely on something that turned out to be incorrect or outdated (doc, example, 3rd-party claim)?
 - A class of review comments that can be caught by tooling / a hook / a rule — not by attention?
 - What was missing in the issue/spec to start without clarifications?
 
 **Systemic successes:**
 - What went unexpectedly smoothly, and why?
-- Is there a reproducible logic — to codify as a principle in `docs/engineering/`, a check in a skill, an item in a command template?
+- Is there a reproducible logic — to codify as a principle in the engineering docs (`docCorpus.engineeringDir`), a check in a skill, an item in a command template?
 - A free multiplier (one action → multiple platforms/tasks)? By what mechanism, how to extend it to similar cases?
 
 If there are neither gaps nor successes worth recording — close with "I see no systemic changes", don't invent action items for the sake of form.
@@ -94,8 +96,8 @@ Based on steps 2–3, identify specific systemic changes. Categories:
 | `.claude/commands/*.md` | One of the remaining single-file templates (`merge`, `progress-boring`) gave unclear instructions or missed a scenario |
 | `.claude/agents/<name>.md` | A sub-agent's brief is incomplete, allowed an out-of-scope decision, or missed a check |
 | `CLAUDE.md` | A convention / process / project structure is not recorded — the agent had to guess |
-| `docs/engineering/` | An architectural principle / pattern is recorded incorrectly, incompletely, or its examples diverge from reality |
-| `docs/product/features/` | A feature spec is incomplete or missing where it would have been useful |
+| the engineering docs (`docCorpus.engineeringDir`) | An architectural principle / pattern is recorded incorrectly, incompletely, or its examples diverge from reality |
+| the features dir (`docCorpus.featuresDir`) | A feature spec is incomplete or missing where it would have been useful |
 | `.claude/skills/create-issue` | Issues came out with insufficient context for direct implementation |
 | Hook in `scripts/install-hooks.sh` | A class of errors is catchable automatically at the git operation level, not only by instruction |
 
@@ -128,7 +130,7 @@ For each confirmed improvement:
 
 **If the change is small** (edit in a document, clarification in a command) — do it right now and show the diff.
 
-**Long-lived-artifacts compliance check before commit.** Every prose edit retro produces lands in a long-lived artifact by construction. Before committing, audit every paragraph and bullet against [`docs/engineering/long-lived-artifacts.md`](../../../docs/engineering/long-lived-artifacts.md).
+**Long-lived-artifacts compliance check before commit.** Every prose edit retro produces lands in a long-lived artifact by construction. Before committing, audit every paragraph and bullet against [`docs/engineering/long-lived-artifacts.md`](../../../docs/engineering/long-lived-artifacts.md) (under `docCorpus.engineeringDir`).
 
 **If the change requires a separate task** — create an issue via the `create-issue` skill. The name should read as a useful increment to the workflow, for example:
 - "Add check X to code-review.md"

@@ -1,5 +1,7 @@
 # Step catalog
 
+Repo-specific values for this project live in `.claude/project.json` — consult it; references below name their config keys.
+
 ## Principles 
 
 Each `##` section is one step. 
@@ -126,7 +128,7 @@ Otherwise post the confirmed cause as a comment on issue #\<N\> via `gh issue co
 
 **Applies to:** `track=code AND reentry=fresh`.
 
-When the root cause describes a class of bugs, or parallel implementations contain the same defect — consider fixing one level up: a type / container / contract change that makes the class impossible. Compare costs: N point-fixes vs 1 structural fix. If you choose point-fix — list parallel defective locations explicitly; fold or defer each per [`docs/engineering/scope-discipline.md`](../../../docs/engineering/scope-discipline.md), filing a follow-up issue for any deferred before coding. Announce the decision: `fix-level: structural`, or `fix-level: point-fix → siblings <list>, follow-up #<M> filed` — so the follow-up obligation is on-screen, not assumed.
+When the root cause describes a class of bugs, or parallel implementations contain the same defect — consider fixing one level up: a type / container / contract change that makes the class impossible. Compare costs: N point-fixes vs 1 structural fix. If you choose point-fix — list parallel defective locations explicitly; fold or defer each per the [scope-discipline canon](../../../docs/engineering/scope-discipline.md) (rooted at `docCorpus.engineeringDir`), filing a follow-up issue for any deferred before coding. Announce the decision: `fix-level: structural`, or `fix-level: point-fix → siblings <list>, follow-up #<M> filed` — so the follow-up obligation is on-screen, not assumed.
 
 
 ---
@@ -141,11 +143,11 @@ Decide which artifact layers this issue needs.
 
 | Layer | Needed when | Artifact | Writer |
 |---|---|---|---|
-| **spec** | FEATURE AND `docs/product/features/<slug>/spec.md` is missing, `(stub)`, or has blocking open questions | `docs/product/features/<slug>/spec.md` | `spec-writer` |
-| **ux** | FEATURE with user-facing UI AND `ux-brief.md` is missing or stale relative to spec changes | `docs/product/features/<slug>/ux-brief.md` | `ux-expert` |
-| **tech** | Subsystem with a non-trivial mechanism not covered by `docs/engineering/<name>.md`, or existing doc is outdated | `docs/engineering/<name>.md` | `architect` |
-| **ADR** | Architectural choice clearing the three-way threshold in `docs/engineering/adr/README.md` §ADR threshold | `docs/engineering/adr/adr-<name>.md` | `architect` |
-| **knowledge** | Solved problem / platform quirk worth capturing (from a retro or closed BUGFIX) | `docs/knowledge/<name>.md` | `architect` |
+| **spec** | FEATURE AND the feature spec (`.claude/project.json` → `docCorpus.featureSpec`) is missing, `(stub)`, or has blocking open questions | the feature spec (`docCorpus.featureSpec`) | `spec-writer` |
+| **ux** | FEATURE with user-facing UI AND the UX brief (`docCorpus.uxBrief`) is missing or stale relative to spec changes | the UX brief (`docCorpus.uxBrief`) | `ux-expert` |
+| **tech** | Subsystem with a non-trivial mechanism not covered by an engineering doc under `docCorpus.engineeringDir`, or existing doc is outdated | `<docCorpus.engineeringDir>/<name>.md` | `architect` |
+| **ADR** | Architectural choice clearing the three-way threshold in `docCorpus.adrDir`'s README §ADR threshold | `<docCorpus.adrDir>/adr-<name>.md` | `architect` |
+| **knowledge** | Solved problem / platform quirk worth capturing (from a retro or closed BUGFIX) | `<docCorpus.knowledgeDir>/<name>.md` | `architect` |
 | **.claude** | Deliverable edits a skill prompt, agent definition, slash command, hook, or settings | `.claude/skills/…` / `.claude/agents/…` / `.claude/commands/…` | orchestrator (inline) |
 
 Multiple layers per issue are normal. Classification ambiguity → SKILL.md §Framing ambiguity (user stop).
@@ -220,7 +222,7 @@ Form a list of actionable blocks (sequential or parallel) to dispatch to writing
 * reviewers findings
 * fail description
 
-**For structural findings, the action must contain a symmetry pass** — check sibling files, sibling methods, sibling platforms, sibling source sets for the same anti-pattern, and fix in this same pass. Whether an adjacent fix is folded here or deferred is the single criterion in [`docs/engineering/scope-discipline.md`](../../../docs/engineering/scope-discipline.md) — apply it, do not invent a local rule. If it defers, the agent escalates to the orchestrator — never silently skip.
+**For structural findings, the action must contain a symmetry pass** — check sibling files, sibling methods, sibling platforms, sibling source sets for the same anti-pattern, and fix in this same pass. Whether an adjacent fix is folded here or deferred is the single criterion in the [scope-discipline canon](../../../docs/engineering/scope-discipline.md) (rooted at `docCorpus.engineeringDir`) — apply it, do not invent a local rule. If it defers, the agent escalates to the orchestrator — never silently skip.
 
 **Review transmission accuracy.** Pass findings close to the reviewer's original wording; do not narrow or soften. If several findings converge on one principle — name the principle explicitly and list ALL sites where it applies. If interpretation is unclear → escalate to the user before re-dispatching, not after the next review round.
 
@@ -256,7 +258,7 @@ Dispatch every corresponding writing agent with a proper prompt:
 
 Order matters — lower layers depend on upper ones for vocabulary and scope.
 
-**Prose discipline carry-forward.** Every dispatch brief must instruct the sub-agent to load and every direct edit must follow the principles of  [`docs/engineering/long-lived-artifacts.md`](../../../docs/engineering/long-lived-artifacts.md) before writing and apply it to every paragraph.
+**Prose discipline carry-forward.** Every dispatch brief must instruct the sub-agent to load and every direct edit must follow the principles of the [long-lived-artifacts canon](../../../docs/engineering/long-lived-artifacts.md) (rooted at `docCorpus.engineeringDir`) before writing and apply it to every paragraph.
 
 ---
 ## Step 17 — commit
@@ -288,7 +290,7 @@ If it fails → go back to `transform input to actions` step with a clear proble
 What round of `fast-review` is it?
 
 - 1-4 → **Refresh roster, then dispatch review.** Run `classify-state.sh` to recompute `touched` from the live committed diff, then `select-reviewers.sh <track> <type> <touched>` to get the current `inner-loop-reviewers` roster. Dispatch exactly those reviewers. 
-	- When reviewing the UI changes: resolve the feature slug from the issue number (spec link or `docs/product/features/<slug>/` reference in the body, else glob `docs/product/features/**/ux-brief.md` and topic-match the changed paths); pass the resolved brief path in the `review-ux-conformance` prompt. Suppress the dispatch entirely when no brief exists. Announce the outcome (`ux-conformance: brief <path> → dispatched` / `ux-conformance: no brief → suppressed`) so this orchestrator-owned judgment is not silently skipped behind the scripted roster.
+	- When reviewing the UI changes: resolve the feature slug from the issue number (spec link or a features-dir (`docCorpus.featuresDir`) reference in the body, else glob the UX briefs under the features dir and topic-match the changed paths); pass the resolved brief path in the `review-ux-conformance` prompt. Suppress the dispatch entirely when no brief exists. Announce the outcome (`ux-conformance: brief <path> → dispatched` / `ux-conformance: no brief → suppressed`) so this orchestrator-owned judgment is not silently skipped behind the scripted roster.
 - 5+ → escalate to the user with remaining findings; signals a plan/scope problem the loop cannot fix.
    
 If every reviewer says `APPROVE` and zero `[REQUIRED]` → step done, reset the counter, move forward.
@@ -379,7 +381,7 @@ No force-push. Do not block on explicit OK before push — green runtime checks 
 
 Open the PR for the just-pushed branch:
 
-1. Read [`.github/pull_request_template.md`](../../../.github/pull_request_template.md) and compose the body using only the sections it defines — do not add sections of your own.
+1. Read the PR template (`.claude/project.json` → `git.prTemplate`) and compose the body using only the sections it defines — do not add sections of your own.
 2. Write the body to a file (e.g. `/tmp/pr-<N>-body.md`); `--body` with an in-shell heredoc silently corrupts multiline markdown and can drop `Closes #<N>`.
 3. Then run:
 

@@ -1,0 +1,39 @@
+{
+  "repo": { "slug": "OWNER/REPO" },
+  "git": {
+    "commitPrefix": "#<issue>: ",
+    "todoMarker": "TODO(#<issue>)",
+    "prTitlePattern": "^#<issue>",
+    "branchPatterns": [],
+    "prTemplate": ""
+  },
+  "docCorpus": {
+    "productDir": "",
+    "featuresDir": "",
+    "featureSpec": "",
+    "uxBrief": "",
+    "engineeringDir": "",
+    "adrDir": "",
+    "knowledgeDir": "",
+    "glossary": ""
+  },
+  "commands": {
+    "allTests": "",
+    "recordSnapshots": "",
+    "buildDebug": "",
+    "run": ""
+  },
+  "reviewers": {
+    "projectSpecific": {}
+  },
+  "touchedBuckets": {
+    "uxBrief": "",
+    "ui": "",
+    "platformSourceSets": [],
+    "docsPrefix": "",
+    "engdocPrefix": "",
+    "claudePrefix": "",
+    "testSourceSets": [],
+    "testFilename": ""
+  }
+}

@@ -53,4 +53,5 @@ ADRs in [`adr/`](adr/) capture the *why* behind one-time architectural choices. 
 - [Key-value persistence — DataStore](adr/adr-persistence-key-value.md) — chose `androidx.datastore-preferences-core` direct over wrapper libraries and per-store actuals.
 - [Sheet and modal primitives](adr/adr-sheet-modal-primitives.md) — chose Compose Unstyled over ad-hoc Compose Foundation overlay, Material 3, and Android-only sheet libraries.
 - [SAS pairing protocol](adr/adr-sas-pairing-protocol.md) — chose to authenticate the static identity keys (SAS over the full transcript, contributory co-committed nonce) over app-level ephemeral ECDH in pairing; session confidentiality comes from the pinned TLS channel.
+- [Project-context adapter](adr/adr-project-context-adapter.md) — chose to render prompt templates at install time and commit the rendered instance over the LLM reading config at runtime or gitignore-and-render-at-session-start.
 
